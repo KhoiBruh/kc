@@ -22,8 +22,9 @@ and design history are under `docs/superpowers/`.
 - Preserve positioned diagnostics and CLI exit codes:
   `0` success, `1` CLI/filesystem/tool invocation failure, `2` source,
   semantic, codegen, or linker diagnostic.
-- This workspace is currently not a Git repository. Use build/test checkpoints
-  rather than claiming commits or branches.
+- Git remote: `https://github.com/KhoiBruh/kc`. IDE settings, `out/`,
+  `cmake-build-*`, and `scripts/` are gitignored to keep machine environment
+  details out of the repository.
 
 ## Current architecture
 
@@ -73,8 +74,10 @@ source.k
 - Required version: LLVM **22.1.8**.
 - Local development package:
   `C:/Users/Admin/tools/llvm-22.1.8`
-- CMake package:
-  `C:/Users/Admin/tools/llvm-22.1.8/lib/cmake/llvm`
+- CMake package: set the `KLANG_LLVM_DIR` user environment variable to the
+  `lib/cmake/llvm` directory (locally
+  `C:/Users/Admin/tools/llvm-22.1.8/lib/cmake/llvm`); `CMakePresets.json`
+  expands it into `LLVM_DIR` so machine paths stay out of versioned files.
 - Clang driver:
   `C:/Users/Admin/tools/llvm-22.1.8/bin/clang.exe`
 - The Windows LLVM archive contains a stale Visual Studio 2022 Enterprise DIA

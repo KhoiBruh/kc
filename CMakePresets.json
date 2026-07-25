@@ -9,7 +9,7 @@
             "installDir": "${sourceDir}/out/install/${presetName}",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER": "cl.exe",
-                "LLVM_DIR": "C:/Users/Admin/tools/llvm-22.1.8/lib/cmake/llvm"
+                "LLVM_DIR": "$env{KLANG_LLVM_DIR}"
             },
             "condition": {
                 "type": "equals",
