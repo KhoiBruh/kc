@@ -1,3 +1,7 @@
+module kbootstrap.ast;
+
+import kbootstrap.containers;
+
 struct AstNode(
     kind: u32,
     start: u64,

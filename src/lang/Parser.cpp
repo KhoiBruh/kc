@@ -118,21 +118,28 @@ ParseResult Parser::parseProgram() {
             synchronizeTopLevel();
         }
     }
+    bool seenItem = false;
     while (!atEnd()) {
         if (check(TokenKind::KwModule)) {
-            report(peek().span, "'module' declaration must be at top of file");
+            if (!seenItem) {
+                report(peek().span, "'module' declaration must be at top of file");
+            }
             synchronizeTopLevel();
             continue;
         }
         if (check(TokenKind::KwImport)) {
-            report(peek().span, "'import' declaration must precede items");
+            if (seenItem) {
+                report(peek().span, "'import' declaration must precede items");
+            }
             synchronizeTopLevel();
             continue;
         }
         if (check(TokenKind::KwStruct)) {
             auto structure = parseStruct();
-            if (structure) program.structs.push_back(std::move(*structure));
-            else synchronizeTopLevel();
+            if (structure) {
+                program.structs.push_back(std::move(*structure));
+                seenItem = true;
+            } else synchronizeTopLevel();
             continue;
         }
         if (!check(TokenKind::KwFn) && !check(TokenKind::KwExtern)) {
@@ -144,6 +151,7 @@ ParseResult Parser::parseProgram() {
         auto function = parseFunction(isExtern);
         if (function) {
             program.functions.push_back(std::move(*function));
+            seenItem = true;
         } else {
             synchronizeTopLevel();
         }

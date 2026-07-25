@@ -1,3 +1,8 @@
+module kbootstrap.main;
+
+import kbootstrap.compiler;
+import kbootstrap.containers;
+
 struct Argument(data: u8*, length: u64, ok: bool)
 
 fn readArgument(index: i32): Argument {

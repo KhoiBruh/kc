@@ -1,3 +1,7 @@
+module kbootstrap.types;
+
+import kbootstrap.containers; import kbootstrap.ast;
+
 struct TypeValue(kind: u32, name: u64, pointee: u32)
 
 struct TypeValueList(

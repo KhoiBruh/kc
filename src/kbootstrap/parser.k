@@ -1,3 +1,9 @@
+module kbootstrap.parser;
+
+import kbootstrap.token;
+import kbootstrap.ast;
+import kbootstrap.containers;
+
 struct ParseResult(nodes: AstList, ok: bool, errorStart: u64)
 struct Parser(tokens: TokenList, nodes: AstList, current: u64, ok: bool)
 
@@ -611,14 +617,23 @@ fn parseModule(var parser: Parser): u64 {
     val start = parserPeek(parser).start;
     parser.current = parser.current + 1;
     if (parserExpect(parser, 1) == false) { return 0; }
-    val moduleName = parserPrevious(parser);
+    val firstName = parserPrevious(parser);
     parserAdd(
-        parser, 45, moduleName.start, moduleName.end,
+        parser, 45, firstName.start, firstName.end,
         parser.nodes.length, 0);
+    var partCount: u32 = 1;
+    while (parserMatch(parser, 59)) {
+        if (parserExpect(parser, 1) == false) { return 0; }
+        val name = parserPrevious(parser);
+        parserAdd(
+            parser, 45, name.start, name.end,
+            parser.nodes.length, 0);
+        partCount = partCount + 1;
+    }
     if (parserExpect(parser, 58) == false) { return 0; }
     return parserAdd(
         parser, 47, start, parserPrevious(parser).end,
-        subtreeStart, 0);
+        subtreeStart, partCount);
 }
 
 fn parseImport(var parser: Parser): u64 {
@@ -676,20 +691,20 @@ fn parse(tokens: TokenList): ParseResult {
             return ParseResult(parser.nodes, true, 0);
         }
         if (parserCheck(parser, 25)) {
-            parser.ok = false;
-            return ParseResult(parser.nodes, false, parserPeek(parser).start);
-        }
-        if (parserCheck(parser, 26)) {
-            parser.ok = false;
-            return ParseResult(parser.nodes, false, parserPeek(parser).start);
-        }
-        if (parserCheck(parser, 11)) {
-            parseStruct(parser);
+            parseModule(parser);
         } else {
-            var isExtern = false;
-            val declarationStart = parserPeek(parser).start;
-            if (parserMatch(parser, 9)) { isExtern = true; }
-            parseFunction(parser, isExtern, declarationStart);
+            if (parserCheck(parser, 26)) {
+                parseImport(parser);
+            } else {
+                if (parserCheck(parser, 11)) {
+                    parseStruct(parser);
+                } else {
+                    var isExtern = false;
+                    val declarationStart = parserPeek(parser).start;
+                    if (parserMatch(parser, 9)) { isExtern = true; }
+                    parseFunction(parser, isExtern, declarationStart);
+                }
+            }
         }
         declarationCount = declarationCount + 1;
     }

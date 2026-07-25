@@ -1,3 +1,7 @@
+module kbootstrap.semantic;
+
+import kbootstrap.*;
+
 struct Semantic(
     source: Source,
     nodes: AstList,
@@ -1125,9 +1129,9 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
     while (index < program.aux) {
         root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
-        val nameNode = semantic.nodes.data[declaration.subtreeStart];
-        val name = nodeHash(semantic, nameNode);
         if (declaration.kind == 43) {
+            val nameNode = semantic.nodes.data[declaration.subtreeStart];
+            val name = nodeHash(semantic, nameNode);
             if (declarationFind(semantic.structs, name) !=
                     semantic.structs.length) {
                 semanticFail(semantic, 1, nameNode);
@@ -1149,14 +1153,18 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             }
             semantic.currentStruct = savedStruct;
         } else {
-            if (declarationFind(semantic.functions, name) !=
-                    semantic.functions.length) {
-                semanticFail(semantic, 1, nameNode);
-            } else {
-                var functions = semantic.functions;
-                declarationListAppend(
-                    functions, DeclarationInfo(name, root));
-                semantic.functions = functions;
+            if (declaration.kind == 41) {
+                val nameNode = semantic.nodes.data[declaration.subtreeStart];
+                val name = nodeHash(semantic, nameNode);
+                if (declarationFind(semantic.functions, name) !=
+                        semantic.functions.length) {
+                    semanticFail(semantic, 1, nameNode);
+                } else {
+                    var functions = semantic.functions;
+                    declarationListAppend(
+                        functions, DeclarationInfo(name, root));
+                    semantic.functions = functions;
+                }
             }
         }
         index = index + 1;

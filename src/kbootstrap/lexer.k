@@ -1,3 +1,9 @@
+module kbootstrap.lexer;
+
+import kbootstrap.source;
+import kbootstrap.token;
+import kbootstrap.containers;
+
 extern fn k_boot_arg_count(): i32;
 extern fn k_boot_arg(index: i32, data: u8**, length: u64*): bool;
 extern fn k_boot_read_file(

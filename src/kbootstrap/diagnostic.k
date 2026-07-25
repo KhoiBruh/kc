@@ -1,3 +1,8 @@
+module kbootstrap.diagnostic;
+
+import kbootstrap.containers;
+import kbootstrap.types;
+
 struct SemanticResult(
     ok: bool, category: u32, start: u64, end: u64,
     genericArguments: TypeValueList)
