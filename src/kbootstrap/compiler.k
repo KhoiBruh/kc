@@ -157,7 +157,8 @@ fn linkLl(
     clangPath: u8*, clangPathLength: u64,
     stdRuntime: u8*, stdRuntimeLength: u64,
     bootstrapRuntime: u8*, bootstrapRuntimeLength: u64,
-    executablePath: u8*, executablePathLength: u64): i32 {
+    executablePath: u8*, executablePathLength: u64
+): i32 {
     var command = byteBufferNew();
     appendQuoted(command, clangPath, clangPathLength);
     byteBufferAppend(command, 32);

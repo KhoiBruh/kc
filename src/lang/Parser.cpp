@@ -102,7 +102,33 @@ void Parser::report(SourceSpan span, std::string message) {
 ParseResult Parser::parseProgram() {
     Program program;
     const auto start = peek().span.start;
+    if (check(TokenKind::KwModule)) {
+        auto module = parseModule();
+        if (module) {
+            program.module = std::move(*module);
+        } else {
+            synchronizeTopLevel();
+        }
+    }
+    while (check(TokenKind::KwImport)) {
+        auto import = parseImport();
+        if (import) {
+            program.imports.push_back(std::move(*import));
+        } else {
+            synchronizeTopLevel();
+        }
+    }
     while (!atEnd()) {
+        if (check(TokenKind::KwModule)) {
+            report(peek().span, "'module' declaration must be at top of file");
+            synchronizeTopLevel();
+            continue;
+        }
+        if (check(TokenKind::KwImport)) {
+            report(peek().span, "'import' declaration must precede items");
+            synchronizeTopLevel();
+            continue;
+        }
         if (check(TokenKind::KwStruct)) {
             auto structure = parseStruct();
             if (structure) program.structs.push_back(std::move(*structure));
@@ -124,6 +150,33 @@ ParseResult Parser::parseProgram() {
     }
     program.span = {start, peek().span.end};
     return {std::move(program), std::move(diagnostics_)};
+}
+
+std::optional<ModuleDecl> Parser::parseModule() {
+    const auto start = advance().span;
+    if (!expect(TokenKind::Identifier, "expected module name")) return std::nullopt;
+    const auto name = previous().span;
+    if (!expect(TokenKind::Semicolon, "expected ';' after module declaration"))
+        return std::nullopt;
+    const auto end = previous().span;
+    return ModuleDecl{name, spanFrom(start, end)};
+}
+
+std::optional<ImportDecl> Parser::parseImport() {
+    const auto start = advance().span;
+    std::vector<SourceSpan> path;
+    if (!expect(TokenKind::Identifier, "expected imported module name"))
+        return std::nullopt;
+    path.push_back(previous().span);
+    while (match(TokenKind::Dot)) {
+        if (!expect(TokenKind::Identifier, "expected module component after '.'"))
+            return std::nullopt;
+        path.push_back(previous().span);
+    }
+    if (!expect(TokenKind::Semicolon, "expected ';' after import declaration"))
+        return std::nullopt;
+    const auto end = previous().span;
+    return ImportDecl{std::move(path), spanFrom(start, end)};
 }
 
 std::optional<StructDecl> Parser::parseStruct() {

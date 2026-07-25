@@ -119,6 +119,21 @@ TEST(semantic_infers_and_accepts_explicit_generic_arguments) {
     EXPECT_EQ(fixture.semantic.requestedSpecializations.size(), 2u);
 }
 
+TEST(semantic_stores_module_name_and_imports) {
+    SemanticFixture fixture{
+        "module my;\n"
+        "import std.io;\n"
+        "import std.math;\n"
+        "fn main(): i32 { return 0; }\n"
+    };
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+    EXPECT_TRUE(fixture.semantic.moduleName.has_value());
+    EXPECT_EQ(*fixture.semantic.moduleName, "my");
+    EXPECT_EQ(fixture.semantic.importedModules.size(), 2u);
+    EXPECT_EQ(fixture.semantic.importedModules[0], "std.io");
+    EXPECT_EQ(fixture.semantic.importedModules[1], "std.math");
+}
+
 TEST(semantic_rejects_inconsistent_generic_inference) {
     SemanticFixture fixture{
         "fn same<T>(a: T, b: T): T { return a; }"

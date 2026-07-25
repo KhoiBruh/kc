@@ -66,6 +66,8 @@ struct RuntimeArraySizeCheck {
 
 struct SemanticResult {
     std::vector<Diagnostic> diagnostics;
+    std::optional<std::string> moduleName;
+    std::vector<std::string> importedModules;
     std::unordered_map<std::string, StructSymbol> structs;
     std::unordered_map<std::string, FunctionSymbol> functions;
     std::unordered_map<const Expr*, SemanticType> expressionTypes;

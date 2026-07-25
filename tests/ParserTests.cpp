@@ -201,6 +201,47 @@ TEST(parser_distinguishes_unit_literal_from_empty_call) {
         callStatement.expression->node));
 }
 
+TEST(parser_parses_module_and_import_declarations) {
+    ParseFixture fixture{
+        "module math;\n"
+        "import std.io;\n"
+        "import math.vector;\n"
+        "struct Point(x: i32, y: i32)\n"
+        "fn get_x(p: Point): i32 { return p.x; }\n"
+    };
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    EXPECT_TRUE(fixture.parsed.program.module.has_value());
+    EXPECT_EQ(fixture.text(fixture.parsed.program.module->name), "math");
+    EXPECT_EQ(fixture.parsed.program.imports.size(), 2u);
+    EXPECT_EQ(fixture.text(fixture.parsed.program.imports[0].path[0]), "std");
+    EXPECT_EQ(fixture.text(fixture.parsed.program.imports[0].path[1]), "io");
+    EXPECT_EQ(fixture.text(fixture.parsed.program.imports[1].path[0]), "math");
+    EXPECT_EQ(fixture.text(fixture.parsed.program.imports[1].path[1]), "vector");
+
+    const auto printed = k::printAst(fixture.source, fixture.parsed.program);
+    EXPECT_TRUE(printed.find("Module math") != std::string::npos);
+    EXPECT_TRUE(printed.find("Import std.io") != std::string::npos);
+    EXPECT_TRUE(printed.find("Import math.vector") != std::string::npos);
+}
+
+TEST(parser_reports_error_when_module_is_not_first) {
+    ParseFixture fixture{
+        "import std.io;\n"
+        "module math;\n"
+    };
+    EXPECT_TRUE(!fixture.parsed.diagnostics.empty());
+    EXPECT_EQ(fixture.parsed.diagnostics[0].message, "'module' declaration must be at top of file");
+}
+
+TEST(parser_reports_error_when_import_is_after_item) {
+    ParseFixture fixture{
+        "struct Point(x: i32)\n"
+        "import std.io;\n"
+    };
+    EXPECT_TRUE(!fixture.parsed.diagnostics.empty());
+    EXPECT_EQ(fixture.parsed.diagnostics[0].message, "'import' declaration must precede items");
+}
+
 TEST(parser_parses_array_literals) {
     ParseFixture fixture{
         "fn f() { val values = [1, 2 + 3, 4]; val empty: i32[] = []; }"};

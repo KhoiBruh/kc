@@ -69,6 +69,17 @@ public:
         : source_{source}, program_{program} {}
 
     SemanticResult run() {
+        if (program_.module) {
+            result_.moduleName = spelling(source_, program_.module->name);
+        }
+        for (const auto& imp : program_.imports) {
+            std::string pathStr;
+            for (const auto& part : imp.path) {
+                if (!pathStr.empty()) pathStr += '.';
+                pathStr += spelling(source_, part);
+            }
+            result_.importedModules.push_back(std::move(pathStr));
+        }
         for (const auto& structure : program_.structs) declareStruct(structure);
         for (const auto& structure : program_.structs) defineStruct(structure);
         for (const auto& function : program_.functions) collect(function);

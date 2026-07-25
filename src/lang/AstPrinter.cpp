@@ -45,6 +45,17 @@ public:
 
     std::string print(const Program& program) {
         line(0, "Program");
+        if (program.module) {
+            line(1, "Module " + text(program.module->name));
+        }
+        for (const auto& imp : program.imports) {
+            std::string pathStr;
+            for (const auto& part : imp.path) {
+                if (!pathStr.empty()) pathStr += '.';
+                pathStr += text(part);
+            }
+            line(1, "Import " + pathStr);
+        }
         for (const auto& structure : program.structs) printStruct(structure, 1);
         for (const auto& function : program.functions) printFunction(function, 1);
         return output_.str();

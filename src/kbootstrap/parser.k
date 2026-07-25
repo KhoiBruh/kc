@@ -606,15 +606,70 @@ fn parseStruct(var parser: Parser): u64 {
         subtreeStart, fieldCount + typeParameterCount * 65536);
 }
 
+fn parseModule(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val start = parserPeek(parser).start;
+    parser.current = parser.current + 1;
+    if (parserExpect(parser, 1) == false) { return 0; }
+    val moduleName = parserPrevious(parser);
+    parserAdd(
+        parser, 45, moduleName.start, moduleName.end,
+        parser.nodes.length, 0);
+    if (parserExpect(parser, 58) == false) { return 0; }
+    return parserAdd(
+        parser, 47, start, parserPrevious(parser).end,
+        subtreeStart, 0);
+}
+
+fn parseImport(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val start = parserPeek(parser).start;
+    parser.current = parser.current + 1;
+    if (parserExpect(parser, 1) == false) { return 0; }
+    val firstName = parserPrevious(parser);
+    parserAdd(
+        parser, 45, firstName.start, firstName.end,
+        parser.nodes.length, 0);
+    var partCount: u32 = 1;
+    while (parserMatch(parser, 59)) {
+        if (parserExpect(parser, 1) == false) { return 0; }
+        val name = parserPrevious(parser);
+        parserAdd(
+            parser, 45, name.start, name.end,
+            parser.nodes.length, 0);
+        partCount = partCount + 1;
+    }
+    if (parserExpect(parser, 58) == false) { return 0; }
+    return parserAdd(
+        parser, 48, start, parserPrevious(parser).end,
+        subtreeStart, partCount);
+}
+
 fn parse(tokens: TokenList): ParseResult {
     var parser = Parser(tokens, astListNew(), 0, true);
     val start = parserPeek(parser).start;
     var declarationCount: u32 = 0;
+    if (parserCheck(parser, 25)) {
+        parseModule(parser);
+        declarationCount = declarationCount + 1;
+    }
+    while (parserCheck(parser, 26)) {
+        parseImport(parser);
+        declarationCount = declarationCount + 1;
+    }
     while (parser.ok) {
         if (parserCheck(parser, 0)) {
             val end = parserPeek(parser).end;
             parserAdd(parser, 44, start, end, 0, declarationCount);
             return ParseResult(parser.nodes, true, 0);
+        }
+        if (parserCheck(parser, 25)) {
+            parser.ok = false;
+            return ParseResult(parser.nodes, false, parserPeek(parser).start);
+        }
+        if (parserCheck(parser, 26)) {
+            parser.ok = false;
+            return ParseResult(parser.nodes, false, parserPeek(parser).start);
         }
         if (parserCheck(parser, 11)) {
             parseStruct(parser);

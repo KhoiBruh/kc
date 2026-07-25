@@ -131,6 +131,28 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
         }
     }
     if (length == 6) {
+        if (source.data[start] == 109) {
+            if (source.data[start + 1] == 111) {
+                if (source.data[start + 2] == 100) {
+                    if (source.data[start + 3] == 117) {
+                        if (source.data[start + 4] == 108) {
+                            if (source.data[start + 5] == 101) { return 25; }
+                        }
+                    }
+                }
+            }
+        }
+        if (source.data[start] == 105) {
+            if (source.data[start + 1] == 109) {
+                if (source.data[start + 2] == 112) {
+                    if (source.data[start + 3] == 111) {
+                        if (source.data[start + 4] == 114) {
+                            if (source.data[start + 5] == 116) { return 26; }
+                        }
+                    }
+                }
+            }
+        }
         if (source.data[start] == 114) {
             if (source.data[start + 1] == 101) {
                 if (source.data[start + 2] == 116) {

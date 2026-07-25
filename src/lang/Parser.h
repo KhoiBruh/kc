@@ -29,6 +29,8 @@ private:
     bool expect(TokenKind kind, std::string message);
     void report(SourceSpan span, std::string message);
 
+    [[nodiscard]] std::optional<ModuleDecl> parseModule();
+    [[nodiscard]] std::optional<ImportDecl> parseImport();
     [[nodiscard]] std::optional<FunctionDecl> parseFunction(bool isExtern);
     [[nodiscard]] std::optional<StructDecl> parseStruct();
     [[nodiscard]] std::optional<Parameter> parseParameter();

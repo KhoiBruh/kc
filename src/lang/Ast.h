@@ -129,7 +129,19 @@ struct FunctionDecl {
     bool isExtern = false;
 };
 
+struct ModuleDecl {
+    SourceSpan name;
+    SourceSpan span;
+};
+
+struct ImportDecl {
+    std::vector<SourceSpan> path;
+    SourceSpan span;
+};
+
 struct Program {
+    std::optional<ModuleDecl> module;
+    std::vector<ImportDecl> imports;
     std::vector<StructDecl> structs;
     std::vector<FunctionDecl> functions;
     SourceSpan span{0, 0};
