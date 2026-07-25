@@ -54,6 +54,10 @@ public:
                 if (!pathStr.empty()) pathStr += '.';
                 pathStr += text(part);
             }
+            if (imp.isWildcard) {
+                if (!pathStr.empty()) pathStr += '.';
+                pathStr += '*';
+            }
             line(1, "Import " + pathStr);
         }
         for (const auto& structure : program.structs) printStruct(structure, 1);

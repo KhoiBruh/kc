@@ -64,10 +64,16 @@ struct RuntimeArraySizeCheck {
     std::uint64_t literalLength;
 };
 
+struct ImportedSymbol {
+    std::vector<std::string> modulePath;
+    std::string symbolOrWildcard;
+    bool isWildcard = false;
+};
+
 struct SemanticResult {
     std::vector<Diagnostic> diagnostics;
     std::optional<std::string> moduleName;
-    std::vector<std::string> importedModules;
+    std::vector<ImportedSymbol> importedSymbols;
     std::unordered_map<std::string, StructSymbol> structs;
     std::unordered_map<std::string, FunctionSymbol> functions;
     std::unordered_map<const Expr*, SemanticType> expressionTypes;

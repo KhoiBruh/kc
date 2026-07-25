@@ -165,18 +165,30 @@ std::optional<ModuleDecl> Parser::parseModule() {
 std::optional<ImportDecl> Parser::parseImport() {
     const auto start = advance().span;
     std::vector<SourceSpan> path;
-    if (!expect(TokenKind::Identifier, "expected imported module name"))
+    bool isWildcard = false;
+
+    if (match(TokenKind::Star)) {
+        report(previous().span, "expected module name before '*'");
+        return std::nullopt;
+    }
+
+    if (!expect(TokenKind::Identifier, "expected imported module or symbol name"))
         return std::nullopt;
     path.push_back(previous().span);
+
     while (match(TokenKind::Dot)) {
-        if (!expect(TokenKind::Identifier, "expected module component after '.'"))
+        if (match(TokenKind::Star)) {
+            isWildcard = true;
+            break;
+        }
+        if (!expect(TokenKind::Identifier, "expected module component or symbol name after '.'"))
             return std::nullopt;
         path.push_back(previous().span);
     }
     if (!expect(TokenKind::Semicolon, "expected ';' after import declaration"))
         return std::nullopt;
     const auto end = previous().span;
-    return ImportDecl{std::move(path), spanFrom(start, end)};
+    return ImportDecl{std::move(path), isWildcard, spanFrom(start, end)};
 }
 
 std::optional<StructDecl> Parser::parseStruct() {

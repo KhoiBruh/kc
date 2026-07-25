@@ -136,6 +136,7 @@ struct ModuleDecl {
 
 struct ImportDecl {
     std::vector<SourceSpan> path;
+    bool isWildcard = false;
     SourceSpan span;
 };
 

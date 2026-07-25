@@ -631,18 +631,30 @@ fn parseImport(var parser: Parser): u64 {
         parser, 45, firstName.start, firstName.end,
         parser.nodes.length, 0);
     var partCount: u32 = 1;
-    while (parserMatch(parser, 59)) {
-        if (parserExpect(parser, 1) == false) { return 0; }
-        val name = parserPrevious(parser);
-        parserAdd(
-            parser, 45, name.start, name.end,
-            parser.nodes.length, 0);
-        partCount = partCount + 1;
+    var isWildcard: u32 = 0;
+    var importing = true;
+    while (importing) {
+        if (parserMatch(parser, 59) == false) {
+            importing = false;
+        } else {
+            if (parserMatch(parser, 62)) {
+                isWildcard = 1;
+                partCount = partCount + 1;
+                importing = false;
+            } else {
+                if (parserExpect(parser, 1) == false) { return 0; }
+                val name = parserPrevious(parser);
+                parserAdd(
+                    parser, 45, name.start, name.end,
+                    parser.nodes.length, 0);
+                partCount = partCount + 1;
+            }
+        }
     }
     if (parserExpect(parser, 58) == false) { return 0; }
     return parserAdd(
         parser, 48, start, parserPrevious(parser).end,
-        subtreeStart, partCount);
+        subtreeStart, partCount + isWildcard * 65536);
 }
 
 fn parse(tokens: TokenList): ParseResult {

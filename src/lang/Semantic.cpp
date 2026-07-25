@@ -73,12 +73,20 @@ public:
             result_.moduleName = spelling(source_, program_.module->name);
         }
         for (const auto& imp : program_.imports) {
-            std::string pathStr;
-            for (const auto& part : imp.path) {
-                if (!pathStr.empty()) pathStr += '.';
-                pathStr += spelling(source_, part);
+            ImportedSymbol symbol;
+            symbol.isWildcard = imp.isWildcard;
+            if (imp.isWildcard) {
+                for (const auto& part : imp.path) {
+                    symbol.modulePath.push_back(spelling(source_, part));
+                }
+                symbol.symbolOrWildcard = "*";
+            } else if (!imp.path.empty()) {
+                for (std::size_t i = 0; i < imp.path.size() - 1; ++i) {
+                    symbol.modulePath.push_back(spelling(source_, imp.path[i]));
+                }
+                symbol.symbolOrWildcard = spelling(source_, imp.path.back());
             }
-            result_.importedModules.push_back(std::move(pathStr));
+            result_.importedSymbols.push_back(std::move(symbol));
         }
         for (const auto& structure : program_.structs) declareStruct(structure);
         for (const auto& structure : program_.structs) defineStruct(structure);

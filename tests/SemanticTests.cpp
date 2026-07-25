@@ -122,16 +122,33 @@ TEST(semantic_infers_and_accepts_explicit_generic_arguments) {
 TEST(semantic_stores_module_name_and_imports) {
     SemanticFixture fixture{
         "module my;\n"
-        "import std.io;\n"
-        "import std.math;\n"
+        "import std.io.println;\n"
+        "import std.io.Lexer;\n"
+        "import std.math.*;\n"
         "fn main(): i32 { return 0; }\n"
     };
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
     EXPECT_TRUE(fixture.semantic.moduleName.has_value());
     EXPECT_EQ(*fixture.semantic.moduleName, "my");
-    EXPECT_EQ(fixture.semantic.importedModules.size(), 2u);
-    EXPECT_EQ(fixture.semantic.importedModules[0], "std.io");
-    EXPECT_EQ(fixture.semantic.importedModules[1], "std.math");
+    EXPECT_EQ(fixture.semantic.importedSymbols.size(), 3u);
+
+    EXPECT_EQ(fixture.semantic.importedSymbols[0].modulePath.size(), 2u);
+    EXPECT_EQ(fixture.semantic.importedSymbols[0].modulePath[0], "std");
+    EXPECT_EQ(fixture.semantic.importedSymbols[0].modulePath[1], "io");
+    EXPECT_EQ(fixture.semantic.importedSymbols[0].symbolOrWildcard, "println");
+    EXPECT_TRUE(!fixture.semantic.importedSymbols[0].isWildcard);
+
+    EXPECT_EQ(fixture.semantic.importedSymbols[1].modulePath.size(), 2u);
+    EXPECT_EQ(fixture.semantic.importedSymbols[1].modulePath[0], "std");
+    EXPECT_EQ(fixture.semantic.importedSymbols[1].modulePath[1], "io");
+    EXPECT_EQ(fixture.semantic.importedSymbols[1].symbolOrWildcard, "Lexer");
+    EXPECT_TRUE(!fixture.semantic.importedSymbols[1].isWildcard);
+
+    EXPECT_EQ(fixture.semantic.importedSymbols[2].modulePath.size(), 2u);
+    EXPECT_EQ(fixture.semantic.importedSymbols[2].modulePath[0], "std");
+    EXPECT_EQ(fixture.semantic.importedSymbols[2].modulePath[1], "math");
+    EXPECT_EQ(fixture.semantic.importedSymbols[2].symbolOrWildcard, "*");
+    EXPECT_TRUE(fixture.semantic.importedSymbols[2].isWildcard);
 }
 
 TEST(semantic_rejects_inconsistent_generic_inference) {
