@@ -1,0 +1,2 @@
+fn take(val value: i32): i32 { return value; }
+fn main(): i32 { return take(); }

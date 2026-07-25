@@ -1,0 +1,136 @@
+struct TypeValue(kind: u32, name: u64, pointee: u32)
+
+struct TypeValueList(
+    data: TypeValue*, length: u64, capacity: u64)
+
+fn typeValueListNew(): TypeValueList {
+    return TypeValueList(
+        k_boot_alloc(8 * sizeof(TypeValue)) as TypeValue*, 0, 8);
+}
+
+fn typeValueListAppend(var list: TypeValueList, value: TypeValue): u64 {
+    if (list.length == list.capacity) {
+        val capacity = list.capacity * 2;
+        val data =
+            k_boot_alloc(capacity * sizeof(TypeValue)) as TypeValue*;
+        var index: u64 = 0;
+        while (index < list.length) {
+            data[index] = list.data[index];
+            index = index + 1;
+        }
+        k_boot_free(list.data as unit*);
+        list.data = data;
+        list.capacity = capacity;
+    }
+    val index = list.length;
+    list.data[index] = value;
+    list.length = index + 1;
+    return index;
+}
+
+fn typeValueListFree(list: TypeValueList) {
+    k_boot_free(list.data as unit*);
+}
+
+fn invalidType(): TypeValue { return TypeValue(0, 0, 0); }
+fn unitType(): TypeValue { return TypeValue(1, 0, 0); }
+fn boolType(): TypeValue { return TypeValue(2, 0, 0); }
+fn integerLiteralType(): TypeValue { return TypeValue(11, 0, 0); }
+
+fn typeEquals(left: TypeValue, right: TypeValue): bool {
+    if (left.kind != right.kind) { return false; }
+    if (left.name != right.name) { return false; }
+    return left.pointee == right.pointee;
+}
+
+fn typeAccepts(expected: TypeValue, actual: TypeValue): bool {
+    if (typeEquals(expected, actual)) { return true; }
+    if (expected.kind == 15) {
+        if (actual.kind == 16) { return true; }
+        return typeEquals(
+            TypeValue(expected.pointee, expected.name, 0), actual);
+    }
+    if (actual.kind == 11) {
+        if (expected.kind >= 3) {
+            if (expected.kind <= 7) { return true; }
+        }
+    }
+    return false;
+}
+
+fn primitiveType(tokenKind: u32): TypeValue {
+    if (tokenKind == 49) { return unitType(); }
+    if (tokenKind == 32) { return boolType(); }
+    if (tokenKind == 35) { return TypeValue(3, 0, 0); }
+    if (tokenKind == 36) { return TypeValue(4, 0, 0); }
+    if (tokenKind == 38) { return TypeValue(5, 0, 0); }
+    if (tokenKind == 40) { return TypeValue(6, 0, 0); }
+    if (tokenKind == 41) { return TypeValue(7, 0, 0); }
+    if (tokenKind == 48) { return TypeValue(10, 0, 0); }
+    return invalidType();
+}
+
+struct LocalInfo(
+    name: u64, valueType: TypeValue, mutable: bool, storage: u64)
+struct LocalList(data: LocalInfo*, length: u64, capacity: u64)
+
+fn localListNew(): LocalList {
+    return LocalList(k_boot_alloc(8 * sizeof(LocalInfo)) as LocalInfo*, 0, 8);
+}
+
+fn localListGrow(var list: LocalList) {
+    val capacity = list.capacity * 2;
+    val data = k_boot_alloc(capacity * sizeof(LocalInfo)) as LocalInfo*;
+    var index: u64 = 0;
+    while (index < list.length) {
+        data[index] = list.data[index];
+        index = index + 1;
+    }
+    k_boot_free(list.data as unit*);
+    list.data = data;
+    list.capacity = capacity;
+}
+
+fn localListAppend(var list: LocalList, value: LocalInfo) {
+    if (list.length == list.capacity) { localListGrow(list); }
+    list.data[list.length] = value;
+    list.length = list.length + 1;
+}
+
+fn localListFree(list: LocalList) {
+    k_boot_free(list.data as unit*);
+}
+
+struct DeclarationInfo(name: u64, node: u64)
+struct DeclarationList(
+    data: DeclarationInfo*, length: u64, capacity: u64)
+
+fn declarationListNew(): DeclarationList {
+    return DeclarationList(
+        k_boot_alloc(8 * sizeof(DeclarationInfo)) as DeclarationInfo*, 0, 8);
+}
+
+fn declarationListGrow(var list: DeclarationList) {
+    val capacity = list.capacity * 2;
+    val data =
+        k_boot_alloc(capacity * sizeof(DeclarationInfo)) as DeclarationInfo*;
+    var index: u64 = 0;
+    while (index < list.length) {
+        data[index] = list.data[index];
+        index = index + 1;
+    }
+    k_boot_free(list.data as unit*);
+    list.data = data;
+    list.capacity = capacity;
+}
+
+fn declarationListAppend(
+    var list: DeclarationList, value: DeclarationInfo) {
+    if (list.length == list.capacity) { declarationListGrow(list); }
+    list.data[list.length] = value;
+    list.length = list.length + 1;
+}
+
+fn declarationListFree(list: DeclarationList) {
+    k_boot_free(list.data as unit*);
+}

@@ -1,0 +1,57 @@
+fn printToken(token: Token) {
+    print(token.kind as i32);
+    print(":");
+    print(token.start as i32);
+    print(":");
+    print(token.end as i32);
+    print(";");
+}
+
+fn main(): i32 {
+    if (k_boot_arg_count() < 2) {
+        return 1;
+    }
+
+    val pathPlaceholder = k_boot_alloc(1);
+    var path = pathPlaceholder as u8*;
+    var pathLength: u64 = 0;
+    if (k_boot_arg(1, &path, &pathLength)) {
+        k_boot_free(pathPlaceholder);
+    } else {
+        k_boot_free(pathPlaceholder);
+        return 1;
+    }
+
+    val sourcePlaceholder = k_boot_alloc(1);
+    var sourceData = sourcePlaceholder as u8*;
+    var sourceLength: u64 = 0;
+    if (k_boot_read_file(
+            path, pathLength, &sourceData, &sourceLength)) {
+        k_boot_free(sourcePlaceholder);
+    } else {
+        k_boot_free(sourcePlaceholder);
+        k_boot_free(path as unit*);
+        return 1;
+    }
+
+    val result = lex(Source(sourceData, sourceLength));
+    if (result.ok) {
+        var index: u64 = 0;
+        while (index < result.tokens.length) {
+            printToken(result.tokens.data[index]);
+            index = index + 1;
+        }
+    } else {
+        print("error:");
+        print(result.errorStart as i32);
+        tokenListFree(result.tokens);
+        k_boot_free(sourceData as unit*);
+        k_boot_free(path as unit*);
+        return 2;
+    }
+
+    tokenListFree(result.tokens);
+    k_boot_free(sourceData as unit*);
+    k_boot_free(path as unit*);
+    return 0;
+}

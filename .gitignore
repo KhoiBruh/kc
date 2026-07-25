@@ -1,0 +1,19 @@
+# IDE settings
+.idea/
+.vs/
+.vscode/
+
+# Build output
+out/
+build/
+cmake-build-debug/
+cmake-build-release/
+
+# Local environment scripts
+scripts/
+
+# Compiled artifacts
+*.obj
+*.exe
+*.ilk
+*.pdb

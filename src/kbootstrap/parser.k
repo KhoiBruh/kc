@@ -1,0 +1,587 @@
+struct ParseResult(nodes: AstList, ok: bool, errorStart: u64)
+struct Parser(tokens: TokenList, nodes: AstList, current: u64, ok: bool)
+
+fn parserPeek(parser: Parser): Token {
+    return parser.tokens.data[parser.current];
+}
+
+fn parserPrevious(parser: Parser): Token {
+    return parser.tokens.data[parser.current - 1];
+}
+
+fn parserCheck(parser: Parser, kind: u32): bool {
+    return parserPeek(parser).kind == kind;
+}
+
+fn parserMatch(var parser: Parser, kind: u32): bool {
+    if (parserCheck(parser, kind)) {
+        parser.current = parser.current + 1;
+        return true;
+    }
+    return false;
+}
+
+fn parserExpect(var parser: Parser, kind: u32): bool {
+    if (parserMatch(parser, kind)) { return true; }
+    parser.ok = false;
+    return false;
+}
+
+fn parserAdd(
+    var parser: Parser,
+    kind: u32,
+    start: u64,
+    end: u64,
+    subtreeStart: u64,
+    aux: u32): u64 {
+    var nodes = parser.nodes;
+    val index = astListAppend(
+        nodes,
+        AstNode(
+            kind, start, end, subtreeStart, aux,
+            0, 0, 0, 0, 0, 0, 0));
+    parser.nodes = nodes;
+    return index;
+}
+
+fn isTypeStart(kind: u32): bool {
+    if (kind == 1) { return true; }
+    if (kind >= 32) {
+        if (kind <= 49) { return true; }
+    }
+    return false;
+}
+
+fn parseType(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val first = parserPeek(parser);
+    if (parserMatch(parser, 54)) {
+        if (parserExpect(parser, 55) == false) { return 0; }
+        val element = parseType(parser);
+        return parserAdd(
+            parser, 4, first.start, parser.nodes.data[element].end,
+            subtreeStart, 0);
+    }
+    if (isTypeStart(first.kind) == false) {
+        parser.ok = false;
+        return 0;
+    }
+    parser.current = parser.current + 1;
+    var root = parserAdd(
+        parser, 1, first.start, first.end, subtreeStart, first.kind);
+    var end = first.end;
+    while (parserMatch(parser, 62)) {
+        end = parserPrevious(parser).end;
+        root = parserAdd(parser, 2, first.start, end, subtreeStart, 0);
+    }
+    if (parserMatch(parser, 72)) {
+        if (parser.nodes.data[root].kind == 3) {
+            parser.ok = false;
+            return 0;
+        }
+        end = parserPrevious(parser).end;
+        root = parserAdd(parser, 3, first.start, end, subtreeStart, 0);
+    }
+    return root;
+}
+
+fn prefixBindingPower(kind: u32): u32 {
+    if (kind == 60) { return 90; }
+    if (kind == 61) { return 90; }
+    if (kind == 68) { return 90; }
+    if (kind == 71) { return 90; }
+    if (kind == 73) { return 90; }
+    return 0;
+}
+
+fn leftBindingPower(kind: u32): u32 {
+    if (kind >= 65) {
+        if (kind <= 78) { return 10; }
+    }
+    if (kind == 84) { return 20; }
+    if (kind == 83) { return 30; }
+    if (kind == 79) { return 40; }
+    if (kind == 80) { return 40; }
+    if (kind >= 66) {
+        if (kind <= 67) { return 50; }
+    }
+    if (kind == 81) { return 50; }
+    if (kind == 82) { return 50; }
+    if (kind == 87) { return 60; }
+    if (kind == 88) { return 60; }
+    if (kind == 60) { return 70; }
+    if (kind == 61) { return 70; }
+    if (kind == 62) { return 80; }
+    if (kind == 63) { return 80; }
+    if (kind == 64) { return 80; }
+    return 0;
+}
+
+fn rightBindingPower(kind: u32): u32 {
+    val left = leftBindingPower(kind);
+    if (left == 10) { return 10; }
+    return left + 1;
+}
+
+fn isAssignmentKind(kind: u32): bool {
+    if (kind == 65) { return true; }
+    if (kind >= 74) {
+        if (kind <= 78) { return true; }
+    }
+    return false;
+}
+
+fn isLiteralKind(kind: u32): bool {
+    if (kind >= 2) {
+        if (kind <= 5) { return true; }
+    }
+    if (kind >= 29) {
+        if (kind <= 31) { return true; }
+    }
+    return false;
+}
+
+fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
+    val subtreeStart = parser.nodes.length;
+    val first = parserPeek(parser);
+    var root: u64 = 0;
+    if (first.kind == 1) {
+        parser.current = parser.current + 1;
+        root = parserAdd(
+            parser, 10, first.start, first.end, subtreeStart, 0);
+    } else {
+        if (isLiteralKind(first.kind)) {
+            parser.current = parser.current + 1;
+            root = parserAdd(
+                parser, 11, first.start, first.end, subtreeStart, first.kind);
+        } else {
+            val prefixPower = prefixBindingPower(first.kind);
+            if (prefixPower != 0) {
+                parser.current = parser.current + 1;
+                val operand = parseExpression(parser, prefixPower);
+                if (parser.ok == false) { return 0; }
+                root = parserAdd(
+                    parser, 12, first.start, parser.nodes.data[operand].end,
+                    subtreeStart, first.kind);
+            } else {
+                if (parserMatch(parser, 50)) {
+                    if (parserMatch(parser, 51)) {
+                        root = parserAdd(
+                            parser, 20, first.start, parserPrevious(parser).end,
+                            subtreeStart, 0);
+                    } else {
+                        root = parseExpression(parser, 0);
+                        if (parserExpect(parser, 51) == false) { return 0; }
+                    }
+                } else {
+                    if (parserMatch(parser, 28)) {
+                        if (parserExpect(parser, 50) == false) { return 0; }
+                        parseType(parser);
+                        if (parserExpect(parser, 51) == false) { return 0; }
+                        root = parserAdd(
+                            parser, 21, first.start, parserPrevious(parser).end,
+                            subtreeStart, 0);
+                    } else {
+                        parser.ok = false;
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+
+    var parsing = true;
+    while (parsing) {
+        val token = parserPeek(parser);
+        if (token.kind == 66) {
+            if (parserGenericCallAhead(parser)) {
+                parser.current = parser.current + 1;
+                var typeArgumentCount: u32 = 0;
+                var typeArguments = true;
+                while (typeArguments) {
+                    parseType(parser);
+                    typeArgumentCount = typeArgumentCount + 1;
+                    if (parserMatch(parser, 56) == false) {
+                        typeArguments = false;
+                    }
+                }
+                if (parserExpect(parser, 67) == false) { return 0; }
+                if (parserExpect(parser, 50) == false) { return 0; }
+                var argumentCount: u32 = 0;
+                if (parserCheck(parser, 51) == false) {
+                    var arguments = true;
+                    while (arguments) {
+                        parseExpression(parser, 0);
+                        argumentCount = argumentCount + 1;
+                        if (parserMatch(parser, 56) == false) {
+                            arguments = false;
+                        }
+                    }
+                }
+                if (parserExpect(parser, 51) == false) { return 0; }
+                root = parserAdd(
+                    parser, 16, first.start, parserPrevious(parser).end,
+                    subtreeStart,
+                    argumentCount + typeArgumentCount * 65536);
+            } else {
+                val leftPower = leftBindingPower(token.kind);
+                if (leftPower < minimumPower) {
+                    parsing = false;
+                } else {
+                    parser.current = parser.current + 1;
+                    val right = parseExpression(
+                        parser, rightBindingPower(token.kind));
+                    if (parser.ok == false) { return 0; }
+                    root = parserAdd(
+                        parser, 13, first.start,
+                        parser.nodes.data[right].end,
+                        subtreeStart, token.kind);
+                }
+            }
+        } else {
+        if (token.kind == 50) {
+            parser.current = parser.current + 1;
+            var argumentCount: u32 = 0;
+            if (parserCheck(parser, 51) == false) {
+                var arguments = true;
+                while (arguments) {
+                    parseExpression(parser, 0);
+                    argumentCount = argumentCount + 1;
+                    if (parserMatch(parser, 56) == false) { arguments = false; }
+                }
+            }
+            if (parserExpect(parser, 51) == false) { return 0; }
+            root = parserAdd(
+                parser, 16, first.start, parserPrevious(parser).end,
+                subtreeStart, argumentCount);
+        } else {
+            if (token.kind == 59) {
+                parser.current = parser.current + 1;
+                val name = parserPeek(parser);
+                if (parserExpect(parser, 1) == false) { return 0; }
+                root = parserAdd(
+                    parser, 17, name.start, name.end, subtreeStart, 0);
+            } else {
+                if (token.kind == 54) {
+                    parser.current = parser.current + 1;
+                    parseExpression(parser, 0);
+                    if (parserExpect(parser, 55) == false) { return 0; }
+                    root = parserAdd(
+                        parser, 18, first.start, parserPrevious(parser).end,
+                        subtreeStart, 0);
+                } else {
+                    if (token.kind == 73) {
+                        parser.current = parser.current + 1;
+                        root = parserAdd(
+                            parser, 19, first.start, token.end,
+                            subtreeStart, token.kind);
+                    } else {
+                        if (token.kind == 27) {
+                            parser.current = parser.current + 1;
+                            parseType(parser);
+                            root = parserAdd(
+                                parser, 15, first.start,
+                                parser.nodes.data[parser.nodes.length - 1].end,
+                                subtreeStart, 0);
+                        } else {
+                            val leftPower = leftBindingPower(token.kind);
+                            if (leftPower == 0) {
+                                parsing = false;
+                            } else {
+                                if (leftPower < minimumPower) {
+                                    parsing = false;
+                                } else {
+                                    parser.current = parser.current + 1;
+                                    val leftKind =
+                                        parser.nodes.data[root].kind;
+                                    if (isAssignmentKind(token.kind)) {
+                                        var assignable = leftKind == 10;
+                                        if (leftKind == 17) { assignable = true; }
+                                        if (leftKind == 18) { assignable = true; }
+                                        if (leftKind == 12) {
+                                            if (parser.nodes.data[root].aux == 62) {
+                                                assignable = true;
+                                            }
+                                        }
+                                        if (assignable == false) {
+                                            parser.ok = false;
+                                            return 0;
+                                        }
+                                    }
+                                    val right = parseExpression(
+                                        parser, rightBindingPower(token.kind));
+                                    if (parser.ok == false) { return 0; }
+                                    var nodeKind: u32 = 13;
+                                    if (isAssignmentKind(token.kind)) {
+                                        nodeKind = 14;
+                                    }
+                                    root = parserAdd(
+                                        parser, nodeKind, first.start,
+                                        parser.nodes.data[right].end,
+                                        subtreeStart, token.kind);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        }
+    }
+    return root;
+}
+
+fn parserGenericCallAhead(parser: Parser): bool {
+    var cursor = parser.current + 1;
+    var depth: u32 = 1;
+    while (cursor < parser.tokens.length) {
+        val kind = parser.tokens.data[cursor].kind;
+        if (kind == 66) {
+            depth = depth + 1;
+        } else {
+            if (kind == 67) {
+                depth = depth - 1;
+                if (depth == 0) {
+                    if (cursor + 1 >= parser.tokens.length) {
+                        return false;
+                    }
+                    return parser.tokens.data[cursor + 1].kind == 50;
+                }
+            }
+        }
+        cursor = cursor + 1;
+    }
+    return false;
+}
+
+fn parseBlock(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val start = parserPeek(parser).start;
+    if (parserExpect(parser, 52) == false) { return 0; }
+    var count: u32 = 0;
+    while (parser.ok) {
+        if (parserCheck(parser, 53)) {
+            parser.current = parser.current + 1;
+            return parserAdd(parser, 30, 0, 0, subtreeStart, count);
+        }
+        if (parserCheck(parser, 0)) {
+            parser.ok = false;
+        } else {
+            parseStatement(parser);
+            count = count + 1;
+        }
+    }
+    return 0;
+}
+
+fn parseStatement(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val first = parserPeek(parser);
+    if (parserMatch(parser, 15)) {
+        if (parserExpect(parser, 50) == false) { return 0; }
+        parseExpression(parser, 0);
+        if (parserExpect(parser, 51) == false) { return 0; }
+        parseBlock(parser);
+        var end = parserPrevious(parser).end;
+        var hasElse: u32 = 0;
+        if (parserMatch(parser, 16)) {
+            parseBlock(parser);
+            end = parserPrevious(parser).end;
+            hasElse = 1;
+        }
+        return parserAdd(parser, 31, first.start, end, subtreeStart, hasElse);
+    }
+    if (parserMatch(parser, 19)) {
+        if (parserExpect(parser, 50) == false) { return 0; }
+        parseExpression(parser, 0);
+        if (parserExpect(parser, 51) == false) { return 0; }
+        parseBlock(parser);
+        val end = parserPrevious(parser).end;
+        return parserAdd(
+            parser, 32, first.start, end,
+            subtreeStart, 0);
+    }
+    var isVariable = first.kind == 6;
+    if (first.kind == 7) { isVariable = true; }
+    if (isVariable) {
+        parser.current = parser.current + 1;
+        if (parserExpect(parser, 1) == false) { return 0; }
+        val variableName = parserPrevious(parser);
+        parserAdd(
+            parser, 45, variableName.start, variableName.end,
+            parser.nodes.length, 0);
+        if (parserMatch(parser, 57)) { parseType(parser); }
+        if (parserExpect(parser, 65) == false) { return 0; }
+        parseExpression(parser, 0);
+        if (parserExpect(parser, 58) == false) { return 0; }
+        return parserAdd(
+            parser, 33, first.start, parserPrevious(parser).end,
+            subtreeStart, first.kind);
+    }
+    if (parserMatch(parser, 20)) {
+        var hasValue: u32 = 0;
+        if (parserCheck(parser, 58) == false) {
+            parseExpression(parser, 0);
+            hasValue = 1;
+        }
+        if (parserExpect(parser, 58) == false) { return 0; }
+        return parserAdd(
+            parser, 34, first.start, parserPrevious(parser).end,
+            subtreeStart, hasValue);
+    }
+    if (parserCheck(parser, 52)) { return parseBlock(parser); }
+    parseExpression(parser, 0);
+    if (parserExpect(parser, 58) == false) { return 0; }
+    return parserAdd(
+        parser, 35, first.start, parserPrevious(parser).end,
+        subtreeStart, 0);
+}
+
+fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
+    val subtreeStart = parser.nodes.length;
+    if (parserExpect(parser, 10) == false) { return 0; }
+    if (parserExpect(parser, 1) == false) { return 0; }
+    val functionName = parserPrevious(parser);
+    parserAdd(
+        parser, 45, functionName.start, functionName.end,
+        parser.nodes.length, 0);
+    var typeParameterCount: u32 = 0;
+    if (parserMatch(parser, 66)) {
+        var typeParameters = true;
+        while (typeParameters) {
+            val parameterSubtree = parser.nodes.length;
+            val parameterStart = parserPeek(parser).start;
+            if (parserExpect(parser, 1) == false) { return 0; }
+            val parameterName = parserPrevious(parser);
+            parserAdd(
+                parser, 45, parameterName.start, parameterName.end,
+                parser.nodes.length, 0);
+            var hasConstraint: u32 = 0;
+            if (parserMatch(parser, 57)) {
+                if (parserExpect(parser, 1) == false) { return 0; }
+                val constraint = parserPrevious(parser);
+                parserAdd(
+                    parser, 45, constraint.start, constraint.end,
+                    parser.nodes.length, 0);
+                hasConstraint = 1;
+            }
+            parserAdd(
+                parser, 46, parameterStart, parserPrevious(parser).end,
+                parameterSubtree, hasConstraint);
+            typeParameterCount = typeParameterCount + 1;
+            if (parserMatch(parser, 56) == false) {
+                typeParameters = false;
+            }
+        }
+        if (parserExpect(parser, 67) == false) { return 0; }
+    }
+    if (parserExpect(parser, 50) == false) { return 0; }
+    var parameterCount: u32 = 0;
+    if (parserCheck(parser, 51) == false) {
+        var parameters = true;
+        while (parameters) {
+            val parameterSubtree = parser.nodes.length;
+            val parameterStart = parserPeek(parser).start;
+            var mode: u32 = 0;
+            if (parserMatch(parser, 6)) { mode = 1; }
+            else {
+                if (parserMatch(parser, 7)) { mode = 2; }
+            }
+            if (parserExpect(parser, 1) == false) { return 0; }
+            val parameterName = parserPrevious(parser);
+            parserAdd(
+                parser, 45, parameterName.start, parameterName.end,
+                parser.nodes.length, 0);
+            if (parserExpect(parser, 57) == false) { return 0; }
+            val typeNode = parseType(parser);
+            parserAdd(
+                parser, 40, parameterStart, parser.nodes.data[typeNode].end,
+                parameterSubtree, mode);
+            parameterCount = parameterCount + 1;
+            if (parserMatch(parser, 56) == false) { parameters = false; }
+        }
+    }
+    if (parserExpect(parser, 51) == false) { return 0; }
+    if (parserMatch(parser, 57)) {
+        parseType(parser);
+    } else {
+        parserAdd(
+            parser, 1, parserPrevious(parser).end,
+            parserPrevious(parser).end, parser.nodes.length, 49);
+    }
+    var end: u64 = 0;
+    if (isExtern) {
+        if (parserExpect(parser, 58) == false) { return 0; }
+        end = parserPrevious(parser).end;
+    } else {
+        parseBlock(parser);
+        end = parserPrevious(parser).end;
+    }
+    var aux = parameterCount;
+    if (isExtern) { aux = aux + 65536; }
+    aux = aux + typeParameterCount * 131072;
+    return parserAdd(parser, 41, start, end, subtreeStart, aux);
+}
+
+fn parseStruct(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val start = parserPeek(parser).start;
+    parser.current = parser.current + 1;
+    if (parserExpect(parser, 1) == false) { return 0; }
+    val structName = parserPrevious(parser);
+    parserAdd(
+        parser, 45, structName.start, structName.end,
+        parser.nodes.length, 0);
+    if (parserExpect(parser, 50) == false) { return 0; }
+    var fieldCount: u32 = 0;
+    if (parserCheck(parser, 51) == false) {
+        var fields = true;
+        while (fields) {
+            val fieldSubtree = parser.nodes.length;
+            val fieldStart = parserPeek(parser).start;
+            if (parserExpect(parser, 1) == false) { return 0; }
+            val fieldName = parserPrevious(parser);
+            parserAdd(
+                parser, 45, fieldName.start, fieldName.end,
+                parser.nodes.length, 0);
+            if (parserExpect(parser, 57) == false) { return 0; }
+            val typeNode = parseType(parser);
+            parserAdd(
+                parser, 42, fieldStart, parser.nodes.data[typeNode].end,
+                fieldSubtree, 0);
+            fieldCount = fieldCount + 1;
+            if (parserMatch(parser, 56) == false) { fields = false; }
+        }
+    }
+    if (parserExpect(parser, 51) == false) { return 0; }
+    if (parserMatch(parser, 52)) {
+        if (parserExpect(parser, 53) == false) { return 0; }
+    }
+    return parserAdd(
+        parser, 43, start, parserPrevious(parser).end,
+        subtreeStart, fieldCount);
+}
+
+fn parse(tokens: TokenList): ParseResult {
+    var parser = Parser(tokens, astListNew(), 0, true);
+    val start = parserPeek(parser).start;
+    var declarationCount: u32 = 0;
+    while (parser.ok) {
+        if (parserCheck(parser, 0)) {
+            val end = parserPeek(parser).end;
+            parserAdd(parser, 44, start, end, 0, declarationCount);
+            return ParseResult(parser.nodes, true, 0);
+        }
+        if (parserCheck(parser, 11)) {
+            parseStruct(parser);
+        } else {
+            var isExtern = false;
+            val declarationStart = parserPeek(parser).start;
+            if (parserMatch(parser, 9)) { isExtern = true; }
+            parseFunction(parser, isExtern, declarationStart);
+        }
+        declarationCount = declarationCount + 1;
+    }
+    return ParseResult(
+        parser.nodes, false, parserPeek(parser).start);
+}
