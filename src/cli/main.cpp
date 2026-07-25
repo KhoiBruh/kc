@@ -4,6 +4,7 @@
 #include "lang/AstPrinter.h"
 #include "lang/Diagnostic.h"
 #include "lang/Lexer.h"
+#include "lang/ModuleSystem.h"
 #include "lang/Parser.h"
 #include "lang/Semantic.h"
 #include "lang/Source.h"
@@ -102,46 +103,85 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    auto parsed = k::Parser{source, result.tokens}.parseProgram();
-    if (!parsed.diagnostics.empty()) {
-        for (const auto& diagnostic : parsed.diagnostics) {
-            std::cerr << k::formatDiagnostic(source, diagnostic) << '\n';
+    k::ModuleLoader loader{inputPath};
+    if (!loader.load()) {
+        for (const auto& diagnostic : loader.diagnostics()) {
+            std::cerr << diagnostic.message << '\n';
         }
         return 2;
     }
-
+    std::vector<k::ParsedModule> parsedModules;
+    {
+        auto& rawModules = loader.modules();
+        parsedModules.reserve(rawModules.size());
+        for (auto& module : rawModules) {
+            k::ParsedModule parsed;
+            parsed.source = std::move(module.source);
+            parsed.program = std::move(module.program);
+            parsedModules.push_back(std::move(parsed));
+        }
+    }
+    for (std::size_t i = parsedModules.size(); i > 0; --i) {
+        const auto idx = i - 1;
+        auto& module = parsedModules[idx];
+        if (module.semantic != nullptr) continue;
+        k::SemanticAnalyzer analyzer{*module.source, *module.program};
+        for (std::size_t j = idx + 1; j < parsedModules.size(); ++j) {
+            if (parsedModules[j].semantic == nullptr) {
+                k::SemanticAnalyzer otherAnalyzer{
+                    *parsedModules[j].source,
+                    *parsedModules[j].program};
+                parsedModules[j].semantic =
+                    std::make_unique<k::SemanticResult>(otherAnalyzer.analyze());
+            }
+            analyzer.importExports(*parsedModules[j].semantic);
+        }
+        module.semantic = std::make_unique<k::SemanticResult>(analyzer.analyze());
+    }
     if (outputMode == OutputMode::Ast) {
-        std::cout << k::printAst(source, parsed.program);
+        for (const auto& module : parsedModules) {
+            std::cout << k::printAst(*module.source, *module.program);
+        }
         return 0;
     }
-
-    auto semantic = k::SemanticAnalyzer{source, parsed.program}.analyze();
-    if (!semantic.diagnostics.empty()) {
-        for (const auto& diagnostic : semantic.diagnostics) {
-            std::cerr << k::formatDiagnostic(source, diagnostic) << '\n';
+    bool anyDiagnostics = false;
+    for (const auto& module : parsedModules) {
+        for (const auto& diagnostic : module.semantic->diagnostics) {
+            std::cerr << k::formatDiagnostic(*module.source, diagnostic) << '\n';
+            anyDiagnostics = true;
         }
-        return 2;
     }
+    if (anyDiagnostics) return 2;
     if (outputMode == OutputMode::Check) {
         std::cout << "check succeeded\n";
+        return 0;
     } else if (outputMode == OutputMode::EmitLlvm ||
                outputMode == OutputMode::EmitObject ||
                outputMode == OutputMode::Executable) {
         if (outputMode != OutputMode::EmitLlvm) {
-            const auto mainFunction = semantic.functions.find("main");
-            if (mainFunction == semantic.functions.end() ||
-                !mainFunction->second.parameterTypes.empty() ||
-                mainFunction->second.returnType.kind != k::SemanticTypeKind::I32) {
+            const k::FunctionSymbol* mainSymbol = nullptr;
+            for (const auto& module : parsedModules) {
+                const auto found = module.semantic->functions.find("main");
+                if (found != module.semantic->functions.end() &&
+                    !found->second.declaration->isExtern) {
+                    mainSymbol = &found->second;
+                    break;
+                }
+            }
+            if (mainSymbol == nullptr ||
+                !mainSymbol->parameterTypes.empty() ||
+                mainSymbol->returnType.kind != k::SemanticTypeKind::I32) {
                 std::cerr << "kc: error: native output requires fn main(): i32\n";
                 return 2;
             }
         }
         llvm::LLVMContext context;
         auto generated =
-            k::LlvmCodegen{source, parsed.program, semantic, context}.generate();
+            k::LlvmCodegen{std::move(parsedModules), context}.generate();
         if (!generated.diagnostics.empty()) {
             for (const auto& diagnostic : generated.diagnostics) {
-                std::cerr << k::formatDiagnostic(source, diagnostic) << '\n';
+                k::Source fallback{inputPath.string(), ""};
+                std::cerr << k::formatDiagnostic(fallback, diagnostic) << '\n';
             }
             return 2;
         }

@@ -2,6 +2,7 @@
 
 #include "lang/Ast.h"
 #include "lang/Diagnostic.h"
+#include "lang/ModuleSystem.h"
 #include "lang/Semantic.h"
 
 #include <llvm/IR/Module.h>
@@ -20,20 +21,22 @@ struct CodegenResult {
     std::vector<Diagnostic> diagnostics;
 };
 
+struct ParsedModule {
+    std::unique_ptr<Source> source;
+    std::unique_ptr<Program> program;
+    std::unique_ptr<SemanticResult> semantic;
+};
+
 class LlvmCodegen {
 public:
     LlvmCodegen(
-        const Source& source,
-        const Program& program,
-        const SemanticResult& semantic,
+        std::vector<ParsedModule> modules,
         llvm::LLVMContext& context);
 
     [[nodiscard]] CodegenResult generate();
 
 private:
-    const Source& source_;
-    const Program& program_;
-    const SemanticResult& semantic_;
+    std::vector<ParsedModule> modules_;
     llvm::LLVMContext& context_;
 };
 

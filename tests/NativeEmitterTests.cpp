@@ -16,8 +16,18 @@ TEST(native_emitter_configures_and_writes_host_object) {
     auto parsed = k::Parser{source, lexed.tokens}.parseProgram();
     const auto semantic = k::SemanticAnalyzer{source, parsed.program}.analyze();
     llvm::LLVMContext context;
-    auto generated =
-        k::LlvmCodegen{source, parsed.program, semantic, context}.generate();
+    std::vector<k::ParsedModule> modules;
+    auto programPtr = std::make_unique<k::Program>(std::move(parsed.program));
+    auto semanticPtr =
+        std::make_unique<k::SemanticResult>(std::move(semantic));
+    auto sourcePtr =
+        std::make_unique<k::Source>(std::move(source));
+    k::ParsedModule module;
+    module.source = std::move(sourcePtr);
+    module.program = std::move(programPtr);
+    module.semantic = std::move(semanticPtr);
+    modules.push_back(std::move(module));
+    auto generated = k::LlvmCodegen{std::move(modules), context}.generate();
     k::NativeEmitter emitter;
     const auto output =
         std::filesystem::temp_directory_path() / "klang-native-test.obj";

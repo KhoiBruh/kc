@@ -68,9 +68,31 @@ public:
     Analysis(const Source& source, const Program& program)
         : source_{source}, program_{program} {}
 
+    Analysis(const Source& source, const Program& program,
+             std::unordered_map<std::string, FunctionSymbol> extraFunctions,
+             std::unordered_map<std::string, StructSymbol> extraStructs)
+        : source_{source}, program_{program},
+          extraFunctions_{std::move(extraFunctions)},
+          extraStructs_{std::move(extraStructs)} {}
+
+    void importExports(const SemanticResult& other) {
+        for (const auto& [name, symbol] : other.functions) {
+            extraFunctions_.insert_or_assign(name, symbol);
+        }
+        for (const auto& [name, symbol] : other.structs) {
+            extraStructs_.insert_or_assign(name, symbol);
+        }
+    }
+
     SemanticResult run() {
         if (program_.module) {
             result_.moduleName = spelling(source_, program_.module->name);
+        }
+        for (const auto& [name, symbol] : extraFunctions_) {
+            result_.functions.insert_or_assign(name, symbol);
+        }
+        for (const auto& [name, symbol] : extraStructs_) {
+            result_.structs.insert_or_assign(name, symbol);
         }
         for (const auto& imp : program_.imports) {
             ImportedSymbol symbol;
@@ -98,7 +120,19 @@ public:
                 analyzeFunction(function, found->second);
             }
         }
-        return std::move(result_);
+        for (const auto& imp : program_.imports) {
+            if (imp.isWildcard) continue;
+            const auto symbolName = spelling(source_, imp.path.back());
+            const auto exportFunction = extraFunctions_.find(symbolName);
+            if (exportFunction != extraFunctions_.end()) {
+                result_.functions[exportFunction->first] = exportFunction->second;
+            }
+            const auto exportStruct = extraStructs_.find(symbolName);
+            if (exportStruct != extraStructs_.end()) {
+                result_.structs[exportStruct->first] = exportStruct->second;
+            }
+        }
+        return result_;
     }
 
 private:
@@ -208,7 +242,10 @@ private:
         const auto name = spelling(source_, structure.name);
         const auto found = result_.structs.find(name);
         if (found == result_.structs.end() ||
-            found->second.declaration != &structure) return;
+            found->second.declaration != &structure) {
+            (void)found;
+            return;
+        }
         typeParameters_.clear();
         for (std::size_t i = 0; i < structure.typeParameters.size(); ++i) {
             const auto& syntax = structure.typeParameters[i];
@@ -254,8 +291,15 @@ private:
     void collect(const FunctionDecl& function) {
         const auto name = spelling(source_, function.name);
         if (result_.functions.contains(name)) {
+            if (extraFunctions_.contains(name)) {
+                extraFunctions_.erase(name);
+            }
             diagnose("duplicate function '" + name + "'", function.name);
             return;
+        }
+        const auto extraFunction = extraFunctions_.find(name);
+        if (extraFunction != extraFunctions_.end()) {
+            extraFunctions_.erase(extraFunction);
         }
         typeParameters_.clear();
         std::vector<TypeParameterSymbol> typeParameters;
@@ -323,6 +367,7 @@ private:
         if (currentReturn_.kind != SemanticTypeKind::Unit && !terminates)
             diagnose("non-unit function may reach the end without returning", function.name);
         typeParameters_.clear();
+        (void)symbol;
     }
 
     bool analyzeBlock(const BlockStmt& block, bool nested) {
@@ -441,10 +486,10 @@ private:
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
             if (const auto* variable = findVariable(name)) type = variable->type;
-            else {
-                diagnose(result_.functions.contains(name)
-                    ? "functions cannot be used as values yet"
-                    : "unknown identifier '" + name + "'", identifier->name);
+            else if (result_.functions.contains(name)) {
+                type = result_.functions.find(name)->second.returnType;
+            } else {
+                diagnose("unknown identifier '" + name + "'", identifier->name);
             }
         } else if (const auto* literal = std::get_if<LiteralExpr>(&expression.node)) {
             type = literalType(*literal, expected);
@@ -872,7 +917,7 @@ private:
             result_.resolvedCalls.emplace(
                 &call,
                 ResolvedCall{
-                    &symbol, typeArguments, parameterTypes, returnType});
+                    symbol.declaration, typeArguments, parameterTypes, returnType});
             result_.expressionTypes[call.callee.get()] = returnType;
             if (inferenceOk && typeParameters_.empty()) {
                 const SpecializationKey key{
@@ -1139,6 +1184,8 @@ private:
     const Source& source_;
     const Program& program_;
     SemanticResult result_;
+    std::unordered_map<std::string, FunctionSymbol> extraFunctions_;
+    std::unordered_map<std::string, StructSymbol> extraStructs_;
     std::vector<std::unordered_map<std::string, VariableSymbol>> scopes_;
     std::unordered_map<std::string, TypeParameterSymbol> typeParameters_;
     SemanticType currentReturn_;
@@ -1150,7 +1197,18 @@ SemanticAnalyzer::SemanticAnalyzer(const Source& source, const Program& program)
     : source_{source}, program_{program} {}
 
 SemanticResult SemanticAnalyzer::analyze() {
-    return Analysis{source_, program_}.run();
+    return Analysis{source_, program_,
+                    std::move(extraFunctions_),
+                    std::move(extraStructs_)}.run();
+}
+
+void SemanticAnalyzer::importExports(const SemanticResult& other) {
+    for (const auto& [name, symbol] : other.functions) {
+        extraFunctions_.insert_or_assign(name, symbol);
+    }
+    for (const auto& [name, symbol] : other.structs) {
+        extraStructs_.insert_or_assign(name, symbol);
+    }
 }
 
 }

@@ -18,6 +18,7 @@ add_library(k_frontend STATIC
     src/lang/AstPrinter.cpp
     src/lang/Diagnostic.cpp
     src/lang/Lexer.cpp
+    src/lang/ModuleSystem.cpp
     src/lang/Parser.cpp
     src/lang/Semantic.cpp
     src/lang/SemanticType.cpp
@@ -100,6 +101,7 @@ if(BUILD_TESTING)
     target_include_directories(k_codegen_tests PRIVATE ${LLVM_INCLUDE_DIRS})
     target_link_libraries(k_codegen_tests PRIVATE k_codegen)
     add_test(NAME k_codegen_tests COMMAND k_codegen_tests)
+
 
     add_executable(k_native_tests tests/NativeEmitterTests.cpp)
     target_include_directories(k_native_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")

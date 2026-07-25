@@ -156,6 +156,10 @@ std::optional<ModuleDecl> Parser::parseModule() {
     const auto start = advance().span;
     if (!expect(TokenKind::Identifier, "expected module name")) return std::nullopt;
     const auto name = previous().span;
+    while (match(TokenKind::Dot)) {
+        if (!expect(TokenKind::Identifier, "expected module component after '.'"))
+            return std::nullopt;
+    }
     if (!expect(TokenKind::Semicolon, "expected ';' after module declaration"))
         return std::nullopt;
     const auto end = previous().span;

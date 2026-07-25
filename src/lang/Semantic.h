@@ -41,7 +41,7 @@ struct SpecializationKey {
 };
 
 struct ResolvedCall {
-    const FunctionSymbol* function = nullptr;
+    const FunctionDecl* declaration = nullptr;
     std::vector<SemanticType> typeArguments;
     std::vector<SemanticType> parameterTypes;
     SemanticType returnType;
@@ -89,10 +89,13 @@ class SemanticAnalyzer {
 public:
     SemanticAnalyzer(const Source& source, const Program& program);
     [[nodiscard]] SemanticResult analyze();
+    void importExports(const SemanticResult& other);
 
 private:
     const Source& source_;
     const Program& program_;
+    std::unordered_map<std::string, FunctionSymbol> extraFunctions_;
+    std::unordered_map<std::string, StructSymbol> extraStructs_;
 };
 
 }

@@ -18,8 +18,16 @@ std::string generateIr(std::string text, std::vector<k::Diagnostic>& diagnostics
     auto parsed = k::Parser{source, lexed.tokens}.parseProgram();
     const auto semantic = k::SemanticAnalyzer{source, parsed.program}.analyze();
     llvm::LLVMContext context;
-    auto generated =
-        k::LlvmCodegen{source, parsed.program, semantic, context}.generate();
+    std::vector<k::ParsedModule> modules;
+    auto programPtr = std::make_unique<k::Program>(std::move(parsed.program));
+    auto semanticPtr = std::make_unique<k::SemanticResult>(std::move(semantic));
+    auto sourcePtr = std::make_unique<k::Source>(std::move(source));
+    k::ParsedModule module;
+    module.source = std::move(sourcePtr);
+    module.program = std::move(programPtr);
+    module.semantic = std::move(semanticPtr);
+    modules.push_back(std::move(module));
+    auto generated = k::LlvmCodegen{std::move(modules), context}.generate();
     diagnostics = std::move(generated.diagnostics);
     std::string ir;
     llvm::raw_string_ostream output{ir};
@@ -35,9 +43,17 @@ TEST(codegen_creates_a_verified_module) {
     auto parsed = k::Parser{source, lexed.tokens}.parseProgram();
     const auto semantic = k::SemanticAnalyzer{source, parsed.program}.analyze();
     llvm::LLVMContext context;
+    std::vector<k::ParsedModule> modules;
+    auto programPtr = std::make_unique<k::Program>(std::move(parsed.program));
+    auto semanticPtr = std::make_unique<k::SemanticResult>(std::move(semantic));
+    auto sourcePtr = std::make_unique<k::Source>(std::move(source));
+    k::ParsedModule module;
+    module.source = std::move(sourcePtr);
+    module.program = std::move(programPtr);
+    module.semantic = std::move(semanticPtr);
+    modules.push_back(std::move(module));
 
-    auto generated =
-        k::LlvmCodegen{source, parsed.program, semantic, context}.generate();
+    auto generated = k::LlvmCodegen{std::move(modules), context}.generate();
 
     EXPECT_TRUE(generated.diagnostics.empty());
     EXPECT_TRUE(generated.module != nullptr);

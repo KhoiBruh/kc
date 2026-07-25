@@ -24,29 +24,41 @@ std::string spelling(const Source& source, SourceSpan span) {
 
 class Generator {
 public:
+    const Source& source() const { return *current_->source; }
+    const SemanticResult& semantic() const { return *current_->semantic; }
+    const Program& program() const { return *current_->program; }
     Generator(
-        const Source& source,
-        const Program& program,
-        const SemanticResult& semantic,
+        std::vector<ParsedModule> modules,
         llvm::LLVMContext& context)
-        : source_{source},
-          program_{program},
-          semantic_{semantic},
+        : modules_{std::move(modules)},
           context_{context},
           builder_{context} {
+        const auto& entry = modules_.back();
         result_.module = std::make_unique<llvm::Module>(
-            std::string{source.path()}, context);
+            std::string{entry.source->path()}, context_);
     }
 
     CodegenResult run() {
-        declareStructs();
-        declareFunctions();
-        for (const auto& specialization :
-             semantic_.requestedSpecializations)
-            getOrDeclareSpecialization(specialization);
+        for (auto& module : modules_) {
+            current_ = &module;
+            declareStructs();
+        }
+        for (auto& module : modules_) {
+            current_ = &module;
+            declareFunctions();
+        }
+        for (auto& module : modules_) {
+            current_ = &module;
+            for (const auto& specialization :
+                 current_->semantic->requestedSpecializations)
+                getOrDeclareSpecialization(specialization);
+        }
         if (result_.diagnostics.empty()) {
-            for (const auto& function : program_.functions)
-                emitFunction(function);
+            for (auto& module : modules_) {
+                current_ = &module;
+                for (const auto& function : current_->program->functions)
+                    emitFunction(function);
+            }
             std::size_t next = 0;
             while (next < pendingSpecializations_.size()) {
                 const auto item = pendingSpecializations_[next++];
@@ -134,13 +146,13 @@ private:
     }
 
     void declareStructs() {
-        for (const auto& structure : program_.structs) {
+        for (const auto& structure : current_->program->structs) {
             if (!structure.typeParameters.empty()) continue;
-            const auto name = spelling(source_, structure.name);
+            const auto name = spelling(source(), structure.name);
             structs_.emplace(
                 name, llvm::StructType::create(context_, name));
         }
-        for (const auto& [name, symbol] : semantic_.structs) {
+        for (const auto& [name, symbol] : current_->semantic->structs) {
             const auto found = structs_.find(name);
             if (found == structs_.end()) continue;
             std::vector<llvm::Type*> fields;
@@ -169,8 +181,8 @@ private:
         if (const auto found = specializedStructs_.find(key);
             found != specializedStructs_.end())
             return found->second;
-        const auto symbol = semantic_.structs.find(type.name);
-        if (symbol == semantic_.structs.end()) {
+        const auto symbol = semantic().structs.find(type.name);
+        if (symbol == semantic().structs.end()) {
             diagnose("unknown struct during LLVM codegen", span);
             return nullptr;
         }
@@ -190,11 +202,11 @@ private:
     }
 
     void declareFunctions() {
-        for (const auto& function : program_.functions) {
+        for (const auto& function : current_->program->functions) {
             if (!function.typeParameters.empty()) continue;
-            const auto name = spelling(source_, function.name);
-            const auto symbol = semantic_.functions.find(name);
-            if (symbol == semantic_.functions.end()) continue;
+            const auto name = spelling(source(), function.name);
+            const auto symbol = current_->semantic->functions.find(name);
+            if (symbol == current_->semantic->functions.end()) continue;
             std::vector<llvm::Type*> parameters;
             for (std::size_t i = 0; i < symbol->second.parameterTypes.size(); ++i) {
                 auto* type = lowerType(
@@ -264,18 +276,32 @@ private:
             hash ^= 0xff;
             hash *= 1099511628211ULL;
         }
-        return spelling(source_, declaration.name) +
+        const Source* ownerSource = nullptr;
+        for (const auto& module : modules_) {
+            const auto found = module.semantic->functions.find(
+                spelling(*module.source, declaration.name));
+            if (found != module.semantic->functions.end() &&
+                found->second.declaration == &declaration) {
+                ownerSource = module.source.get();
+                break;
+            }
+        }
+        if (ownerSource == nullptr) ownerSource = &source();
+        return spelling(*ownerSource, declaration.name) +
             "__g" + std::to_string(hash);
     }
 
     const FunctionSymbol* functionSymbol(
         const FunctionDecl& declaration) const {
-        const auto found = semantic_.functions.find(
-            spelling(source_, declaration.name));
-        if (found == semantic_.functions.end() ||
-            found->second.declaration != &declaration)
-            return nullptr;
-        return &found->second;
+        for (const auto& module : modules_) {
+            const auto found = module.semantic->functions.find(
+                spelling(*module.source, declaration.name));
+            if (found != module.semantic->functions.end() &&
+                found->second.declaration == &declaration) {
+                return &found->second;
+            }
+        }
+        return nullptr;
     }
 
     llvm::Function* getOrDeclareSpecialization(
@@ -333,6 +359,20 @@ private:
         if (declaration.isExtern || !function->empty()) return;
         const auto outerTypeArguments = activeTypeArguments_;
         activeTypeArguments_ = std::move(typeArguments);
+        ParsedModule* outerCurrent = current_;
+        const Source* ownerSource = nullptr;
+        for (const auto& module : modules_) {
+            const auto found = module.semantic->functions.find(
+                spelling(*module.source, declaration.name));
+            if (found != module.semantic->functions.end() &&
+                found->second.declaration == &declaration) {
+                current_ = const_cast<ParsedModule*>(&module);
+                ownerSource = module.source.get();
+                break;
+            }
+        }
+        if (ownerSource == nullptr) ownerSource = &source();
+        const auto& owner = *ownerSource;
         auto* entry = llvm::BasicBlock::Create(context_, "entry", function);
         builder_.SetInsertPoint(entry);
         locals_.clear();
@@ -340,11 +380,11 @@ private:
         std::size_t parameterIndex = 0;
         for (auto& argument : function->args()) {
             const auto& parameter = declaration.parameters[parameterIndex];
-            const auto name = spelling(source_, parameter.name);
+            const auto name = spelling(owner, parameter.name);
             argument.setName(name);
             if (parameter.mode == ParameterMode::MutableBorrow) {
-                const auto symbol = semantic_.functions.find(
-                    spelling(source_, declaration.name));
+                const auto symbol = current_->semantic->functions.find(
+                    spelling(owner, declaration.name));
                 auto* valueType = lowerType(
                     symbol->second.parameterTypes[parameterIndex],
                     parameter.type->span);
@@ -369,6 +409,7 @@ private:
             builder_.CreateRetVoid();
         }
         activeTypeArguments_ = outerTypeArguments;
+        current_ = outerCurrent;
     }
 
     llvm::AllocaInst* createEntryAlloca(
@@ -395,12 +436,12 @@ private:
         }
         if (const auto* variable = std::get_if<VariableDecl>(&statement.node)) {
             llvm::Value* value = nullptr;
-            const auto declared = semantic_.declarationTypes.find(variable);
+            const auto declared = semantic().declarationTypes.find(variable);
             const auto initializerType =
-                semantic_.expressionTypes.find(variable->initializer.get());
-            if (declared != semantic_.declarationTypes.end() &&
+                semantic().expressionTypes.find(variable->initializer.get());
+            if (declared != semantic().declarationTypes.end() &&
                 declared->second.kind == SemanticTypeKind::Slice &&
-                initializerType != semantic_.expressionTypes.end() &&
+                initializerType != semantic().expressionTypes.end() &&
                 initializerType->second.kind == SemanticTypeKind::Array) {
                 value = emitArrayToSlice(
                     *variable->initializer, declared->second);
@@ -408,7 +449,7 @@ private:
                 value = emitExpr(*variable->initializer);
             }
             if (!value) return;
-            const auto name = spelling(source_, variable->name);
+            const auto name = spelling(source(), variable->name);
             auto* slot = createEntryAlloca(
                 *builder_.GetInsertBlock()->getParent(), value->getType(), name);
             builder_.CreateStore(value, slot);
@@ -419,9 +460,9 @@ private:
             if (returnStatement->value) {
                 if (auto* value = emitExpr(*returnStatement->value)) {
                     const auto conversion =
-                        semantic_.implicitConversions.find(
+                        semantic().implicitConversions.find(
                             returnStatement->value.get());
-                    if (conversion != semantic_.implicitConversions.end())
+                    if (conversion != semantic().implicitConversions.end())
                         value = liftNullable(
                             value, conversion->second,
                             returnStatement->value->span);
@@ -500,16 +541,16 @@ private:
     }
 
     llvm::Value* emitExpr(const Expr& expression) {
-        const auto typeFound = semantic_.expressionTypes.find(&expression);
-        if (typeFound == semantic_.expressionTypes.end()) {
+        const auto typeFound = semantic().expressionTypes.find(&expression);
+        if (typeFound == semantic().expressionTypes.end()) {
             diagnose("expression has no semantic type", expression.span);
             return nullptr;
         }
         const auto semanticType =
             substituteActive(typeFound->second);
         if (std::holds_alternative<SizeofExpr>(expression.node)) {
-            const auto sized = semantic_.sizeofTypes.find(&expression);
-            if (sized == semantic_.sizeofTypes.end()) return nullptr;
+            const auto sized = semantic().sizeofTypes.find(&expression);
+            if (sized == semantic().sizeofTypes.end()) return nullptr;
             auto* type = lowerType(sized->second, expression.span);
             if (!type) return nullptr;
             return llvm::ConstantExpr::getSizeOf(type);
@@ -528,12 +569,12 @@ private:
         }
         if (const auto* cast = std::get_if<CastExpr>(&expression.node)) {
             const auto sourceType =
-                semantic_.expressionTypes.find(cast->value.get());
-            if (sourceType != semantic_.expressionTypes.end() &&
+                semantic().expressionTypes.find(cast->value.get());
+            if (sourceType != semantic().expressionTypes.end() &&
                 sourceType->second.kind == SemanticTypeKind::Pointer &&
                 semanticType.kind == SemanticTypeKind::Pointer)
                 return emitExpr(*cast->value);
-            if (sourceType != semantic_.expressionTypes.end() &&
+            if (sourceType != semantic().expressionTypes.end() &&
                 isInteger(sourceType->second) && isInteger(semanticType)) {
                 auto* value = emitExpr(*cast->value);
                 if (!value) return nullptr;
@@ -555,18 +596,18 @@ private:
         }
         if (const auto* call = std::get_if<CallExpr>(&expression.node)) {
             const auto* callee = std::get_if<IdentifierExpr>(&call->callee->node);
-            if (callee && spelling(source_, callee->name) == "print" &&
+            if (callee && spelling(source(), callee->name) == "print" &&
                 call->arguments.size() == 1) {
                 const auto& argument = *call->arguments.front();
-                const auto argumentType = semantic_.expressionTypes.find(&argument);
-                if (argumentType != semantic_.expressionTypes.end() &&
+                const auto argumentType = semantic().expressionTypes.find(&argument);
+                if (argumentType != semantic().expressionTypes.end() &&
                     argumentType->second.kind == SemanticTypeKind::String) {
                     const auto* literal = std::get_if<LiteralExpr>(&argument.node);
                     if (!literal) {
                         diagnose("print string currently requires a literal", argument.span);
                         return nullptr;
                     }
-                    auto text = spelling(source_, literal->spelling);
+                    auto text = spelling(source(), literal->spelling);
                     text = text.substr(1, text.size() - 2);
                     auto* pointer = builder_.CreateGlobalString(text);
                     auto function = result_.module->getOrInsertFunction(
@@ -588,12 +629,12 @@ private:
                 return builder_.CreateCall(function, {value});
             }
             if (callee) {
-                const auto name = spelling(source_, callee->name);
+                const auto name = spelling(source(), callee->name);
                 if (const auto resolved =
-                        semantic_.resolvedCalls.find(call);
-                    resolved != semantic_.resolvedCalls.end() &&
-                    resolved->second.function &&
-                    !resolved->second.function->typeParameters.empty()) {
+                        semantic().resolvedCalls.find(call);
+                    resolved != semantic().resolvedCalls.end() &&
+                    resolved->second.declaration &&
+                    !resolved->second.declaration->typeParameters.empty()) {
                     std::vector<SemanticType> concreteArguments;
                     concreteArguments.reserve(
                         resolved->second.typeArguments.size());
@@ -603,7 +644,7 @@ private:
                             substituteActive(argument));
                     auto* target = getOrDeclareSpecialization(
                         SpecializationKey{
-                            resolved->second.function->declaration,
+                            resolved->second.declaration,
                             concreteArguments});
                     if (!target) return nullptr;
                     std::vector<llvm::Value*> arguments;
@@ -611,9 +652,9 @@ private:
                     for (std::size_t i = 0;
                          i < call->arguments.size(); ++i) {
                         llvm::Value* value = nullptr;
-                        if (i < resolved->second.function->declaration
+                        if (i < resolved->second.declaration
                                     ->parameters.size() &&
-                            resolved->second.function->declaration
+                            resolved->second.declaration
                                     ->parameters[i].mode ==
                                 ParameterMode::MutableBorrow) {
                             const auto* identifier =
@@ -622,7 +663,7 @@ private:
                             if (identifier) {
                                 const auto local = locals_.find(
                                     spelling(
-                                        source_,
+                                        source(),
                                         identifier->name));
                                 if (local != locals_.end())
                                     value = local->second.address;
@@ -635,8 +676,8 @@ private:
                     }
                     return builder_.CreateCall(target, arguments);
                 }
-                if (const auto structure = semantic_.structs.find(name);
-                    structure != semantic_.structs.end()) {
+                if (const auto structure = semantic().structs.find(name);
+                    structure != semantic().structs.end()) {
                     auto* llvmStructure = lowerType(
                         semanticType, expression.span);
                     if (!llvmStructure) return nullptr;
@@ -657,10 +698,10 @@ private:
                 }
                 std::vector<llvm::Value*> arguments;
                 arguments.reserve(call->arguments.size());
-                const auto semanticFunction = semantic_.functions.find(name);
+                const auto semanticFunction = semantic().functions.find(name);
                 for (std::size_t i = 0; i < call->arguments.size(); ++i) {
                     llvm::Value* value = nullptr;
-                    if (semanticFunction != semantic_.functions.end() &&
+                    if (semanticFunction != semantic().functions.end() &&
                         i < semanticFunction->second.declaration->parameters.size() &&
                         semanticFunction->second.declaration->parameters[i].mode ==
                             ParameterMode::MutableBorrow) {
@@ -669,7 +710,7 @@ private:
                                 &call->arguments[i]->node);
                         if (identifier) {
                             const auto local = locals_.find(
-                                spelling(source_, identifier->name));
+                                spelling(source(), identifier->name));
                             if (local != locals_.end())
                                 value = local->second.address;
                         }
@@ -691,7 +732,7 @@ private:
                 return builder_.CreateInsertValue(
                     value, builder_.getFalse(), 0);
             }
-            auto text = spelling(source_, literal->spelling);
+            auto text = spelling(source(), literal->spelling);
             if (semanticType.kind == SemanticTypeKind::Bool)
                 return llvm::ConstantInt::get(
                     type, literal->kind == TokenKind::KwTrue);
@@ -709,7 +750,7 @@ private:
                 return llvm::ConstantFP::get(type, std::stod(text));
         }
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
-            const auto name = spelling(source_, identifier->name);
+            const auto name = spelling(source(), identifier->name);
             const auto found = locals_.find(name);
             if (found == locals_.end()) {
                 diagnose("unknown local during LLVM codegen", identifier->name);
@@ -721,16 +762,16 @@ private:
         }
         if (const auto* member = std::get_if<MemberExpr>(&expression.node)) {
             const auto objectType =
-                semantic_.expressionTypes.find(member->object.get());
-            if (objectType == semantic_.expressionTypes.end() ||
+                semantic().expressionTypes.find(member->object.get());
+            if (objectType == semantic().expressionTypes.end() ||
                 objectType->second.kind != SemanticTypeKind::Struct) {
                 diagnose("member object has no struct type during LLVM codegen",
                          member->object->span);
                 return nullptr;
             }
-            const auto structure = semantic_.structs.find(objectType->second.name);
-            if (structure == semantic_.structs.end()) return nullptr;
-            const auto fieldName = spelling(source_, member->name);
+            const auto structure = semantic().structs.find(objectType->second.name);
+            if (structure == semantic().structs.end()) return nullptr;
+            const auto fieldName = spelling(source(), member->name);
             const auto field = std::find_if(
                 structure->second.fields.begin(), structure->second.fields.end(),
                 [&](const StructFieldSymbol& candidate) {
@@ -768,19 +809,19 @@ private:
                              member->object->span);
                     return nullptr;
                 }
-                const auto localName = spelling(source_, object->name);
+                const auto localName = spelling(source(), object->name);
                 const auto local = locals_.find(localName);
                 if (local == locals_.end()) return nullptr;
                 const auto objectType =
-                    semantic_.expressionTypes.find(member->object.get());
-                if (objectType == semantic_.expressionTypes.end()) return nullptr;
+                    semantic().expressionTypes.find(member->object.get());
+                if (objectType == semantic().expressionTypes.end()) return nullptr;
                 const auto structure =
-                    semantic_.structs.find(objectType->second.name);
-                if (structure == semantic_.structs.end()) return nullptr;
+                    semantic().structs.find(objectType->second.name);
+                if (structure == semantic().structs.end()) return nullptr;
                 auto* llvmStructure = lowerType(
                     objectType->second, member->object->span);
                 if (!llvmStructure) return nullptr;
-                const auto fieldName = spelling(source_, member->name);
+                const auto fieldName = spelling(source(), member->name);
                 const auto field = std::find_if(
                     structure->second.fields.begin(),
                     structure->second.fields.end(),
@@ -811,7 +852,7 @@ private:
                          assignment->target->span);
                 return nullptr;
             }
-            const auto name = spelling(source_, target->name);
+            const auto name = spelling(source(), target->name);
             const auto found = locals_.find(name);
             if (found == locals_.end()) {
                 diagnose("unknown local during LLVM codegen", target->name);
@@ -827,9 +868,9 @@ private:
             auto* right = emitExpr(*binary->right);
             if (!left || !right) return nullptr;
             const auto operandType =
-                semantic_.expressionTypes.find(binary->left.get());
+                semantic().expressionTypes.find(binary->left.get());
             const auto operationType =
-                operandType == semantic_.expressionTypes.end()
+                operandType == semantic().expressionTypes.end()
                 ? semanticType
                 : substituteActive(operandType->second);
             const bool floating = isFloat(operationType);
@@ -918,7 +959,7 @@ private:
                     std::get_if<IdentifierExpr>(&unary->operand->node);
                 if (!identifier) return nullptr;
                 const auto local = locals_.find(
-                    spelling(source_, identifier->name));
+                    spelling(source(), identifier->name));
                 return local == locals_.end()
                     ? nullptr : local->second.address;
             }
@@ -939,8 +980,8 @@ private:
     }
 
     llvm::Value* emitIndexPointer(const IndexExpr& index) {
-        const auto type = semantic_.expressionTypes.find(index.object.get());
-        if (type == semantic_.expressionTypes.end()) {
+        const auto type = semantic().expressionTypes.find(index.object.get());
+        if (type == semantic().expressionTypes.end()) {
             diagnose("indexed value has no semantic type", index.object->span);
             return nullptr;
         }
@@ -959,7 +1000,7 @@ private:
                      index.object->span);
             return nullptr;
         }
-        const auto name = spelling(source_, object->name);
+        const auto name = spelling(source(), object->name);
         const auto local = locals_.find(name);
         if (local == locals_.end()) return nullptr;
         if (type->second.kind == SemanticTypeKind::Slice) {
@@ -1013,11 +1054,11 @@ private:
             return nullptr;
         }
         const auto local =
-            locals_.find(spelling(source_, identifier->name));
+            locals_.find(spelling(source(), identifier->name));
         const auto arraySemantic =
-            semantic_.expressionTypes.find(&expression);
+            semantic().expressionTypes.find(&expression);
         if (local == locals_.end() ||
-            arraySemantic == semantic_.expressionTypes.end()) return nullptr;
+            arraySemantic == semantic().expressionTypes.end()) return nullptr;
         auto* arrayType = llvm::cast<llvm::ArrayType>(
             lowerType(arraySemantic->second, expression.span));
         auto* data = builder_.CreateInBoundsGEP(
@@ -1075,16 +1116,15 @@ private:
         std::string message;
         llvm::raw_string_ostream output{message};
         if (llvm::verifyModule(*result_.module, &output))
-            diagnose("LLVM verification failed: " + output.str(), program_.span);
+            diagnose("LLVM verification failed: " + output.str(), current_->program->span);
     }
 
     void diagnose(std::string message, SourceSpan span) {
         result_.diagnostics.push_back({std::move(message), span});
     }
 
-    const Source& source_;
-    const Program& program_;
-    const SemanticResult& semantic_;
+    std::vector<ParsedModule> modules_;
+    ParsedModule* current_ = nullptr;
     llvm::LLVMContext& context_;
     llvm::IRBuilder<> builder_;
     CodegenResult result_;
@@ -1102,14 +1142,13 @@ private:
 }
 
 LlvmCodegen::LlvmCodegen(
-    const Source& source,
-    const Program& program,
-    const SemanticResult& semantic,
+    std::vector<ParsedModule> modules,
     llvm::LLVMContext& context)
-    : source_{source}, program_{program}, semantic_{semantic}, context_{context} {}
+    : modules_{std::move(modules)}, context_{context} {}
 
 CodegenResult LlvmCodegen::generate() {
-    return Generator{source_, program_, semantic_, context_}.run();
+    if (modules_.empty()) return {};
+    return Generator{std::move(modules_), context_}.run();
 }
 
 }
