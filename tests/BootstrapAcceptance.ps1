@@ -71,7 +71,8 @@ $kc3 = Build-Stage $kc2 $stage3 "kc3"
 
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
-    "generics.k", "generics_multiple.k", "generic_nullable.k"
+    "generics.k", "generics_multiple.k", "generic_nullable.k",
+    "generic_structs.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName

@@ -191,6 +191,7 @@ if(BUILD_TESTING)
             -GenericsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generics.k"
             -MultipleGenericsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generics_multiple.k"
             -GenericNullableFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generic_nullable.k"
+            -GenericStructsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generic_structs.k"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-codegen-test.exe"
     )
 

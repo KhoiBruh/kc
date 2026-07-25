@@ -39,6 +39,9 @@ param(
     [string]$GenericNullableFixture,
 
     [Parameter(Mandatory)]
+    [string]$GenericStructsFixture,
+
+    [Parameter(Mandatory)]
     [string]$Output
 )
 
@@ -198,4 +201,24 @@ if ($LASTEXITCODE -ne 0) { Write-Error "kc0 failed to compile generic nullable f
 & $expectedNullableExe
 if ($LASTEXITCODE -ne $actualNullableExit) {
     Write-Error "Generic nullable fixture behavior differs from kc0"
+}
+
+$structsIr = "$Output.generic-structs.ll"
+$structsExe = "$Output.generic-structs.exe"
+& $Output $GenericStructsFixture $structsIr $Opt $Clang $StdRuntime $BootstrapRuntime $structsExe
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Bootstrap compiler failed to compile generic structs fixture"
+}
+& $Opt -passes=verify -disable-output $structsIr
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Bootstrap compiler emitted invalid generic structs LLVM IR"
+}
+& $structsExe
+$actualStructsExit = $LASTEXITCODE
+$expectedStructsExe = "$Output.generic-structs.kc0.exe"
+& $Compiler $GenericStructsFixture -o $expectedStructsExe
+if ($LASTEXITCODE -ne 0) { Write-Error "kc0 failed to compile generic structs fixture" }
+& $expectedStructsExe
+if ($LASTEXITCODE -ne $actualStructsExit) {
+    Write-Error "Generic structs fixture behavior differs from kc0"
 }

@@ -66,13 +66,27 @@ fn parseType(var parser: Parser): u64 {
         parser.ok = false;
         return 0;
     }
+    val typeToken = first;
     parser.current = parser.current + 1;
+    var typeArgumentCount: u32 = 0;
+    if (parserMatch(parser, 66)) {
+        var typeArguments = true;
+        while (typeArguments) {
+            parseType(parser);
+            typeArgumentCount = typeArgumentCount + 1;
+            if (parserMatch(parser, 56) == false) {
+                typeArguments = false;
+            }
+        }
+        if (parserExpect(parser, 67) == false) { return 0; }
+    }
+    var end = parserPrevious(parser).end;
     var root = parserAdd(
-        parser, 1, first.start, first.end, subtreeStart, first.kind);
-    var end = first.end;
+        parser, 1, typeToken.start, typeToken.end, subtreeStart,
+        typeToken.kind + typeArgumentCount * 256);
     while (parserMatch(parser, 62)) {
         end = parserPrevious(parser).end;
-        root = parserAdd(parser, 2, first.start, end, subtreeStart, 0);
+        root = parserAdd(parser, 2, typeToken.start, end, subtreeStart, 0);
     }
     if (parserMatch(parser, 72)) {
         if (parser.nodes.data[root].kind == 3) {
@@ -80,7 +94,7 @@ fn parseType(var parser: Parser): u64 {
             return 0;
         }
         end = parserPrevious(parser).end;
-        root = parserAdd(parser, 3, first.start, end, subtreeStart, 0);
+        root = parserAdd(parser, 3, typeToken.start, end, subtreeStart, 0);
     }
     return root;
 }
@@ -532,6 +546,36 @@ fn parseStruct(var parser: Parser): u64 {
     parserAdd(
         parser, 45, structName.start, structName.end,
         parser.nodes.length, 0);
+    var typeParameterCount: u32 = 0;
+    if (parserMatch(parser, 66)) {
+        var typeParameters = true;
+        while (typeParameters) {
+            val parameterSubtree = parser.nodes.length;
+            val parameterStart = parserPeek(parser).start;
+            if (parserExpect(parser, 1) == false) { return 0; }
+            val parameterName = parserPrevious(parser);
+            parserAdd(
+                parser, 45, parameterName.start, parameterName.end,
+                parser.nodes.length, 0);
+            var hasConstraint: u32 = 0;
+            if (parserMatch(parser, 57)) {
+                if (parserExpect(parser, 1) == false) { return 0; }
+                val constraint = parserPrevious(parser);
+                parserAdd(
+                    parser, 45, constraint.start, constraint.end,
+                    parser.nodes.length, 0);
+                hasConstraint = 1;
+            }
+            parserAdd(
+                parser, 46, parameterStart, parserPrevious(parser).end,
+                parameterSubtree, hasConstraint);
+            typeParameterCount = typeParameterCount + 1;
+            if (parserMatch(parser, 56) == false) {
+                typeParameters = false;
+            }
+        }
+        if (parserExpect(parser, 67) == false) { return 0; }
+    }
     if (parserExpect(parser, 50) == false) { return 0; }
     var fieldCount: u32 = 0;
     if (parserCheck(parser, 51) == false) {
@@ -559,7 +603,7 @@ fn parseStruct(var parser: Parser): u64 {
     }
     return parserAdd(
         parser, 43, start, parserPrevious(parser).end,
-        subtreeStart, fieldCount);
+        subtreeStart, fieldCount + typeParameterCount * 65536);
 }
 
 fn parse(tokens: TokenList): ParseResult {

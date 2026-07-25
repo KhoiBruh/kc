@@ -37,18 +37,36 @@ fn unitType(): TypeValue { return TypeValue(1, 0, 0); }
 fn boolType(): TypeValue { return TypeValue(2, 0, 0); }
 fn integerLiteralType(): TypeValue { return TypeValue(11, 0, 0); }
 
-fn typeEquals(left: TypeValue, right: TypeValue): bool {
+fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList): bool {
     if (left.kind != right.kind) { return false; }
     if (left.name != right.name) { return false; }
+    if (left.kind == 8) {
+        val leftCount = left.pointee / 65536;
+        val rightCount = right.pointee / 65536;
+        if (leftCount != rightCount) { return false; }
+        if (leftCount == 0) { return true; }
+        val leftStart = left.pointee % 65536;
+        val rightStart = right.pointee % 65536;
+        var index: u32 = 0;
+        while (index < leftCount) {
+            val leftArg = genericArguments.data[leftStart as u64 + index as u64];
+            val rightArg = genericArguments.data[rightStart as u64 + index as u64];
+            if (typeEquals(leftArg, rightArg, genericArguments) == false) {
+                return false;
+            }
+            index = index + 1;
+        }
+        return true;
+    }
     return left.pointee == right.pointee;
 }
 
-fn typeAccepts(expected: TypeValue, actual: TypeValue): bool {
-    if (typeEquals(expected, actual)) { return true; }
+fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeValueList): bool {
+    if (typeEquals(expected, actual, genericArguments)) { return true; }
     if (expected.kind == 15) {
         if (actual.kind == 16) { return true; }
         return typeEquals(
-            TypeValue(expected.pointee, expected.name, 0), actual);
+            TypeValue(expected.pointee, expected.name, 0), actual, genericArguments);
     }
     if (actual.kind == 11) {
         if (expected.kind >= 3) {

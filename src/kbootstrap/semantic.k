@@ -8,7 +8,8 @@ struct Semantic(
     result: SemanticResult,
     returnType: TypeValue,
     scopeStart: u64,
-    currentFunction: u64)
+    currentFunction: u64,
+    currentStruct: u64)
 
 fn sourceHash(source: Source, start: u64, end: u64): u64 {
     var value: u64 = 5381;
@@ -102,32 +103,164 @@ fn functionTypeParameterRoot(
     return root;
 }
 
-fn findCurrentTypeParameter(
-    semantic: Semantic, name: u64): TypeValue {
-    if (semantic.currentFunction >= semantic.nodes.length) {
-        return invalidType();
+fn structTypeParameterCount(structure: AstNode): u32 {
+    return structure.aux / 65536;
+}
+
+fn structFieldCount(structure: AstNode): u32 {
+    return structure.aux % 65536;
+}
+
+fn structTypeParameterRoot(
+    semantic: Semantic, structureRoot: u64, position: u32): u64 {
+    val structure = semantic.nodes.data[structureRoot];
+    var root = structureRoot - 1;
+    var fields = structFieldCount(structure);
+    while (fields > 0) {
+        root = semantic.nodes.data[root].subtreeStart - 1;
+        fields = fields - 1;
     }
-    val function =
-        semantic.nodes.data[semantic.currentFunction];
-    val count = functionTypeParameterCount(function);
+    var remaining = structTypeParameterCount(structure);
+    while (remaining > position) {
+        root = semantic.nodes.data[root].subtreeStart - 1;
+        remaining = remaining - 1;
+    }
+    return root;
+}
+
+fn structTypeParameterPosition(
+    semantic: Semantic, structureRoot: u64, name: u64): u32 {
+    val count = structTypeParameterCount(
+        semantic.nodes.data[structureRoot]);
     var position: u32 = 1;
     while (position <= count) {
-        val root = functionTypeParameterRoot(
-            semantic, semantic.currentFunction, position);
+        val root = structTypeParameterRoot(
+            semantic, structureRoot, position);
         val parameter = semantic.nodes.data[root];
-        val nameNode =
-            semantic.nodes.data[parameter.subtreeStart];
-        if (nodeHash(semantic, nameNode) == name) {
-            var constraint: u32 = 0;
-            if (parameter.aux == 1) {
-                constraint = constraintFromHash(
-                    nodeHash(
-                        semantic,
-                        semantic.nodes.data[root - 1]));
-            }
-            return TypeValue(14, name, constraint);
+        if (nodeHash(
+                semantic,
+                semantic.nodes.data[parameter.subtreeStart]) == name) {
+            return position - 1;
         }
         position = position + 1;
+    }
+    return count;
+}
+
+fn fieldRootAt(
+    nodes: AstList, structureRoot: u64, wanted: u32): u64 {
+    val structure = nodes.data[structureRoot];
+    var roots =
+        k_boot_alloc((structFieldCount(structure) as u64) * sizeof(u64)) as u64*;
+    var root = structureRoot - 1;
+    var remaining = structFieldCount(structure);
+    while (remaining > 0) {
+        roots[remaining as u64 - 1] = root;
+        root = nodes.data[root].subtreeStart - 1;
+        remaining = remaining - 1;
+    }
+    val result = roots[wanted as u64];
+    k_boot_free(roots as unit*);
+    return result;
+}
+
+fn substituteStructType(
+    semantic: Semantic, structureRoot: u64,
+    type: TypeValue, arguments: TypeValueList,
+    argumentStart: u64, count: u32): TypeValue {
+    if (type.kind == 14) {
+        val position =
+            structTypeParameterPosition(semantic, structureRoot, type.name);
+        if (position >= count) { return invalidType(); }
+        return arguments.data[argumentStart + position as u64];
+    }
+    if (type.kind == 8) {
+        val start = type.pointee % 65536;
+        val argCount = type.pointee / 65536;
+        if (argCount == 0) { return type; }
+        val newStart = semantic.genericArguments.length;
+        var index: u32 = 0;
+        while (index < argCount) {
+            val arg = semantic.genericArguments.data[start as u64 + index as u64];
+            val substituted = substituteStructType(
+                semantic, structureRoot, arg, arguments, argumentStart, count);
+            var resolved = semantic.genericArguments;
+            typeValueListAppend(resolved, substituted);
+            semantic.genericArguments = resolved;
+            index = index + 1;
+        }
+        return TypeValue(8, type.name, newStart as u32 + argCount * 65536);
+    }
+    if (type.kind == 15) {
+        val inner = substituteStructType(
+            semantic, structureRoot,
+            TypeValue(type.pointee, type.name, 0), arguments, argumentStart, count);
+        return TypeValue(15, inner.name, inner.kind);
+    }
+    if (type.kind == 9) {
+        val inner = substituteStructType(
+            semantic, structureRoot,
+            TypeValue(type.pointee, type.name, 0), arguments, argumentStart, count);
+        return TypeValue(9, inner.name, inner.kind);
+    }
+    if (type.kind == 13) {
+        val inner = substituteStructType(
+            semantic, structureRoot,
+            TypeValue(type.pointee, type.name, 0), arguments, argumentStart, count);
+        return TypeValue(13, inner.name, inner.kind);
+    }
+    return type;
+}
+
+fn findCurrentTypeParameter(
+    semantic: Semantic, name: u64): TypeValue {
+    if (semantic.currentFunction < semantic.nodes.length) {
+        val function =
+            semantic.nodes.data[semantic.currentFunction];
+        val count = functionTypeParameterCount(function);
+        var position: u32 = 1;
+        while (position <= count) {
+            val root = functionTypeParameterRoot(
+                semantic, semantic.currentFunction, position);
+            val parameter = semantic.nodes.data[root];
+            val nameNode =
+                semantic.nodes.data[parameter.subtreeStart];
+            if (nodeHash(semantic, nameNode) == name) {
+                var constraint: u32 = 0;
+                if (parameter.aux == 1) {
+                    constraint = constraintFromHash(
+                        nodeHash(
+                            semantic,
+                            semantic.nodes.data[root - 1]));
+                }
+                return TypeValue(14, name, constraint);
+            }
+            position = position + 1;
+        }
+    }
+    if (semantic.currentStruct < semantic.nodes.length) {
+        val structure =
+            semantic.nodes.data[semantic.currentStruct];
+        val count = structTypeParameterCount(structure);
+        var position: u32 = 1;
+        while (position <= count) {
+            val root = structTypeParameterRoot(
+                semantic, semantic.currentStruct, position);
+            val parameter = semantic.nodes.data[root];
+            val nameNode =
+                semantic.nodes.data[parameter.subtreeStart];
+            if (nodeHash(semantic, nameNode) == name) {
+                var constraint: u32 = 0;
+                if (parameter.aux == 1) {
+                    constraint = constraintFromHash(
+                        nodeHash(
+                            semantic,
+                            semantic.nodes.data[root - 1]));
+                }
+                return TypeValue(14, name, constraint);
+            }
+            position = position + 1;
+        }
     }
     return invalidType();
 }
@@ -221,14 +354,48 @@ fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
     return value;
 }
 
+fn structTypeArgumentRoot(
+    semantic: Semantic, typeRoot: u64, position: u32, count: u32): u64 {
+    var root = typeRoot - 1;
+    var remaining = count;
+    while (remaining > position) {
+        root = semantic.nodes.data[root].subtreeStart - 1;
+        remaining = remaining - 1;
+    }
+    return root;
+}
+
 fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
     val node = semantic.nodes.data[root];
     if (node.kind == 1) {
-        val primitive = primitiveType(node.aux);
+        val tokenKind = node.aux % 256;
+        val primitive = primitiveType(tokenKind);
         if (primitive.kind != 0) { return primitive; }
         val parameter = findCurrentTypeParameter(
             semantic, nodeHash(semantic, node));
         if (parameter.kind != 0) { return parameter; }
+        
+        val typeArgumentCount = node.aux / 256;
+        if (typeArgumentCount > 0) {
+            val start = semantic.genericArguments.length;
+            val typeArguments = k_boot_alloc((typeArgumentCount as u64) * sizeof(TypeValue)) as TypeValue*;
+            var index: u32 = 0;
+            while (index < typeArgumentCount) {
+                val argRoot = structTypeArgumentRoot(semantic, root, index + 1, typeArgumentCount);
+                typeArguments[index as u64] = typeFromNode(semantic, argRoot);
+                index = index + 1;
+            }
+            index = 0;
+            while (index < typeArgumentCount) {
+                var resolved = semantic.genericArguments;
+                typeValueListAppend(resolved, typeArguments[index as u64]);
+                semantic.genericArguments = resolved;
+                index = index + 1;
+            }
+            k_boot_free(typeArguments as unit*);
+            return TypeValue(8, nodeHash(semantic, node), start as u32 + typeArgumentCount * 65536);
+        }
+        
         return TypeValue(8, nodeHash(semantic, node), 0);
     }
     if (node.kind == 2) {
@@ -342,15 +509,15 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         if (comparison) {
-            if (typeAccepts(left, right) == false) {
-                if (typeAccepts(right, left) == false) {
+            if (typeAccepts(left, right, semantic.genericArguments) == false) {
+                if (typeAccepts(right, left, semantic.genericArguments) == false) {
                     semanticFail(semantic, 4, node);
                 }
             }
             return boolType();
         }
-        if (typeAccepts(left, right)) { return left; }
-        if (typeAccepts(right, left)) { return right; }
+        if (typeAccepts(left, right, semantic.genericArguments)) { return left; }
+        if (typeAccepts(right, left, semantic.genericArguments)) { return right; }
         semanticFail(semantic, 4, node);
         return invalidType();
     }
@@ -372,7 +539,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val left = expressionType(semantic, leftRoot);
         val right = expressionType(semantic, rightRoot);
-        if (typeAccepts(left, right) == false) {
+        if (typeAccepts(left, right, semantic.genericArguments) == false) {
             semanticFail(semantic, 4, node);
         }
         return left;
@@ -437,22 +604,130 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             val structureRoot =
                 semantic.structs.data[structureIndex].node;
-            if (semantic.nodes.data[structureRoot].aux != argumentCount) {
+            val structure = semantic.nodes.data[structureRoot];
+            val fieldCount = structFieldCount(structure);
+            val typeCount = structTypeParameterCount(structure);
+            if (fieldCount != argumentCount) {
                 semanticFail(semantic, 3, callee);
                 k_boot_free(explicitTypeRoots as unit*);
                 k_boot_free(argumentRoots as unit*);
                 return invalidType();
             }
+            if (explicitTypeCount > 0) {
+                if (explicitTypeCount != typeCount) {
+                    semanticFail(semantic, 3, callee);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+            }
+            val typeArguments =
+                k_boot_alloc(
+                    (typeCount as u64) * sizeof(TypeValue)) as TypeValue*;
+            explicit = 0;
+            while (explicit < typeCount) {
+                typeArguments[explicit as u64] = invalidType();
+                explicit = explicit + 1;
+            }
+            explicit = 0;
+            while (explicit < explicitTypeCount) {
+                typeArguments[explicit as u64] =
+                    typeFromNode(
+                        semantic,
+                        explicitTypeRoots[explicit as u64]);
+                explicit = explicit + 1;
+            }
             argument = 0;
             while (argument < argumentCount) {
-                expressionType(
+                var actual = expressionType(
                     semantic, argumentRoots[argument as u64]);
+                val fieldRoot = fieldRootAt(semantic.nodes, structureRoot, argument);
+                val savedStruct = semantic.currentStruct;
+                semantic.currentStruct = structureRoot;
+                val pattern = typeFromNode(semantic, fieldRoot - 1);
+                semantic.currentStruct = savedStruct;
+                if (pattern.kind == 14) {
+                    val position = structTypeParameterPosition(
+                        semantic, structureRoot, pattern.name);
+                    if (explicitTypeCount == 0) {
+                        var inferredActual = actual;
+                        if (inferredActual.kind == 11) {
+                            inferredActual = TypeValue(3, 0, 0);
+                        }
+                        if (typeArguments[position as u64].kind == 0) {
+                            typeArguments[position as u64] = inferredActual;
+                        } else {
+                            if (typeEquals(
+                                    typeArguments[position as u64],
+                                    inferredActual, semantic.genericArguments) == false) {
+                                semanticFail(
+                                    semantic, 4,
+                                    semantic.nodes.data[
+                                        argumentRoots[argument as u64]]);
+                            }
+                        }
+                    }
+                } else {
+                    if (actual.kind == 11) {
+                        if (pattern.kind >= 3) {
+                            if (pattern.kind <= 7) {
+                                actual = pattern;
+                            }
+                        }
+                    }
+                }
+                val expected = substituteStructType(
+                    semantic, structureRoot, pattern,
+                    TypeValueList(typeArguments, typeCount as u64, typeCount as u64),
+                    0, typeCount);
+                if (typeAccepts(expected, actual, semantic.genericArguments) == false) {
+                    semanticFail(
+                        semantic, 4,
+                        semantic.nodes.data[
+                            argumentRoots[argument as u64]]);
+                }
                 argument = argument + 1;
             }
+            explicit = 0;
+            while (explicit < typeCount) {
+                val parameterRoot = structTypeParameterRoot(
+                    semantic, structureRoot, explicit + 1);
+                val parameter = semantic.nodes.data[parameterRoot];
+                var constraint: u32 = 0;
+                if (parameter.aux == 1) {
+                    constraint = constraintFromHash(
+                        nodeHash(
+                            semantic,
+                            semantic.nodes.data[parameterRoot - 1]));
+                }
+                if (constraintAcceptsType(
+                        constraint,
+                        typeArguments[explicit as u64]) == false) {
+                    semanticFail(semantic, 4, callee);
+                }
+                explicit = explicit + 1;
+            }
+            var start: u32 = 0;
+            if (typeCount > 0) {
+                start = semantic.genericArguments.length as u32;
+                var callNode = semantic.nodes.data[root];
+                callNode.genericArgumentStart = start as u64;
+                callNode.genericArgumentCount = typeCount;
+                var typeIndex: u32 = 0;
+                while (typeIndex < typeCount) {
+                    var resolved = semantic.genericArguments;
+                    typeValueListAppend(
+                        resolved, typeArguments[typeIndex as u64]);
+                    semantic.genericArguments = resolved;
+                    typeIndex = typeIndex + 1;
+                }
+                semantic.nodes.data[root] = callNode;
+            }
+            k_boot_free(typeArguments as unit*);
             k_boot_free(explicitTypeRoots as unit*);
             k_boot_free(argumentRoots as unit*);
             return TypeValue(
-                8, semantic.structs.data[structureIndex].name, 0);
+                8, semantic.structs.data[structureIndex].name, start + typeCount * 65536);
         }
         val functionRoot = semantic.functions.data[functionIndex].node;
         val function = semantic.nodes.data[functionRoot];
@@ -511,7 +786,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     } else {
                         if (typeEquals(
                                 typeArguments[position as u64],
-                                inferredActual) == false) {
+                                inferredActual, semantic.genericArguments) == false) {
                             semanticFail(
                                 semantic, 4,
                                 semantic.nodes.data[
@@ -523,7 +798,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val expected = substituteGenericType(
                 semantic, functionRoot, pattern,
                 typeArguments, typeCount);
-            if (typeAccepts(expected, actual) == false) {
+            if (typeAccepts(expected, actual, semantic.genericArguments) == false) {
                 semanticFail(
                     semantic, 4,
                     semantic.nodes.data[
@@ -595,12 +870,23 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val structure = semantic.nodes.data[structureRoot];
         val wanted = nodeHash(semantic, node);
         var cursor = structureRoot - 1;
-        var remaining = structure.aux;
+        var remaining = structFieldCount(structure);
         while (remaining > 0) {
             val field = semantic.nodes.data[cursor];
             val fieldName = semantic.nodes.data[field.subtreeStart];
             if (nodeHash(semantic, fieldName) == wanted) {
-                return typeFromNode(semantic, cursor - 1);
+                val savedStruct = semantic.currentStruct;
+                semantic.currentStruct = structureRoot;
+                val fieldType = typeFromNode(semantic, cursor - 1);
+                semantic.currentStruct = savedStruct;
+                val start = object.pointee % 65536;
+                val count = object.pointee / 65536;
+                if (count > 0) {
+                    return substituteStructType(
+                        semantic, structureRoot, fieldType,
+                        semantic.genericArguments, start as u64, count);
+                }
+                return fieldType;
             }
             cursor = field.subtreeStart - 1;
             remaining = remaining - 1;
@@ -716,7 +1002,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             valueType = typeFromNode(
                 semantic,
                 semantic.nodes.data[initializerRoot].subtreeStart - 1);
-            if (typeAccepts(valueType, initializer) == false) {
+            if (typeAccepts(valueType, initializer, semantic.genericArguments) == false) {
                 semanticFail(
                     semantic, 4, semantic.nodes.data[initializerRoot]);
             }
@@ -734,7 +1020,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (node.aux == 1) {
             actual = expressionType(semantic, root - 1);
         }
-        if (typeAccepts(semantic.returnType, actual) == false) {
+        if (typeAccepts(semantic.returnType, actual, semantic.genericArguments) == false) {
             if (node.aux == 1) {
                 semanticFail(
                     semantic, 5, semantic.nodes.data[root - 1]);
@@ -852,13 +1138,16 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 semantic.structs = structures;
             }
             var fieldRoot = root - 1;
-            var fields = declaration.aux;
+            var fields = structFieldCount(declaration);
+            val savedStruct = semantic.currentStruct;
+            semantic.currentStruct = root;
             while (fields > 0) {
                 typeFromNode(semantic, fieldRoot - 1);
                 fieldRoot =
                     semantic.nodes.data[fieldRoot].subtreeStart - 1;
                 fields = fields - 1;
             }
+            semantic.currentStruct = savedStruct;
         } else {
             if (declarationFind(semantic.functions, name) !=
                     semantic.functions.length) {
@@ -880,7 +1169,7 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
     var semantic = Semantic(
         source, nodes, declarationListNew(), declarationListNew(),
         localListNew(), genericArguments,
-        semanticSuccess(genericArguments), unitType(), 0, nodes.length);
+        semanticSuccess(genericArguments), unitType(), 0, nodes.length, nodes.length);
     val programRoot = nodes.length - 1;
     collectDeclarations(semantic, programRoot);
     if (semantic.result.ok) {
