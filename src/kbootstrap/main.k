@@ -39,6 +39,52 @@ fn mainError(kind: u32) {
     byteBufferFree(message);
 }
 
+fn mainPathError(kind: u32) {
+    var message = byteBufferNew();
+    byteBufferAppend(message, 101); byteBufferAppend(message, 114);
+    byteBufferAppend(message, 114); byteBufferAppend(message, 111);
+    byteBufferAppend(message, 114); byteBufferAppend(message, 58);
+    byteBufferAppend(message, 32);
+    if (kind == 1) {
+        byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+        byteBufferAppend(message, 112); byteBufferAppend(message, 117);
+        byteBufferAppend(message, 116); byteBufferAppend(message, 32);
+        byteBufferAppend(message, 109); byteBufferAppend(message, 117);
+        byteBufferAppend(message, 115); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 117);
+        byteBufferAppend(message, 115); byteBufferAppend(message, 101);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 46);
+        byteBufferAppend(message, 107); byteBufferAppend(message, 32);
+        byteBufferAppend(message, 101); byteBufferAppend(message, 120);
+        byteBufferAppend(message, 116); byteBufferAppend(message, 101);
+        byteBufferAppend(message, 110); byteBufferAppend(message, 115);
+        byteBufferAppend(message, 105); byteBufferAppend(message, 111);
+        byteBufferAppend(message, 110);
+    } else {
+        byteBufferAppend(message, 112); byteBufferAppend(message, 97);
+        byteBufferAppend(message, 116); byteBufferAppend(message, 104);
+        byteBufferAppend(message, 115); byteBufferAppend(message, 32);
+        byteBufferAppend(message, 109); byteBufferAppend(message, 117);
+        byteBufferAppend(message, 115); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 110);
+        byteBufferAppend(message, 111); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 98);
+        byteBufferAppend(message, 101); byteBufferAppend(message, 32);
+        byteBufferAppend(message, 101); byteBufferAppend(message, 109);
+        byteBufferAppend(message, 112); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 121);
+    }
+    byteBufferAppend(message, 10);
+    k_boot_stderr(message.data, message.length);
+    byteBufferFree(message);
+}
+
+fn hasKExtension(argument: Argument): bool {
+    if (argument.length < 2) { return false; }
+    if (argument.data[argument.length - 2] != 46) { return false; }
+    return argument.data[argument.length - 1] == 107;
+}
+
 fn freeArgument(argument: Argument) {
     if (argument.ok) { k_boot_free(argument.data as unit*); }
 }
@@ -82,6 +128,25 @@ fn main(): i32 {
     if (executable.ok == false) { argumentsOk = false; }
     if (argumentsOk == false) {
         mainError(1);
+        freeArguments(
+            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+        return 1;
+    }
+    if (hasKExtension(input) == false) {
+        mainPathError(1);
+        freeArguments(
+            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+        return 1;
+    }
+    var pathsOk = true;
+    if (llOutput.length == 0) { pathsOk = false; }
+    if (opt.length == 0) { pathsOk = false; }
+    if (clang.length == 0) { pathsOk = false; }
+    if (stdRuntime.length == 0) { pathsOk = false; }
+    if (bootstrapRuntime.length == 0) { pathsOk = false; }
+    if (executable.length == 0) { pathsOk = false; }
+    if (pathsOk == false) {
+        mainPathError(2);
         freeArguments(
             input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
         return 1;

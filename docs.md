@@ -563,8 +563,10 @@ filesystem hoặc không khởi chạy được `opt`/Clang trả exit code `1`;
 semantic, LLVM verification hoặc linker trả exit code `2`. Tool được khởi chạy
 thành công nhưng báo IR/link failure vẫn thuộc nhóm diagnostic `2`.
 Các nhánh exit `1` phát stderr ổn định (`expected 7 arguments`, `cannot load
-input`, `cannot write LLVM output`, `cannot launch opt/clang`). Driver giải
-phóng mọi argument buffer đã nhận trước khi thoát sớm.
+input`, `cannot write LLVM output`, `cannot launch opt/clang`). Entry phải có
+đuôi `.k`; sáu path output/tool/runtime còn lại không được rỗng. Driver kiểm tra
+các contract này trước khi đọc source hoặc chạy tool, phát diagnostic ổn định,
+và giải phóng mọi argument buffer đã nhận trước khi thoát sớm.
 
 ### Array literal và suy luận kích thước
 

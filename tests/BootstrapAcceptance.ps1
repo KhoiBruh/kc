@@ -163,6 +163,7 @@ $invalidSourceFixture = Join-Path $InvalidFixtureDirectory "bootstrap-semantic-u
 $missingInput = Join-Path $OutputDirectory "missing-input.k"
 $missingTool = Join-Path $OutputDirectory "missing-tool.exe"
 $missingRuntime = Join-Path $OutputDirectory "missing-runtime.lib"
+$nonKInput = Join-Path $OutputDirectory "input.txt"
 foreach ($moduleStage in $moduleStages) {
     $compiler = $moduleStage[0]
     $directory = $moduleStage[1]
@@ -175,6 +176,14 @@ foreach ($moduleStage in $moduleStages) {
         "error: expected 7 arguments"
     Assert-BootstrapExitCode $compiler ($validArguments + "extra") 1 `
         "extra arguments" "error: expected 7 arguments"
+    Assert-BootstrapExitCode $compiler @(
+        $nonKInput, $ll, $Opt, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "non-K input" `
+        "error: input must use .k extension"
+    Assert-BootstrapExitCode $compiler @(
+        $cliFixture, '""', $Opt, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "empty output path" `
+        "error: paths must not be empty"
     Assert-BootstrapExitCode $compiler @(
         $missingInput, $ll, $Opt, $Clang,
         $StdRuntime, $BootstrapRuntime, $exe) 1 "missing entry file" `
