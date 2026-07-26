@@ -642,11 +642,13 @@ The stages are:
 - `kc0`: the C++ compiler built by CMake.
 - `kc1`: the K compiler sources compiled by `kc0`.
 - `kc2`: the same source manifest compiled through `kc1`.
-- `kc3`: a self-rebuild acceptance stage compiled through `kc2`.
+- `kc3`: the source manifest compiled through `kc2`.
+- `kc4`: a self-rebuild acceptance stage compiled through `kc3`.
 
-Artifacts are written under `out/bootstrap/stage1`, `stage2`, and `stage3`.
+Artifacts are written under `out/bootstrap/stage1` through `stage4`.
 The acceptance suite compares valid program behavior, invalid diagnostic
-categories/spans, and verifies emitted LLVM IR.
+categories/spans, verifies emitted LLVM IR, and requires `kc3.ll` and `kc4.ll`
+to have matching SHA-256 hashes.
 
 The runtime boundary remains a small C++ Windows ABI for allocation, file I/O,
 process execution, stderr, panic, and stdout. K directly emits typed LLVM for

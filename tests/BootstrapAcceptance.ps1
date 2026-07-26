@@ -44,7 +44,8 @@ $source = ($modules | ForEach-Object {
 $stage1 = Join-Path $OutputDirectory "stage1"
 $stage2 = Join-Path $OutputDirectory "stage2"
 $stage3 = Join-Path $OutputDirectory "stage3"
-@($stage1, $stage2, $stage3) | ForEach-Object {
+$stage4 = Join-Path $OutputDirectory "stage4"
+@($stage1, $stage2, $stage3, $stage4) | ForEach-Object {
     [System.IO.Directory]::CreateDirectory($_) | Out-Null
 }
 
@@ -68,6 +69,14 @@ function Build-Stage {
 
 $kc2 = Build-Stage $kc1 $stage2 "kc2"
 $kc3 = Build-Stage $kc2 $stage3 "kc3"
+$kc4 = Build-Stage $kc3 $stage4 "kc4"
+
+$kc3Ll = Join-Path $stage3 "kc3.ll"
+$kc4Ll = Join-Path $stage4 "kc4.ll"
+if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
+    (Get-FileHash $kc4Ll -Algorithm SHA256).Hash) {
+    Write-Error "bootstrap fixed point differs between kc3 and kc4"
+}
 
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
@@ -88,6 +97,10 @@ foreach ($fixtureName in $validFixtures) {
     $stage3Exe = Join-Path $stage3 "$fixtureName.exe"
     & $kc3 $fixture $stage3Ll $Opt $Clang $StdRuntime $BootstrapRuntime $stage3Exe
     if ($LASTEXITCODE -ne 0) { Write-Error "kc3 rejected $fixtureName" }
+    $stage4Ll = Join-Path $stage4 "$fixtureName.ll"
+    $stage4Exe = Join-Path $stage4 "$fixtureName.exe"
+    & $kc4 $fixture $stage4Ll $Opt $Clang $StdRuntime $BootstrapRuntime $stage4Exe
+    if ($LASTEXITCODE -ne 0) { Write-Error "kc4 rejected $fixtureName" }
 
     $stage1Output = & $stage1Exe
     $stage1Exit = $LASTEXITCODE
@@ -95,10 +108,14 @@ foreach ($fixtureName in $validFixtures) {
     $stage2Exit = $LASTEXITCODE
     $stage3Output = & $stage3Exe
     $stage3Exit = $LASTEXITCODE
+    $stage4Output = & $stage4Exe
+    $stage4Exit = $LASTEXITCODE
     if ($stage1Exit -ne $stage2Exit -or
         $stage1Exit -ne $stage3Exit -or
+        $stage1Exit -ne $stage4Exit -or
         $stage1Output -cne $stage2Output -or
-        $stage1Output -cne $stage3Output) {
+        $stage1Output -cne $stage3Output -or
+        $stage1Output -cne $stage4Output) {
         Write-Error "bootstrap stage behavior differs for $fixtureName"
     }
     & $Opt -passes=verify -disable-output $stage1Ll
@@ -107,6 +124,8 @@ foreach ($fixtureName in $validFixtures) {
     if ($LASTEXITCODE -ne 0) { Write-Error "kc2 IR failed verification" }
     & $Opt -passes=verify -disable-output $stage3Ll
     if ($LASTEXITCODE -ne 0) { Write-Error "kc3 IR failed verification" }
+    & $Opt -passes=verify -disable-output $stage4Ll
+    if ($LASTEXITCODE -ne 0) { Write-Error "kc4 IR failed verification" }
 }
 
 $invalidFixtures = @(
@@ -125,16 +144,24 @@ foreach ($fixtureName in $invalidFixtures) {
     $oneExit = $LASTEXITCODE
     $two = & $kc2 $fixture (Join-Path $stage2 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage2 "invalid.exe")
     $twoExit = $LASTEXITCODE
+    $three = & $kc3 $fixture (Join-Path $stage3 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage3 "invalid.exe")
+    $threeExit = $LASTEXITCODE
+    $four = & $kc4 $fixture (Join-Path $stage4 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage4 "invalid.exe")
+    $fourExit = $LASTEXITCODE
     $oneText = [string]($one -join "`n")
     $twoText = [string]($two -join "`n")
-    if ($oneExit -ne 2 -or $twoExit -ne 2 -or $oneText -cne $twoText) {
+    $threeText = [string]($three -join "`n")
+    $fourText = [string]($four -join "`n")
+    if ($oneExit -ne 2 -or $twoExit -ne 2 -or $threeExit -ne 2 -or $fourExit -ne 2 -or
+        $oneText -cne $twoText -or $oneText -cne $threeText -or $oneText -cne $fourText) {
         Write-Error "bootstrap diagnostic parity failed for $fixtureName"
     }
 }
 
 if ((Test-Path $kc1) -eq $false -or
     (Test-Path $kc2) -eq $false -or
-    (Test-Path $kc3) -eq $false) {
+    (Test-Path $kc3) -eq $false -or
+    (Test-Path $kc4) -eq $false) {
     Write-Error "bootstrap stage artifact is missing"
 }
 

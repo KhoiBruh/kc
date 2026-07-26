@@ -170,13 +170,13 @@ llvm-readobj --file-headers file.obj
 
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
-- Run `.\scripts\bootstrap.ps1` to build `kc1`, `kc2`, and a `kc3` self-rebuild
-  check under `out/bootstrap/`.
+- Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
+  fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
   restricted generics, and minimal nullable values emit typed LLVM text
   directly from K.
-- `kc0` seeds `kc1` only. `kc1` builds `kc2`, and `kc2` builds `kc3` without
-  invoking the C++ compiler.
+- `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
+  builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
