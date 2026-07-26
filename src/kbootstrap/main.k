@@ -19,7 +19,7 @@ fn readArgument(index: i32): Argument {
 }
 
 fn main(): i32 {
-    if (k_boot_arg_count() < 8) { return 1; }
+    if (k_boot_arg_count() != 8) { return 1; }
     val input = readArgument(1);
     val llOutput = readArgument(2);
     val opt = readArgument(3);
@@ -38,7 +38,7 @@ fn main(): i32 {
     val loaded = loadModules(input.data, input.length);
     if (loaded.ok == false) {
         sourceMapFree(loaded.sourceMap);
-        return 2;
+        return loaded.failureKind;
     }
 
     var result = compileToLl(

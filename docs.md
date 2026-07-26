@@ -558,6 +558,11 @@ offset trong source tổng hợp. Bootstrap lexer phân biệt chuỗi chưa k�
 ký tự không hợp lệ; parser giữ token được mong đợi để báo lỗi như
 `expected ';'` thay vì diagnostic chung chung.
 
+Bootstrap CLI yêu cầu đúng bảy đối số sau tên executable. Lỗi arguments,
+filesystem hoặc không khởi chạy được `opt`/Clang trả exit code `1`; lỗi source,
+semantic, LLVM verification hoặc linker trả exit code `2`. Tool được khởi chạy
+thành công nhưng báo IR/link failure vẫn thuộc nhóm diagnostic `2`.
+
 ### Array literal và suy luận kích thước
 
 Array literal dùng cú pháp `[a, b, c]`. Trình biên dịch suy luận kiểu phần tử chung và kích thước từ phép gán:

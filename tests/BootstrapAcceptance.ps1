@@ -130,6 +130,62 @@ $moduleStages = @(
     @($kc1, $stage1), @($kc2, $stage2),
     @($kc3, $stage3), @($kc4, $stage4)
 )
+
+function Assert-BootstrapExitCode {
+    param(
+        [string]$Compiler,
+        [object[]]$CompilerArguments,
+        [int]$Expected,
+        [string]$CaseName
+    )
+    $previousErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $null = & $Compiler @CompilerArguments 2>&1
+        $actual = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+    if ($actual -ne $Expected) {
+        Write-Error "$Compiler returned $actual for $CaseName; expected $Expected"
+    }
+}
+
+$cliFixture = Join-Path $FixtureDirectory "hello.k"
+$invalidSourceFixture = Join-Path $InvalidFixtureDirectory "bootstrap-semantic-unknown.k"
+$missingInput = Join-Path $OutputDirectory "missing-input.k"
+$missingTool = Join-Path $OutputDirectory "missing-tool.exe"
+$missingRuntime = Join-Path $OutputDirectory "missing-runtime.lib"
+foreach ($moduleStage in $moduleStages) {
+    $compiler = $moduleStage[0]
+    $directory = $moduleStage[1]
+    $ll = Join-Path $directory "exit-code.ll"
+    $exe = Join-Path $directory "exit-code.exe"
+    $validArguments = @(
+        $cliFixture, $ll, $Opt, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe)
+    Assert-BootstrapExitCode $compiler @() 1 "missing arguments"
+    Assert-BootstrapExitCode $compiler ($validArguments + "extra") 1 "extra arguments"
+    Assert-BootstrapExitCode $compiler @(
+        $missingInput, $ll, $Opt, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing entry file"
+    Assert-BootstrapExitCode $compiler @(
+        $cliFixture, (Join-Path $directory "missing/exit.ll"), $Opt, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "unwritable output"
+    Assert-BootstrapExitCode $compiler @(
+        $cliFixture, $ll, $missingTool, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing opt executable"
+    Assert-BootstrapExitCode $compiler @(
+        $cliFixture, $ll, $Opt, $missingTool,
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing clang executable"
+    Assert-BootstrapExitCode $compiler @(
+        $invalidSourceFixture, $ll, $Opt, $Clang,
+        $StdRuntime, $BootstrapRuntime, $exe) 2 "source diagnostic"
+    Assert-BootstrapExitCode $compiler @(
+        $cliFixture, $ll, $Opt, $Clang,
+        $missingRuntime, $BootstrapRuntime, $exe) 2 "linker diagnostic"
+}
+
 foreach ($moduleFixture in @("diamond", "wildcard", "cycle")) {
     $moduleEntry = Join-Path $moduleRoot "$moduleFixture/main.k"
     $moduleResults = @()

@@ -179,6 +179,9 @@ Module/import self-hosting is complete for the current contract.
   lexer, parser, semantic, and import diagnostics to original file positions.
 - Bootstrap lexer/parser diagnostics preserve an error kind or expected token;
   do not regress them to generic `invalid source` or `error` messages.
+- Bootstrap CLI requires exactly seven arguments after the executable. Argument,
+  filesystem, and process-launch failures return `1`; source, verification, and
+  linker diagnostics return `2`.
 - Bootstrap stages compile `src/kbootstrap/main.k` as a real module graph;
   `manifest.txt` only verifies that every compiler source remains reachable.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
@@ -191,6 +194,6 @@ Module/import self-hosting is complete for the current contract.
 
 ## Recommended next milestone
 
-Make bootstrap CLI exit codes consistent: use `1` for argument, filesystem, and
-tool-invocation failures, and `2` only for source, semantic, codegen, or linker
-diagnostics. Do not expand language semantics for this work.
+Add stable stderr messages for bootstrap CLI, filesystem, output-write, and
+process-launch failures while preserving the established exit-code split.
+Ensure early failure paths release runtime-owned argument and source buffers.

@@ -136,7 +136,7 @@ fn compileToLl(
         typeValueListFree(checked.genericArguments);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
-        return 2;
+        return 1;
     }
     var verifyCommand = byteBufferNew();
     appendQuoted(verifyCommand, optPath, optPathLength);
@@ -152,6 +152,7 @@ fn compileToLl(
         typeValueListFree(checked.genericArguments);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
+        if (verified < 0) { return 1; }
         return 2;
     }
     val published = k_boot_write_file(
@@ -162,7 +163,7 @@ fn compileToLl(
     astListFree(parsed.nodes);
     tokenListFree(lexed.tokens);
     if (published) { return 0; }
-    return 0;
+    return 1;
 }
 
 fn linkLl(
@@ -185,6 +186,7 @@ fn linkLl(
     val result = k_boot_run(command.data, command.length);
     byteBufferFree(command);
     if (result == 0) { return 0; }
+    if (result < 0) { return 1; }
     return 2;
 }
 
