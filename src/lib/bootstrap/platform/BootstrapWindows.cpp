@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <optional>
 #include <string>
@@ -65,6 +66,24 @@ std::optional<std::wstring> widen(
         return std::nullopt;
     if (result.find(L'\0') != std::wstring::npos) return std::nullopt;
     return result;
+}
+
+bool copyPathUtf8(
+    const std::filesystem::path& path,
+    std::uint8_t** data,
+    std::uint64_t* length) {
+    if (!data || !length) return false;
+    *data = nullptr;
+    *length = 0;
+    const auto text = path.u8string();
+    if (text.empty()) return false;
+    const auto byteLength = static_cast<std::uint64_t>(text.size());
+    auto* bytes = static_cast<std::uint8_t*>(k_boot_alloc(byteLength));
+    if (!bytes) return false;
+    std::copy(text.begin(), text.end(), bytes);
+    *data = bytes;
+    *length = byteLength;
+    return true;
 }
 
 bool writeHandle(
@@ -189,6 +208,39 @@ extern "C" bool k_boot_read_file(
     *data = buffer;
     *dataLength = length;
     return true;
+}
+
+extern "C" bool k_boot_current_directory(
+    std::uint8_t** data,
+    std::uint64_t* dataLength) {
+    if (!data || !dataLength) return false;
+    *data = nullptr;
+    *dataLength = 0;
+    std::error_code error;
+    const auto current = std::filesystem::current_path(error);
+    if (error) {
+        return false;
+    }
+    const auto path = std::filesystem::weakly_canonical(current, error);
+    if (error) return false;
+    return copyPathUtf8(path, data, dataLength);
+}
+
+extern "C" bool k_boot_canonical_path(
+    const std::uint8_t* path,
+    std::uint64_t pathLength,
+    std::uint8_t** data,
+    std::uint64_t* dataLength) {
+    if (!data || !dataLength) return false;
+    *data = nullptr;
+    *dataLength = 0;
+    const auto widePath = widen(path, pathLength);
+    if (!widePath || widePath->empty()) return false;
+    std::error_code error;
+    const auto canonical = std::filesystem::weakly_canonical(
+        std::filesystem::path{*widePath}, error);
+    if (error) return false;
+    return copyPathUtf8(canonical, data, dataLength);
 }
 
 extern "C" bool k_boot_write_file(

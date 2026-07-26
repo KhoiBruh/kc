@@ -19,6 +19,16 @@ bool k_boot_read_file(
     std::uint8_t** data,
     std::uint64_t* dataLength);
 
+bool k_boot_current_directory(
+    std::uint8_t** data,
+    std::uint64_t* dataLength);
+
+bool k_boot_canonical_path(
+    const std::uint8_t* path,
+    std::uint64_t pathLength,
+    std::uint8_t** data,
+    std::uint64_t* dataLength);
+
 bool k_boot_write_file(
     const std::uint8_t* path,
     std::uint64_t pathLength,

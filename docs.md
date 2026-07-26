@@ -608,9 +608,11 @@ Kết quả chính xác là `value=42`. Codegen hạ hai dạng này thành ABI 
 ### Bootstrap runtime Windows
 
 Runtime bootstrap độc lập với lexer, AST, semantic và LLVM. ABI C tối thiểu cung
-cấp `k_boot_alloc`, `k_boot_free`, binary file read/write, chạy child process,
-ghi stderr và `k_boot_panic`. Dữ liệu text đi qua ABI dưới dạng UTF-8
-`(pointer, length)`; adapter Windows chuyển path/command sang UTF-16 tại biên OS.
+cấp `k_boot_alloc`, `k_boot_free`, binary file read/write, current directory,
+canonical path, chạy child process, ghi stderr và `k_boot_panic`. Dữ liệu text đi
+qua ABI dưới dạng UTF-8 `(pointer, length)`; buffer path trả về do runtime cấp phát,
+caller giải phóng bằng `k_boot_free`, và adapter Windows chuyển path/command sang
+UTF-16 tại biên OS.
 Bounds check của array/slice gọi `k_boot_panic`, ghi `index out of bounds` và
 thoát với mã `2`.
 

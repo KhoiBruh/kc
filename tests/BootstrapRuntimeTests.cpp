@@ -45,6 +45,38 @@ TEST(bootstrap_runtime_round_trips_binary_files) {
     std::filesystem::remove(path);
 }
 
+TEST(bootstrap_runtime_returns_utf8_paths) {
+    const auto before = k_boot_live_allocations();
+    std::uint8_t* current = nullptr;
+    std::uint64_t currentLength = 0;
+    EXPECT_TRUE(k_boot_current_directory(&current, &currentLength));
+    EXPECT_TRUE(current != nullptr);
+    EXPECT_TRUE(currentLength != 0);
+
+    const std::string relative{"."};
+    std::uint8_t* canonical = nullptr;
+    std::uint64_t canonicalLength = 0;
+    EXPECT_TRUE(k_boot_canonical_path(
+        reinterpret_cast<const std::uint8_t*>(relative.data()), relative.size(),
+        &canonical, &canonicalLength));
+    EXPECT_EQ(canonicalLength, currentLength);
+    if (canonical && current && canonicalLength == currentLength) {
+        for (std::uint64_t i = 0; i < currentLength; ++i)
+            EXPECT_EQ(canonical[i], current[i]);
+    }
+    k_boot_free(canonical);
+    k_boot_free(current);
+    EXPECT_EQ(k_boot_live_allocations(), before);
+}
+
+TEST(bootstrap_runtime_rejects_invalid_path_input) {
+    std::uint8_t* data = reinterpret_cast<std::uint8_t*>(1);
+    std::uint64_t length = 99;
+    EXPECT_TRUE(!k_boot_canonical_path(nullptr, 1, &data, &length));
+    EXPECT_TRUE(data == nullptr);
+    EXPECT_EQ(length, std::uint64_t{0});
+}
+
 TEST(bootstrap_runtime_returns_child_process_exit_code) {
     const std::string command{"cmd.exe /d /c exit /b 7"};
     EXPECT_EQ(

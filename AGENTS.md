@@ -148,8 +148,9 @@ llvm-readobj --file-headers file.obj
 - The Windows runtime uses `GetStdHandle` + `WriteFile`, performs its own
   stack-buffer `i32` conversion, and does not use `printf`, `sprintf`,
   iostream, or a formatting library.
-- The Windows bootstrap runtime provides allocation, binary file I/O, child
-  process execution, stderr, and bounds-check panic through a narrow C ABI.
+- The Windows bootstrap runtime provides allocation, binary file I/O, current
+  directory and canonical UTF-8 paths, child process execution, stderr, and
+  bounds-check panic through a narrow C ABI.
 
 ## Important current limitations
 
