@@ -551,7 +551,9 @@ import math.utils.Vector;
 dependency-first rồi phân tích semantic và phát một LLVM module cho toàn bộ
 graph. Canonical path được dùng để chỉ tải module dùng chung một lần; diamond
 dependency và wildcard `mod.k` đều được hỗ trợ. Việc build chính compiler
-bootstrap vẫn tạm ghép source theo `manifest.txt`.
+bootstrap vẫn tạm ghép source theo `manifest.txt`. Loader giữ source-map segment
+cho từng canonical path, vì vậy lexer, parser, semantic và import diagnostics
+đều báo `path:line:column` theo tệp gốc thay vì offset trong source tổng hợp.
 
 ### Array literal và suy luận kích thước
 
@@ -656,8 +658,8 @@ The stages are:
 
 Artifacts are written under `out/bootstrap/stage1` through `stage4`.
 The acceptance suite compares valid program behavior, invalid diagnostic
-categories/spans, verifies emitted LLVM IR, and requires `kc3.ll` and `kc4.ll`
-to have matching SHA-256 hashes.
+categories/spans and dependency source paths, verifies emitted LLVM IR, and
+requires `kc3.ll` and `kc4.ll` to have matching SHA-256 hashes.
 
 The runtime boundary remains a small C++ Windows ABI for allocation, file I/O,
 process execution, stderr, panic, and stdout. K directly emits typed LLVM for

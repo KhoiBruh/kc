@@ -3,6 +3,7 @@ module kbootstrap.containers;
 extern fn k_boot_alloc(size: u64): unit*;
 extern fn k_boot_free(pointer: unit*);
 extern fn k_boot_live_allocations(): u64;
+extern fn k_boot_stderr(data: u8*, length: u64);
 
 struct ByteBuffer(data: u8*, length: u64, capacity: u64)
 

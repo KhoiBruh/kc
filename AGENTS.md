@@ -173,6 +173,8 @@ llvm-readobj --file-headers file.obj
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
 - The K module loader resolves symbol imports to `.k`, wildcard imports to
   `mod.k`, loads dependencies first, and de-duplicates canonical paths.
+- Bootstrap source-map segments preserve each canonical path and translate
+  lexer, parser, semantic, and import diagnostics to original file positions.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
@@ -183,7 +185,6 @@ llvm-readobj --file-headers file.obj
 
 ## Recommended next milestone
 
-Add source-map segments to the concatenated bootstrap source so lexer, parser,
-semantic, and import diagnostics report the original path, line, and column.
-Then replace PowerShell manifest concatenation with a build from
-`src/kbootstrap/main.k` while retaining the manifest as a reachability check.
+Replace PowerShell manifest concatenation with a bootstrap build from
+`src/kbootstrap/main.k`. Retain `manifest.txt` only as a reachability check that
+every compiler source is imported and therefore compiled by `kc1+`.

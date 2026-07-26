@@ -36,10 +36,14 @@ fn main(): i32 {
     if (executable.ok == false) { return 1; }
 
     val loaded = loadModules(input.data, input.length);
-    if (loaded.ok == false) { return 2; }
+    if (loaded.ok == false) {
+        sourceMapFree(loaded.sourceMap);
+        return 2;
+    }
 
     var result = compileToLl(
-        loaded.source.data, loaded.source.length, llOutput.data, llOutput.length,
+        loaded.source.data, loaded.source.length, loaded.sourceMap,
+        llOutput.data, llOutput.length,
         opt.data, opt.length);
     if (result == 0) {
         result = linkLl(
@@ -49,6 +53,7 @@ fn main(): i32 {
             executable.data, executable.length);
     }
     k_boot_free(loaded.source.data as unit*);
+    sourceMapFree(loaded.sourceMap);
     k_boot_free(executable.data as unit*);
     k_boot_free(bootstrapRuntime.data as unit*);
     k_boot_free(stdRuntime.data as unit*);

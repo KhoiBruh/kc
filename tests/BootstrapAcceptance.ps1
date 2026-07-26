@@ -160,6 +160,63 @@ foreach ($moduleFixture in @("diamond", "wildcard")) {
     }
 }
 
+$semanticModuleEntry = Join-Path $moduleRoot "semantic_error/main.k"
+$semanticModulePath = [System.IO.Path]::GetFullPath(
+    (Join-Path $moduleRoot "semantic_error/bad.k"))
+$semanticExpected = "${semanticModulePath}:3:26: error: unknown identifier"
+Push-Location $moduleRoot
+try {
+    foreach ($moduleStage in $moduleStages) {
+        $previousErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            $diagnostic = & $moduleStage[0] $semanticModuleEntry `
+                (Join-Path $moduleStage[1] "module-semantic-error.ll") `
+                $Opt $Clang $StdRuntime $BootstrapRuntime `
+                (Join-Path $moduleStage[1] "module-semantic-error.exe") 2>&1
+            $diagnosticExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousErrorAction
+        }
+        if ($diagnosticExit -ne 2) {
+            Write-Error "$($moduleStage[0]) returned the wrong module diagnostic exit code"
+        }
+        if ([string]($diagnostic -join "`n") -notlike "*$semanticExpected*") {
+            Write-Error "$($moduleStage[0]) did not map the dependency diagnostic"
+        }
+    }
+} finally {
+    Pop-Location
+}
+
+$missingModuleEntry = Join-Path $moduleRoot "missing/main.k"
+$missingModulePath = [System.IO.Path]::GetFullPath($missingModuleEntry)
+$missingExpected = "${missingModulePath}:2:1: error: cannot resolve import"
+Push-Location $moduleRoot
+try {
+    foreach ($moduleStage in $moduleStages) {
+        $previousErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            $diagnostic = & $moduleStage[0] $missingModuleEntry `
+                (Join-Path $moduleStage[1] "module-missing.ll") `
+                $Opt $Clang $StdRuntime $BootstrapRuntime `
+                (Join-Path $moduleStage[1] "module-missing.exe") 2>&1
+            $diagnosticExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousErrorAction
+        }
+        if ($diagnosticExit -ne 2) {
+            Write-Error "$($moduleStage[0]) returned the wrong missing-module exit code"
+        }
+        if ([string]($diagnostic -join "`n") -notlike "*$missingExpected*") {
+            Write-Error "$($moduleStage[0]) did not position the import diagnostic"
+        }
+    }
+} finally {
+    Pop-Location
+}
+
 $invalidFixtures = @(
     "bootstrap-semantic-duplicate.k",
     "bootstrap-semantic-unknown.k",

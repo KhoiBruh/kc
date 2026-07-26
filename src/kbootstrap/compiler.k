@@ -1,12 +1,11 @@
 module kbootstrap.compiler;
 
 import kbootstrap.*;
+import kbootstrap.loader;
 
 extern fn k_boot_write_file(
     path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
-extern fn k_boot_stderr(data: u8*, length: u64);
-
 fn appendRaw(
     var buffer: ByteBuffer, data: u8*, length: u64) {
     var index: u64 = 0;
@@ -84,6 +83,7 @@ fn appendEmitLlFlag(var buffer: ByteBuffer) {
 fn compileToLl(
     sourceData: u8*,
     sourceLength: u64,
+    sourceMap: SourceMap,
     outputPath: u8*,
     outputPathLength: u64,
     optPath: u8*,
@@ -91,18 +91,21 @@ fn compileToLl(
     val source = Source(sourceData, sourceLength);
     val lexed = lex(source);
     if (lexed.ok == false) {
+        printDiagnostic(source, sourceMap, 0, lexed.errorStart, lexed.errorStart + 1);
         tokenListFree(lexed.tokens);
         return 2;
     }
     val parsed = parse(lexed.tokens);
     if (parsed.ok == false) {
+        printDiagnostic(source, sourceMap, 0, parsed.errorStart, parsed.errorStart + 1);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         return 2;
     }
     var checked = analyze(source, parsed.nodes);
     if (checked.ok == false) {
-        printDiagnostic(source, checked.category, checked.start, checked.end);
+        printDiagnostic(
+            source, sourceMap, checked.category, checked.start, checked.end);
         typeValueListFree(checked.genericArguments);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
@@ -181,9 +184,9 @@ fn linkLl(
     return 2;
 }
 
-fn findLine(source: Source, offset: u64): u64 {
+fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
     var line: u64 = 1;
-    var index: u64 = 0;
+    var index = sourceStart;
     while (index < offset) {
         if (source.data[index] == 10) { line = line + 1; }
         index = index + 1;
@@ -191,10 +194,10 @@ fn findLine(source: Source, offset: u64): u64 {
     return line;
 }
 
-fn findColumn(source: Source, offset: u64): u64 {
+fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     var col: u64 = 1;
     var index = offset;
-    while (index > 0) {
+    while (index > sourceStart) {
         index = index - 1;
         if (source.data[index] == 10) { return col; }
         col = col + 1;
@@ -344,13 +347,32 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
     }
 }
 
-fn printDiagnostic(source: Source, category: u32, start: u64, end: u64) {
+fn printDiagnostic(
+    source: Source, sourceMap: SourceMap,
+    category: u32, start: u64, end: u64) {
     var buf = byteBufferNew();
-    val lineNum = stderrNumber(findLine(source, start));
+    var sourceStart: u64 = 0;
+    var segmentIndex: u64 = 0;
+    var found = false;
+    while (segmentIndex < sourceMap.length) {
+        val segment = sourceMap.data[segmentIndex];
+        if (found == false) {
+            if (start >= segment.sourceStart) {
+                if (start <= segment.sourceStart + segment.sourceLength) {
+                    appendRaw(buf, segment.path, segment.pathLength);
+                    byteBufferAppend(buf, 58);
+                    sourceStart = segment.sourceStart;
+                    found = true;
+                }
+            }
+        }
+        segmentIndex = segmentIndex + 1;
+    }
+    val lineNum = stderrNumber(findLine(source, sourceStart, start));
     appendRaw(buf, lineNum.data, lineNum.length);
     byteBufferFree(lineNum);
     byteBufferAppend(buf, 58);
-    val colNum = stderrNumber(findColumn(source, start));
+    val colNum = stderrNumber(findColumn(source, sourceStart, start));
     appendRaw(buf, colNum.data, colNum.length);
     byteBufferFree(colNum);
     byteBufferAppend(buf, 58);
