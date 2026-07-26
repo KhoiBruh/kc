@@ -51,7 +51,7 @@ $combined = "$Output.combined.k"
 $modules = @(
     "source.k", "token.k", "containers.k", "lexer.k", "ast.k", "parser.k",
     "types.k", "diagnostic.k", "semantic.k", "llvm_text.k", "compiler.k",
-    "main.k"
+    "loader.k", "main.k"
 )
 $source = ($modules | ForEach-Object {
     [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))

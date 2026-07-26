@@ -547,10 +547,11 @@ import math.utils.Vector;
 
 (Cho phép bỏ qua khai báo `module` đối với các tệp kịch bản cục bộ).
 
-`kc0` tải đệ quy các module được import theo thứ tự dependency-first rồi phân
-tích semantic và phát LLVM cho toàn bộ graph. Một module dùng chung chỉ được
-tải một lần; diamond dependency được hỗ trợ. Bootstrap compiler K vẫn ghép
-source theo `manifest.txt`, nên module loading chưa được self-hosted.
+`kc0` và compiler bootstrap K tải đệ quy các module được import theo thứ tự
+dependency-first rồi phân tích semantic và phát một LLVM module cho toàn bộ
+graph. Canonical path được dùng để chỉ tải module dùng chung một lần; diamond
+dependency và wildcard `mod.k` đều được hỗ trợ. Việc build chính compiler
+bootstrap vẫn tạm ghép source theo `manifest.txt`.
 
 ### Array literal và suy luận kích thước
 
@@ -630,14 +631,13 @@ extern fn k_boot_free(pointer: unit*);
 `src/kbootstrap/containers.k` cung cấp vertical slice chạy được cho `ByteBuffer`,
 `TokenList`, `ExprList`, `StringList` và `SymbolTable`. Các container này dùng
 raw allocation, tự grow/copy/free và chưa phụ thuộc generic. Chúng đang nằm
-chung một source file cho đến khi module/import và multi-file compilation hoạt
-động.
+chung một source file; việc tách nhỏ thêm chỉ thực hiện khi có nhu cầu cụ thể.
 # Bootstrap compiler status
 
 The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is the
 authoritative source list and the bootstrap-manifest test requires it to list
 every K source exactly once. It currently supports the
-source loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,
+dependency-first module loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,
 textual LLVM IR, LLVM verification, and Windows x64 linking.
 
 Run:

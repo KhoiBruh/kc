@@ -9,4 +9,5 @@ diagnostic.k
 semantic.k
 llvm_text.k
 compiler.k
+loader.k
 main.k

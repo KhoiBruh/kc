@@ -171,6 +171,8 @@ llvm-readobj --file-headers file.obj
 
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
+- The K module loader resolves symbol imports to `.k`, wildcard imports to
+  `mod.k`, loads dependencies first, and de-duplicates canonical paths.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
@@ -181,7 +183,7 @@ llvm-readobj --file-headers file.obj
 
 ## Recommended next milestone
 
-Self-host module/import and multi-file compilation. The C++ seed already loads
-dependency-first module graphs and covers diamond dependencies; keep module
-resolution, source mapping, and diagnostics in K while retaining only narrow
-Windows path services in the bootstrap runtime.
+Add source-map segments to the concatenated bootstrap source so lexer, parser,
+semantic, and import diagnostics report the original path, line, and column.
+Then replace PowerShell manifest concatenation with a build from
+`src/kbootstrap/main.k` while retaining the manifest as a reachability check.

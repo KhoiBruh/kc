@@ -2,6 +2,7 @@ module kbootstrap.main;
 
 import kbootstrap.compiler;
 import kbootstrap.containers;
+import kbootstrap.loader;
 
 struct Argument(data: u8*, length: u64, ok: bool)
 
@@ -34,19 +35,11 @@ fn main(): i32 {
     if (bootstrapRuntime.ok == false) { return 1; }
     if (executable.ok == false) { return 1; }
 
-    val sourcePlaceholder = k_boot_alloc(1);
-    var sourceData = sourcePlaceholder as u8*;
-    var sourceLength: u64 = 0;
-    if (k_boot_read_file(
-            input.data, input.length, &sourceData, &sourceLength)) {
-        k_boot_free(sourcePlaceholder);
-    } else {
-        k_boot_free(sourcePlaceholder);
-        return 1;
-    }
+    val loaded = loadModules(input.data, input.length);
+    if (loaded.ok == false) { return 2; }
 
     var result = compileToLl(
-        sourceData, sourceLength, llOutput.data, llOutput.length,
+        loaded.source.data, loaded.source.length, llOutput.data, llOutput.length,
         opt.data, opt.length);
     if (result == 0) {
         result = linkLl(
@@ -55,7 +48,7 @@ fn main(): i32 {
             bootstrapRuntime.data, bootstrapRuntime.length,
             executable.data, executable.length);
     }
-    k_boot_free(sourceData as unit*);
+    k_boot_free(loaded.source.data as unit*);
     k_boot_free(executable.data as unit*);
     k_boot_free(bootstrapRuntime.data as unit*);
     k_boot_free(stdRuntime.data as unit*);

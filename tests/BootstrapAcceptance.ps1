@@ -127,6 +127,39 @@ foreach ($fixtureName in $validFixtures) {
     if ($LASTEXITCODE -ne 0) { Write-Error "kc4 IR failed verification" }
 }
 
+$moduleRoot = Join-Path $InvalidFixtureDirectory "modules"
+$moduleStages = @(
+    @($kc1, $stage1), @($kc2, $stage2),
+    @($kc3, $stage3), @($kc4, $stage4)
+)
+foreach ($moduleFixture in @("diamond", "wildcard")) {
+    $moduleEntry = Join-Path $moduleRoot "$moduleFixture/main.k"
+    $moduleResults = @()
+    Push-Location $moduleRoot
+    try {
+        foreach ($moduleStage in $moduleStages) {
+            $moduleLl = Join-Path $moduleStage[1] "module-$moduleFixture.ll"
+            $moduleExe = Join-Path $moduleStage[1] "module-$moduleFixture.exe"
+            & $moduleStage[0] $moduleEntry $moduleLl $Opt $Clang `
+                $StdRuntime $BootstrapRuntime $moduleExe
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "$($moduleStage[0]) rejected module $moduleFixture fixture"
+            }
+            & $Opt -passes=verify -disable-output $moduleLl
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "module $moduleFixture IR failed verification"
+            }
+            & $moduleExe
+            $moduleResults += $LASTEXITCODE
+        }
+    } finally {
+        Pop-Location
+    }
+    if (($moduleResults | Where-Object { $_ -ne 42 }).Count -ne 0) {
+        Write-Error "bootstrap module $moduleFixture behavior differs"
+    }
+}
+
 $invalidFixtures = @(
     "bootstrap-semantic-duplicate.k",
     "bootstrap-semantic-unknown.k",
