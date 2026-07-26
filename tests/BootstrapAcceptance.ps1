@@ -151,8 +151,10 @@ function Assert-BootstrapExitCode {
         Write-Error "$Compiler returned $actual for $CaseName; expected $Expected"
     }
     if ($ExpectedMessage.Length -ne 0) {
-        $text = [string]($output -join "`n")
-        if ($text -notlike "*$ExpectedMessage*") {
+        $messages = @($output | ForEach-Object { $_.ToString() } |
+            Where-Object { $_ -like "*$ExpectedMessage*" })
+        if ($messages.Count -ne 1 -or
+            [string]$messages[0] -cne $ExpectedMessage) {
             Write-Error "$Compiler did not report the expected message for $CaseName"
         }
     }

@@ -170,6 +170,7 @@ llvm-readobj --file-headers file.obj
 ## Bootstrap compiler
 
 Module/import self-hosting is complete for the current contract.
+Bootstrap diagnostics and CLI parity are complete for the current contract.
 
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
@@ -186,6 +187,8 @@ Module/import self-hosting is complete for the current contract.
   process-launch failures, and frees all acquired argument buffers on early exit.
 - Bootstrap CLI rejects entries without a `.k` suffix and empty output, tool, or
   runtime paths before source loading or process launch.
+- Bootstrap acceptance requires stable CLI failure messages exactly once across
+  `kc1` through `kc4`, plus exact semantic diagnostic parity.
 - Bootstrap stages compile `src/kbootstrap/main.k` as a real module graph;
   `manifest.txt` only verifies that every compiler source remains reachable.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a

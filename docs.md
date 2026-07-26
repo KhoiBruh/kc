@@ -657,6 +657,12 @@ Acceptance covers diamond graphs, wildcard `mod.k`, cycles, missing modules,
 depth success/failure, and lexer/parser/semantic errors in dependencies across
 `kc1` through `kc4`.
 
+**Bootstrap diagnostics/CLI parity milestone: complete.** Lexer, parser,
+semantic, import, argument, filesystem, tool-launch, verification, and linker
+failures use the established exit-code split. Acceptance requires every stable
+CLI failure message exactly once and identically across `kc1` through `kc4`,
+alongside exact semantic diagnostic parity.
+
 The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
 and the bootstrap-manifest test requires every listed K source to be reachable
 from `main.k` through imports. It currently supports the
