@@ -80,6 +80,44 @@ fn appendEmitLlFlag(var buffer: ByteBuffer) {
     byteBufferAppend(buffer, 32);
 }
 
+fn compilerFailure(kind: u32) {
+    var message = byteBufferNew();
+    byteBufferAppend(message, 101); byteBufferAppend(message, 114);
+    byteBufferAppend(message, 114); byteBufferAppend(message, 111);
+    byteBufferAppend(message, 114); byteBufferAppend(message, 58);
+    byteBufferAppend(message, 32); byteBufferAppend(message, 99);
+    byteBufferAppend(message, 97); byteBufferAppend(message, 110);
+    byteBufferAppend(message, 110); byteBufferAppend(message, 111);
+    byteBufferAppend(message, 116); byteBufferAppend(message, 32);
+    if (kind == 1) {
+        byteBufferAppend(message, 119); byteBufferAppend(message, 114);
+        byteBufferAppend(message, 105); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 101); byteBufferAppend(message, 32);
+        byteBufferAppend(message, 76); byteBufferAppend(message, 76);
+        byteBufferAppend(message, 86); byteBufferAppend(message, 77);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 111);
+        byteBufferAppend(message, 117); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 112); byteBufferAppend(message, 117);
+        byteBufferAppend(message, 116);
+    } else {
+        byteBufferAppend(message, 108); byteBufferAppend(message, 97);
+        byteBufferAppend(message, 117); byteBufferAppend(message, 110);
+        byteBufferAppend(message, 99); byteBufferAppend(message, 104);
+        byteBufferAppend(message, 32);
+        if (kind == 2) {
+            byteBufferAppend(message, 111); byteBufferAppend(message, 112);
+            byteBufferAppend(message, 116);
+        } else {
+            byteBufferAppend(message, 99); byteBufferAppend(message, 108);
+            byteBufferAppend(message, 97); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 103);
+        }
+    }
+    byteBufferAppend(message, 10);
+    k_boot_stderr(message.data, message.length);
+    byteBufferFree(message);
+}
+
 fn compileToLl(
     sourceData: u8*,
     sourceLength: u64,
@@ -131,6 +169,7 @@ fn compileToLl(
     val written = k_boot_write_file(
         temporaryPath.data, temporaryPath.length, output.data, output.length);
     if (written == false) {
+        compilerFailure(1);
         byteBufferFree(temporaryPath);
         byteBufferFree(output);
         typeValueListFree(checked.genericArguments);
@@ -152,7 +191,7 @@ fn compileToLl(
         typeValueListFree(checked.genericArguments);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
-        if (verified < 0) { return 1; }
+        if (verified < 0) { compilerFailure(2); return 1; }
         return 2;
     }
     val published = k_boot_write_file(
@@ -163,6 +202,7 @@ fn compileToLl(
     astListFree(parsed.nodes);
     tokenListFree(lexed.tokens);
     if (published) { return 0; }
+    compilerFailure(1);
     return 1;
 }
 
@@ -186,7 +226,7 @@ fn linkLl(
     val result = k_boot_run(command.data, command.length);
     byteBufferFree(command);
     if (result == 0) { return 0; }
-    if (result < 0) { return 1; }
+    if (result < 0) { compilerFailure(3); return 1; }
     return 2;
 }
 

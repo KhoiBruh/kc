@@ -136,18 +136,25 @@ function Assert-BootstrapExitCode {
         [string]$Compiler,
         [object[]]$CompilerArguments,
         [int]$Expected,
-        [string]$CaseName
+        [string]$CaseName,
+        [string]$ExpectedMessage = ""
     )
     $previousErrorAction = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $null = & $Compiler @CompilerArguments 2>&1
+        $output = & $Compiler @CompilerArguments 2>&1
         $actual = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $previousErrorAction
     }
     if ($actual -ne $Expected) {
         Write-Error "$Compiler returned $actual for $CaseName; expected $Expected"
+    }
+    if ($ExpectedMessage.Length -ne 0) {
+        $text = [string]($output -join "`n")
+        if ($text -notlike "*$ExpectedMessage*") {
+            Write-Error "$Compiler did not report the expected message for $CaseName"
+        }
     }
 }
 
@@ -164,20 +171,26 @@ foreach ($moduleStage in $moduleStages) {
     $validArguments = @(
         $cliFixture, $ll, $Opt, $Clang,
         $StdRuntime, $BootstrapRuntime, $exe)
-    Assert-BootstrapExitCode $compiler @() 1 "missing arguments"
-    Assert-BootstrapExitCode $compiler ($validArguments + "extra") 1 "extra arguments"
+    Assert-BootstrapExitCode $compiler @() 1 "missing arguments" `
+        "error: expected 7 arguments"
+    Assert-BootstrapExitCode $compiler ($validArguments + "extra") 1 `
+        "extra arguments" "error: expected 7 arguments"
     Assert-BootstrapExitCode $compiler @(
         $missingInput, $ll, $Opt, $Clang,
-        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing entry file"
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing entry file" `
+        "error: cannot load input"
     Assert-BootstrapExitCode $compiler @(
         $cliFixture, (Join-Path $directory "missing/exit.ll"), $Opt, $Clang,
-        $StdRuntime, $BootstrapRuntime, $exe) 1 "unwritable output"
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "unwritable output" `
+        "error: cannot write LLVM output"
     Assert-BootstrapExitCode $compiler @(
         $cliFixture, $ll, $missingTool, $Clang,
-        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing opt executable"
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing opt executable" `
+        "error: cannot launch opt"
     Assert-BootstrapExitCode $compiler @(
         $cliFixture, $ll, $Opt, $missingTool,
-        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing clang executable"
+        $StdRuntime, $BootstrapRuntime, $exe) 1 "missing clang executable" `
+        "error: cannot launch clang"
     Assert-BootstrapExitCode $compiler @(
         $invalidSourceFixture, $ll, $Opt, $Clang,
         $StdRuntime, $BootstrapRuntime, $exe) 2 "source diagnostic"

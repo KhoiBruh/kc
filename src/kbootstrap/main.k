@@ -6,6 +6,51 @@ import kbootstrap.loader.loadModules;
 
 struct Argument(data: u8*, length: u64, ok: bool)
 
+fn mainError(kind: u32) {
+    var message = byteBufferNew();
+    byteBufferAppend(message, 101); byteBufferAppend(message, 114);
+    byteBufferAppend(message, 114); byteBufferAppend(message, 111);
+    byteBufferAppend(message, 114); byteBufferAppend(message, 58);
+    byteBufferAppend(message, 32);
+    if (kind == 1) {
+        byteBufferAppend(message, 101); byteBufferAppend(message, 120);
+        byteBufferAppend(message, 112); byteBufferAppend(message, 101);
+        byteBufferAppend(message, 99); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 101); byteBufferAppend(message, 100);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 55);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 97);
+        byteBufferAppend(message, 114); byteBufferAppend(message, 103);
+        byteBufferAppend(message, 117); byteBufferAppend(message, 109);
+        byteBufferAppend(message, 101); byteBufferAppend(message, 110);
+        byteBufferAppend(message, 116); byteBufferAppend(message, 115);
+    } else {
+        byteBufferAppend(message, 99); byteBufferAppend(message, 97);
+        byteBufferAppend(message, 110); byteBufferAppend(message, 110);
+        byteBufferAppend(message, 111); byteBufferAppend(message, 116);
+        byteBufferAppend(message, 32); byteBufferAppend(message, 108);
+        byteBufferAppend(message, 111); byteBufferAppend(message, 97);
+        byteBufferAppend(message, 100); byteBufferAppend(message, 32);
+        byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+        byteBufferAppend(message, 112); byteBufferAppend(message, 117);
+        byteBufferAppend(message, 116);
+    }
+    byteBufferAppend(message, 10);
+    k_boot_stderr(message.data, message.length);
+    byteBufferFree(message);
+}
+
+fn freeArgument(argument: Argument) {
+    if (argument.ok) { k_boot_free(argument.data as unit*); }
+}
+
+fn freeArguments(
+    input: Argument, llOutput: Argument, opt: Argument, clang: Argument,
+    stdRuntime: Argument, bootstrapRuntime: Argument, executable: Argument) {
+    freeArgument(executable); freeArgument(bootstrapRuntime);
+    freeArgument(stdRuntime); freeArgument(clang); freeArgument(opt);
+    freeArgument(llOutput); freeArgument(input);
+}
+
 fn readArgument(index: i32): Argument {
     val placeholder = k_boot_alloc(1);
     var data = placeholder as u8*;
@@ -19,7 +64,7 @@ fn readArgument(index: i32): Argument {
 }
 
 fn main(): i32 {
-    if (k_boot_arg_count() != 8) { return 1; }
+    if (k_boot_arg_count() != 8) { mainError(1); return 1; }
     val input = readArgument(1);
     val llOutput = readArgument(2);
     val opt = readArgument(3);
@@ -27,17 +72,27 @@ fn main(): i32 {
     val stdRuntime = readArgument(5);
     val bootstrapRuntime = readArgument(6);
     val executable = readArgument(7);
-    if (input.ok == false) { return 1; }
-    if (llOutput.ok == false) { return 1; }
-    if (opt.ok == false) { return 1; }
-    if (clang.ok == false) { return 1; }
-    if (stdRuntime.ok == false) { return 1; }
-    if (bootstrapRuntime.ok == false) { return 1; }
-    if (executable.ok == false) { return 1; }
+    var argumentsOk = true;
+    if (input.ok == false) { argumentsOk = false; }
+    if (llOutput.ok == false) { argumentsOk = false; }
+    if (opt.ok == false) { argumentsOk = false; }
+    if (clang.ok == false) { argumentsOk = false; }
+    if (stdRuntime.ok == false) { argumentsOk = false; }
+    if (bootstrapRuntime.ok == false) { argumentsOk = false; }
+    if (executable.ok == false) { argumentsOk = false; }
+    if (argumentsOk == false) {
+        mainError(1);
+        freeArguments(
+            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+        return 1;
+    }
 
     val loaded = loadModules(input.data, input.length);
     if (loaded.ok == false) {
         sourceMapFree(loaded.sourceMap);
+        if (loaded.failureKind == 1) { mainError(2); }
+        freeArguments(
+            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
         return loaded.failureKind;
     }
 
@@ -54,12 +109,7 @@ fn main(): i32 {
     }
     k_boot_free(loaded.source.data as unit*);
     sourceMapFree(loaded.sourceMap);
-    k_boot_free(executable.data as unit*);
-    k_boot_free(bootstrapRuntime.data as unit*);
-    k_boot_free(stdRuntime.data as unit*);
-    k_boot_free(clang.data as unit*);
-    k_boot_free(opt.data as unit*);
-    k_boot_free(llOutput.data as unit*);
-    k_boot_free(input.data as unit*);
+    freeArguments(
+        input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
     return result;
 }

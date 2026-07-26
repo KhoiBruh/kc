@@ -182,6 +182,8 @@ Module/import self-hosting is complete for the current contract.
 - Bootstrap CLI requires exactly seven arguments after the executable. Argument,
   filesystem, and process-launch failures return `1`; source, verification, and
   linker diagnostics return `2`.
+- Bootstrap CLI emits stable stderr for argument, input-load, output-write, and
+  process-launch failures, and frees all acquired argument buffers on early exit.
 - Bootstrap stages compile `src/kbootstrap/main.k` as a real module graph;
   `manifest.txt` only verifies that every compiler source remains reachable.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
@@ -194,6 +196,6 @@ Module/import self-hosting is complete for the current contract.
 
 ## Recommended next milestone
 
-Add stable stderr messages for bootstrap CLI, filesystem, output-write, and
-process-launch failures while preserving the established exit-code split.
-Ensure early failure paths release runtime-owned argument and source buffers.
+Validate bootstrap CLI path contracts: reject non-`.k` entries and empty output
+or tool paths with stable messages before loading source or launching tools.
+Keep the seven-argument ABI unchanged.
