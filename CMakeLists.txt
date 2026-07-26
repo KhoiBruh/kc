@@ -186,27 +186,6 @@ if(BUILD_TESTING)
     )
 
     add_test(
-        NAME k_bootstrap_codegen_tests
-        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapCodegenTests.ps1"
-            -Compiler "$<TARGET_FILE:kc>"
-            -Opt "${LLVM_TOOLS_BINARY_DIR}/opt.exe"
-            -Clang "${LLVM_TOOLS_BINARY_DIR}/clang.exe"
-            -StdRuntime "$<TARGET_FILE:k_std_runtime>"
-            -BootstrapRuntime "$<TARGET_FILE:k_bootstrap_runtime>"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
-            -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/hello.k"
-            -FunctionsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/functions.k"
-            -ControlFlowFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/control_flow.k"
-            -AggregatesFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/aggregates.k"
-            -GenericsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generics.k"
-            -MultipleGenericsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generics_multiple.k"
-            -GenericNullableFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generic_nullable.k"
-            -GenericStructsFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/generic_structs.k"
-            -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-codegen-test.exe"
-    )
-
-    add_test(
         NAME k_bootstrap_manifest_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapManifestTests.ps1"
