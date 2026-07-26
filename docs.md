@@ -627,7 +627,9 @@ chung một source file cho đến khi module/import và multi-file compilation 
 động.
 # Bootstrap compiler status
 
-The bootstrap subset lives in `src/kbootstrap/` and currently supports the
+The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is the
+authoritative source list and the bootstrap-manifest test requires it to list
+every K source exactly once. It currently supports the
 source loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,
 textual LLVM IR, LLVM verification, and Windows x64 linking.
 
@@ -660,8 +662,8 @@ constraints currently include `any`, `comparable`, `ordered`, `number`,
 nullable subset supports `T?`, `null`, implicit lifting from `T`, and postfix
 `!`.
 
-Bootstrap generic functions accept arbitrary ordered type-parameter lists.
-Specialization identity and LLVM symbol names include every concrete type
-argument in declaration order. Generic structs, type packs, overload
-resolution, ownership/moves, enums, and user-defined traits remain
-unsupported.
+Bootstrap generic functions and structs accept arbitrary ordered type-parameter
+lists. Specialization identity and LLVM symbol names include every concrete
+type argument in declaration order; struct construction remains explicit (for
+example, `Pair<i32, bool>(40, true)`). Type packs, overload resolution,
+ownership/moves, enums, and user-defined traits remain unsupported.

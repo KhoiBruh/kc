@@ -18,6 +18,9 @@ param(
     [string]$SourceDirectory,
 
     [Parameter(Mandatory)]
+    [string]$Manifest,
+
+    [Parameter(Mandatory)]
     [string]$FixtureDirectory,
 
     [Parameter(Mandatory)]
@@ -31,11 +34,7 @@ $ErrorActionPreference = "Stop"
 
 [System.IO.Directory]::CreateDirectory($OutputDirectory) | Out-Null
 $combined = Join-Path $OutputDirectory "compiler.k"
-$modules = @(
-    "source.k", "token.k", "containers.k", "lexer.k", "ast.k", "parser.k",
-    "types.k", "diagnostic.k", "semantic.k", "llvm_text.k", "compiler.k",
-    "main.k"
-)
+$modules = Get-Content $Manifest | Where-Object { $_.Trim().Length -ne 0 }
 $source = ($modules | ForEach-Object {
     [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))
 }) -join "`n"

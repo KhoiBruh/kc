@@ -198,6 +198,14 @@ if(BUILD_TESTING)
     )
 
     add_test(
+        NAME k_bootstrap_manifest_tests
+        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapManifestTests.ps1"
+            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
+            -Manifest "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/manifest.txt"
+    )
+
+    add_test(
         NAME k_bootstrap_acceptance
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapAcceptance.ps1"
@@ -207,6 +215,7 @@ if(BUILD_TESTING)
             -StdRuntime "$<TARGET_FILE:k_std_runtime>"
             -BootstrapRuntime "$<TARGET_FILE:k_bootstrap_runtime>"
             -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
+            -Manifest "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/manifest.txt"
             -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap"
             -InvalidFixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -OutputDirectory "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-acceptance"
