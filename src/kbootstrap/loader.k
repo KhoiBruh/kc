@@ -196,6 +196,29 @@ fn loaderReport(
             byteBufferAppend(message, 101); byteBufferAppend(message, 100);
             byteBufferAppend(message, 101); byteBufferAppend(message, 100);
         } else {
+        if (category == 3) {
+            byteBufferAppend(message, 117); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 114); byteBufferAppend(message, 109);
+            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 97); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 100);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 115);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 103);
+        } else {
+        if (category == 4) {
+            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 118); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 108); byteBufferAppend(message, 105);
+            byteBufferAppend(message, 100); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 99); byteBufferAppend(message, 104);
+            byteBufferAppend(message, 97); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 97); byteBufferAppend(message, 99);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 114);
+        } else {
             byteBufferAppend(message, 105); byteBufferAppend(message, 110);
             byteBufferAppend(message, 118); byteBufferAppend(message, 97);
             byteBufferAppend(message, 108); byteBufferAppend(message, 105);
@@ -203,7 +226,7 @@ fn loaderReport(
             byteBufferAppend(message, 115); byteBufferAppend(message, 111);
             byteBufferAppend(message, 117); byteBufferAppend(message, 114);
             byteBufferAppend(message, 99); byteBufferAppend(message, 101);
-        }
+        }}}
     }
     byteBufferAppend(message, 10);
     k_boot_stderr(message.data, message.length);
@@ -338,7 +361,9 @@ fn loaderScanImports(
     depth: u64): bool {
     val lexed = lex(source);
     if (lexed.ok == false) {
-        loaderReport(path, source, lexed.errorStart, 0);
+        var category: u32 = 4;
+        if (lexed.errorKind == 1) { category = 3; }
+        loaderReport(path, source, lexed.errorStart, category);
         tokenListFree(lexed.tokens);
         return false;
     }

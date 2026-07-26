@@ -4,8 +4,10 @@ import kbootstrap.token.Token;
 import kbootstrap.ast.AstNode;
 import kbootstrap.containers.ByteBuffer;
 
-struct ParseResult(nodes: AstList, ok: bool, errorStart: u64)
-struct Parser(tokens: TokenList, nodes: AstList, current: u64, ok: bool)
+struct ParseResult(nodes: AstList, ok: bool, errorStart: u64, expectedKind: u32)
+struct Parser(
+    tokens: TokenList, nodes: AstList, current: u64,
+    ok: bool, expectedKind: u32)
 
 fn parserPeek(parser: Parser): Token {
     return parser.tokens.data[parser.current];
@@ -30,6 +32,7 @@ fn parserMatch(var parser: Parser, kind: u32): bool {
 fn parserExpect(var parser: Parser, kind: u32): bool {
     if (parserMatch(parser, kind)) { return true; }
     parser.ok = false;
+    parser.expectedKind = kind;
     return false;
 }
 
@@ -673,7 +676,7 @@ fn parseImport(var parser: Parser): u64 {
 }
 
 fn parse(tokens: TokenList): ParseResult {
-    var parser = Parser(tokens, astListNew(), 0, true);
+    var parser = Parser(tokens, astListNew(), 0, true, 0);
     val start = parserPeek(parser).start;
     var declarationCount: u32 = 0;
     if (parserCheck(parser, 25)) {
@@ -688,7 +691,7 @@ fn parse(tokens: TokenList): ParseResult {
         if (parserCheck(parser, 0)) {
             val end = parserPeek(parser).end;
             parserAdd(parser, 44, start, end, 0, declarationCount);
-            return ParseResult(parser.nodes, true, 0);
+            return ParseResult(parser.nodes, true, 0, 0);
         }
         if (parserCheck(parser, 25)) {
             parseModule(parser);
@@ -709,5 +712,5 @@ fn parse(tokens: TokenList): ParseResult {
         declarationCount = declarationCount + 1;
     }
     return ParseResult(
-        parser.nodes, false, parserPeek(parser).start);
+        parser.nodes, false, parserPeek(parser).start, parser.expectedKind);
 }

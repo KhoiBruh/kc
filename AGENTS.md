@@ -177,6 +177,8 @@ Module/import self-hosting is complete for the current contract.
   `mod.k`, loads dependencies first, and de-duplicates canonical paths.
 - Bootstrap source-map segments preserve each canonical path and translate
   lexer, parser, semantic, and import diagnostics to original file positions.
+- Bootstrap lexer/parser diagnostics preserve an error kind or expected token;
+  do not regress them to generic `invalid source` or `error` messages.
 - Bootstrap stages compile `src/kbootstrap/main.k` as a real module graph;
   `manifest.txt` only verifies that every compiler source remains reachable.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
@@ -189,6 +191,6 @@ Module/import self-hosting is complete for the current contract.
 
 ## Recommended next milestone
 
-Improve bootstrap diagnostics and CLI parity, starting with specific lexer and
-parser messages plus consistent filesystem/tool-invocation exit code `1` versus
-source diagnostic exit code `2`. Do not expand language semantics for this work.
+Make bootstrap CLI exit codes consistent: use `1` for argument, filesystem, and
+tool-invocation failures, and `2` only for source, semantic, codegen, or linker
+diagnostics. Do not expand language semantics for this work.

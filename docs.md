@@ -554,7 +554,9 @@ dependency và wildcard `mod.k` đều được hỗ trợ. Compiler bootstrap �
 trực tiếp từ entry `src/kbootstrap/main.k`; PowerShell không còn ghép source.
 Loader giữ source-map segment cho từng canonical path, vì vậy lexer, parser,
 semantic và import diagnostics đều báo `path:line:column` theo tệp gốc thay vì
-offset trong source tổng hợp.
+offset trong source tổng hợp. Bootstrap lexer phân biệt chuỗi chưa kết thúc và
+ký tự không hợp lệ; parser giữ token được mong đợi để báo lỗi như
+`expected ';'` thay vì diagnostic chung chung.
 
 ### Array literal và suy luận kích thước
 

@@ -9,7 +9,7 @@ extern fn k_boot_arg(index: i32, data: u8**, length: u64*): bool;
 extern fn k_boot_read_file(
     path: u8*, pathLength: u64, data: u8**, length: u64*): bool;
 
-struct LexResult(tokens: TokenList, ok: bool, errorStart: u64)
+struct LexResult(tokens: TokenList, ok: bool, errorStart: u64, errorKind: u32)
 
 fn isWhitespace(value: u8): bool {
     if (value == 32) { return true; }
@@ -363,7 +363,7 @@ fn lex(source: Source): LexResult {
             if (value == 34) {
                 val end = scanString(source, offset + 1);
                 if (end == offset + 1) {
-                    return LexResult(tokens, false, start);
+                    return LexResult(tokens, false, start, 1);
                 }
                 offset = end;
                 tokenListAppend(tokens, Token(5, start, offset));
@@ -387,7 +387,7 @@ fn lex(source: Source): LexResult {
                         }
                     }
                     if (kind == 0) {
-                        return LexResult(tokens, false, start);
+                        return LexResult(tokens, false, start, 2);
                     }
                     offset = offset + 1;
                     tokenListAppend(tokens, Token(kind, start, offset));
@@ -398,5 +398,5 @@ fn lex(source: Source): LexResult {
         }
     }
     tokenListAppend(tokens, Token(0, source.length, source.length));
-    return LexResult(tokens, true, 0);
+    return LexResult(tokens, true, 0, 0);
 }

@@ -216,8 +216,8 @@ try {
 }
 
 $positionedModuleErrors = @(
-    @("lexer_error", "bad.k", "3:30: error: invalid source"),
-    @("parser_error", "bad.k", "3:29: error: error")
+    @("lexer_error", "bad.k", "3:30: error: unterminated string"),
+    @("parser_error", "bad.k", "3:29: error: expected ';'")
 )
 Push-Location $moduleRoot
 try {

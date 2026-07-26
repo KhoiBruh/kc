@@ -91,13 +91,17 @@ fn compileToLl(
     val source = Source(sourceData, sourceLength);
     val lexed = lex(source);
     if (lexed.ok == false) {
-        printDiagnostic(source, sourceMap, 0, lexed.errorStart, lexed.errorStart + 1);
+        printDiagnostic(
+            source, sourceMap, 99 + lexed.errorKind,
+            lexed.errorStart, lexed.errorStart + 1);
         tokenListFree(lexed.tokens);
         return 2;
     }
     val parsed = parse(lexed.tokens);
     if (parsed.ok == false) {
-        printDiagnostic(source, sourceMap, 0, parsed.errorStart, parsed.errorStart + 1);
+        printDiagnostic(
+            source, sourceMap, 1000 + parsed.expectedKind,
+            parsed.errorStart, parsed.errorStart + 1);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         return 2;
@@ -234,6 +238,63 @@ fn stderrNumber(value: u64): ByteBuffer {
 }
 
 fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
+    if (category == 100) {
+        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 109);
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
+        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 100);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 115);
+        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+        byteBufferAppend(buffer, 103);
+    } else {
+    if (category == 101) {
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+        byteBufferAppend(buffer, 118); byteBufferAppend(buffer, 97);
+        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 105);
+        byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 104);
+        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
+        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
+        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 114);
+    } else {
+    if (category >= 1000) {
+        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
+        byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 116);
+        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 100);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 39);
+        val kind = category - 1000;
+        if (kind == 1) {
+            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 100);
+            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 110);
+            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 105);
+            byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 105);
+            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
+        } else {
+            var known = false;
+            if (kind == 50) { byteBufferAppend(buffer, 40); known = true; }
+            if (kind == 51) { byteBufferAppend(buffer, 41); known = true; }
+            if (kind == 52) { byteBufferAppend(buffer, 123); known = true; }
+            if (kind == 53) { byteBufferAppend(buffer, 125); known = true; }
+            if (kind == 54) { byteBufferAppend(buffer, 91); known = true; }
+            if (kind == 55) { byteBufferAppend(buffer, 93); known = true; }
+            if (kind == 56) { byteBufferAppend(buffer, 44); known = true; }
+            if (kind == 57) { byteBufferAppend(buffer, 58); known = true; }
+            if (kind == 58) { byteBufferAppend(buffer, 59); known = true; }
+            if (kind == 59) { byteBufferAppend(buffer, 46); known = true; }
+            if (kind == 67) { byteBufferAppend(buffer, 61); known = true; }
+            if (known == false) {
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 107); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 110);
+            }
+        }
+        byteBufferAppend(buffer, 39);
+    } else {
     if (category == 1) {
         byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 117);
         byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 108);
@@ -344,7 +405,7 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
                 }
             }
         }
-    }
+    }}}}
 }
 
 fn printDiagnostic(
