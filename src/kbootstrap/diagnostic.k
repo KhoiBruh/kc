@@ -1,7 +1,7 @@
 module kbootstrap.diagnostic;
 
-import kbootstrap.containers;
-import kbootstrap.types;
+import kbootstrap.containers.ByteBuffer;
+import kbootstrap.types.TypeValue;
 
 struct SemanticResult(
     ok: bool, category: u32, start: u64, end: u64,

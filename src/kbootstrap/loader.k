@@ -1,9 +1,9 @@
 module kbootstrap.loader;
 
-import kbootstrap.source;
-import kbootstrap.token;
-import kbootstrap.containers;
-import kbootstrap.lexer;
+import kbootstrap.source.Source;
+import kbootstrap.token.Token;
+import kbootstrap.containers.ByteBuffer;
+import kbootstrap.lexer.lex;
 
 extern fn k_boot_current_directory(data: u8**, dataLength: u64*): bool;
 extern fn k_boot_canonical_path(

@@ -1,6 +1,6 @@
 module kbootstrap.ast;
 
-import kbootstrap.containers;
+import kbootstrap.containers.ByteBuffer;
 
 struct AstNode(
     kind: u32,

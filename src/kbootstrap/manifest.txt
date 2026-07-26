@@ -10,4 +10,5 @@ semantic.k
 llvm_text.k
 compiler.k
 loader.k
+mod.k
 main.k

@@ -18,9 +18,6 @@ param(
     [string]$SourceDirectory,
 
     [Parameter(Mandatory)]
-    [string]$Manifest,
-
-    [Parameter(Mandatory)]
     [string]$FixtureDirectory,
 
     [Parameter(Mandatory)]
@@ -33,12 +30,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 [System.IO.Directory]::CreateDirectory($OutputDirectory) | Out-Null
-$combined = Join-Path $OutputDirectory "compiler.k"
-$modules = Get-Content $Manifest | Where-Object { $_.Trim().Length -ne 0 }
-$source = ($modules | ForEach-Object {
-    [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))
-}) -join "`n"
-[System.IO.File]::WriteAllText($combined, $source)
+$entry = Join-Path $SourceDirectory "main.k"
+$moduleRoot = Split-Path -Parent $SourceDirectory
 
 $stage1 = Join-Path $OutputDirectory "stage1"
 $stage2 = Join-Path $OutputDirectory "stage2"
@@ -49,8 +42,6 @@ $stage4 = Join-Path $OutputDirectory "stage4"
 }
 
 $kc1 = Join-Path $stage1 "kc1.exe"
-& $Kc0 $combined -o $kc1
-if ($LASTEXITCODE -ne 0) { Write-Error "kc0 failed to build kc1" }
 function Build-Stage {
     param(
         [string]$Compiler,
@@ -59,16 +50,23 @@ function Build-Stage {
     )
     $ll = Join-Path $Directory "$Name.ll"
     $exe = Join-Path $Directory "$Name.exe"
-    & $Compiler $combined $ll $Opt $Clang $StdRuntime $BootstrapRuntime $exe
+    & $Compiler $entry $ll $Opt $Clang $StdRuntime $BootstrapRuntime $exe
     if ($LASTEXITCODE -ne 0) {
         Write-Error "$Compiler failed to build $Name"
     }
     return $exe
 }
 
-$kc2 = Build-Stage $kc1 $stage2 "kc2"
-$kc3 = Build-Stage $kc2 $stage3 "kc3"
-$kc4 = Build-Stage $kc3 $stage4 "kc4"
+Push-Location $moduleRoot
+try {
+    & $Kc0 $entry -o $kc1
+    if ($LASTEXITCODE -ne 0) { Write-Error "kc0 failed to build kc1" }
+    $kc2 = Build-Stage $kc1 $stage2 "kc2"
+    $kc3 = Build-Stage $kc2 $stage3 "kc3"
+    $kc4 = Build-Stage $kc3 $stage4 "kc4"
+} finally {
+    Pop-Location
+}
 
 $kc3Ll = Join-Path $stage3 "kc3.ll"
 $kc4Ll = Join-Path $stage4 "kc4.ll"

@@ -550,10 +550,11 @@ import math.utils.Vector;
 `kc0` và compiler bootstrap K tải đệ quy các module được import theo thứ tự
 dependency-first rồi phân tích semantic và phát một LLVM module cho toàn bộ
 graph. Canonical path được dùng để chỉ tải module dùng chung một lần; diamond
-dependency và wildcard `mod.k` đều được hỗ trợ. Việc build chính compiler
-bootstrap vẫn tạm ghép source theo `manifest.txt`. Loader giữ source-map segment
-cho từng canonical path, vì vậy lexer, parser, semantic và import diagnostics
-đều báo `path:line:column` theo tệp gốc thay vì offset trong source tổng hợp.
+dependency và wildcard `mod.k` đều được hỗ trợ. Compiler bootstrap được build
+trực tiếp từ entry `src/kbootstrap/main.k`; PowerShell không còn ghép source.
+Loader giữ source-map segment cho từng canonical path, vì vậy lexer, parser,
+semantic và import diagnostics đều báo `path:line:column` theo tệp gốc thay vì
+offset trong source tổng hợp.
 
 ### Array literal và suy luận kích thước
 
@@ -636,9 +637,9 @@ raw allocation, tự grow/copy/free và chưa phụ thuộc generic. Chúng đan
 chung một source file; việc tách nhỏ thêm chỉ thực hiện khi có nhu cầu cụ thể.
 # Bootstrap compiler status
 
-The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is the
-authoritative source list and the bootstrap-manifest test requires it to list
-every K source exactly once. It currently supports the
+The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
+and the bootstrap-manifest test requires every listed K source to be reachable
+from `main.k` through imports. It currently supports the
 dependency-first module loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,
 textual LLVM IR, LLVM verification, and Windows x64 linking.
 
@@ -651,9 +652,9 @@ Run:
 The stages are:
 
 - `kc0`: the C++ compiler built by CMake.
-- `kc1`: the K compiler sources compiled by `kc0`.
-- `kc2`: the same source manifest compiled through `kc1`.
-- `kc3`: the source manifest compiled through `kc2`.
+- `kc1`: the `main.k` module graph compiled by `kc0`.
+- `kc2`: the same entry graph compiled through `kc1`.
+- `kc3`: the entry graph compiled through `kc2`.
 - `kc4`: a self-rebuild acceptance stage compiled through `kc3`.
 
 Artifacts are written under `out/bootstrap/stage1` through `stage4`.

@@ -128,7 +128,7 @@ bool ModuleLoader::loadInto(const std::filesystem::path& path,
             return false;
         }
         if (modulePath.empty()) continue;
-        auto resolved = resolveImport(modulePath, path);
+        auto resolved = resolveImport(modulePath, path, imp.isWildcard);
         if (!resolved.has_value()) {
             std::ostringstream oss;
             oss << "cannot resolve import: ";
@@ -152,11 +152,12 @@ bool ModuleLoader::loadInto(const std::filesystem::path& path,
 
 std::optional<std::filesystem::path> ModuleLoader::resolveImport(
     const std::vector<std::string>& modulePath,
-    const std::filesystem::path& currentPath) const {
+    const std::filesystem::path& currentPath,
+    bool isWildcard) const {
     if (modulePath.empty()) return std::nullopt;
-    if (modulePath.back() == "*") {
+    if (isWildcard) {
         std::filesystem::path dir;
-        for (std::size_t i = 0; i + 1 < modulePath.size(); ++i) {
+        for (std::size_t i = 0; i < modulePath.size(); ++i) {
             if (i == 0) dir = modulePath[i];
             else dir /= modulePath[i];
         }

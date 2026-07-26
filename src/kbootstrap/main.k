@@ -1,8 +1,8 @@
 module kbootstrap.main;
 
-import kbootstrap.compiler;
-import kbootstrap.containers;
-import kbootstrap.loader;
+import kbootstrap.compiler.compileToLl;
+import kbootstrap.containers.ByteBuffer;
+import kbootstrap.loader.loadModules;
 
 struct Argument(data: u8*, length: u64, ok: bool)
 

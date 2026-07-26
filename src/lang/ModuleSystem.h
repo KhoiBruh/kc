@@ -34,7 +34,8 @@ private:
                                 std::size_t depth);
     [[nodiscard]] std::optional<std::filesystem::path> resolveImport(
         const std::vector<std::string>& modulePath,
-        const std::filesystem::path& currentPath) const;
+        const std::filesystem::path& currentPath,
+        bool isWildcard) const;
     void report(SourceSpan span, std::string message,
                 const std::filesystem::path& path);
 

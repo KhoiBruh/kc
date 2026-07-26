@@ -1,7 +1,7 @@
 module kbootstrap.compiler;
 
 import kbootstrap.*;
-import kbootstrap.loader;
+import kbootstrap.loader.LoadResult;
 
 extern fn k_boot_write_file(
     path: u8*, pathLength: u64, data: u8*, length: u64): bool;
