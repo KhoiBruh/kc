@@ -108,6 +108,15 @@ if(BUILD_TESTING)
     target_link_libraries(k_native_tests PRIVATE k_codegen)
     add_test(NAME k_native_tests COMMAND k_native_tests)
 
+    add_test(
+        NAME k_module_cli_tests
+        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/ModuleCliTests.ps1"
+            -Compiler "$<TARGET_FILE:kc>"
+            -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/modules/diamond/main.k"
+            -Output "${CMAKE_CURRENT_BINARY_DIR}/module-diamond.exe"
+    )
+
     add_executable(k_bootstrap_runtime_tests tests/BootstrapRuntimeTests.cpp)
     target_include_directories(k_bootstrap_runtime_tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/tests"

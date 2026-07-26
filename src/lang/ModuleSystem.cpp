@@ -98,8 +98,7 @@ bool ModuleLoader::loadInto(const std::filesystem::path& path,
     const auto importsCopy = program->imports;
     const auto& sourceText = module.source->text();
     module.program = std::move(program);
-    modules_.push_back(std::move(module));
-    visited_[key] = modules_.size() - 1;
+    visited_[key] = modules_.size();
     for (const auto& imp : importsCopy) {
         std::vector<std::string> modulePath;
         modulePath.reserve(imp.path.size());
@@ -147,6 +146,7 @@ bool ModuleLoader::loadInto(const std::filesystem::path& path,
         }
         if (!loadInto(*resolved, depth + 1)) return false;
     }
+    modules_.push_back(std::move(module));
     return true;
 }
 

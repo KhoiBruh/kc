@@ -121,12 +121,11 @@ int main(int argc, char** argv) {
             parsedModules.push_back(std::move(parsed));
         }
     }
-    for (std::size_t i = parsedModules.size(); i > 0; --i) {
-        const auto idx = i - 1;
+    for (std::size_t idx = 0; idx < parsedModules.size(); ++idx) {
         auto& module = parsedModules[idx];
         if (module.semantic != nullptr) continue;
         k::SemanticAnalyzer analyzer{*module.source, *module.program};
-        for (std::size_t j = idx + 1; j < parsedModules.size(); ++j) {
+        for (std::size_t j = 0; j < idx; ++j) {
             if (parsedModules[j].semantic == nullptr) {
                 k::SemanticAnalyzer otherAnalyzer{
                     *parsedModules[j].source,

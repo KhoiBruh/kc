@@ -157,9 +157,9 @@ llvm-readobj --file-headers file.obj
   `continue` are not lowered yet.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
-- Bootstrap generic functions support arbitrary ordered type-parameter lists.
-  Generic structs, type packs, user-defined traits, and overload resolution
-  remain unsupported.
+- Bootstrap generic functions and structs support arbitrary ordered
+  type-parameter lists. Type packs, user-defined traits, and overload
+  resolution remain unsupported.
 - Native output currently requires exactly `fn main(): i32`.
 - Runtime platform adapter exists only for Windows. Keep the common runtime
   separate so a POSIX adapter can be added later.
@@ -173,11 +173,14 @@ llvm-readobj --file-headers file.obj
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
-  restricted generics, and minimal nullable values emit typed LLVM text
-  directly from K.
+  generic functions and structs, and minimal nullable values emit typed LLVM
+  text directly from K.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Add generic structs only when demanded by a concrete compiler data structure.
+Self-host module/import and multi-file compilation. The C++ seed already loads
+dependency-first module graphs and covers diamond dependencies; keep module
+resolution, source mapping, and diagnostics in K while retaining only narrow
+Windows path services in the bootstrap runtime.

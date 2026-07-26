@@ -263,6 +263,16 @@ private:
         return substituteType(type, activeTypeArguments_);
     }
 
+    const ParsedModule* ownerModule(
+        const FunctionDecl& declaration) const {
+        for (const auto& module : modules_) {
+            for (const auto& candidate : module.program->functions) {
+                if (&candidate == &declaration) return &module;
+            }
+        }
+        return nullptr;
+    }
+
     std::string specializationName(
         const FunctionDecl& declaration,
         const std::vector<SemanticType>& arguments) const {
@@ -276,16 +286,8 @@ private:
             hash ^= 0xff;
             hash *= 1099511628211ULL;
         }
-        const Source* ownerSource = nullptr;
-        for (const auto& module : modules_) {
-            const auto found = module.semantic->functions.find(
-                spelling(*module.source, declaration.name));
-            if (found != module.semantic->functions.end() &&
-                found->second.declaration == &declaration) {
-                ownerSource = module.source.get();
-                break;
-            }
-        }
+        const auto* owner = ownerModule(declaration);
+        const Source* ownerSource = owner ? owner->source.get() : nullptr;
         if (ownerSource == nullptr) ownerSource = &source();
         return spelling(*ownerSource, declaration.name) +
             "__g" + std::to_string(hash);
@@ -293,14 +295,13 @@ private:
 
     const FunctionSymbol* functionSymbol(
         const FunctionDecl& declaration) const {
-        for (const auto& module : modules_) {
-            const auto found = module.semantic->functions.find(
-                spelling(*module.source, declaration.name));
-            if (found != module.semantic->functions.end() &&
-                found->second.declaration == &declaration) {
-                return &found->second;
-            }
-        }
+        const auto* owner = ownerModule(declaration);
+        if (!owner) return nullptr;
+        const auto found = owner->semantic->functions.find(
+            spelling(*owner->source, declaration.name));
+        if (found != owner->semantic->functions.end() &&
+            found->second.declaration == &declaration)
+            return &found->second;
         return nullptr;
     }
 
@@ -360,16 +361,11 @@ private:
         const auto outerTypeArguments = activeTypeArguments_;
         activeTypeArguments_ = std::move(typeArguments);
         ParsedModule* outerCurrent = current_;
+        const auto* module = ownerModule(declaration);
         const Source* ownerSource = nullptr;
-        for (const auto& module : modules_) {
-            const auto found = module.semantic->functions.find(
-                spelling(*module.source, declaration.name));
-            if (found != module.semantic->functions.end() &&
-                found->second.declaration == &declaration) {
-                current_ = const_cast<ParsedModule*>(&module);
-                ownerSource = module.source.get();
-                break;
-            }
+        if (module) {
+            current_ = const_cast<ParsedModule*>(module);
+            ownerSource = module->source.get();
         }
         if (ownerSource == nullptr) ownerSource = &source();
         const auto& owner = *ownerSource;

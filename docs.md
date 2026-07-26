@@ -547,6 +547,11 @@ import math.utils.Vector;
 
 (Cho phép bỏ qua khai báo `module` đối với các tệp kịch bản cục bộ).
 
+`kc0` tải đệ quy các module được import theo thứ tự dependency-first rồi phân
+tích semantic và phát LLVM cho toàn bộ graph. Một module dùng chung chỉ được
+tải một lần; diamond dependency được hỗ trợ. Bootstrap compiler K vẫn ghép
+source theo `manifest.txt`, nên module loading chưa được self-hosted.
+
 ### Array literal và suy luận kích thước
 
 Array literal dùng cú pháp `[a, b, c]`. Trình biên dịch suy luận kiểu phần tử chung và kích thước từ phép gán:
