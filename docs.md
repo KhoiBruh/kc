@@ -637,6 +637,14 @@ raw allocation, tự grow/copy/free và chưa phụ thuộc generic. Chúng đan
 chung một source file; việc tách nhỏ thêm chỉ thực hiện khi có nhu cầu cụ thể.
 # Bootstrap compiler status
 
+**Module/import self-hosting milestone: complete.** Bootstrap compilation starts
+from `src/kbootstrap/main.k`, resolves symbol and wildcard imports in K, loads
+dependencies first, de-duplicates canonical paths (including cycles), enforces
+the depth-64 boundary, and maps dependency diagnostics back to original files.
+Acceptance covers diamond graphs, wildcard `mod.k`, cycles, missing modules,
+depth success/failure, and lexer/parser/semantic errors in dependencies across
+`kc1` through `kc4`.
+
 The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
 and the bootstrap-manifest test requires every listed K source to be reachable
 from `main.k` through imports. It currently supports the
@@ -659,8 +667,9 @@ The stages are:
 
 Artifacts are written under `out/bootstrap/stage1` through `stage4`.
 The acceptance suite compares valid program behavior, invalid diagnostic
-categories/spans and dependency source paths, verifies emitted LLVM IR, and
-requires `kc3.ll` and `kc4.ll` to have matching SHA-256 hashes.
+categories/spans and dependency source paths, exercises module graph edge
+cases, verifies emitted LLVM IR, and requires `kc3.ll` and `kc4.ll` to have
+matching SHA-256 hashes.
 
 The runtime boundary remains a small C++ Windows ABI for allocation, file I/O,
 process execution, stderr, panic, and stdout. K directly emits typed LLVM for

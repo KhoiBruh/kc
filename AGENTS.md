@@ -169,6 +169,8 @@ llvm-readobj --file-headers file.obj
 
 ## Bootstrap compiler
 
+Module/import self-hosting is complete for the current contract.
+
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
 - The K module loader resolves symbol imports to `.k`, wildcard imports to
@@ -187,6 +189,6 @@ llvm-readobj --file-headers file.obj
 
 ## Recommended next milestone
 
-Add focused bootstrap acceptance fixtures for import cycles, the depth-64
-boundary, and lexer/parser errors inside dependencies. Keep the existing
-de-duplication semantics for cycles and require positioned parity on `kc1`–`kc4`.
+Improve bootstrap diagnostics and CLI parity, starting with specific lexer and
+parser messages plus consistent filesystem/tool-invocation exit code `1` versus
+source diagnostic exit code `2`. Do not expand language semantics for this work.

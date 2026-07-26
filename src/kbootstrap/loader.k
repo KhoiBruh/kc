@@ -145,7 +145,7 @@ fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
 }
 
 fn loaderReport(
-    path: LoadedPath, source: Source, offset: u64, importError: bool) {
+    path: LoadedPath, source: Source, offset: u64, category: u32) {
     var line: u64 = 1;
     var column: u64 = 1;
     var index: u64 = 0;
@@ -167,7 +167,7 @@ fn loaderReport(
     byteBufferAppend(message, 114); byteBufferAppend(message, 111);
     byteBufferAppend(message, 114); byteBufferAppend(message, 58);
     byteBufferAppend(message, 32);
-    if (importError) {
+    if (category == 1) {
         byteBufferAppend(message, 99); byteBufferAppend(message, 97);
         byteBufferAppend(message, 110); byteBufferAppend(message, 110);
         byteBufferAppend(message, 111); byteBufferAppend(message, 116);
@@ -180,13 +180,30 @@ fn loaderReport(
         byteBufferAppend(message, 111); byteBufferAppend(message, 114);
         byteBufferAppend(message, 116);
     } else {
-        byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 118); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 108); byteBufferAppend(message, 105);
-        byteBufferAppend(message, 100); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 115); byteBufferAppend(message, 111);
-        byteBufferAppend(message, 117); byteBufferAppend(message, 114);
-        byteBufferAppend(message, 99); byteBufferAppend(message, 101);
+        if (category == 2) {
+            byteBufferAppend(message, 109); byteBufferAppend(message, 111);
+            byteBufferAppend(message, 100); byteBufferAppend(message, 117);
+            byteBufferAppend(message, 108); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 105);
+            byteBufferAppend(message, 109); byteBufferAppend(message, 112);
+            byteBufferAppend(message, 111); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 100); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 112); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 104); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 120);
+            byteBufferAppend(message, 99); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 100);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 100);
+        } else {
+            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 118); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 108); byteBufferAppend(message, 105);
+            byteBufferAppend(message, 100); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 115); byteBufferAppend(message, 111);
+            byteBufferAppend(message, 117); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 99); byteBufferAppend(message, 101);
+        }
     }
     byteBufferAppend(message, 10);
     k_boot_stderr(message.data, message.length);
@@ -265,12 +282,12 @@ fn loaderResolveImport(
     tokens: TokenList, first: u64, partCount: u64, wildcard: bool,
     start: u64, end: u64, depth: u64): bool {
     if (depth > 64) {
-        loaderReport(currentPath, source, start, true);
+        loaderReport(currentPath, source, start, 2);
         return false;
     }
     if (wildcard == false) {
         if (partCount < 2) {
-            loaderReport(currentPath, source, start, true);
+            loaderReport(currentPath, source, start, 1);
             return false;
         }
     }
@@ -312,7 +329,7 @@ fn loaderResolveImport(
     }
     byteBufferFree(currentDirectory);
     byteBufferFree(relative);
-    loaderReport(currentPath, source, start, true);
+    loaderReport(currentPath, source, start, 1);
     return false;
 }
 
@@ -321,7 +338,7 @@ fn loaderScanImports(
     depth: u64): bool {
     val lexed = lex(source);
     if (lexed.ok == false) {
-        loaderReport(path, source, lexed.errorStart, false);
+        loaderReport(path, source, lexed.errorStart, 0);
         tokenListFree(lexed.tokens);
         return false;
     }

@@ -130,7 +130,7 @@ $moduleStages = @(
     @($kc1, $stage1), @($kc2, $stage2),
     @($kc3, $stage3), @($kc4, $stage4)
 )
-foreach ($moduleFixture in @("diamond", "wildcard")) {
+foreach ($moduleFixture in @("diamond", "wildcard", "cycle")) {
     $moduleEntry = Join-Path $moduleRoot "$moduleFixture/main.k"
     $moduleResults = @()
     Push-Location $moduleRoot
@@ -209,6 +209,107 @@ try {
         }
         if ([string]($diagnostic -join "`n") -notlike "*$missingExpected*") {
             Write-Error "$($moduleStage[0]) did not position the import diagnostic"
+        }
+    }
+} finally {
+    Pop-Location
+}
+
+$positionedModuleErrors = @(
+    @("lexer_error", "bad.k", "3:30: error: invalid source"),
+    @("parser_error", "bad.k", "3:29: error: error")
+)
+Push-Location $moduleRoot
+try {
+    foreach ($positionedCase in $positionedModuleErrors) {
+        $positionedEntry = Join-Path $moduleRoot "$($positionedCase[0])/main.k"
+        $positionedPath = [System.IO.Path]::GetFullPath(
+            (Join-Path $moduleRoot "$($positionedCase[0])/$($positionedCase[1])"))
+        $positionedExpected = "${positionedPath}:$($positionedCase[2])"
+        foreach ($moduleStage in $moduleStages) {
+            $previousErrorAction = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            try {
+                $diagnostic = & $moduleStage[0] $positionedEntry `
+                    (Join-Path $moduleStage[1] "module-$($positionedCase[0]).ll") `
+                    $Opt $Clang $StdRuntime $BootstrapRuntime `
+                    (Join-Path $moduleStage[1] "module-$($positionedCase[0]).exe") 2>&1
+                $diagnosticExit = $LASTEXITCODE
+            } finally {
+                $ErrorActionPreference = $previousErrorAction
+            }
+            if ($diagnosticExit -ne 2 -or
+                [string]($diagnostic -join "`n") -notlike "*$positionedExpected*") {
+                Write-Error "$($moduleStage[0]) failed positioned $($positionedCase[0]) parity"
+            }
+        }
+    }
+} finally {
+    Pop-Location
+}
+
+$generatedModuleRoot = Join-Path $OutputDirectory "generated-modules"
+[System.IO.Directory]::CreateDirectory($generatedModuleRoot) | Out-Null
+function Write-DepthFixture {
+    param([string]$Name, [int]$LastModule)
+    $directory = Join-Path $generatedModuleRoot $Name
+    [System.IO.Directory]::CreateDirectory($directory) | Out-Null
+    for ($index = 0; $index -le $LastModule; ++$index) {
+        $lines = @("module $Name.m$index;")
+        if ($index -lt $LastModule) {
+            $next = $index + 1
+            $lines += "import $Name.m$next.f$next;"
+        }
+        $lines += ""
+        if ($index -eq 0) {
+            $lines += "fn main(): i32 { return f1(); }"
+        } elseif ($index -lt $LastModule) {
+            $next = $index + 1
+            $lines += "fn f$index(): i32 { return f$next(); }"
+        } else {
+            $lines += "fn f$index(): i32 { return 42; }"
+        }
+        [System.IO.File]::WriteAllText(
+            (Join-Path $directory "m$index.k"), ($lines -join "`n"))
+    }
+}
+
+Write-DepthFixture -Name "depth_ok" -LastModule 64
+Write-DepthFixture -Name "depth_fail" -LastModule 65
+Push-Location $generatedModuleRoot
+try {
+    $depthOkEntry = Join-Path $generatedModuleRoot "depth_ok/m0.k"
+    foreach ($moduleStage in $moduleStages) {
+        $depthLl = Join-Path $moduleStage[1] "module-depth-ok.ll"
+        $depthExe = Join-Path $moduleStage[1] "module-depth-ok.exe"
+        & $moduleStage[0] $depthOkEntry $depthLl $Opt $Clang `
+            $StdRuntime $BootstrapRuntime $depthExe
+        if ($LASTEXITCODE -ne 0) { Write-Error "depth-64 boundary was rejected" }
+        & $Opt -passes=verify -disable-output $depthLl
+        if ($LASTEXITCODE -ne 0) { Write-Error "depth-64 IR failed verification" }
+        & $depthExe
+        if ($LASTEXITCODE -ne 42) { Write-Error "depth-64 executable returned incorrectly" }
+    }
+
+    $depthFailEntry = Join-Path $generatedModuleRoot "depth_fail/m0.k"
+    $depthFailPath = [System.IO.Path]::GetFullPath(
+        (Join-Path $generatedModuleRoot "depth_fail/m64.k"))
+    $depthExpected = "${depthFailPath}:2:1: error: module import depth exceeded"
+    foreach ($moduleStage in $moduleStages) {
+        $previousErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            $diagnostic = & $moduleStage[0] $depthFailEntry `
+                (Join-Path $moduleStage[1] "module-depth-fail.ll") `
+                $Opt $Clang $StdRuntime $BootstrapRuntime `
+                (Join-Path $moduleStage[1] "module-depth-fail.exe") 2>&1
+            $diagnosticExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousErrorAction
+        }
+        if ($diagnosticExit -ne 2 -or
+            [string]($diagnostic -join "`n") -notlike "*$depthExpected*") {
+            Write-Error "$($moduleStage[0]) failed depth-limit parity"
         }
     }
 } finally {
