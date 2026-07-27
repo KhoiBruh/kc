@@ -195,7 +195,9 @@ private:
     }
 
     void printStmtNode(const ForStmt& statement, std::size_t depth) {
-        line(depth, "For " + text(statement.valueName));
+        auto label = "For " + text(statement.valueName);
+        if (statement.indexName) label += ", " + text(*statement.indexName);
+        line(depth, label);
         printExpr(*statement.collection, depth + 1);
         printStmtNode(*statement.body, depth + 1);
     }

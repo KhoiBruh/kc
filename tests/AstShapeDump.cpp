@@ -117,6 +117,12 @@ private:
         type(*item.element);
         add(4, value.span, subtree);
     }
+    void typeNode(const k::ArrayType& item, const k::Type& value,
+                  std::size_t subtree) {
+        type(*item.element);
+        if (item.size) expression(*item.size);
+        add(5, value.span, subtree, item.size ? 1 : 0);
+    }
     template <typename T>
     void typeNode(const T&, const k::Type& value, std::size_t subtree) {
         add(1, value.span, subtree, tokenKind(value.span));
@@ -188,6 +194,12 @@ private:
         type(*item.type);
         add(21, value.span, subtree);
     }
+    void exprNode(const k::ArrayLiteralExpr& item, const k::Expr& value,
+                  std::size_t subtree) {
+        for (const auto& element : item.elements) expression(*element);
+        add(22, value.span, subtree,
+            static_cast<unsigned>(item.elements.size()));
+    }
     template <typename T>
     void exprNode(const T&, const k::Expr& value, std::size_t subtree) {
         add(0, value.span, subtree);
@@ -219,9 +231,10 @@ private:
     void stmtNode(const k::ForStmt& item, const k::Stmt& value,
                   std::size_t subtree) {
         add(45, item.valueName, index_);
+        if (item.indexName) add(45, *item.indexName, index_);
         expression(*item.collection);
         block(*item.body);
-        add(38, value.span, subtree);
+        add(38, value.span, subtree, item.indexName ? 1 : 0);
     }
     void stmtNode(const k::BreakStmt&, const k::Stmt& value,
                   std::size_t subtree) {

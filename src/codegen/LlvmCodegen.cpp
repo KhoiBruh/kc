@@ -557,8 +557,71 @@ private:
             emitRangeFor(statement, *range);
             return;
         }
-        diagnose("for collection must be an integer range",
-                 statement.collection->span);
+        const auto type = semantic().expressionTypes.find(statement.collection.get());
+        const auto* identifier = std::get_if<IdentifierExpr>(&statement.collection->node);
+        if (type == semantic().expressionTypes.end() || !identifier) {
+            diagnose("for collection must be a local array or slice",
+                     statement.collection->span);
+            return;
+        }
+        const auto local = locals_.find(spelling(source(), identifier->name));
+        if (local == locals_.end()) return;
+        auto* function = builder_.GetInsertBlock()->getParent();
+        auto* indexSlot = createEntryAlloca(
+            *function, builder_.getInt64Ty(), "for.index");
+        builder_.CreateStore(builder_.getInt64(0), indexSlot);
+        llvm::Value* data = nullptr;
+        llvm::Value* length = nullptr;
+        if (type->second.kind == SemanticTypeKind::Array) {
+            auto* arrayType = llvm::cast<llvm::ArrayType>(
+                lowerType(type->second, statement.collection->span));
+            data = builder_.CreateInBoundsGEP(
+                arrayType, local->second.address,
+                {builder_.getInt32(0), builder_.getInt32(0)});
+            length = builder_.getInt64(type->second.knownArraySize);
+        } else {
+            auto* sliceType = llvm::cast<llvm::StructType>(
+                lowerType(type->second, statement.collection->span));
+            auto* slice = builder_.CreateLoad(sliceType, local->second.address);
+            data = builder_.CreateExtractValue(slice, 0);
+            length = builder_.CreateExtractValue(slice, 1);
+        }
+        auto* conditionBlock = llvm::BasicBlock::Create(
+            context_, "for.condition", function);
+        auto* bodyBlock = llvm::BasicBlock::Create(context_, "for.body", function);
+        auto* incrementBlock = llvm::BasicBlock::Create(
+            context_, "for.increment", function);
+        auto* exitBlock = llvm::BasicBlock::Create(context_, "for.end", function);
+        builder_.CreateBr(conditionBlock);
+        builder_.SetInsertPoint(conditionBlock);
+        auto* index = builder_.CreateLoad(builder_.getInt64Ty(), indexSlot);
+        builder_.CreateCondBr(
+            builder_.CreateICmpULT(index, length), bodyBlock, exitBlock);
+        builder_.SetInsertPoint(bodyBlock);
+        auto* elementType = lowerType(*type->second.element, statement.valueName);
+        auto* value = builder_.CreateLoad(
+            elementType, builder_.CreateInBoundsGEP(elementType, data, index));
+        const auto valueName = spelling(source(), statement.valueName);
+        auto* valueSlot = createEntryAlloca(*function, elementType, valueName);
+        builder_.CreateStore(value, valueSlot);
+        const auto outerLocals = locals_;
+        locals_[valueName] = {valueSlot, elementType};
+        if (statement.indexName)
+            locals_[spelling(source(), *statement.indexName)] = {
+                indexSlot, builder_.getInt64Ty()};
+        loopTargets_.push_back({incrementBlock, exitBlock});
+        emitScopedBlock(*statement.body);
+        loopTargets_.pop_back();
+        locals_ = outerLocals;
+        if (!builder_.GetInsertBlock()->getTerminator())
+            builder_.CreateBr(incrementBlock);
+        builder_.SetInsertPoint(incrementBlock);
+        auto* next = builder_.CreateAdd(
+            builder_.CreateLoad(builder_.getInt64Ty(), indexSlot),
+            builder_.getInt64(1));
+        builder_.CreateStore(next, indexSlot);
+        builder_.CreateBr(conditionBlock);
+        builder_.SetInsertPoint(exitBlock);
     }
 
     void emitRangeFor(const ForStmt& statement, const BinaryExpr& range) {

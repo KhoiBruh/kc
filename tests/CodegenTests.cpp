@@ -468,6 +468,17 @@ TEST(codegen_lowers_inclusive_and_exclusive_integer_ranges) {
     EXPECT_TRUE(ir.find("icmp slt") != std::string::npos);
 }
 
+TEST(codegen_lowers_collection_for_with_value_and_index) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn sum(items: i32[3]): i32 { var total = 0; "
+        "for (item, i in items) { total = total + item + i as i32; } "
+        "return total; }", diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("for.condition") != std::string::npos);
+    EXPECT_TRUE(ir.find("getelementptr inbounds i32") != std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

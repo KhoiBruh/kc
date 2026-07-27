@@ -348,13 +348,26 @@ TEST(semantic_rejects_break_and_continue_outside_loops) {
 TEST(semantic_rejects_non_range_for_collections) {
     SemanticFixture invalid{"fn f() { for (item in 42) print(item); }"};
     EXPECT_EQ(invalid.semantic.diagnostics[0].message,
-              "for collection must be an integer range");
+              "for collection must be an array, slice, or integer range");
 }
 
 TEST(semantic_accepts_integer_for_ranges) {
     SemanticFixture fixture{
         "fn f() { for (i in 0..10) print(i); for (i in 0..<10) print(i); }"};
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_types_collection_for_value_and_index_bindings) {
+    SemanticFixture fixture{
+        "fn f(players: []i32) { for (player, i in players) { "
+        "print(player); val index: u64 = i; } }"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_rejects_index_binding_on_range_for) {
+    SemanticFixture fixture{"fn f() { for (value, i in 0..<10) return; }"};
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "range for does not accept an index binding");
 }
 
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {

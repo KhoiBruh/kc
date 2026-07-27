@@ -553,6 +553,20 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         val inner = typeFromNode(semantic, root - 1);
         return TypeValue(13, inner.name, inner.kind);
     }
+    if (node.kind == 5) {
+        var childRoot = root - 1;
+        var size: u64 = 0;
+        if (node.aux == 1) {
+            val constant = integerConstant(semantic, childRoot);
+            if (constant.ok == false) {
+                semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
+                return invalidType();
+            }
+            size = constant.magnitude;
+            childRoot = semantic.nodes.data[childRoot].subtreeStart - 1;
+        }
+        return arrayType(typeFromNode(semantic, childRoot), size);
+    }
     if (node.kind == 3) {
         val inner = typeFromNode(semantic, root - 1);
         return TypeValue(15, inner.name, inner.kind);
@@ -1113,6 +1127,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
         val object = expressionType(semantic, objectRoot);
         expressionType(semantic, indexRoot);
+        if (object.kind == 19) {
+            return arrayElement(object);
+        }
+        if (object.kind == 13) {
+            return TypeValue(object.pointee, object.name, 0);
+        }
         if (object.kind != 9) {
             semanticFail(semantic, 8, node);
             return invalidType();
@@ -1129,6 +1149,28 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             return invalidType();
         }
         return TypeValue(operand.pointee, operand.name, 0);
+    }
+    if (node.kind == 22) {
+        if (node.aux == 0) { return arrayType(invalidType(), 0); }
+        var childRoot = root - 1;
+        var element = expressionType(semantic, childRoot);
+        if (element.kind == 11) { element = TypeValue(3, 0, 0); }
+        var remaining = node.aux;
+        while (remaining > 0) {
+            val actual = expressionType(semantic, childRoot);
+            if (typeAccepts(element, actual, semantic.genericArguments) == false) {
+                semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
+                return invalidType();
+            }
+            var childNode = semantic.nodes.data[childRoot];
+            childNode.typeKind = element.kind;
+            childNode.typeName = element.name;
+            childNode.typePointee = element.pointee;
+            semantic.nodes.data[childRoot] = childNode;
+            childRoot = childNode.subtreeStart - 1;
+            remaining = remaining - 1;
+        }
+        return arrayType(element, node.aux as u64);
     }
     if (node.kind == 20) { return unitType(); }
     if (node.kind == 21) {
@@ -1212,9 +1254,26 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             range = collectionNode.aux == 87;
             if (collectionNode.aux == 88) { range = true; }
         }
-        if (range == false) {
-            semanticFail(semantic, 4, collectionNode);
-            return;
+        if (range) {
+            if (node.aux == 1) {
+                semanticFail(
+                    semantic, 4,
+                    semantic.nodes.data[node.subtreeStart + 1]);
+                return;
+            }
+        } else {
+            var collection = valueType.kind == 13;
+            if (valueType.kind == 19) { collection = true; }
+            if (collection == false) {
+                semanticFail(semantic, 4, collectionNode);
+                return;
+            }
+            if (valueType.kind == 13) {
+                valueType = TypeValue(
+                    valueType.pointee, valueType.name, 0);
+            } else {
+                valueType = arrayElement(valueType);
+            }
         }
         if (valueType.kind == 11) {
             valueType = TypeValue(3, 0, 0);
@@ -1230,9 +1289,11 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             semantic.nodes.data[rightRoot] = rightNode;
             semantic.nodes.data[leftRoot] = leftNode;
         }
-        if (isIntegerType(valueType) == false) {
-            semanticFail(semantic, 4, collectionNode);
-            return;
+        if (range) {
+            if (isIntegerType(valueType) == false) {
+                semanticFail(semantic, 4, collectionNode);
+                return;
+            }
         }
         val savedLocals = semantic.locals.length;
         val nameNode = semantic.nodes.data[node.subtreeStart];
@@ -1240,6 +1301,13 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         localListAppend(
             locals, LocalInfo(
                 nodeHash(semantic, nameNode), valueType, false, nameNode.start));
+        if (node.aux == 1) {
+            val indexNode = semantic.nodes.data[node.subtreeStart + 1];
+            localListAppend(
+                locals, LocalInfo(
+                    nodeHash(semantic, indexNode),
+                    TypeValue(7, 0, 0), false, indexNode.start));
+        }
         semantic.locals = locals;
         semantic.loopDepth = semantic.loopDepth + 1;
         checkBlock(semantic, bodyRoot);
@@ -1287,6 +1355,15 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             if (typeAccepts(valueType, initializer, semantic.genericArguments) == false) {
                 semanticFail(
                     semantic, 4, semantic.nodes.data[initializerRoot]);
+            }
+            if (initializer.kind == 19) {
+                if (arrayElement(initializer).kind == 0) {
+                    var initializerNode = semantic.nodes.data[initializerRoot];
+                    initializerNode.typeKind = valueType.kind;
+                    initializerNode.typeName = valueType.name;
+                    initializerNode.typePointee = valueType.pointee;
+                    semantic.nodes.data[initializerRoot] = initializerNode;
+                }
             }
         }
         var locals = semantic.locals;

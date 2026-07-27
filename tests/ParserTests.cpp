@@ -361,6 +361,18 @@ TEST(parser_accepts_single_statement_control_flow_bodies) {
     EXPECT_TRUE(std::holds_alternative<k::ForStmt>(statements[1]->node));
 }
 
+TEST(parser_accepts_collection_for_with_optional_index_binding) {
+    ParseFixture fixture{
+        "fn f(players: []i32) { for (player in players) print(player); "
+        "for (player, i in players) print(player); }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& statements = fixture.parsed.program.functions[0].body->statements;
+    const auto& first = std::get<k::ForStmt>(statements[0]->node);
+    const auto& second = std::get<k::ForStmt>(statements[1]->node);
+    EXPECT_TRUE(!first.indexName.has_value());
+    EXPECT_EQ(fixture.text(*second.indexName), "i");
+}
+
 TEST(parser_parses_left_associative_integer_casts) {
     ParseFixture fixture{
         "fn convert(val value: i32): u64 { return value as i64 as u64; }"};

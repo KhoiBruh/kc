@@ -42,6 +42,19 @@ fn unitType(): TypeValue { return TypeValue(1, 0, 0); }
 fn boolType(): TypeValue { return TypeValue(2, 0, 0); }
 fn integerLiteralType(): TypeValue { return TypeValue(11, 0, 0); }
 
+fn arrayType(element: TypeValue, size: u64): TypeValue {
+    return TypeValue(
+        19, element.name, element.kind + (size as u32) * 256);
+}
+
+fn arrayElement(type: TypeValue): TypeValue {
+    return TypeValue(type.pointee % 256, type.name, 0);
+}
+
+fn arraySize(type: TypeValue): u64 {
+    return (type.pointee / 256) as u64;
+}
+
 fn isFloatType(type: TypeValue): bool {
     if (type.kind == 17) { return true; }
     return type.kind == 18;
@@ -113,6 +126,13 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeVal
     }
     if (actual.kind == 18) {
         if (isFloatType(expected)) { return true; }
+    }
+    if (expected.kind == 19) {
+        if (actual.kind == 19) {
+            if (arraySize(expected) == arraySize(actual)) {
+                if (arrayElement(actual).kind == 0) { return true; }
+            }
+        }
     }
     return false;
 }

@@ -442,6 +442,12 @@ StmtPtr Parser::parseFor() {
     if (!expect(TokenKind::LeftParen, "expected '(' after 'for'")) return nullptr;
     if (!expect(TokenKind::Identifier, "expected loop variable")) return nullptr;
     const auto valueName = previous().span;
+    std::optional<SourceSpan> indexName;
+    if (match(TokenKind::Comma)) {
+        if (!expect(TokenKind::Identifier, "expected index variable after ','"))
+            return nullptr;
+        indexName = previous().span;
+    }
     if (!expect(TokenKind::KwIn, "expected 'in' after loop variable")) return nullptr;
     auto collection = parseExpression();
     if (!collection) return nullptr;
@@ -451,7 +457,8 @@ StmtPtr Parser::parseFor() {
     auto body = parseControlBody(bodySpan);
     if (!body) return nullptr;
     return makeStmt(spanFrom(start, bodySpan),
-                    ForStmt{valueName, std::move(collection), std::move(body)});
+                    ForStmt{valueName, indexName, std::move(collection),
+                            std::move(body)});
 }
 
 StmtPtr Parser::parseVariable() {

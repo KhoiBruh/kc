@@ -79,6 +79,7 @@ struct WhileStmt {
 };
 struct ForStmt {
     SourceSpan valueName;
+    std::optional<SourceSpan> indexName;
     ExprPtr collection;
     std::unique_ptr<BlockStmt> body;
 };

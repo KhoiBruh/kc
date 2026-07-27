@@ -158,6 +158,9 @@ llvm-readobj --file-headers file.obj
   newlines are whitespace and dangling `else` binds to the nearest `if`.
 - Integer-range `for` is self-hosted: `..` is inclusive and `..<` is exclusive;
   `break`/`continue` target the nearest `while` or `for`.
+- Collection `for` is self-hosted for fixed arrays and slices. It accepts
+  `(value in collection)` or `(value, index in collection)`; value comes first,
+  index is immutable `u64`, and both bindings are immutable.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -170,7 +173,7 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- `when` and collection iteration with `for` are not lowered yet.
+- `when` is not lowered yet.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -218,6 +221,5 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 
 ## Recommended next milestone
 
-Add index-based `for` over fixed arrays and slices as the next vertical slice,
-including empty collections, nested loops, and `break`/`continue`. Do not add a
-general iterator protocol or labeled control flow yet.
+Add `when` as the next vertical slice with first-match semantics, an optional
+`else`, positioned diagnostics, and bootstrap behavior fixtures.

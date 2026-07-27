@@ -12,6 +12,8 @@
 namespace {
 
 unsigned category(const std::string& message) {
+    if (message.find("range for does not accept") != std::string::npos)
+        return 4;
     if (message.find("duplicate") != std::string::npos) return 1;
     if (message.find("argument count") != std::string::npos ||
         message.find("exactly one argument") != std::string::npos)

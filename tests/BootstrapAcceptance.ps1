@@ -81,7 +81,8 @@ $validFixtures = @(
     "generic_structs.k", "integer_casts.k", "integer_cast_panic.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
-    "short_circuit.k", "loop_control.k", "for_control.k"
+    "short_circuit.k", "loop_control.k", "for_control.k",
+    "collection_for.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName
@@ -123,6 +124,9 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "for_control.k" -and $stage1Exit -ne 42) {
         Write-Error "for control fixture did not return 42"
+    }
+    if ($fixtureName -eq "collection_for.k" -and $stage1Exit -ne 42) {
+        Write-Error "collection for fixture did not return 42"
     }
     if ($fixtureName -eq "integer_cast_panic.k" -and $stage1Exit -ne 2) {
         Write-Error "out-of-range integer cast did not panic with exit code 2"

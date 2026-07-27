@@ -432,6 +432,11 @@ một statement, kể cả khi statement bắt đầu ở dòng kế tiếp. `el
 `if` chưa có `else` gần nhất. Hiện backend self-hosted hỗ trợ `for` với range số
 nguyên: `..` gồm cận cuối, còn `..<` không gồm cận cuối.
 
+Collection iteration hỗ trợ fixed array và slice. Dạng `for (value in values)`
+chỉ bind phần tử; dạng `for (value, index in values)` bind thêm chỉ mục `u64`.
+Phần tử luôn đứng trước chỉ mục và cả hai binding đều immutable. Range `for`
+không nhận binding chỉ mục thứ hai. Collection rỗng hợp lệ và không chạy body.
+
 ---
 
 ## 6. Xử lý lỗi (Error Handling)

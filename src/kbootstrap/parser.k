@@ -97,6 +97,17 @@ fn parseType(var parser: Parser): u64 {
         end = parserPrevious(parser).end;
         root = parserAdd(parser, 2, typeToken.start, end, subtreeStart, 0);
     }
+    while (parserMatch(parser, 54)) {
+        var hasSize: u32 = 0;
+        if (parserCheck(parser, 55) == false) {
+            parseExpression(parser, 0);
+            hasSize = 1;
+        }
+        if (parserExpect(parser, 55) == false) { return 0; }
+        end = parserPrevious(parser).end;
+        root = parserAdd(
+            parser, 5, typeToken.start, end, subtreeStart, hasSize);
+    }
     if (parserMatch(parser, 72)) {
         if (parser.nodes.data[root].kind == 3) {
             parser.ok = false;
@@ -187,6 +198,23 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     parser, 12, first.start, parser.nodes.data[operand].end,
                     subtreeStart, first.kind);
             } else {
+                if (parserMatch(parser, 54)) {
+                    var count: u32 = 0;
+                    if (parserCheck(parser, 55) == false) {
+                        var elements = true;
+                        while (elements) {
+                            parseExpression(parser, 0);
+                            count = count + 1;
+                            if (parserMatch(parser, 56) == false) {
+                                elements = false;
+                            }
+                        }
+                    }
+                    if (parserExpect(parser, 55) == false) { return 0; }
+                    root = parserAdd(
+                        parser, 22, first.start, parserPrevious(parser).end,
+                        subtreeStart, count);
+                } else {
                 if (parserMatch(parser, 50)) {
                     if (parserMatch(parser, 51)) {
                         root = parserAdd(
@@ -208,6 +236,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parser.ok = false;
                         return 0;
                     }
+                }
                 }
             }
         }
@@ -446,13 +475,22 @@ fn parseStatement(var parser: Parser): u64 {
         if (parserExpect(parser, 1) == false) { return 0; }
         val name = parserPrevious(parser);
         parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+        var hasIndex: u32 = 0;
+        if (parserMatch(parser, 56)) {
+            if (parserExpect(parser, 1) == false) { return 0; }
+            val indexName = parserPrevious(parser);
+            parserAdd(
+                parser, 45, indexName.start, indexName.end,
+                parser.nodes.length, 0);
+            hasIndex = 1;
+        }
         if (parserExpect(parser, 18) == false) { return 0; }
         parseExpression(parser, 0);
         if (parserExpect(parser, 51) == false) { return 0; }
         parseControlBody(parser);
         return parserAdd(
             parser, 38, first.start, parserPrevious(parser).end,
-            subtreeStart, 0);
+            subtreeStart, hasIndex);
     }
     if (parserMatch(parser, 90)) {
         if (parserExpect(parser, 58) == false) { return 0; }

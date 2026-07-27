@@ -427,20 +427,37 @@ private:
             const auto* range = std::get_if<BinaryExpr>(&forStatement->collection->node);
             if (range && (range->op == TokenKind::Range ||
                           range->op == TokenKind::RangeExclusive)) {
+                if (forStatement->indexName)
+                    diagnose("range for does not accept an index binding",
+                             *forStatement->indexName);
                 if (!isInteger(collection))
                     diagnose("for range bounds must be integers",
                              forStatement->collection->span);
                 else {
                     element = collection;
                 }
+            } else if ((collection.kind == SemanticTypeKind::Array ||
+                        collection.kind == SemanticTypeKind::Slice) &&
+                       collection.element) {
+                element = *collection.element;
             } else {
-                diagnose("for collection must be an integer range",
+                diagnose("for collection must be an array, slice, or integer range",
                          forStatement->collection->span);
             }
             scopes_.emplace_back();
             scopes_.back().emplace(
                 spelling(source_, forStatement->valueName),
                 VariableSymbol{element, false});
+            if (forStatement->indexName) {
+                const auto indexName = spelling(source_, *forStatement->indexName);
+                if (scopes_.back().contains(indexName))
+                    diagnose("duplicate loop binding '" + indexName + "'",
+                             *forStatement->indexName);
+                else
+                    scopes_.back().emplace(
+                        indexName,
+                        VariableSymbol{{SemanticTypeKind::U64}, false});
+            }
             ++loopDepth_;
             analyzeBlock(*forStatement->body, false);
             --loopDepth_;
