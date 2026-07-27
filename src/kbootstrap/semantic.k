@@ -15,6 +15,8 @@ struct Semantic(
     currentFunction: u64,
     currentStruct: u64)
 
+struct IntegerConstant(ok: bool, negative: bool, overflow: bool, magnitude: u64)
+
 fn sourceHash(source: Source, start: u64, end: u64): u64 {
     var value: u64 = 5381;
     var offset = start;
@@ -27,6 +29,55 @@ fn sourceHash(source: Source, start: u64, end: u64): u64 {
 
 fn nodeHash(semantic: Semantic, node: AstNode): u64 {
     return sourceHash(semantic.source, node.start, node.end);
+}
+
+fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
+    var node = semantic.nodes.data[root];
+    var negative = false;
+    if (node.kind == 12) {
+        if (node.aux != 60) {
+            if (node.aux != 61) {
+                return IntegerConstant(false, false, false, 0);
+            }
+        }
+        negative = node.aux == 61;
+        node = semantic.nodes.data[root - 1];
+    }
+    if (node.kind != 11) { return IntegerConstant(false, false, false, 0); }
+    if (node.aux != 2) { return IntegerConstant(false, false, false, 0); }
+    var magnitude: u64 = 0;
+    var overflow = false;
+    var offset = node.start;
+    while (offset < node.end) {
+        val digit = (semantic.source.data[offset] - 48) as u64;
+        if (magnitude > 1844674407370955161) {
+            overflow = true;
+        } else {
+            if (magnitude == 1844674407370955161) {
+                if (digit > 5) { overflow = true; }
+            }
+        }
+        if (overflow == false) { magnitude = magnitude * 10 + digit; }
+        offset = offset + 1;
+    }
+    return IntegerConstant(true, negative, overflow, magnitude);
+}
+
+fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
+    if (value.overflow) { return false; }
+    if (value.negative) {
+        if (value.magnitude == 0) { return true; }
+        if (integerTypeIsSigned(target) == false) { return false; }
+        if (target.kind == 4) {
+            return value.magnitude <= 9223372036854775808;
+        }
+        return value.magnitude <= 2147483648;
+    }
+    if (target.kind == 5) { return value.magnitude <= 255; }
+    if (target.kind == 6) { return value.magnitude <= 4294967295; }
+    if (target.kind == 3) { return value.magnitude <= 2147483647; }
+    if (target.kind == 4) { return value.magnitude <= 9223372036854775807; }
+    return true;
 }
 
 fn nodeIsPrint(semantic: Semantic, node: AstNode): bool {
@@ -551,8 +602,39 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (node.kind == 15) {
         val typeRoot = root - 1;
         val valueRoot = semantic.nodes.data[typeRoot].subtreeStart - 1;
-        expressionType(semantic, valueRoot);
-        return typeFromNode(semantic, typeRoot);
+        var source = expressionType(semantic, valueRoot);
+        val target = typeFromNode(semantic, typeRoot);
+        if (source.kind == 11) {
+            source = TypeValue(3, 0, 0);
+            var valueNode = semantic.nodes.data[valueRoot];
+            valueNode.typeKind = source.kind;
+            semantic.nodes.data[valueRoot] = valueNode;
+        }
+        var pointerCast = false;
+        if (source.kind == 9) {
+            if (target.kind == 9) { pointerCast = true; }
+        }
+        var integerCast = false;
+        if (isIntegerType(source)) {
+            if (isIntegerType(target)) { integerCast = true; }
+        }
+        if (integerCast) {
+            val constant = integerConstant(semantic, valueRoot);
+            if (constant.ok) {
+                if (integerConstantFits(constant, target) == false) {
+                    semanticFail(semantic, 4, node);
+                }
+            }
+            var castNode = semantic.nodes.data[root];
+            castNode.conversionKind = 3;
+            if (integerCastRequiresRangeCheck(source, target)) {
+                castNode.conversionKind = 4;
+            }
+            semantic.nodes.data[root] = castNode;
+        } else {
+            if (pointerCast == false) { semanticFail(semantic, 4, node); }
+        }
+        return target;
     }
     if (node.kind == 16) {
         val argumentCount = node.aux % 65536;

@@ -249,6 +249,52 @@ TEST(semantic_allows_explicit_pointer_cast_and_raw_indexing) {
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 
+TEST(semantic_validates_integer_casts) {
+    SemanticFixture valid{
+        "fn convert(val signed: i32, val unsigned: u32): u64 {"
+        "val widened = signed as i64;"
+        "val unsignedWidened = unsigned as i64;"
+        "return widened as u64;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+    EXPECT_EQ(valid.semantic.integerCasts.size(), 3u);
+    std::size_t checked = 0;
+    for (const auto& [cast, info] : valid.semantic.integerCasts) {
+        (void)cast;
+        if (info.requiresRangeCheck) ++checked;
+    }
+    EXPECT_EQ(checked, 1u);
+
+    SemanticFixture constantOutOfRange{
+        "fn bad(): u8 { return 256 as u8; }"};
+    EXPECT_EQ(constantOutOfRange.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(constantOutOfRange.semantic.diagnostics[0].message,
+              "constant integer cast is out of range");
+
+    SemanticFixture negativeOutOfRange{
+        "fn bad(): u8 { return -1 as u8; }"};
+    EXPECT_EQ(negativeOutOfRange.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(negativeOutOfRange.semantic.diagnostics[0].message,
+              "constant integer cast is out of range");
+
+    SemanticFixture u128Boundary{
+        "fn good(): u128 {"
+        "return 340282366920938463463374607431768211455 as u128;"
+        "}"};
+    EXPECT_TRUE(u128Boundary.semantic.diagnostics.empty());
+    SemanticFixture u128Overflow{
+        "fn bad(): u128 {"
+        "return 340282366920938463463374607431768211456 as u128;"
+        "}"};
+    EXPECT_EQ(u128Overflow.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture floatCast{
+        "fn bad(val value: f64): i32 { return value as i32; }"};
+    EXPECT_EQ(floatCast.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(floatCast.semantic.diagnostics[0].message,
+              "cast requires integer types or raw pointers");
+}
+
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {
     SemanticFixture fixture{
         "struct Buffer(data: i32*)"

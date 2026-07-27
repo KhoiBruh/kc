@@ -96,6 +96,11 @@ saturate. `bool`, `char`, float và pointer không tham gia ma trận integer n�
 pointer cast hiện có vẫn là một contract riêng. Float casts được để lại cho
 vertical slice sau khi integer casts đã self-hosted.
 
+Frontend semantic của `kc0` và compiler bootstrap hiện áp dụng ma trận integer
+trên, từ chối float cast trong slice này, báo constant ngoài miền tại toàn bộ
+biểu thức cast, và lưu metadata cho biết conversion có cần runtime range check.
+Lowering runtime check vẫn là bước codegen kế tiếp.
+
 ### Văn bản và Unicode (Text & Unicode)
 
 `char` biểu diễn đúng một Unicode scalar value và được lưu bằng 32 bit. `string` sở hữu một buffer UTF-8 hợp lệ; dữ liệu nhị phân sử dụng `[]u8` thay vì `string`.

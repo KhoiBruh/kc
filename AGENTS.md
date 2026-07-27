@@ -142,6 +142,8 @@ llvm-readobj --file-headers file.obj
 - Constrained generic functions with explicit or inferred type arguments and
   demand-driven monomorphization.
 - Minimal tagged nullable values, `null`, lifting `T` to `T?`, and postfix `!`.
+- Integer casts have semantic source/target metadata, positioned constant range
+  diagnostics, and bootstrap parity; checked runtime lowering is still pending.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -201,7 +203,7 @@ Bootstrap diagnostics and CLI parity are complete for the current contract.
 
 ## Recommended next milestone
 
-Implement semantic validation for the approved integer-cast matrix: integer
-types only, positioned constant diagnostics, and conversion metadata for
-codegen. Cast syntax and AST parity are complete in `kc0` and the bootstrap
-frontend. Defer float casts until integer casts are self-hosted.
+Lower the approved integer-cast metadata in both LLVM backends: use identity,
+`sext`, and `zext` for infallible conversions; emit range checks plus `panic`
+before checked narrowing or signedness changes. Defer float casts until integer
+casts are self-hosted.

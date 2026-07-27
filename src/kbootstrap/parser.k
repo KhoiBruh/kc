@@ -300,12 +300,16 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             subtreeStart, token.kind);
                     } else {
                         if (token.kind == 27) {
-                            parser.current = parser.current + 1;
-                            parseType(parser);
-                            root = parserAdd(
-                                parser, 15, first.start,
-                                parser.nodes.data[parser.nodes.length - 1].end,
-                                subtreeStart, 0);
+                            if (85 < minimumPower) {
+                                parsing = false;
+                            } else {
+                                parser.current = parser.current + 1;
+                                parseType(parser);
+                                root = parserAdd(
+                                    parser, 15, first.start,
+                                    parser.nodes.data[parser.nodes.length - 1].end,
+                                    subtreeStart, 0);
+                            }
                         } else {
                             val leftPower = leftBindingPower(token.kind);
                             if (leftPower == 0) {

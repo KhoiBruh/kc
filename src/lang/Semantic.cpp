@@ -590,13 +590,20 @@ private:
         } else if (const auto* cast = std::get_if<CastExpr>(&expression.node)) {
             auto from = analyzeExpr(*cast->value);
             type = resolve(*cast->type);
-            const bool numericCast = isNumeric(from) && isNumeric(type);
             const bool pointerCast =
                 from.kind == SemanticTypeKind::Pointer &&
                 type.kind == SemanticTypeKind::Pointer;
-            if (!numericCast && !pointerCast)
-                diagnose("cast requires numeric types or raw pointers",
+            if (isInteger(from) && isInteger(type)) {
+                const bool rangeCheck = integerCastRequiresRangeCheck(from, type);
+                result_.integerCasts[cast] = {from, type, rangeCheck};
+                if (const auto constant = integerConstant(*cast->value);
+                    constant && !integerConstantFits(*constant, type))
+                    diagnose("constant integer cast is out of range",
+                             expression.span);
+            } else if (!pointerCast) {
+                diagnose("cast requires integer types or raw pointers",
                          expression.span);
+            }
         } else if (const auto* postfix = std::get_if<PostfixExpr>(&expression.node)) {
             auto value = analyzeExpr(*postfix->value);
             if (postfix->op == TokenKind::Bang && value.kind == SemanticTypeKind::Nullable)
@@ -1146,6 +1153,69 @@ private:
         if (width <= 32) return {SemanticTypeKind::U32};
         if (width <= 64) return {SemanticTypeKind::U64};
         return {SemanticTypeKind::U128};
+    }
+
+    struct IntegerConstant {
+        bool negative;
+        std::string_view digits;
+    };
+
+    std::optional<IntegerConstant> integerConstant(const Expr& expression) const {
+        const Expr* value = &expression;
+        bool negative = false;
+        if (const auto* unary = std::get_if<UnaryExpr>(&value->node);
+            unary && (unary->op == TokenKind::Minus ||
+                      unary->op == TokenKind::Plus)) {
+            negative = unary->op == TokenKind::Minus;
+            value = unary->operand.get();
+        }
+        const auto* literal = std::get_if<LiteralExpr>(&value->node);
+        if (!literal || literal->kind != TokenKind::IntegerLiteral)
+            return std::nullopt;
+        const auto text = source_.text().substr(
+            literal->spelling.start,
+            literal->spelling.end - literal->spelling.start);
+        return IntegerConstant{negative, text};
+    }
+
+    bool integerConstantFits(
+        const IntegerConstant& value, const SemanticType& target) const {
+        auto digits = value.digits;
+        while (digits.size() > 1 && digits.front() == '0')
+            digits.remove_prefix(1);
+        if (value.negative && digits != "0" && !isSignedInteger(target))
+            return false;
+        const auto width = numericBitWidth(target);
+        std::string_view limit;
+        if (isSignedInteger(target)) {
+            if (width == 8) limit = value.negative ? "128" : "127";
+            else if (width == 16) limit = value.negative ? "32768" : "32767";
+            else if (width == 32)
+                limit = value.negative ? "2147483648" : "2147483647";
+            else if (width == 64)
+                limit = value.negative ? "9223372036854775808" :
+                    "9223372036854775807";
+            else
+                limit = value.negative ?
+                    "170141183460469231731687303715884105728" :
+                    "170141183460469231731687303715884105727";
+        } else if (width == 8) limit = "255";
+        else if (width == 16) limit = "65535";
+        else if (width == 32) limit = "4294967295";
+        else if (width == 64) limit = "18446744073709551615";
+        else limit = "340282366920938463463374607431768211455";
+        return digits.size() < limit.size() ||
+            (digits.size() == limit.size() && digits <= limit);
+    }
+
+    bool integerCastRequiresRangeCheck(
+        const SemanticType& source, const SemanticType& target) const {
+        if (source == target) return false;
+        const auto sourceWidth = numericBitWidth(source);
+        const auto targetWidth = numericBitWidth(target);
+        if (isSignedInteger(source) == isSignedInteger(target))
+            return targetWidth < sourceWidth;
+        return isSignedInteger(source) || targetWidth <= sourceWidth;
     }
 
     bool compatible(const SemanticType& expected, const SemanticType& actual) const {

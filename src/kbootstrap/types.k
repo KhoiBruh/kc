@@ -42,6 +42,34 @@ fn unitType(): TypeValue { return TypeValue(1, 0, 0); }
 fn boolType(): TypeValue { return TypeValue(2, 0, 0); }
 fn integerLiteralType(): TypeValue { return TypeValue(11, 0, 0); }
 
+fn isIntegerType(type: TypeValue): bool {
+    if (type.kind >= 3) { return type.kind <= 7; }
+    return false;
+}
+
+fn integerTypeWidth(type: TypeValue): u32 {
+    if (type.kind == 4) { return 64; }
+    if (type.kind == 5) { return 8; }
+    if (type.kind == 7) { return 64; }
+    return 32;
+}
+
+fn integerTypeIsSigned(type: TypeValue): bool {
+    if (type.kind == 3) { return true; }
+    return type.kind == 4;
+}
+
+fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
+    if (source.kind == target.kind) { return false; }
+    val sourceWidth = integerTypeWidth(source);
+    val targetWidth = integerTypeWidth(target);
+    if (integerTypeIsSigned(source) == integerTypeIsSigned(target)) {
+        return targetWidth < sourceWidth;
+    }
+    if (integerTypeIsSigned(source)) { return true; }
+    return targetWidth <= sourceWidth;
+}
+
 fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList): bool {
     if (left.kind != right.kind) { return false; }
     if (left.name != right.name) { return false; }
