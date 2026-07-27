@@ -12,6 +12,7 @@ fn mainError(kind: u32) {
     byteBufferAppend(message, 114); byteBufferAppend(message, 111);
     byteBufferAppend(message, 114); byteBufferAppend(message, 58);
     byteBufferAppend(message, 32);
+    
     if (kind == 1) {
         byteBufferAppend(message, 101); byteBufferAppend(message, 120);
         byteBufferAppend(message, 112); byteBufferAppend(message, 101);
@@ -34,6 +35,7 @@ fn mainError(kind: u32) {
         byteBufferAppend(message, 112); byteBufferAppend(message, 117);
         byteBufferAppend(message, 116);
     }
+
     byteBufferAppend(message, 10);
     k_boot_stderr(message.data, message.length);
     byteBufferFree(message);
@@ -45,34 +47,37 @@ fn mainPathError(kind: u32) {
     byteBufferAppend(message, 114); byteBufferAppend(message, 111);
     byteBufferAppend(message, 114); byteBufferAppend(message, 58);
     byteBufferAppend(message, 32);
-    if (kind == 1) {
-        byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 112); byteBufferAppend(message, 117);
-        byteBufferAppend(message, 116); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 109); byteBufferAppend(message, 117);
-        byteBufferAppend(message, 115); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 117);
-        byteBufferAppend(message, 115); byteBufferAppend(message, 101);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 46);
-        byteBufferAppend(message, 107); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 120);
-        byteBufferAppend(message, 116); byteBufferAppend(message, 101);
-        byteBufferAppend(message, 110); byteBufferAppend(message, 115);
-        byteBufferAppend(message, 105); byteBufferAppend(message, 111);
-        byteBufferAppend(message, 110);
-    } else {
-        byteBufferAppend(message, 112); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 116); byteBufferAppend(message, 104);
-        byteBufferAppend(message, 115); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 109); byteBufferAppend(message, 117);
-        byteBufferAppend(message, 115); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 111); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 98);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 109);
-        byteBufferAppend(message, 112); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 121);
+    when (kind) {
+        1 -> {
+            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 112); byteBufferAppend(message, 117);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 109); byteBufferAppend(message, 117);
+            byteBufferAppend(message, 115); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 117);
+            byteBufferAppend(message, 115); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 46);
+            byteBufferAppend(message, 107); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 120);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 110); byteBufferAppend(message, 115);
+            byteBufferAppend(message, 105); byteBufferAppend(message, 111);
+            byteBufferAppend(message, 110);
+        }
+        else -> {
+            byteBufferAppend(message, 112); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 116); byteBufferAppend(message, 104);
+            byteBufferAppend(message, 115); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 109); byteBufferAppend(message, 117);
+            byteBufferAppend(message, 115); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 111); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 98);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 109);
+            byteBufferAppend(message, 112); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 121);
+        }
     }
     byteBufferAppend(message, 10);
     k_boot_stderr(message.data, message.length);

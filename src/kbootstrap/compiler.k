@@ -89,28 +89,32 @@ fn compilerFailure(kind: u32) {
     byteBufferAppend(message, 97); byteBufferAppend(message, 110);
     byteBufferAppend(message, 110); byteBufferAppend(message, 111);
     byteBufferAppend(message, 116); byteBufferAppend(message, 32);
-    if (kind == 1) {
-        byteBufferAppend(message, 119); byteBufferAppend(message, 114);
-        byteBufferAppend(message, 105); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 76); byteBufferAppend(message, 76);
-        byteBufferAppend(message, 86); byteBufferAppend(message, 77);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 111);
-        byteBufferAppend(message, 117); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 112); byteBufferAppend(message, 117);
-        byteBufferAppend(message, 116);
-    } else {
-        byteBufferAppend(message, 108); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 117); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 99); byteBufferAppend(message, 104);
-        byteBufferAppend(message, 32);
-        if (kind == 2) {
-            byteBufferAppend(message, 111); byteBufferAppend(message, 112);
+    when (kind) {
+        1 -> {
+            byteBufferAppend(message, 119); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 105); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 32);
+            byteBufferAppend(message, 76); byteBufferAppend(message, 76);
+            byteBufferAppend(message, 86); byteBufferAppend(message, 77);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 111);
+            byteBufferAppend(message, 117); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 112); byteBufferAppend(message, 117);
             byteBufferAppend(message, 116);
-        } else {
-            byteBufferAppend(message, 99); byteBufferAppend(message, 108);
-            byteBufferAppend(message, 97); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 103);
+        }
+        2 -> {
+            byteBufferAppend(message, 108); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 117); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 99); byteBufferAppend(message, 104);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 111);
+            byteBufferAppend(message, 112); byteBufferAppend(message, 116);
+        }
+        else -> {
+            byteBufferAppend(message, 108); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 117); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 99); byteBufferAppend(message, 104);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 99);
+            byteBufferAppend(message, 108); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 110); byteBufferAppend(message, 103);
         }
     }
     byteBufferAppend(message, 10);
@@ -280,29 +284,6 @@ fn stderrNumber(value: u64): ByteBuffer {
 }
 
 fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
-    if (category == 100) {
-        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 109);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 100);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 115);
-        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 103);
-    } else {
-    if (category == 101) {
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 118); byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 104);
-        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 114);
-    } else {
     if (category >= 1000) {
         byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
         byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 101);
@@ -310,26 +291,27 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
         byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 100);
         byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 39);
         val kind = category - 1000;
-        if (kind == 1) {
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 100);
-            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
-        } else {
-            var known = false;
-            if (kind == 50) { byteBufferAppend(buffer, 40); known = true; }
-            if (kind == 51) { byteBufferAppend(buffer, 41); known = true; }
-            if (kind == 52) { byteBufferAppend(buffer, 123); known = true; }
-            if (kind == 53) { byteBufferAppend(buffer, 125); known = true; }
-            if (kind == 54) { byteBufferAppend(buffer, 91); known = true; }
-            if (kind == 55) { byteBufferAppend(buffer, 93); known = true; }
-            if (kind == 56) { byteBufferAppend(buffer, 44); known = true; }
-            if (kind == 57) { byteBufferAppend(buffer, 58); known = true; }
-            if (kind == 58) { byteBufferAppend(buffer, 59); known = true; }
-            if (kind == 59) { byteBufferAppend(buffer, 46); known = true; }
-            if (kind == 67) { byteBufferAppend(buffer, 61); known = true; }
-            if (known == false) {
+        when (kind) {
+            1 -> {
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 102);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 114);
+            }
+            50 -> byteBufferAppend(buffer, 40);
+            51 -> byteBufferAppend(buffer, 41);
+            52 -> byteBufferAppend(buffer, 123);
+            53 -> byteBufferAppend(buffer, 125);
+            54 -> byteBufferAppend(buffer, 91);
+            55 -> byteBufferAppend(buffer, 93);
+            56 -> byteBufferAppend(buffer, 44);
+            57 -> byteBufferAppend(buffer, 58);
+            58 -> byteBufferAppend(buffer, 59);
+            59 -> byteBufferAppend(buffer, 46);
+            67 -> byteBufferAppend(buffer, 61);
+            else -> {
                 byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 111);
                 byteBufferAppend(buffer, 107); byteBufferAppend(buffer, 101);
                 byteBufferAppend(buffer, 110);
@@ -337,31 +319,55 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
         }
         byteBufferAppend(buffer, 39);
     } else {
-    if (category == 1) {
-        byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 110);
-    } else {
-        if (category == 2) {
-            byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 107); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 119);
-            byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 100);
-            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
-        } else {
-            if (category == 3) {
+        when (category) {
+            100 -> {
+                byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 109);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 100);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 115);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 103);
+            }
+            101 -> {
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 118); byteBufferAppend(buffer, 97);
+                byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 105);
+                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 104);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 114);
+            }
+            1 -> {
+                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 117);
+                byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 108);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 108);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 110);
+            }
+            2 -> {
+                byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 107); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 119);
+                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 100);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 105);
+                byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 105);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
+            }
+            3 -> {
                 byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
                 byteBufferAppend(buffer, 103); byteBufferAppend(buffer, 117);
                 byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 101);
@@ -374,80 +380,76 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
                 byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 97);
                 byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 99);
                 byteBufferAppend(buffer, 104);
-            } else {
-                if (category == 4) {
-                    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 121);
-                    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 101);
-                    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 109);
-                    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 115);
-                    byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 97);
-                    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 99);
-                    byteBufferAppend(buffer, 104);
-                } else {
-                    if (category == 5) {
-                        byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
-                        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 117);
-                        byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 110);
-                        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
-                        byteBufferAppend(buffer, 121); byteBufferAppend(buffer, 112);
-                        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
-                        byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 105);
-                        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 109);
-                        byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
-                        byteBufferAppend(buffer, 99);
-                    } else {
-                        if (category == 6) {
-                            byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 111);
-                            byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 100);
-                            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 116);
-                            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 111);
-                            byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 32);
-                            byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 117);
-                            byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 116);
-                            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 98);
-                            byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
-                            byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 111);
-                            byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 108);
-                        } else {
-                            if (category == 7) {
-                                byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 97);
-                                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 110);
-                                byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 116);
-                                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 97);
-                                byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 115);
-                                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 103);
-                                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 32);
-                                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 111);
-                                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
-                                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 109);
-                                byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 116);
-                                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 98);
-                                byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
-                            } else {
-                                if (category == 8) {
-                                    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
-                                    byteBufferAppend(buffer, 118); byteBufferAppend(buffer, 97);
-                                    byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 105);
-                                    byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
-                                    byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 101);
-                                    byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 98);
-                                    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
-                                    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 97);
-                                    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 99);
-                                    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 115);
-                                    byteBufferAppend(buffer, 115);
-                                } else {
-                                    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
-                                    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 111);
-                                    byteBufferAppend(buffer, 114);
-                                }
-                            }
-                        }
-                    }
-                }
+            }
+            4 -> {
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 121);
+                byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 109);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 115);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 97);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 99);
+                byteBufferAppend(buffer, 104);
+            }
+            5 -> {
+                byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 117);
+                byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 121); byteBufferAppend(buffer, 112);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 105);
+                byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 109);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 99);
+            }
+            6 -> {
+                byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 100);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 117);
+                byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 98);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 108);
+            }
+            7 -> {
+                byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 97);
+                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 97);
+                byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 115);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 103);
+                byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 109);
+                byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 98);
+                byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
+            }
+            8 -> {
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 118); byteBufferAppend(buffer, 97);
+                byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 105);
+                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 98);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 97);
+                byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 99);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 115);
+                byteBufferAppend(buffer, 115);
+            }
+            else -> {
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 114);
+                byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 111);
+                byteBufferAppend(buffer, 114);
             }
         }
-    }}}}
+    }
 }
 
 fn printDiagnostic(

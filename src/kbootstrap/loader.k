@@ -169,20 +169,22 @@ fn loaderReport(
     byteBufferAppend(message, 114); byteBufferAppend(message, 111);
     byteBufferAppend(message, 114); byteBufferAppend(message, 58);
     byteBufferAppend(message, 32);
-    if (category == 1) {
-        byteBufferAppend(message, 99); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 110); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 111); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 114);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 115);
-        byteBufferAppend(message, 111); byteBufferAppend(message, 108);
-        byteBufferAppend(message, 118); byteBufferAppend(message, 101);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 105);
-        byteBufferAppend(message, 109); byteBufferAppend(message, 112);
-        byteBufferAppend(message, 111); byteBufferAppend(message, 114);
-        byteBufferAppend(message, 116);
-    } else {
-        if (category == 2) {
+
+    when (category) {
+        1 -> {
+            byteBufferAppend(message, 99); byteBufferAppend(message, 97);
+            byteBufferAppend(message, 110); byteBufferAppend(message, 110);
+            byteBufferAppend(message, 111); byteBufferAppend(message, 116);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 101); byteBufferAppend(message, 115);
+            byteBufferAppend(message, 111); byteBufferAppend(message, 108);
+            byteBufferAppend(message, 118); byteBufferAppend(message, 101);
+            byteBufferAppend(message, 32); byteBufferAppend(message, 105);
+            byteBufferAppend(message, 109); byteBufferAppend(message, 112);
+            byteBufferAppend(message, 111); byteBufferAppend(message, 114);
+            byteBufferAppend(message, 116);
+        }
+        2 -> {
             byteBufferAppend(message, 109); byteBufferAppend(message, 111);
             byteBufferAppend(message, 100); byteBufferAppend(message, 117);
             byteBufferAppend(message, 108); byteBufferAppend(message, 101);
@@ -197,8 +199,8 @@ fn loaderReport(
             byteBufferAppend(message, 99); byteBufferAppend(message, 101);
             byteBufferAppend(message, 101); byteBufferAppend(message, 100);
             byteBufferAppend(message, 101); byteBufferAppend(message, 100);
-        } else {
-        if (category == 3) {
+        }
+        3 -> {
             byteBufferAppend(message, 117); byteBufferAppend(message, 110);
             byteBufferAppend(message, 116); byteBufferAppend(message, 101);
             byteBufferAppend(message, 114); byteBufferAppend(message, 109);
@@ -209,8 +211,8 @@ fn loaderReport(
             byteBufferAppend(message, 116); byteBufferAppend(message, 114);
             byteBufferAppend(message, 105); byteBufferAppend(message, 110);
             byteBufferAppend(message, 103);
-        } else {
-        if (category == 4) {
+        }
+        4 -> {
             byteBufferAppend(message, 105); byteBufferAppend(message, 110);
             byteBufferAppend(message, 118); byteBufferAppend(message, 97);
             byteBufferAppend(message, 108); byteBufferAppend(message, 105);
@@ -220,7 +222,8 @@ fn loaderReport(
             byteBufferAppend(message, 97); byteBufferAppend(message, 99);
             byteBufferAppend(message, 116); byteBufferAppend(message, 101);
             byteBufferAppend(message, 114);
-        } else {
+        }
+        else -> {
             byteBufferAppend(message, 105); byteBufferAppend(message, 110);
             byteBufferAppend(message, 118); byteBufferAppend(message, 97);
             byteBufferAppend(message, 108); byteBufferAppend(message, 105);
@@ -228,8 +231,9 @@ fn loaderReport(
             byteBufferAppend(message, 115); byteBufferAppend(message, 111);
             byteBufferAppend(message, 117); byteBufferAppend(message, 114);
             byteBufferAppend(message, 99); byteBufferAppend(message, 101);
-        }}}
+        }
     }
+    
     byteBufferAppend(message, 10);
     k_boot_stderr(message.data, message.length);
     byteBufferFree(message);
