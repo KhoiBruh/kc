@@ -283,19 +283,18 @@ fn appendModuleHeader(var buffer: ByteBuffer) {
 }
 
 fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
-    if (node.end - node.start != 5) { return false; }
-    if (source.data[node.start] != 112) { return false; }
-    if (source.data[node.start + 1] != 114) { return false; }
-    if (source.data[node.start + 2] != 105) { return false; }
-    if (source.data[node.start + 3] != 110) { return false; }
+    if (node.end - node.start != 5) return false;
+    if (source.data[node.start] != 112) return false;
+    if (source.data[node.start + 1] != 114) return false;
+    if (source.data[node.start + 2] != 105) return false;
+    if (source.data[node.start + 3] != 110) return false;
     return source.data[node.start + 4] == 116;
 }
 
-fn appendOperator(
-    var buffer: ByteBuffer, kind: u32, typeKind: u32) {
+fn appendOperator(var buffer: ByteBuffer, kind: u32, typeKind: u32) {
     var floating = typeKind == 17;
-    if (typeKind == 18) { floating = true; }
-    if (floating) { byteBufferAppend(buffer, 102); }
+    if (typeKind == 18) floating = true;
+    if (floating) byteBufferAppend(buffer, 102);
     if (kind == 60) {
         byteBufferAppend(buffer, 97);
         byteBufferAppend(buffer, 100);
@@ -317,8 +316,8 @@ fn appendOperator(
             byteBufferAppend(buffer, 118); return;
         }
         var unsigned = typeKind == 5;
-        if (typeKind == 6) { unsigned = true; }
-        if (typeKind == 7) { unsigned = true; }
+        if (typeKind == 6) unsigned = true;
+        if (typeKind == 7) unsigned = true;
         if (unsigned) {
             byteBufferAppend(buffer, 117);
         } else {
@@ -334,8 +333,8 @@ fn appendOperator(
             byteBufferAppend(buffer, 109); return;
         }
         var unsigned = typeKind == 5;
-        if (typeKind == 6) { unsigned = true; }
-        if (typeKind == 7) { unsigned = true; }
+        if (typeKind == 6) unsigned = true;
+        if (typeKind == 7) unsigned = true;
         if (unsigned) {
             byteBufferAppend(buffer, 117);
         } else {
@@ -352,15 +351,18 @@ fn appendNewline(var buffer: ByteBuffer) {
 }
 
 fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
-    if (kind == 1) { byteBufferAppend(buffer, 115); }
-    if (kind == 2) { byteBufferAppend(buffer, 122); }
-    if (kind <= 2) {
-        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
-        byteBufferAppend(buffer, 116); return;
+    when (kind) {
+        1 -> byteBufferAppend(buffer, 115);
+        2 -> byteBufferAppend(buffer, 122);
+        else -> {
+            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
+            byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+            byteBufferAppend(buffer, 99);
+            return;
+        }
     }
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
+    byteBufferAppend(buffer, 116);
 }
 
 fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
@@ -375,10 +377,10 @@ fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
         byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
         byteBufferAppend(buffer, 99); return;
     }
-    if (kind == 3) { byteBufferAppend(buffer, 115); }
-    if (kind == 4) { byteBufferAppend(buffer, 117); }
+    if (kind == 3) byteBufferAppend(buffer, 115);
+    if (kind == 4) byteBufferAppend(buffer, 117);
     var integerToFloat = kind == 3;
-    if (kind == 4) { integerToFloat = true; }
+    if (kind == 4) integerToFloat = true;
     if (integerToFloat) {
         byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 116);
         byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 102);
@@ -395,20 +397,22 @@ fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
 
 fn appendFloatIntegerConstant(
     var buffer: ByteBuffer, negative: bool, magnitude: u64,
-    appendSix: bool) {
-    if (negative) { byteBufferAppend(buffer, 45); }
+    appendSix: bool
+) {
+    if (negative) byteBufferAppend(buffer, 45);
     appendDecimal(buffer, magnitude);
-    if (appendSix) { byteBufferAppend(buffer, 54); }
+    if (appendSix) byteBufferAppend(buffer, 54);
     byteBufferAppend(buffer, 46); byteBufferAppend(buffer, 48);
 }
 
 fn appendFloatCastBound(
     var buffer: ByteBuffer, sourceKind: u32, targetKind: u32,
-    lower: bool) {
+    lower: bool
+) {
     if (lower) {
         if (targetKind == 3) {
             var magnitude: u64 = 2147483649;
-            if (sourceKind == 17) { magnitude = 2147483648; }
+            if (sourceKind == 17) magnitude = 2147483648;
             appendFloatIntegerConstant(buffer, true, magnitude, false);
             return;
         }
@@ -516,7 +520,7 @@ fn appendType(
         byteBufferAppend(buffer, 105);
         byteBufferAppend(buffer, 49);
     }
-    if (kind == 3) { appendI32(buffer); }
+    if (kind == 3) appendI32(buffer);
     if (kind == 4) {
         byteBufferAppend(buffer, 105);
         byteBufferAppend(buffer, 54);
@@ -526,7 +530,7 @@ fn appendType(
         byteBufferAppend(buffer, 105);
         byteBufferAppend(buffer, 56);
     }
-    if (kind == 6) { appendI32(buffer); }
+    if (kind == 6) appendI32(buffer);
     if (kind == 7) {
         byteBufferAppend(buffer, 105);
         byteBufferAppend(buffer, 54);
@@ -562,8 +566,8 @@ fn appendType(
         byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 98);
         byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
     }
-    if (kind == 11) { appendI32(buffer); }
-    if (kind == 20) { appendI32(buffer); }
+    if (kind == 11) appendI32(buffer);
+    if (kind == 20) appendI32(buffer);
     if (kind == 13) {
         byteBufferAppend(buffer, 123);
         byteBufferAppend(buffer, 32);
@@ -808,7 +812,7 @@ fn substituteStructEmitterType(
     if (pattern.kind == 14) {
         val position = emitterStructTypeParameterPosition(
             source, nodes, structureRoot, pattern.name);
-        if (position >= count) { return invalidType(); }
+        if (position >= count) return invalidType();
         return arguments.data[argumentStart + position as u64];
     }
     if (pattern.kind == 15) {
@@ -877,19 +881,19 @@ fn alignUp(value: u64, alignment: u64): u64 {
 fn typeAlignment(
     source: Source, nodes: AstList, genericArguments: TypeValueList,
     kind: u32, name: u64, pointee: u32): u64 {
-    if (kind == 2) { return 1; }
-    if (kind == 5) { return 1; }
-    if (kind == 3) { return 4; }
-    if (kind == 6) { return 4; }
-    if (kind == 11) { return 4; }
-    if (kind == 20) { return 4; }
-    if (kind == 17) { return 4; }
-    if (kind == 4) { return 8; }
-    if (kind == 7) { return 8; }
-    if (kind == 9) { return 8; }
-    if (kind == 10) { return 8; }
-    if (kind == 18) { return 8; }
-    if (kind == 13) { return 8; }
+    if (kind == 2) return 1;
+    if (kind == 5) return 1;
+    if (kind == 3) return 4;
+    if (kind == 6) return 4;
+    if (kind == 11) return 4;
+    if (kind == 20) return 4;
+    if (kind == 17) return 4;
+    if (kind == 4) return 8;
+    if (kind == 7) return 8;
+    if (kind == 9) return 8;
+    if (kind == 10) return 8;
+    if (kind == 18) return 8;
+    if (kind == 13) return 8;
     if (kind == 19) {
         return typeAlignment(
             source, nodes, genericArguments,
@@ -928,20 +932,20 @@ fn typeAlignment(
 fn typeSize(
     source: Source, nodes: AstList, genericArguments: TypeValueList,
     kind: u32, name: u64, pointee: u32): u64 {
-    if (kind == 1) { return 0; }
-    if (kind == 2) { return 1; }
-    if (kind == 5) { return 1; }
-    if (kind == 3) { return 4; }
-    if (kind == 6) { return 4; }
-    if (kind == 11) { return 4; }
-    if (kind == 20) { return 4; }
-    if (kind == 17) { return 4; }
-    if (kind == 4) { return 8; }
-    if (kind == 7) { return 8; }
-    if (kind == 9) { return 8; }
-    if (kind == 10) { return 8; }
-    if (kind == 18) { return 8; }
-    if (kind == 13) { return 16; }
+    if (kind == 1) return 0;
+    if (kind == 2) return 1;
+    if (kind == 5) return 1;
+    if (kind == 3) return 4;
+    if (kind == 6) return 4;
+    if (kind == 11) return 4;
+    if (kind == 20) return 4;
+    if (kind == 17) return 4;
+    if (kind == 4) return 8;
+    if (kind == 7) return 8;
+    if (kind == 9) return 8;
+    if (kind == 10) return 8;
+    if (kind == 18) return 8;
+    if (kind == 13) return 16;
     if (kind == 19) {
         val elementSize = typeSize(
             source, nodes, genericArguments,
@@ -1132,9 +1136,9 @@ fn appendComparison(
         byteBufferAppend(buffer, 101);
     }
     var unsigned = typeKind == 5;
-    if (typeKind == 6) { unsigned = true; }
-    if (typeKind == 7) { unsigned = true; }
-    if (typeKind == 20) { unsigned = true; }
+    if (typeKind == 6) unsigned = true;
+    if (typeKind == 7) unsigned = true;
+    if (typeKind == 20) unsigned = true;
     if (kind == 66) {
         if (unsigned) {
             byteBufferAppend(buffer, 117);
@@ -1273,11 +1277,11 @@ fn appendFloatRangeComparison(
     if (lower) {
         var inclusive = targetKind == 4;
         if (targetKind == 3) {
-            if (value.typeKind == 17) { inclusive = true; }
+            if (value.typeKind == 17) inclusive = true;
         }
         byteBufferAppend(buffer, 103);
-        if (inclusive) { byteBufferAppend(buffer, 101); }
-        else { byteBufferAppend(buffer, 116); }
+        if (inclusive) byteBufferAppend(buffer, 101);
+        else byteBufferAppend(buffer, 116);
     } else {
         byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 116);
     }
@@ -1398,7 +1402,10 @@ fn emitExpression(
             k_boot_free(statementRoots as unit*);
             index = index + 1;
         }
-        if (!hasElse) { appendUnreachable(buffer); appendNewline(buffer); }
+        if (!hasElse) {
+            appendUnreachable(buffer); 
+            appendNewline(buffer); 
+        }
         appendBlockLabel(buffer, counter, mergeBlock);
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
@@ -1564,7 +1571,7 @@ fn emitExpression(
             buffer, source, nodes, genericArguments,
             leftRoot, counter);
         var logical = node.aux == 83;
-        if (node.aux == 84) { logical = true; }
+        if (node.aux == 84) logical = true;
         if (logical) {
             val leftBlock = counter.currentBlock;
             val rhsBlock = nextBlock(counter);
@@ -1590,8 +1597,8 @@ fn emitExpression(
             byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
             byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
             byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 91);
-            if (node.aux == 83) { byteBufferAppend(buffer, 48); }
-            else { byteBufferAppend(buffer, 49); }
+            if (node.aux == 83) byteBufferAppend(buffer, 48);
+            else byteBufferAppend(buffer, 49);
             byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
             appendBlockReference(buffer, leftBlock);
             byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
@@ -1612,10 +1619,10 @@ fn emitExpression(
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
         var comparison = false;
-        if (node.aux == 66) { comparison = true; }
-        if (node.aux == 67) { comparison = true; }
+        if (node.aux == 66) comparison = true;
+        if (node.aux == 67) comparison = true;
         if (node.aux >= 79) {
-            if (node.aux <= 82) { comparison = true; }
+            if (node.aux <= 82) comparison = true;
         }
         if (comparison) {
             appendComparison(buffer, node.aux, left.typeKind);
@@ -1665,9 +1672,9 @@ fn emitExpression(
         val value = emitExpression(
             buffer, source, nodes, genericArguments,
             valueRoot, counter);
-        if (node.typeKind == value.typeKind) { return value; }
-        if (node.typeKind == 9) { return value; }
-        if (value.typeKind == 9) { return value; }
+        if (node.typeKind == value.typeKind) return value;
+        if (node.typeKind == 9) return value;
+        if (value.typeKind == 9) return value;
         val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
         val targetType = TypeValue(node.typeKind, node.typeName, node.typePointee);
         if (node.conversionKind >= 5) {
@@ -1705,13 +1712,13 @@ fn emitExpression(
             var opcode: u32 = 1;
             if (isIntegerType(sourceType)) {
                 opcode = 4;
-                if (integerTypeIsSigned(sourceType)) { opcode = 3; }
+                if (integerTypeIsSigned(sourceType)) opcode = 3;
             } else {
                 if (isIntegerType(targetType)) {
                     opcode = 6;
-                    if (integerTypeIsSigned(targetType)) { opcode = 5; }
+                    if (integerTypeIsSigned(targetType)) opcode = 5;
                 } else {
-                    if (node.typeKind == 17) { opcode = 2; }
+                    if (node.typeKind == 17) opcode = 2;
                 }
             }
             appendFloatCastOpcode(buffer, opcode);
@@ -1741,7 +1748,7 @@ fn emitExpression(
             var opcode: u32 = 3;
             if (targetWidth > sourceWidth) {
                 opcode = 2;
-                if (integerTypeIsSigned(sourceType)) { opcode = 1; }
+                if (integerTypeIsSigned(sourceType)) opcode = 1;
             }
             appendCastOpcode(buffer, opcode);
             byteBufferAppend(buffer, 32);
@@ -1768,7 +1775,7 @@ fn emitExpression(
                 appendValuePrefix(buffer); appendDecimal(buffer, roundTrip);
                 appendEquals(buffer);
                 var reverseOpcode: u32 = 2;
-                if (integerTypeIsSigned(targetType)) { reverseOpcode = 1; }
+                if (integerTypeIsSigned(targetType)) reverseOpcode = 1;
                 appendCastOpcode(buffer, reverseOpcode);
                 byteBufferAppend(buffer, 32);
                 appendNodeType(buffer, genericArguments, node);
@@ -1817,8 +1824,8 @@ fn emitExpression(
                 if (sourceSigned) {
                     byteBufferAppend(buffer, 48);
                 } else {
-                    if (sourceWidth == 32) { appendDecimal(buffer, 2147483647); }
-                    else { appendDecimal(buffer, 9223372036854775807); }
+                    if (sourceWidth == 32) appendDecimal(buffer, 2147483647);
+                    else appendDecimal(buffer, 9223372036854775807);
                 }
                 appendNewline(buffer);
             }
@@ -1847,10 +1854,10 @@ fn emitExpression(
         val count = objectNode.typePointee / 65536;
         
         var addressable = objectNode.kind == 10;
-        if (objectNode.kind == 17) { addressable = true; }
-        if (objectNode.kind == 18) { addressable = true; }
+        if (objectNode.kind == 17) addressable = true;
+        if (objectNode.kind == 18) addressable = true;
         if (objectNode.kind == 12) {
-            if (objectNode.aux == 62) { addressable = true; }
+            if (objectNode.aux == 62) addressable = true;
         }
         if (!addressable) {
             val object = emitExpression(
@@ -2069,7 +2076,7 @@ fn emitExpression(
                 val parameter = nodes.data[
                     parameterRoot(
                         nodes, functionRoot, index + 1)];
-                if (parameter.aux == 2) { byReference = true; }
+                if (parameter.aux == 2) byReference = true;
             }
             if (byReference) {
                 values[index as u64] = emitAddress(
@@ -2237,7 +2244,7 @@ fn emitExpression(
         appendNewline(buffer);
         k_boot_free(values as unit*);
         k_boot_free(arguments as unit*);
-        if (isPrint) { return IrValue(3, 0, 0, 0, 1, 0, 0); }
+        if (isPrint) return IrValue(3, 0, 0, 0, 1, 0, 0);
         if (node.typeKind == 1) {
             return IrValue(3, 0, 0, 0, 1, 0, 0);
         }
@@ -2389,7 +2396,7 @@ fn emitCollectionFor(
     val terminated = emitBlock(
         buffer, source, nodes, genericArguments, bodyRoot, counter);
     counter.continueBlock = outerContinueBlock; counter.breakBlock = outerBreakBlock;
-    if (!terminated) { appendBranch(buffer, incrementBlock); }
+    if (!terminated) appendBranch(buffer, incrementBlock);
     appendBlockLabel(buffer, counter, incrementBlock);
     val loaded = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
@@ -2466,8 +2473,8 @@ fn emitWhen(
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
                 buffer, source, nodes, genericArguments, bodyRoot, counter);
-            if (!terminated) { appendBranch(buffer, mergeBlock); }
-            if (!terminated) { allTerminate = false; }
+            if (!terminated) appendBranch(buffer, mergeBlock);
+            if (!terminated) allTerminate = false;
             if (index + 1 < branchCount) {
                 appendBlockLabel(buffer, counter, nextBlockValue);
             }
@@ -2477,14 +2484,14 @@ fn emitWhen(
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
                 buffer, source, nodes, genericArguments, bodyRoot, counter);
-            if (!terminated) { appendBranch(buffer, mergeBlock); }
-            if (!terminated) { allTerminate = false; }
+            if (!terminated) appendBranch(buffer, mergeBlock);
+            if (!terminated) allTerminate = false;
         }
         index = index + 1;
     }
     k_boot_free(roots as unit*);
     if (hasElse) {
-        if (allTerminate) { return true; }
+        if (allTerminate) return true;
     }
     appendBlockLabel(buffer, counter, mergeBlock);
     if (!hasElse && allTerminate && subject.typeKind == 20) {
@@ -2517,7 +2524,7 @@ fn emitStatement(
         var range = collectionNode.kind == 13;
         if (range) {
             range = collectionNode.aux == 87;
-            if (collectionNode.aux == 88) { range = true; }
+            if (collectionNode.aux == 88) range = true;
         }
         if (!range) {
             return emitCollectionFor(
@@ -2568,7 +2575,7 @@ fn emitStatement(
             buffer, source, nodes, genericArguments, bodyRoot, counter);
         counter.continueBlock = outerContinueBlock;
         counter.breakBlock = outerBreakBlock;
-        if (!terminated) { appendBranch(buffer, incrementBlock); }
+        if (!terminated) appendBranch(buffer, incrementBlock);
         appendBlockLabel(buffer, counter, incrementBlock);
         val loaded = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
@@ -2913,10 +2920,10 @@ fn substituteEmitterType(
             arguments, argumentStart, count);
         return TypeValue(15, inner.name, inner.kind);
     }
-    if (pattern.kind != 14) { return pattern; }
+    if (pattern.kind != 14) return pattern;
     val position = emitterTypeParameterPosition(
         source, nodes, functionRoot, pattern.name);
-    if (position >= count) { return invalidType(); }
+    if (position >= count) return invalidType();
     return arguments.data[argumentStart + position as u64];
 }
 
@@ -2979,7 +2986,7 @@ fn emitBlockAllocas(
             var range = collection.kind == 13;
             if (range) {
                 range = collection.aux == 87;
-                if (collection.aux == 88) { range = true; }
+                if (collection.aux == 88) range = true;
             }
             appendValuePrefix(buffer); appendLocalPrefix(buffer);
             appendDecimal(buffer, name.start); appendEquals(buffer);
@@ -3285,20 +3292,20 @@ fn emitSimpleFunction(
     nodes: AstList,
     functionRoot: u64): bool {
     val function = nodes.data[functionRoot];
-    if (functionParameterCount(function) != 0) { return false; }
-    if (functionTypeParameterCount(function) != 0) { return false; }
+    if (functionParameterCount(function) != 0) return false;
+    if (functionTypeParameterCount(function) != 0) return false;
     val returnTypeRoot = nodes.data[functionRoot - 1].subtreeStart - 1;
-    if (nodes.data[returnTypeRoot].aux != 35) { return false; }
+    if (nodes.data[returnTypeRoot].aux != 35) return false;
     val name = nodes.data[function.subtreeStart];
     val blockRoot = functionRoot - 1;
-    if (nodes.data[blockRoot].aux != 1) { return false; }
+    if (nodes.data[blockRoot].aux != 1) return false;
     val statementRoot = firstStatementRoot(nodes, blockRoot);
     val statement = nodes.data[statementRoot];
-    if (statement.kind != 34) { return false; }
-    if (statement.aux != 1) { return false; }
+    if (statement.kind != 34) return false;
+    if (statement.aux != 1) return false;
     val literal = nodes.data[statementRoot - 1];
-    if (literal.kind != 11) { return false; }
-    if (literal.aux != 2) { return false; }
+    if (literal.kind != 11) return false;
+    if (literal.aux != 2) return false;
 
     appendDefine(buffer);
     appendI32(buffer);
@@ -3340,7 +3347,7 @@ fn emitStruct(
         appendNodeType(buffer, genericArguments, nodes.data[fieldRoot - 1]);
         index = index + 1;
     }
-    if (fieldCount > 0) { byteBufferAppend(buffer, 32); }
+    if (fieldCount > 0) byteBufferAppend(buffer, 32);
     byteBufferAppend(buffer, 125);
     appendNewline(buffer);
 }
@@ -3456,7 +3463,7 @@ fn emitSpecializedStruct(
             fieldType.kind, fieldType.name, fieldType.pointee);
         index = index + 1;
     }
-    if (fieldCount > 0) { byteBufferAppend(buffer, 32); }
+    if (fieldCount > 0) byteBufferAppend(buffer, 32);
     byteBufferAppend(buffer, 125);
     appendNewline(buffer);
 }
@@ -3505,7 +3512,7 @@ fn specializationArgumentsEqual(
     arguments: TypeValueList,
     leftStart: u64, leftCount: u32,
     rightStart: u64, rightCount: u32): bool {
-    if (leftCount != rightCount) { return false; }
+    if (leftCount != rightCount) return false;
     var index: u32 = 0;
     while (index < leftCount) {
         if (
@@ -3545,7 +3552,7 @@ fn specializationRequestExists(
 
 fn callArgumentsAreConcrete(
     call: AstNode, arguments: TypeValueList): bool {
-    if (call.genericArgumentCount == 0) { return false; }
+    if (call.genericArgumentCount == 0) return false;
     var index: u32 = 0;
     while (index < call.genericArgumentCount) {
         if (arguments.data[

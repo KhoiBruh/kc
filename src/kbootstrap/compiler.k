@@ -205,7 +205,7 @@ fn compileToLl(
     typeValueListFree(checked.genericArguments);
     astListFree(parsed.nodes);
     tokenListFree(lexed.tokens);
-    if (published) { return 0; }
+    if (published) return 0;
     compilerFailure(1);
     return 1;
 }
@@ -229,7 +229,7 @@ fn linkLl(
     appendQuoted(command, executablePath, executablePathLength);
     val result = k_boot_run(command.data, command.length);
     byteBufferFree(command);
-    if (result == 0) { return 0; }
+    if (result == 0) return 0;
     if (result < 0) { compilerFailure(3); return 1; }
     return 2;
 }
@@ -238,7 +238,7 @@ fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
     var line: u64 = 1;
     var index = sourceStart;
     while (index < offset) {
-        if (source.data[index] == 10) { line = line + 1; }
+        if (source.data[index] == 10) line = line + 1;
         index = index + 1;
     }
     return line;
@@ -249,7 +249,7 @@ fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     var index = offset;
     while (index > sourceStart) {
         index = index - 1;
-        if (source.data[index] == 10) { return col; }
+        if (source.data[index] == 10) return col;
         col = col + 1;
     }
     return col;

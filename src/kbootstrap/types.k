@@ -37,10 +37,21 @@ fn typeValueListFree(list: TypeValueList) {
     k_boot_free(list.data as unit*);
 }
 
-fn invalidType(): TypeValue { return TypeValue(0, 0, 0); }
-fn unitType(): TypeValue { return TypeValue(1, 0, 0); }
-fn boolType(): TypeValue { return TypeValue(2, 0, 0); }
-fn integerLiteralType(): TypeValue { return TypeValue(11, 0, 0); }
+fn invalidType(): TypeValue {
+    return TypeValue(0, 0, 0);
+}
+
+fn unitType(): TypeValue {
+    return TypeValue(1, 0, 0);
+}
+
+fn boolType(): TypeValue {
+    return TypeValue(2, 0, 0);
+}
+
+fn integerLiteralType(): TypeValue {
+    return TypeValue(11, 0, 0);
+}
 
 fn arrayType(element: TypeValue, size: u64): TypeValue {
     return TypeValue(
@@ -56,46 +67,46 @@ fn arraySize(type: TypeValue): u64 {
 }
 
 fn isFloatType(type: TypeValue): bool {
-    if (type.kind == 17) { return true; }
+    if (type.kind == 17) return true;
     return type.kind == 18;
 }
 
 fn isIntegerType(type: TypeValue): bool {
-    if (type.kind >= 3) { return type.kind <= 7; }
+    if (type.kind >= 3) return type.kind <= 7;
     return false;
 }
 
 fn integerTypeWidth(type: TypeValue): u32 {
-    if (type.kind == 4) { return 64; }
-    if (type.kind == 5) { return 8; }
-    if (type.kind == 7) { return 64; }
+    if (type.kind == 4) return 64;
+    if (type.kind == 5) return 8;
+    if (type.kind == 7) return 64;
     return 32;
 }
 
 fn integerTypeIsSigned(type: TypeValue): bool {
-    if (type.kind == 3) { return true; }
+    if (type.kind == 3) return true;
     return type.kind == 4;
 }
 
 fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
-    if (source.kind == target.kind) { return false; }
+    if (source.kind == target.kind) return false;
     val sourceWidth = integerTypeWidth(source);
     val targetWidth = integerTypeWidth(target);
     if (integerTypeIsSigned(source) == integerTypeIsSigned(target)) {
         return targetWidth < sourceWidth;
     }
-    if (integerTypeIsSigned(source)) { return true; }
+    if (integerTypeIsSigned(source)) return true;
     return targetWidth <= sourceWidth;
 }
 
 fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList): bool {
-    if (left.kind != right.kind) { return false; }
-    if (left.name != right.name) { return false; }
+    if (left.kind != right.kind) return false;
+    if (left.name != right.name) return false;
     if (left.kind == 8) {
         val leftCount = left.pointee / 65536;
         val rightCount = right.pointee / 65536;
-        if (leftCount != rightCount) { return false; }
-        if (leftCount == 0) { return true; }
+        if (leftCount != rightCount) return false;
+        if (leftCount == 0) return true;
         val leftStart = left.pointee % 65536;
         val rightStart = right.pointee % 65536;
         var index: u32 = 0;
@@ -113,24 +124,24 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList
 }
 
 fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeValueList): bool {
-    if (typeEquals(expected, actual, genericArguments)) { return true; }
+    if (typeEquals(expected, actual, genericArguments)) return true;
     if (expected.kind == 15) {
-        if (actual.kind == 16) { return true; }
+        if (actual.kind == 16) return true;
         return typeEquals(
             TypeValue(expected.pointee, expected.name, 0), actual, genericArguments);
     }
     if (actual.kind == 11) {
         if (expected.kind >= 3) {
-            if (expected.kind <= 7) { return true; }
+            if (expected.kind <= 7) return true;
         }
     }
     if (actual.kind == 18) {
-        if (isFloatType(expected)) { return true; }
+        if (isFloatType(expected)) return true;
     }
     if (expected.kind == 19) {
         if (actual.kind == 19) {
             if (arraySize(expected) == arraySize(actual)) {
-                if (arrayElement(actual).kind == 0) { return true; }
+                if (arrayElement(actual).kind == 0) return true;
             }
         }
     }
@@ -175,7 +186,7 @@ fn localListGrow(var list: LocalList) {
 }
 
 fn localListAppend(var list: LocalList, value: LocalInfo) {
-    if (list.length == list.capacity) { localListGrow(list); }
+    if (list.length == list.capacity) localListGrow(list);
     list.data[list.length] = value;
     list.length = list.length + 1;
 }
@@ -209,7 +220,7 @@ fn declarationListGrow(var list: DeclarationList) {
 
 fn declarationListAppend(
     var list: DeclarationList, value: DeclarationInfo) {
-    if (list.length == list.capacity) { declarationListGrow(list); }
+    if (list.length == list.capacity) declarationListGrow(list);
     list.data[list.length] = value;
     list.length = list.length + 1;
 }

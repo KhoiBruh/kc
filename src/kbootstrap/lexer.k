@@ -6,88 +6,87 @@ import kbootstrap.containers.ByteBuffer;
 
 extern fn k_boot_arg_count(): i32;
 extern fn k_boot_arg(index: i32, data: u8**, length: u64*): bool;
-extern fn k_boot_read_file(
-    path: u8*, pathLength: u64, data: u8**, length: u64*): bool;
+extern fn k_boot_read_file(path: u8*, pathLength: u64, data: u8**, length: u64*): bool;
 
 struct LexResult(tokens: TokenList, ok: bool, errorStart: u64, errorKind: u32)
 
 fn isWhitespace(value: u8): bool {
-    if (value == 32) { return true; }
-    if (value == 9) { return true; }
-    if (value == 10) { return true; }
-    if (value == 13) { return true; }
+    if (value == 32) return true;
+    if (value == 9) return true;
+    if (value == 10) return true;
+    if (value == 13) return true;
     return false;
 }
 
 fn isDigit(value: u8): bool {
-    if (value < 48) { return false; }
-    if (value > 57) { return false; }
+    if (value < 48) return false;
+    if (value > 57) return false;
     return true;
 }
 
 fn isIdentifierStart(value: u8): bool {
-    if (value == 95) { return true; }
+    if (value == 95) return true;
     if (value >= 65) {
-        if (value <= 90) { return true; }
+        if (value <= 90) return true;
     }
     if (value >= 97) {
-        if (value <= 122) { return true; }
+        if (value <= 122) return true;
     }
     return false;
 }
 
 fn isIdentifierContinue(value: u8): bool {
-    if (isIdentifierStart(value)) { return true; }
+    if (isIdentifierStart(value)) return true;
     return isDigit(value);
 }
 
 fn matches2(source: Source, start: u64, a: u8, b: u8): bool {
-    if (source.data[start] != a) { return false; }
-    if (source.data[start + 1] != b) { return false; }
+    if (source.data[start] != a) return false;
+    if (source.data[start + 1] != b) return false;
     return true;
 }
 
 fn keywordKind(source: Source, start: u64, end: u64): u32 {
     val length = end - start;
     if (length == 2) {
-        if (matches2(source, start, 102, 110)) { return 10; }
-        if (matches2(source, start, 105, 102)) { return 15; }
-        if (matches2(source, start, 105, 110)) { return 18; }
-        if (matches2(source, start, 117, 56)) { return 38; }
-        if (matches2(source, start, 97, 115)) { return 27; }
+        if (matches2(source, start, 102, 110)) return 10;
+        if (matches2(source, start, 105, 102)) return 15;
+        if (matches2(source, start, 105, 110)) return 18;
+        if (matches2(source, start, 117, 56)) return 38;
+        if (matches2(source, start, 97, 115)) return 27;
     }
     if (length == 3) {
         if (source.data[start] == 118) {
             if (source.data[start + 1] == 97) {
-                if (source.data[start + 2] == 108) { return 6; }
-                if (source.data[start + 2] == 114) { return 7; }
+                if (source.data[start + 2] == 108) return 6;
+                if (source.data[start + 2] == 114) return 7;
             }
         }
         if (source.data[start] == 105) {
             if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) { return 35; }
+                if (source.data[start + 2] == 50) return 35;
             }
             if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) { return 36; }
+                if (source.data[start + 2] == 52) return 36;
             }
         }
         if (source.data[start] == 117) {
             if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) { return 40; }
+                if (source.data[start + 2] == 50) return 40;
             }
             if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) { return 41; }
+                if (source.data[start + 2] == 52) return 41;
             }
         }
         if (source.data[start] == 102) {
             if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 114) { return 17; }
+                if (source.data[start + 2] == 114) return 17;
             }
             if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) { return 45; }
+                if (source.data[start + 2] == 50) return 45;
             }
             if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) { return 46; }
+                if (source.data[start + 2] == 52) return 46;
             }
         }
     }
@@ -95,49 +94,49 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
         if (source.data[start] == 119) {
             if (source.data[start + 1] == 104) {
                 if (source.data[start + 2] == 101) {
-                    if (source.data[start + 3] == 110) { return 14; }
+                    if (source.data[start + 3] == 110) return 14;
                 }
             }
         }
         if (source.data[start] == 101) {
             if (source.data[start + 1] == 108) {
                 if (source.data[start + 2] == 115) {
-                    if (source.data[start + 3] == 101) { return 16; }
+                    if (source.data[start + 3] == 101) return 16;
                 }
             }
         }
         if (source.data[start] == 117) {
             if (source.data[start + 1] == 110) {
                 if (source.data[start + 2] == 105) {
-                    if (source.data[start + 3] == 116) { return 49; }
+                    if (source.data[start + 3] == 116) return 49;
                 }
             }
         }
         if (source.data[start] == 98) {
             if (source.data[start + 1] == 111) {
                 if (source.data[start + 2] == 111) {
-                    if (source.data[start + 3] == 108) { return 32; }
+                    if (source.data[start + 3] == 108) return 32;
                 }
             }
         }
         if (source.data[start] == 116) {
             if (source.data[start + 1] == 114) {
                 if (source.data[start + 2] == 117) {
-                    if (source.data[start + 3] == 101) { return 29; }
+                    if (source.data[start + 3] == 101) return 29;
                 }
             }
         }
         if (source.data[start] == 110) {
             if (source.data[start + 1] == 117) {
                 if (source.data[start + 2] == 108) {
-                    if (source.data[start + 3] == 108) { return 31; }
+                    if (source.data[start + 3] == 108) return 31;
                 }
             }
         }
         if (source.data[start] == 101) {
             if (source.data[start + 1] == 110) {
                 if (source.data[start + 2] == 117) {
-                    if (source.data[start + 3] == 109) { return 24; }
+                    if (source.data[start + 3] == 109) return 24;
                 }
             }
         }
@@ -147,7 +146,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
             if (source.data[start + 1] == 114) {
                 if (source.data[start + 2] == 101) {
                     if (source.data[start + 3] == 97) {
-                        if (source.data[start + 4] == 107) { return 89; }
+                        if (source.data[start + 4] == 107) return 89;
                     }
                 }
             }
@@ -156,7 +155,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
             if (source.data[start + 1] == 104) {
                 if (source.data[start + 2] == 105) {
                     if (source.data[start + 3] == 108) {
-                        if (source.data[start + 4] == 101) { return 19; }
+                        if (source.data[start + 4] == 101) return 19;
                     }
                 }
             }
@@ -165,7 +164,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
             if (source.data[start + 1] == 97) {
                 if (source.data[start + 2] == 108) {
                     if (source.data[start + 3] == 115) {
-                        if (source.data[start + 4] == 101) { return 30; }
+                        if (source.data[start + 4] == 101) return 30;
                     }
                 }
             }
@@ -177,7 +176,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 100) {
                     if (source.data[start + 3] == 117) {
                         if (source.data[start + 4] == 108) {
-                            if (source.data[start + 5] == 101) { return 25; }
+                            if (source.data[start + 5] == 101) return 25;
                         }
                     }
                 }
@@ -188,7 +187,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 112) {
                     if (source.data[start + 3] == 111) {
                         if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 116) { return 26; }
+                            if (source.data[start + 5] == 116) return 26;
                         }
                     }
                 }
@@ -199,7 +198,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 116) {
                     if (source.data[start + 3] == 117) {
                         if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 110) { return 20; }
+                            if (source.data[start + 5] == 110) return 20;
                         }
                     }
                 }
@@ -210,7 +209,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 114) {
                     if (source.data[start + 3] == 117) {
                         if (source.data[start + 4] == 99) {
-                            if (source.data[start + 5] == 116) { return 11; }
+                            if (source.data[start + 5] == 116) return 11;
                         }
                     }
                 }
@@ -221,7 +220,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 116) {
                     if (source.data[start + 3] == 101) {
                         if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 110) { return 9; }
+                            if (source.data[start + 5] == 110) return 9;
                         }
                     }
                 }
@@ -232,7 +231,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 122) {
                     if (source.data[start + 3] == 101) {
                         if (source.data[start + 4] == 111) {
-                            if (source.data[start + 5] == 102) { return 28; }
+                            if (source.data[start + 5] == 102) return 28;
                         }
                     }
                 }
@@ -247,7 +246,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                         if (source.data[start + 4] == 105) {
                             if (source.data[start + 5] == 110) {
                                 if (source.data[start + 6] == 117) {
-                                    if (source.data[start + 7] == 101) { return 90; }
+                                    if (source.data[start + 7] == 101) return 90;
                                 }
                             }
                         }
@@ -340,16 +339,14 @@ fn scanNumber(source: Source, start: u64): NumberScan {
     }
     if (offset < source.length) {
         var exponentMarker = source.data[offset] == 101;
-        if (source.data[offset] == 69) { exponentMarker = true; }
+        if (source.data[offset] == 69) exponentMarker = true;
         if (exponentMarker) {
             kind = 3;
             offset = offset + 1;
             if (offset < source.length) {
                 var exponentSign = source.data[offset] == 43;
-                if (source.data[offset] == 45) { exponentSign = true; }
-                if (exponentSign) {
-                    offset = offset + 1;
-                }
+                if (source.data[offset] == 45) exponentSign = true;
+                if (exponentSign) offset = offset + 1;
             }
             offset = scanInteger(source, offset);
         }
@@ -368,7 +365,7 @@ fn scanString(source: Source, start: u64): u64 {
             if (value == 92) {
                 escaped = true;
             } else {
-                if (value == 34) { return offset + 1; }
+                if (value == 34) return offset + 1;
             }
         }
         offset = offset + 1;
@@ -378,30 +375,30 @@ fn scanString(source: Source, start: u64): u64 {
 
 fn doublePunctuationKind(first: u8, second: u8): u32 {
     if (second == 61) {
-        if (first == 43) { return 74; }
-        if (first == 45) { return 75; }
-        if (first == 42) { return 76; }
-        if (first == 47) { return 77; }
-        if (first == 37) { return 78; }
-        if (first == 61) { return 79; }
-        if (first == 33) { return 80; }
-        if (first == 60) { return 81; }
-        if (first == 62) { return 82; }
+        if (first == 43) return 74;
+        if (first == 45) return 75;
+        if (first == 42) return 76;
+        if (first == 47) return 77;
+        if (first == 37) return 78;
+        if (first == 61) return 79;
+        if (first == 33) return 80;
+        if (first == 60) return 81;
+        if (first == 62) return 82;
     }
     if (first == 38) {
-        if (second == 38) { return 83; }
+        if (second == 38) return 83;
     }
     if (first == 124) {
-        if (second == 124) { return 84; }
+        if (second == 124) return 84;
     }
     if (first == 45) {
-        if (second == 62) { return 85; }
+        if (second == 62) return 85;
     }
     if (first == 61) {
-        if (second == 62) { return 86; }
+        if (second == 62) return 86;
     }
     if (first == 46) {
-        if (second == 46) { return 87; }
+        if (second == 46) return 87;
     }
     return 0;
 }

@@ -45,8 +45,8 @@ fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
         negative = node.aux == 61;
         node = semantic.nodes.data[root - 1];
     }
-    if (node.kind != 11) { return IntegerConstant(false, false, false, 0); }
-    if (node.aux != 2) { return IntegerConstant(false, false, false, 0); }
+    if (node.kind != 11) return IntegerConstant(false, false, false, 0);
+    if (node.aux != 2) return IntegerConstant(false, false, false, 0);
     var magnitude: u64 = 0;
     var overflow = false;
     var offset = node.start;
@@ -56,10 +56,10 @@ fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
             overflow = true;
         } else {
             if (magnitude == 1844674407370955161) {
-                if (digit > 5) { overflow = true; }
+                if (digit > 5) overflow = true;
             }
         }
-        if (!overflow) { magnitude = magnitude * 10 + digit; }
+        if (!overflow) magnitude = magnitude * 10 + digit;
         offset = offset + 1;
     }
     return IntegerConstant(true, negative, overflow, magnitude);
@@ -80,7 +80,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
     if (node.kind != 11) {
         return IntegerConstant(false, false, false, 0);
     }
-    if (node.aux != 3) { return IntegerConstant(false, false, false, 0); }
+    if (node.aux != 3) return IntegerConstant(false, false, false, 0);
     var exponentStart = node.end;
     var decimalDigits: i64 = 0;
     var sawDecimal = false;
@@ -88,14 +88,14 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
     while (offset < node.end) {
         val byte = semantic.source.data[offset];
         var exponentMarker = byte == 101;
-        if (byte == 69) { exponentMarker = true; }
+        if (byte == 69) exponentMarker = true;
         if (exponentMarker) {
             exponentStart = offset;
             offset = node.end;
         } else {
-            if (byte == 46) { sawDecimal = true; }
+            if (byte == 46) sawDecimal = true;
             else {
-                if (!sawDecimal) { decimalDigits = decimalDigits + 1; }
+                if (!sawDecimal) decimalDigits = decimalDigits + 1;
             }
             offset = offset + 1;
         }
@@ -105,7 +105,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
         offset = exponentStart + 1;
         var exponentNegative = false;
         var exponentSign = semantic.source.data[offset] == 43;
-        if (semantic.source.data[offset] == 45) { exponentSign = true; }
+        if (semantic.source.data[offset] == 45) exponentSign = true;
         if (exponentSign) {
             exponentNegative = semantic.source.data[offset] == 45;
             offset = offset + 1;
@@ -117,7 +117,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
             }
             offset = offset + 1;
         }
-        if (exponentNegative) { exponent = 0 - exponent; }
+        if (exponentNegative) exponent = 0 - exponent;
     }
     val integerDigits = decimalDigits + exponent;
     if (integerDigits <= 0) {
@@ -136,53 +136,53 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
                     overflow = true;
                 } else {
                     if (magnitude == 1844674407370955161) {
-                        if (digit > 5) { overflow = true; }
+                        if (digit > 5) overflow = true;
                     }
                 }
-                if (!overflow) { magnitude = magnitude * 10 + digit; }
+                if (!overflow) magnitude = magnitude * 10 + digit;
             }
             digitIndex = digitIndex + 1;
         }
         offset = offset + 1;
     }
     while (digitIndex < integerDigits) {
-        if (magnitude > 1844674407370955161) { overflow = true; }
-        if (!overflow) { magnitude = magnitude * 10; }
+        if (magnitude > 1844674407370955161) overflow = true;
+        if (!overflow) magnitude = magnitude * 10;
         digitIndex = digitIndex + 1;
     }
     return IntegerConstant(true, negative, overflow, magnitude);
 }
 
 fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
-    if (value.overflow) { return false; }
+    if (value.overflow) return false;
     if (value.negative) {
-        if (value.magnitude == 0) { return true; }
-        if (!integerTypeIsSigned(target)) { return false; }
+        if (value.magnitude == 0) return true;
+        if (!integerTypeIsSigned(target)) return false;
         if (target.kind == 4) {
             return value.magnitude <= 9223372036854775808;
         }
         return value.magnitude <= 2147483648;
     }
-    if (target.kind == 5) { return value.magnitude <= 255; }
-    if (target.kind == 6) { return value.magnitude <= 4294967295; }
-    if (target.kind == 3) { return value.magnitude <= 2147483647; }
-    if (target.kind == 4) { return value.magnitude <= 9223372036854775807; }
+    if (target.kind == 5) return value.magnitude <= 255;
+    if (target.kind == 6) return value.magnitude <= 4294967295;
+    if (target.kind == 3) return value.magnitude <= 2147483647;
+    if (target.kind == 4) return value.magnitude <= 9223372036854775807;
     return true;
 }
 
 fn nodeIsPrint(semantic: Semantic, node: AstNode): bool {
-    if (node.end - node.start != 5) { return false; }
-    if (semantic.source.data[node.start] != 112) { return false; }
-    if (semantic.source.data[node.start + 1] != 114) { return false; }
-    if (semantic.source.data[node.start + 2] != 105) { return false; }
-    if (semantic.source.data[node.start + 3] != 110) { return false; }
+    if (node.end - node.start != 5) return false;
+    if (semantic.source.data[node.start] != 112) return false;
+    if (semantic.source.data[node.start + 1] != 114) return false;
+    if (semantic.source.data[node.start + 2] != 105) return false;
+    if (semantic.source.data[node.start + 3] != 110) return false;
     return semantic.source.data[node.start + 4] == 116;
 }
 
 fn declarationFind(list: DeclarationList, name: u64): u64 {
     var index: u64 = 0;
     while (index < list.length) {
-        if (list.data[index].name == name) { return index; }
+        if (list.data[index].name == name) return index;
         index = index + 1;
     }
     return list.length;
@@ -192,7 +192,7 @@ fn localFind(locals: LocalList, name: u64): u64 {
     var index = locals.length;
     while (index > 0) {
         index = index - 1;
-        if (locals.data[index].name == name) { return index; }
+        if (locals.data[index].name == name) return index;
     }
     return locals.length;
 }
@@ -201,7 +201,7 @@ fn localFindFrom(locals: LocalList, name: u64, start: u64): u64 {
     var index = locals.length;
     while (index > start) {
         index = index - 1;
-        if (locals.data[index].name == name) { return index; }
+        if (locals.data[index].name == name) return index;
     }
     return locals.length;
 }
@@ -233,16 +233,16 @@ fn whenConditionRoot(
 fn enumWhenExhaustive(
     var semantic: Semantic, subject: TypeValue, roots: u64*,
     branchCount: u32, valueForm: bool): bool {
-    if (subject.kind != 20) { return false; }
+    if (subject.kind != 20) return false;
     val enumIndex = declarationFind(semantic.enums, subject.name);
-    if (enumIndex == semantic.enums.length) { return false; }
+    if (enumIndex == semantic.enums.length) return false;
     val declaration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
     var unique: u32 = 0;
     var index: u32 = 0;
     while (index < branchCount) {
         val branch = semantic.nodes.data[roots[index as u64]];
         var isElse = branch.aux == 1;
-        if (valueForm) { isElse = branch.aux % 2 == 1; }
+        if (valueForm) isElse = branch.aux % 2 == 1;
         if (!isElse) {
             val conditionRoot = whenConditionRoot(
                 semantic, roots[index as u64], valueForm);
@@ -253,7 +253,7 @@ fn enumWhenExhaustive(
                 while (prior < index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
                     var priorElse = priorBranch.aux == 1;
-                    if (valueForm) { priorElse = priorBranch.aux % 2 == 1; }
+                    if (valueForm) priorElse = priorBranch.aux % 2 == 1;
                     if (!priorElse) {
                         val priorRoot = whenConditionRoot(
                             semantic, roots[prior as u64], valueForm);
@@ -288,12 +288,12 @@ fn functionTypeParameterCount(function: AstNode): u32 {
 }
 
 fn constraintFromHash(hash: u64): u32 {
-    if (hash == 8246182162010039579) { return 1; }
-    if (hash == 229477778387914) { return 2; }
-    if (hash == 6953836814478) { return 3; }
-    if (hash == 229469892001299) { return 4; }
-    if (hash == 7573017822976354) { return 5; }
-    if (hash == 210712519067) { return 6; }
+    if (hash == 8246182162010039579) return 1;
+    if (hash == 229477778387914) return 2;
+    if (hash == 6953836814478) return 3;
+    if (hash == 229469892001299) return 4;
+    if (hash == 7573017822976354) return 5;
+    if (hash == 210712519067) return 6;
     return 0;
 }
 
@@ -382,13 +382,13 @@ fn substituteStructType(
     if (type.kind == 14) {
         val position =
             structTypeParameterPosition(semantic, structureRoot, type.name);
-        if (position >= count) { return invalidType(); }
+        if (position >= count) return invalidType();
         return arguments.data[argumentStart + position as u64];
     }
     if (type.kind == 8) {
         val start = type.pointee % 65536;
         val argCount = type.pointee / 65536;
-        if (argCount == 0) { return type; }
+        if (argCount == 0) return type;
         val newStart = semantic.genericArguments.length;
         var index: u32 = 0;
         while (index < argCount) {
@@ -502,53 +502,53 @@ fn substituteGenericType(
         val inner = substituteGenericType(
             semantic, functionRoot,
             TypeValue(type.pointee, type.name, 0), arguments, count);
-        if (inner.kind == 0) { return inner; }
+        if (inner.kind == 0) return inner;
         return TypeValue(15, inner.name, inner.kind);
     }
-    if (type.kind != 14) { return type; }
+    if (type.kind != 14) return type;
     val position =
         typeParameterPosition(semantic, functionRoot, type.name);
-    if (position >= count) { return invalidType(); }
+    if (position >= count) return invalidType();
     return arguments[position as u64];
 }
 
 fn constraintAcceptsType(constraint: u32, type: TypeValue): bool {
     if (constraint == 0) {
-        if (type.kind == 0) { return false; }
-        if (type.kind == 1) { return false; }
+        if (type.kind == 0) return false;
+        if (type.kind == 1) return false;
         return true;
     }
     if (type.kind == 14) {
         return type.pointee >= constraint;
     }
     if (constraint == 1) {
-        if (type.kind == 2) { return true; }
+        if (type.kind == 2) return true;
         if (type.kind >= 3) {
-            if (type.kind <= 7) { return true; }
+            if (type.kind <= 7) return true;
         }
         return type.kind == 11;
     }
     if (constraint == 2) {
         if (type.kind >= 3) {
-            if (type.kind <= 7) { return true; }
+            if (type.kind <= 7) return true;
         }
         return type.kind == 11;
     }
     if (constraint == 3) {
         if (type.kind >= 3) {
-            if (type.kind <= 7) { return true; }
+            if (type.kind <= 7) return true;
         }
         return type.kind == 11;
     }
     if (constraint == 4) {
         if (type.kind >= 3) {
-            if (type.kind <= 7) { return true; }
+            if (type.kind <= 7) return true;
         }
         return type.kind == 11;
     }
     if (constraint == 5) {
         if (type.kind >= 5) {
-            if (type.kind <= 7) { return true; }
+            if (type.kind <= 7) return true;
         }
         return type.kind == 11;
     }
@@ -581,10 +581,10 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
     if (node.kind == 1) {
         val tokenKind = node.aux % 256;
         val primitive = primitiveType(tokenKind);
-        if (primitive.kind != 0) { return primitive; }
+        if (primitive.kind != 0) return primitive;
         val parameter = findCurrentTypeParameter(
             semantic, nodeHash(semantic, node));
-        if (parameter.kind != 0) { return parameter; }
+        if (parameter.kind != 0) return parameter;
         
         val typeArgumentCount = node.aux / 256;
         if (typeArgumentCount > 0) {
@@ -647,7 +647,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
 
 fn functionReturnRoot(semantic: Semantic, functionRoot: u64): u64 {
     val function = semantic.nodes.data[functionRoot];
-    if (functionIsExtern(function)) { return functionRoot - 1; }
+    if (functionIsExtern(function)) return functionRoot - 1;
     val body = semantic.nodes.data[functionRoot - 1];
     return body.subtreeStart - 1;
 }
@@ -679,7 +679,7 @@ fn expressionType(var semantic: Semantic, root: u64): TypeValue {
 }
 
 fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
-    if (!semantic.result.ok) { return invalidType(); }
+    if (!semantic.result.ok) return invalidType();
     val node = semantic.nodes.data[root];
     if (node.kind == 10) {
         val name = nodeHash(semantic, node);
@@ -698,12 +698,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         return invalidType();
     }
     if (node.kind == 11) {
-        if (node.aux == 2) { return integerLiteralType(); }
-        if (node.aux == 3) { return TypeValue(18, 0, 0); }
-        if (node.aux == 5) { return TypeValue(10, 0, 0); }
-        if (node.aux == 29) { return boolType(); }
-        if (node.aux == 30) { return boolType(); }
-        if (node.aux == 31) { return TypeValue(16, 0, 0); }
+        if (node.aux == 2) return integerLiteralType();
+        if (node.aux == 3) return TypeValue(18, 0, 0);
+        if (node.aux == 5) return TypeValue(10, 0, 0);
+        if (node.aux == 29) return boolType();
+        if (node.aux == 30) return boolType();
+        if (node.aux == 31) return TypeValue(16, 0, 0);
         return invalidType();
     }
     if (node.kind == 12) {
@@ -739,16 +739,16 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val left = expressionType(semantic, leftRoot);
         val right = expressionType(semantic, rightRoot);
         var logical = node.aux == 83;
-        if (node.aux == 84) { logical = true; }
+        if (node.aux == 84) logical = true;
         if (logical) {
-            if (left.kind != 2) { semanticFail(semantic, 4, node); }
+            if (left.kind != 2) semanticFail(semantic, 4, node);
             else {
-                if (right.kind != 2) { semanticFail(semantic, 4, node); }
+                if (right.kind != 2) semanticFail(semantic, 4, node);
             }
             return boolType();
         }
         var comparison = node.aux == 66;
-        if (node.aux == 67) { comparison = true; }
+        if (node.aux == 67) comparison = true;
         if (node.aux >= 79) {
             if (node.aux <= 82) {
                 comparison = true;
@@ -762,8 +762,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             return boolType();
         }
-        if (typeAccepts(left, right, semantic.genericArguments)) { return left; }
-        if (typeAccepts(right, left, semantic.genericArguments)) { return right; }
+        if (typeAccepts(left, right, semantic.genericArguments)) return left;
+        if (typeAccepts(right, left, semantic.genericArguments)) return right;
         semanticFail(semantic, 4, node);
         return invalidType();
     }
@@ -803,11 +803,11 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         var pointerCast = false;
         if (source.kind == 9) {
-            if (target.kind == 9) { pointerCast = true; }
+            if (target.kind == 9) pointerCast = true;
         }
         var integerCast = false;
         if (isIntegerType(source)) {
-            if (isIntegerType(target)) { integerCast = true; }
+            if (isIntegerType(target)) integerCast = true;
         }
         if (integerCast) {
             val constant = integerConstant(semantic, valueRoot);
@@ -825,14 +825,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         } else {
             var floatCast = false;
             if (isFloatType(source)) {
-                if (isFloatType(target)) { floatCast = true; }
+                if (isFloatType(target)) floatCast = true;
             }
             if (isIntegerType(source)) {
-                if (isFloatType(target)) { floatCast = true; }
+                if (isFloatType(target)) floatCast = true;
             }
             var floatToInteger = false;
             if (isFloatType(source)) {
-                if (isIntegerType(target)) { floatToInteger = true; }
+                if (isIntegerType(target)) floatToInteger = true;
             }
             if (floatToInteger) {
                 floatCast = true;
@@ -851,7 +851,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
                 semantic.nodes.data[root] = castNode;
             } else {
-                if (!pointerCast) { semanticFail(semantic, 4, node); }
+                if (!pointerCast) semanticFail(semantic, 4, node);
             }
         }
         return target;
@@ -1296,7 +1296,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         var index: u32 = 0;
         while (index < branchCount) {
             val branch = semantic.nodes.data[roots[index as u64]];
-            if (branch.aux % 2 == 1) { hasElse = true; }
+            if (branch.aux % 2 == 1) hasElse = true;
             val valueRoot = roots[index as u64] - 1;
             val statementCount = branch.aux / 2;
             val statementRoots =
@@ -1370,10 +1370,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         return result;
     }
     if (node.kind == 22) {
-        if (node.aux == 0) { return arrayType(invalidType(), 0); }
+        if (node.aux == 0) return arrayType(invalidType(), 0);
         var childRoot = root - 1;
         var element = expressionType(semantic, childRoot);
-        if (element.kind == 11) { element = TypeValue(3, 0, 0); }
+        if (element.kind == 11) element = TypeValue(3, 0, 0);
         var remaining = node.aux;
         while (remaining > 0) {
             val actual = expressionType(semantic, childRoot);
@@ -1391,7 +1391,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return arrayType(element, node.aux as u64);
     }
-    if (node.kind == 20) { return unitType(); }
+    if (node.kind == 20) return unitType();
     if (node.kind == 21) {
         typeFromNode(semantic, root - 1);
         return TypeValue(7, 0, 0);
@@ -1429,7 +1429,7 @@ fn checkBlock(var semantic: Semantic, root: u64) {
 fn resolveWhenResultType(
     var semantic: Semantic, root: u64, target: TypeValue) {
     var whenNode = semantic.nodes.data[root];
-    if (whenNode.kind != 23) { return; }
+    if (whenNode.kind != 23) return;
     whenNode.typeKind = target.kind;
     whenNode.typeName = target.name;
     whenNode.typePointee = target.pointee;
@@ -1452,7 +1452,7 @@ fn resolveWhenResultType(
 }
 
 fn checkStatement(var semantic: Semantic, root: u64) {
-    if (!semantic.result.ok) { return; }
+    if (!semantic.result.ok) return;
     val node = semantic.nodes.data[root];
     if (node.kind == 30) {
         checkBlock(semantic, root);
@@ -1496,7 +1496,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         var range = collectionNode.kind == 13;
         if (range) {
             range = collectionNode.aux == 87;
-            if (collectionNode.aux == 88) { range = true; }
+            if (collectionNode.aux == 88) range = true;
         }
         if (range) {
             if (node.aux == 1) {
@@ -1507,7 +1507,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
         } else {
             var collection = valueType.kind == 13;
-            if (valueType.kind == 19) { collection = true; }
+            if (valueType.kind == 19) collection = true;
             if (!collection) {
                 semanticFail(semantic, 4, collectionNode);
                 return;
@@ -1588,8 +1588,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 semantic.nodes.data[subjectRoot] = subjectNode;
             }
             var comparable = subject.kind == 2;
-            if (isIntegerType(subject)) { comparable = true; }
-            if (subject.kind == 20) { comparable = true; }
+            if (isIntegerType(subject)) comparable = true;
+            if (subject.kind == 20) comparable = true;
             if (!comparable) {
                 semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
             }
@@ -1598,7 +1598,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         var hasElse = false;
         while (index < branchCount) {
             val current = semantic.nodes.data[roots[index as u64]];
-            if (current.aux == 1) { hasElse = true; }
+            if (current.aux == 1) hasElse = true;
             val bodyRoot = roots[index as u64] - 1;
             if (current.aux == 0) {
                 val conditionRoot =

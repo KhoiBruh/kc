@@ -101,10 +101,10 @@ fn sourceMapFree(sourceMap: SourceMap) {
 }
 
 fn loaderBytesEqual(a: u8*, aLength: u64, b: u8*, bLength: u64): bool {
-    if (aLength != bLength) { return false; }
+    if (aLength != bLength) return false;
     var index: u64 = 0;
     while (index < aLength) {
-        if (a[index] != b[index]) { return false; }
+        if (a[index] != b[index]) return false;
         index = index + 1;
     }
     return true;
@@ -133,7 +133,7 @@ fn loaderAppend(var buffer: ByteBuffer, data: u8*, length: u64) {
 fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
     var digits = byteBufferNew();
     var current = value;
-    if (current == 0) { byteBufferAppend(digits, 48); }
+    if (current == 0) byteBufferAppend(digits, 48);
     while (current > 0) {
         byteBufferAppend(digits, 48 + (current % 10) as u8);
         current = current / 10;
@@ -268,7 +268,7 @@ fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
 fn loaderCandidate(root: u8*, rootLength: u64, relative: ByteBuffer): ByteBuffer {
     var result = byteBufferNew();
     loaderAppend(result, root, rootLength);
-    if (rootLength > 0) { byteBufferAppend(result, 47); }
+    if (rootLength > 0) byteBufferAppend(result, 47);
     loaderAppend(result, relative.data, relative.length);
     return result;
 }
@@ -278,10 +278,10 @@ fn loaderRelative(
     wildcard: bool): ByteBuffer {
     var result = byteBufferNew();
     var count = partCount;
-    if (!wildcard) { count = count - 1; }
+    if (!wildcard) count = count - 1;
     var index: u64 = 0;
     while (index < count) {
-        if (index > 0) { byteBufferAppend(result, 47); }
+        if (index > 0) byteBufferAppend(result, 47);
         val token = tokens.data[first + index * 2];
         var offset = token.start;
         while (offset < token.end) {
@@ -371,7 +371,7 @@ fn loaderScanImports(
     if (!lexed.ok) {
         loader.failureKind = 2;
         var category: u32 = 4;
-        if (lexed.errorKind == 1) { category = 3; }
+        if (lexed.errorKind == 1) category = 3;
         loaderReport(path, source, lexed.errorStart, category);
         tokenListFree(lexed.tokens);
         return false;
@@ -439,7 +439,7 @@ fn loaderLoadModule(
     suppliedData: u8*, suppliedLength: u64, hasSuppliedData: bool): bool {
     if (depth > 64) {
         loader.failureKind = 2;
-        if (hasSuppliedData) { k_boot_free(suppliedData as unit*); }
+        if (hasSuppliedData) k_boot_free(suppliedData as unit*);
         return false;
     }
     val canonicalPlaceholder = k_boot_alloc(1);
@@ -448,14 +448,14 @@ fn loaderLoadModule(
     if (!k_boot_canonical_path(path, pathLength, &canonicalData, &canonicalLength)) {
         loader.failureKind = 1;
         k_boot_free(canonicalData as unit*);
-        if (hasSuppliedData) { k_boot_free(suppliedData as unit*); }
+        if (hasSuppliedData) k_boot_free(suppliedData as unit*);
         return false;
     }
     k_boot_free(canonicalPlaceholder);
     val canonical = LoadedPath(canonicalData, canonicalLength);
     if (loaderWasVisited(loader, canonical)) {
         k_boot_free(canonical.data as unit*);
-        if (hasSuppliedData) { k_boot_free(suppliedData as unit*); }
+        if (hasSuppliedData) k_boot_free(suppliedData as unit*);
         return true;
     }
     var visited = loader.visited;
