@@ -559,6 +559,15 @@ Các toán tử có độ ưu tiên từ thấp đến cao:
 
 Dấu ngoặc `()` thay đổi thứ tự đánh giá. Các toán tử hai ngôi kết hợp trái, ngoại trừ phép gán kết hợp phải:
 
+`&&` và `||` chỉ nhận toán hạng `bool` và đánh giá từ trái sang phải. `a && b`
+không đánh giá `b` khi `a` là `false`; `a || b` không đánh giá `b` khi `a` là
+`true`. Kết quả luôn là `bool`. Vertical slice đầu tiên phải hạ chúng thành
+control flow với nhánh RHS và merge `phi i1`, không dùng eager LLVM `and`/`or`
+và không mở rộng sang truthiness, toán tử bitwise hay constant-folding mới.
+
+Acceptance phải chứng minh RHS có thể `panic` nhưng bị bỏ qua đúng lúc, IR qua
+verifier, behavior giống nhau qua `kc1`–`kc4`, và bootstrap giữ fixed-point.
+
 ```text
 val result = 1 + 2 * 3;
 val converted = result as f64;

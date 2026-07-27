@@ -210,5 +210,7 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 
 ## Recommended next milestone
 
-Choose the next demand-driven language feature after the completed float-cast
-self-hosting milestone.
+Add logical short-circuiting for `&&` and `||` as the next vertical slice.
+Preserve left-to-right evaluation and skip the RHS when the LHS determines the
+result; lower through CFG plus `phi i1` in both LLVM emitters. Keep operands
+strictly `bool`, and do not broaden this into truthiness or bitwise operators.
