@@ -337,6 +337,18 @@ TEST(parser_respects_expression_precedence_and_assignment_associativity) {
     EXPECT_TRUE(std::holds_alternative<k::AssignmentExpr>(outer.value->node));
 }
 
+TEST(parser_parses_left_associative_integer_casts) {
+    ParseFixture fixture{
+        "fn convert(val value: i32): u64 { return value as i64 as u64; }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& statement = fixture.parsed.program.functions[0].body->statements[0];
+    const auto& returned = std::get<k::ReturnStmt>(statement->node);
+    const auto& outer = std::get<k::CastExpr>(returned.value->node);
+    EXPECT_TRUE(std::holds_alternative<k::CastExpr>(outer.value->node));
+    const auto& target = std::get<k::NamedType>(outer.type->node);
+    EXPECT_EQ(fixture.text(target.parts[0]), "u64");
+}
+
 TEST(parser_requires_semicolons_and_recovers_later_statements) {
     ParseFixture fixture{
         "fn main() { val missing = 1 val kept = 2; return kept; }"};

@@ -201,7 +201,7 @@ Bootstrap diagnostics and CLI parity are complete for the current contract.
 
 ## Recommended next milestone
 
-Implement the approved integer-cast matrix as the next frontend/codegen vertical
-slice: integer types only, checked narrowing and signedness changes, positioned
-constant diagnostics, runtime panic checks, and bootstrap acceptance. Defer float
-casts until integer casts are self-hosted.
+Implement semantic validation for the approved integer-cast matrix: integer
+types only, positioned constant diagnostics, and conversion metadata for
+codegen. Cast syntax and AST parity are complete in `kc0` and the bootstrap
+frontend. Defer float casts until integer casts are self-hosted.
