@@ -78,7 +78,9 @@ if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
     "generics.k", "generics_multiple.k", "generic_nullable.k",
-    "generic_structs.k", "integer_casts.k", "integer_cast_panic.k"
+    "generic_structs.k", "integer_casts.k", "integer_cast_panic.k",
+    "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
+    "float_cast_infinity_panic.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName
@@ -120,6 +122,18 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "integer_cast_panic.k" -and $stage1Exit -ne 2) {
         Write-Error "out-of-range integer cast did not panic with exit code 2"
+    }
+    if ($fixtureName -eq "float_casts.k" -and $stage1Exit -ne 42) {
+        Write-Error "float cast fixture did not return 42"
+    }
+    if ($fixtureName -eq "float_cast_panic.k" -and $stage1Exit -ne 2) {
+        Write-Error "out-of-range float cast did not panic with exit code 2"
+    }
+    if ($fixtureName -eq "float_cast_nan_panic.k" -and $stage1Exit -ne 2) {
+        Write-Error "NaN float cast did not panic with exit code 2"
+    }
+    if ($fixtureName -eq "float_cast_infinity_panic.k" -and $stage1Exit -ne 2) {
+        Write-Error "infinite float cast did not panic with exit code 2"
     }
     & $Opt -passes=verify -disable-output $stage1Ll
     if ($LASTEXITCODE -ne 0) { Write-Error "kc1 IR failed verification" }

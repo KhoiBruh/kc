@@ -144,6 +144,9 @@ llvm-readobj --file-headers file.obj
 - Minimal tagged nullable values, `null`, lifting `T` to `T?`, and postfix `!`.
 - Integer casts have semantic source/target metadata, positioned constant range
   diagnostics, checked runtime panic lowering, and bootstrap IR/behavior fixtures.
+- `f32`/`f64` casts lower through `fpext`, `fptrunc`, `sitofp`, `uitofp`,
+  `fptosi`, and `fptoui`; float-to-integer checks reject out-of-range values,
+  `NaN`, and infinity before conversion.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -156,8 +159,8 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- Float casts, logical short-circuiting, `when`, `for`, `break`, and
-  `continue` are not lowered yet.
+- Logical short-circuiting, `when`, `for`, `break`, and `continue` are not
+  lowered yet.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -204,7 +207,7 @@ Integer-cast self-hosting is complete for the approved integer matrix.
 
 ## Recommended next milestone
 
-Lower the approved `f32`/`f64` cast matrix in the C++ LLVM backend and the
-self-hosted textual LLVM emitter. Reuse the semantic conversion metadata and
-checked float-to-integer contract; do not broaden this into `f8`/`f16` or
-implicit numeric coercion.
+Complete the float-cast acceptance boundary matrix across `f32`/`f64` and the
+supported signed/unsigned integer widths, including exact extrema, fractional
+lower bounds, `NaN`, and infinity. Preserve `kc1`-`kc4` behavior and IR parity
+before declaring the float-cast milestone self-hosted.

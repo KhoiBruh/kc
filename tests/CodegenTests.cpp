@@ -385,6 +385,29 @@ TEST(codegen_lowers_integer_width_casts) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_float_casts) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn signedToFloat(val value: i32): f64 { return value as f64; }"
+        "fn unsignedToFloat(val value: u32): f32 { return value as f32; }"
+        "fn extend(val value: f32): f64 { return value as f64; }"
+        "fn narrow(val value: f64): f32 { return value as f32; }"
+        "fn checkedSigned(val value: f64): i32 { return value as i32; }"
+        "fn checkedUnsigned(val value: f64): u8 { return value as u8; }",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("sitofp i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("uitofp i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("fpext float") != std::string::npos);
+    EXPECT_TRUE(ir.find("fptrunc double") != std::string::npos);
+    EXPECT_TRUE(ir.find("fptosi double") != std::string::npos);
+    EXPECT_TRUE(ir.find("fptoui double") != std::string::npos);
+    EXPECT_TRUE(ir.find("fcmp ord") != std::string::npos ||
+                ir.find("fcmp ogt") != std::string::npos);
+    EXPECT_TRUE(ir.find("float cast out of range") != std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

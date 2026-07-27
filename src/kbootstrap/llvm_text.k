@@ -293,6 +293,9 @@ fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
 
 fn appendOperator(
     var buffer: ByteBuffer, kind: u32, typeKind: u32) {
+    var floating = typeKind == 17;
+    if (typeKind == 18) { floating = true; }
+    if (floating) { byteBufferAppend(buffer, 102); }
     if (kind == 60) {
         byteBufferAppend(buffer, 97);
         byteBufferAppend(buffer, 100);
@@ -309,6 +312,10 @@ fn appendOperator(
         byteBufferAppend(buffer, 108);
     }
     if (kind == 63) {
+        if (floating) {
+            byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 105);
+            byteBufferAppend(buffer, 118); return;
+        }
         var unsigned = typeKind == 5;
         if (typeKind == 6) { unsigned = true; }
         if (typeKind == 7) { unsigned = true; }
@@ -322,6 +329,10 @@ fn appendOperator(
         byteBufferAppend(buffer, 118);
     }
     if (kind == 64) {
+        if (floating) {
+            byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
+            byteBufferAppend(buffer, 109); return;
+        }
         var unsigned = typeKind == 5;
         if (typeKind == 6) { unsigned = true; }
         if (typeKind == 7) { unsigned = true; }
@@ -350,6 +361,84 @@ fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
     byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
     byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
     byteBufferAppend(buffer, 99);
+}
+
+fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
+    if (kind == 1) {
+        byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 112);
+        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
+        byteBufferAppend(buffer, 116); return;
+    }
+    if (kind == 2) {
+        byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 112);
+        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
+        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+        byteBufferAppend(buffer, 99); return;
+    }
+    if (kind == 3) { byteBufferAppend(buffer, 115); }
+    if (kind == 4) { byteBufferAppend(buffer, 117); }
+    var integerToFloat = kind == 3;
+    if (kind == 4) { integerToFloat = true; }
+    if (integerToFloat) {
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 116);
+        byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 102);
+        byteBufferAppend(buffer, 112); return;
+    }
+    byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 111);
+    if (kind == 5) {
+        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 105);
+    } else {
+        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 105);
+    }
+}
+
+fn appendFloatIntegerConstant(
+    var buffer: ByteBuffer, negative: bool, magnitude: u64,
+    appendSix: bool) {
+    if (negative) { byteBufferAppend(buffer, 45); }
+    appendDecimal(buffer, magnitude);
+    if (appendSix) { byteBufferAppend(buffer, 54); }
+    byteBufferAppend(buffer, 46); byteBufferAppend(buffer, 48);
+}
+
+fn appendFloatCastBound(
+    var buffer: ByteBuffer, sourceKind: u32, targetKind: u32,
+    lower: bool) {
+    if (lower) {
+        if (targetKind == 3) {
+            var magnitude: u64 = 2147483649;
+            if (sourceKind == 17) { magnitude = 2147483648; }
+            appendFloatIntegerConstant(buffer, true, magnitude, false);
+            return;
+        }
+        if (targetKind == 4) {
+            appendFloatIntegerConstant(
+                buffer, true, 9223372036854775808, false);
+            return;
+        }
+        appendFloatIntegerConstant(buffer, true, 1, false);
+        return;
+    }
+    if (targetKind == 3) {
+        appendFloatIntegerConstant(buffer, false, 2147483648, false);
+    } else {
+        if (targetKind == 4) {
+            appendFloatIntegerConstant(
+                buffer, false, 9223372036854775808, false);
+        } else {
+            if (targetKind == 5) {
+                appendFloatIntegerConstant(buffer, false, 256, false);
+            }
+            if (targetKind == 6) {
+                appendFloatIntegerConstant(buffer, false, 4294967296, false);
+            }
+            if (targetKind == 7) {
+                appendFloatIntegerConstant(
+                    buffer, false, 1844674407370955161, true);
+            }
+        }
+    }
 }
 
 fn appendCastPanic(var buffer: ByteBuffer) {
@@ -457,6 +546,16 @@ fn appendType(
         byteBufferAppend(buffer, 112);
         byteBufferAppend(buffer, 116);
         byteBufferAppend(buffer, 114);
+    }
+    if (kind == 17) {
+        byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 108);
+        byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 97);
+        byteBufferAppend(buffer, 116);
+    }
+    if (kind == 18) {
+        byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 111);
+        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 98);
+        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
     }
     if (kind == 11) { appendI32(buffer); }
     if (kind == 13) {
@@ -760,10 +859,12 @@ fn typeAlignment(
     if (kind == 3) { return 4; }
     if (kind == 6) { return 4; }
     if (kind == 11) { return 4; }
+    if (kind == 17) { return 4; }
     if (kind == 4) { return 8; }
     if (kind == 7) { return 8; }
     if (kind == 9) { return 8; }
     if (kind == 10) { return 8; }
+    if (kind == 18) { return 8; }
     if (kind == 13) { return 8; }
     if (kind == 8) {
         val structureRoot = structRootByName(source, nodes, name);
@@ -804,10 +905,12 @@ fn typeSize(
     if (kind == 3) { return 4; }
     if (kind == 6) { return 4; }
     if (kind == 11) { return 4; }
+    if (kind == 17) { return 4; }
     if (kind == 4) { return 8; }
     if (kind == 7) { return 8; }
     if (kind == 9) { return 8; }
     if (kind == 10) { return 8; }
+    if (kind == 18) { return 8; }
     if (kind == 13) { return 16; }
     if (kind == 8) {
         val structureRoot = structRootByName(source, nodes, name);
@@ -1096,6 +1199,37 @@ fn emitAddress(
     return IrValue(0, 0, 0, 0, 0, 0, 0);
 }
 
+fn appendFloatRangeComparison(
+    var buffer: ByteBuffer, source: Source,
+    genericArguments: TypeValueList, value: IrValue,
+    targetKind: u32, temporary: u64, lower: bool) {
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary);
+    appendEquals(buffer);
+    byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 111);
+    if (lower) {
+        var inclusive = targetKind == 4;
+        if (targetKind == 3) {
+            if (value.typeKind == 17) { inclusive = true; }
+        }
+        byteBufferAppend(buffer, 103);
+        if (inclusive) { byteBufferAppend(buffer, 101); }
+        else { byteBufferAppend(buffer, 116); }
+    } else {
+        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 116);
+    }
+    byteBufferAppend(buffer, 32);
+    appendType(
+        buffer, genericArguments,
+        value.typeKind, value.typeName, value.typePointee);
+    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
+    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+    appendFloatCastBound(
+        buffer, value.typeKind, targetKind, lower);
+    appendNewline(buffer);
+}
+
 fn emitExpression(
     var buffer: ByteBuffer,
     source: Source,
@@ -1135,20 +1269,25 @@ fn emitExpression(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
         }
-        if (node.aux == 60) {
+        if (node.aux == 61) {
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            byteBufferAppend(buffer, 115);
-            byteBufferAppend(buffer, 117);
-            byteBufferAppend(buffer, 98);
-            byteBufferAppend(buffer, 32);
-            appendNodeType(buffer, genericArguments, node);
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 48);
-            byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32);
+            if (isFloatType(TypeValue(
+                    node.typeKind, node.typeName, node.typePointee))) {
+                byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 103);
+                byteBufferAppend(buffer, 32);
+                appendNodeType(buffer, genericArguments, node);
+                byteBufferAppend(buffer, 32);
+            } else {
+                byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 117);
+                byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 32);
+                appendNodeType(buffer, genericArguments, node);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 48);
+                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            }
             appendIrValue(buffer, source, operand);
             appendNewline(buffer);
             return IrValue(
@@ -1244,6 +1383,64 @@ fn emitExpression(
         if (value.typeKind == 9) { return value; }
         val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
         val targetType = TypeValue(node.typeKind, node.typeName, node.typePointee);
+        if (node.conversionKind >= 5) {
+            if (node.conversionKind == 6) {
+                val lower = nextTemporary(counter);
+                val upper = nextTemporary(counter);
+                val check = nextTemporary(counter);
+                appendFloatRangeComparison(
+                    buffer, source, genericArguments, value,
+                    targetType.kind, lower, true);
+                appendFloatRangeComparison(
+                    buffer, source, genericArguments, value,
+                    targetType.kind, upper, false);
+                appendValuePrefix(buffer); appendDecimal(buffer, check);
+                appendEquals(buffer);
+                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
+                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+                appendDecimal(buffer, lower); byteBufferAppend(buffer, 44);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+                appendDecimal(buffer, upper); appendNewline(buffer);
+                val validBlock = nextBlock(counter);
+                val panicBlock = nextBlock(counter);
+                appendConditionalBranch(
+                    buffer, source, IrValue(2, 0, 0, check, 2, 0, 0),
+                    validBlock, panicBlock);
+                appendBlockLabel(buffer, panicBlock);
+                appendCastPanic(buffer);
+                appendBlockLabel(buffer, validBlock);
+            }
+            val temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary);
+            appendEquals(buffer);
+            var opcode: u32 = 1;
+            if (isIntegerType(sourceType)) {
+                opcode = 4;
+                if (integerTypeIsSigned(sourceType)) { opcode = 3; }
+            } else {
+                if (isIntegerType(targetType)) {
+                    opcode = 6;
+                    if (integerTypeIsSigned(targetType)) { opcode = 5; }
+                } else {
+                    if (node.typeKind == 17) { opcode = 2; }
+                }
+            }
+            appendFloatCastOpcode(buffer, opcode);
+            byteBufferAppend(buffer, 32);
+            appendType(
+                buffer, genericArguments,
+                value.typeKind, value.typeName, value.typePointee);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
+            byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 32);
+            appendNodeType(buffer, genericArguments, node);
+            appendNewline(buffer);
+            return IrValue(
+                2, 0, 0, temporary,
+                node.typeKind, node.typeName, node.typePointee);
+        }
         val sourceWidth = integerTypeWidth(sourceType);
         val targetWidth = integerTypeWidth(targetType);
         var converted = IrValue(

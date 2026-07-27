@@ -115,7 +115,9 @@ bao gồm `f8`, `f16`, `bool`, `char` hay pointer.
 Frontend semantic của `kc0` và compiler bootstrap đã hỗ trợ ma trận `f32`/`f64`
 trên. Mỗi cast lưu loại conversion và đánh dấu riêng float sang integer cần
 runtime range check; hằng ngoài miền được báo tại toàn bộ biểu thức cast. LLVM
-lowering cho các conversion này thuộc vertical slice tiếp theo.
+backend C++ và textual bootstrap đã hạ ma trận này bằng `fpext`, `fptrunc`,
+`sitofp`, `uitofp`, `fptosi` và `fptoui`; float sang integer kiểm tra miền bằng
+ordered comparisons trước conversion nên `NaN` và infinity đều `panic`.
 
 Frontend semantic của `kc0` và compiler bootstrap hiện áp dụng ma trận integer
 trên, từ chối float cast trong slice này, báo constant ngoài miền tại toàn bộ
@@ -639,7 +641,8 @@ kc --emit-llvm program.k -o program.ll
 
 Backend hiện hỗ trợ hàm và lời gọi hàm, parameter, `val`/`var`, assignment,
 literal và toán tử số, comparison, `if`/`else`, `while`, `return`, raw pointer,
-integer casts có kiểm tra, fixed struct, fixed array và slice. `unit` được hạ
+integer casts có kiểm tra, cast `f32`/`f64`, fixed struct, fixed array và slice.
+`unit` được hạ
 thành LLVM `void`; `bool`
 thành `i1`; raw pointer thành opaque `ptr`; slice thành `{ptr, i64}`. Truy cập
 array/slice động sinh bounds check gọi `k_boot_panic`. Backend chạy LLVM verifier

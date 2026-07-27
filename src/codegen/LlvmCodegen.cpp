@@ -594,6 +594,31 @@ private:
                         : builder_.CreateZExt(value, targetType);
                 return value;
             }
+            const auto floatCast = semantic().floatCasts.find(cast);
+            if (floatCast != semantic().floatCasts.end()) {
+                auto* value = emitExpr(*cast->value);
+                if (!value) return nullptr;
+                const auto& info = floatCast->second;
+                auto* targetType = lowerType(semanticType, expression.span);
+                if (!targetType) return nullptr;
+                switch (info.kind) {
+                case FloatCastKind::Identity:
+                    return value;
+                case FloatCastKind::Extend:
+                    return builder_.CreateFPExt(value, targetType);
+                case FloatCastKind::Narrow:
+                    return builder_.CreateFPTrunc(value, targetType);
+                case FloatCastKind::IntegerToFloat:
+                    return isSignedInteger(info.sourceType)
+                        ? builder_.CreateSIToFP(value, targetType)
+                        : builder_.CreateUIToFP(value, targetType);
+                case FloatCastKind::FloatToInteger:
+                    emitFloatCastRangeCheck(value, info);
+                    return isSignedInteger(info.targetType)
+                        ? builder_.CreateFPToSI(value, targetType)
+                        : builder_.CreateFPToUI(value, targetType);
+                }
+            }
             diagnose("cast is not supported by the LLVM backend yet",
                      expression.span);
             return nullptr;
@@ -1159,6 +1184,53 @@ private:
         builder_.CreateCondBr(valid, validBlock, panicBlock);
         builder_.SetInsertPoint(panicBlock);
         constexpr std::string_view message{"integer cast out of range"};
+        auto* text = builder_.CreateGlobalString(message);
+        auto panic = result_.module->getOrInsertFunction(
+            "k_boot_panic",
+            llvm::FunctionType::get(
+                llvm::Type::getVoidTy(context_),
+                {builder_.getPtrTy(), builder_.getInt64Ty()}, false));
+        builder_.CreateCall(
+            panic,
+            {text, llvm::ConstantInt::get(
+                       builder_.getInt64Ty(), message.size())});
+        builder_.CreateUnreachable();
+        builder_.SetInsertPoint(validBlock);
+    }
+
+    void emitFloatCastRangeCheck(
+        llvm::Value* value, const FloatCastInfo& cast) {
+        const auto targetWidth = numericBitWidth(cast.targetType);
+        llvm::Value* aboveMinimum = nullptr;
+        if (isSignedInteger(cast.targetType)) {
+            const auto limit = std::ldexp(1.0, targetWidth - 1);
+            const auto precision = cast.sourceType.kind == SemanticTypeKind::F32
+                ? 24u : 53u;
+            if (targetWidth >= precision) {
+                aboveMinimum = builder_.CreateFCmpOGE(
+                    value, llvm::ConstantFP::get(value->getType(), -limit));
+            } else {
+                aboveMinimum = builder_.CreateFCmpOGT(
+                    value, llvm::ConstantFP::get(value->getType(), -limit - 1.0));
+            }
+        } else {
+            aboveMinimum = builder_.CreateFCmpOGT(
+                value, llvm::ConstantFP::get(value->getType(), -1.0));
+        }
+        const auto upper = std::ldexp(
+            1.0, isSignedInteger(cast.targetType)
+                ? targetWidth - 1 : targetWidth);
+        auto* belowMaximum = builder_.CreateFCmpOLT(
+            value, llvm::ConstantFP::get(value->getType(), upper));
+        auto* valid = builder_.CreateAnd(aboveMinimum, belowMaximum);
+        auto* function = builder_.GetInsertBlock()->getParent();
+        auto* validBlock =
+            llvm::BasicBlock::Create(context_, "float.cast.valid", function);
+        auto* panicBlock =
+            llvm::BasicBlock::Create(context_, "float.cast.panic", function);
+        builder_.CreateCondBr(valid, validBlock, panicBlock);
+        builder_.SetInsertPoint(panicBlock);
+        constexpr std::string_view message{"float cast out of range"};
         auto* text = builder_.CreateGlobalString(message);
         auto panic = result_.module->getOrInsertFunction(
             "k_boot_panic",
