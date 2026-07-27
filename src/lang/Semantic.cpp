@@ -72,10 +72,12 @@ public:
 
     Analysis(const Source& source, const Program& program,
              std::unordered_map<std::string, FunctionSymbol> extraFunctions,
-             std::unordered_map<std::string, StructSymbol> extraStructs)
+             std::unordered_map<std::string, StructSymbol> extraStructs,
+             std::unordered_map<std::string, EnumSymbol> extraEnums)
         : source_{source}, program_{program},
           extraFunctions_{std::move(extraFunctions)},
-          extraStructs_{std::move(extraStructs)} {}
+          extraStructs_{std::move(extraStructs)},
+          extraEnums_{std::move(extraEnums)} {}
 
     void importExports(const SemanticResult& other) {
         for (const auto& [name, symbol] : other.functions) {
@@ -83,6 +85,9 @@ public:
         }
         for (const auto& [name, symbol] : other.structs) {
             extraStructs_.insert_or_assign(name, symbol);
+        }
+        for (const auto& [name, symbol] : other.enums) {
+            extraEnums_.insert_or_assign(name, symbol);
         }
     }
 
@@ -95,6 +100,9 @@ public:
         }
         for (const auto& [name, symbol] : extraStructs_) {
             result_.structs.insert_or_assign(name, symbol);
+        }
+        for (const auto& [name, symbol] : extraEnums_) {
+            result_.enums.insert_or_assign(name, symbol);
         }
         for (const auto& imp : program_.imports) {
             ImportedSymbol symbol;
@@ -112,6 +120,7 @@ public:
             }
             result_.importedSymbols.push_back(std::move(symbol));
         }
+        for (const auto& enumeration : program_.enums) declareEnum(enumeration);
         for (const auto& structure : program_.structs) declareStruct(structure);
         for (const auto& structure : program_.structs) defineStruct(structure);
         for (const auto& function : program_.functions) collect(function);
@@ -133,6 +142,9 @@ public:
             if (exportStruct != extraStructs_.end()) {
                 result_.structs[exportStruct->first] = exportStruct->second;
             }
+            const auto exportEnum = extraEnums_.find(symbolName);
+            if (exportEnum != extraEnums_.end())
+                result_.enums[exportEnum->first] = exportEnum->second;
         }
         return result_;
     }
@@ -186,6 +198,12 @@ private:
                 }
                 return structType(name, std::move(arguments));
             }
+            if (const auto enumeration = result_.enums.find(name);
+                enumeration != result_.enums.end()) {
+                if (!named->arguments.empty())
+                    diagnose("enum type does not accept type arguments", syntax.span);
+                return enumType(name);
+            }
             if (!named->arguments.empty()) {
                 diagnose("type does not accept type arguments", syntax.span);
                 return {};
@@ -233,7 +251,7 @@ private:
 
     void declareStruct(const StructDecl& structure) {
         const auto name = spelling(source_, structure.name);
-        if (result_.structs.contains(name)) {
+        if (result_.structs.contains(name) || result_.enums.contains(name)) {
             diagnose("duplicate struct '" + name + "'", structure.name);
             return;
         }
@@ -468,8 +486,9 @@ private:
             std::optional<SemanticType> subject;
             if (whenStatement->subject) {
                 subject = analyzeExpr(*whenStatement->subject);
-                if (subject->kind != SemanticTypeKind::Bool && !isInteger(*subject))
-                    diagnose("when subject must be bool or integer",
+                if (subject->kind != SemanticTypeKind::Bool &&
+                    subject->kind != SemanticTypeKind::Enum && !isInteger(*subject))
+                    diagnose("when subject must be bool, integer, or enum",
                              whenStatement->subject->span);
             }
             if (whenStatement->branches.empty())
@@ -592,8 +611,9 @@ private:
             std::optional<SemanticType> subject;
             if (when->subject) {
                 subject = analyzeExpr(*when->subject);
-                if (subject->kind != SemanticTypeKind::Bool && !isInteger(*subject))
-                    diagnose("when subject must be bool or integer",
+                if (subject->kind != SemanticTypeKind::Bool &&
+                    subject->kind != SemanticTypeKind::Enum && !isInteger(*subject))
+                    diagnose("when subject must be bool, integer, or enum",
                              when->subject->span);
             }
             bool hasElse = false;
@@ -1127,6 +1147,22 @@ private:
     }
 
     SemanticType analyzeMember(const MemberExpr& member) {
+        if (const auto* identifier =
+                std::get_if<IdentifierExpr>(&member.object->node)) {
+            const auto enumName = spelling(source_, identifier->name);
+            if (const auto enumeration = result_.enums.find(enumName);
+                enumeration != result_.enums.end()) {
+                const auto variantName = spelling(source_, member.name);
+                const auto variant = enumeration->second.variants.find(variantName);
+                if (variant == enumeration->second.variants.end()) {
+                    diagnose("unknown enum variant '" + variantName + "'", member.name);
+                    return {};
+                }
+                result_.enumValues[&member] = variant->second;
+                result_.expressionTypes[member.object.get()] = enumType(enumName);
+                return enumType(enumName);
+            }
+        }
         const auto objectType = analyzeExpr(*member.object);
         if (objectType.kind != SemanticTypeKind::Struct) {
             diagnose("member access requires a struct value", member.object->span);
@@ -1313,6 +1349,24 @@ private:
         return {SemanticTypeKind::U128};
     }
 
+    void declareEnum(const EnumDecl& enumeration) {
+        const auto name = spelling(source_, enumeration.name);
+        if (result_.enums.contains(name) || result_.structs.contains(name)) {
+            diagnose("duplicate type '" + name + "'", enumeration.name);
+            return;
+        }
+        EnumSymbol symbol{&enumeration, {}};
+        for (std::size_t i = 0; i < enumeration.variants.size(); ++i) {
+            const auto variant = spelling(source_, enumeration.variants[i].name);
+            if (symbol.variants.contains(variant))
+                diagnose("duplicate enum variant '" + variant + "'",
+                         enumeration.variants[i].name);
+            else
+                symbol.variants.emplace(variant, static_cast<std::uint32_t>(i));
+        }
+        result_.enums.emplace(name, std::move(symbol));
+    }
+
     struct IntegerConstant {
         bool negative;
         std::string_view digits;
@@ -1450,6 +1504,7 @@ private:
     SemanticResult result_;
     std::unordered_map<std::string, FunctionSymbol> extraFunctions_;
     std::unordered_map<std::string, StructSymbol> extraStructs_;
+    std::unordered_map<std::string, EnumSymbol> extraEnums_;
     std::vector<std::unordered_map<std::string, VariableSymbol>> scopes_;
     std::unordered_map<std::string, TypeParameterSymbol> typeParameters_;
     SemanticType currentReturn_;
@@ -1464,7 +1519,8 @@ SemanticAnalyzer::SemanticAnalyzer(const Source& source, const Program& program)
 SemanticResult SemanticAnalyzer::analyze() {
     return Analysis{source_, program_,
                     std::move(extraFunctions_),
-                    std::move(extraStructs_)}.run();
+                    std::move(extraStructs_),
+                    std::move(extraEnums_)}.run();
 }
 
 void SemanticAnalyzer::importExports(const SemanticResult& other) {
@@ -1473,6 +1529,9 @@ void SemanticAnalyzer::importExports(const SemanticResult& other) {
     }
     for (const auto& [name, symbol] : other.structs) {
         extraStructs_.insert_or_assign(name, symbol);
+    }
+    for (const auto& [name, symbol] : other.enums) {
+        extraEnums_.insert_or_assign(name, symbol);
     }
 }
 

@@ -64,6 +64,11 @@ struct RuntimeArraySizeCheck {
     std::uint64_t literalLength;
 };
 
+struct EnumSymbol {
+    const EnumDecl* declaration;
+    std::unordered_map<std::string, std::uint32_t> variants;
+};
+
 struct IntegerCastInfo {
     SemanticType sourceType;
     SemanticType targetType;
@@ -96,6 +101,7 @@ struct SemanticResult {
     std::optional<std::string> moduleName;
     std::vector<ImportedSymbol> importedSymbols;
     std::unordered_map<std::string, StructSymbol> structs;
+    std::unordered_map<std::string, EnumSymbol> enums;
     std::unordered_map<std::string, FunctionSymbol> functions;
     std::unordered_map<const Expr*, SemanticType> expressionTypes;
     std::unordered_map<const Expr*, SemanticType> sizeofTypes;
@@ -103,6 +109,7 @@ struct SemanticResult {
     std::unordered_map<const CastExpr*, IntegerCastInfo> integerCasts;
     std::unordered_map<const CastExpr*, FloatCastInfo> floatCasts;
     std::unordered_map<const CallExpr*, ResolvedCall> resolvedCalls;
+    std::unordered_map<const MemberExpr*, std::uint32_t> enumValues;
     std::vector<SpecializationKey> requestedSpecializations;
     std::unordered_map<const VariableDecl*, SemanticType> declarationTypes;
     std::vector<RuntimeArraySizeCheck> runtimeArraySizeChecks;
@@ -119,6 +126,7 @@ private:
     const Program& program_;
     std::unordered_map<std::string, FunctionSymbol> extraFunctions_;
     std::unordered_map<std::string, StructSymbol> extraStructs_;
+    std::unordered_map<std::string, EnumSymbol> extraEnums_;
 };
 
 }

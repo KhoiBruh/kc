@@ -60,6 +60,11 @@ public:
             }
             line(1, "Import " + pathStr);
         }
+        for (const auto& enumeration : program.enums) {
+            line(1, "Enum " + text(enumeration.name));
+            for (const auto& variant : enumeration.variants)
+                line(2, "Variant " + text(variant.name));
+        }
         for (const auto& structure : program.structs) printStruct(structure, 1);
         for (const auto& function : program.functions) printFunction(function, 1);
         return output_.str();

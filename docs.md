@@ -239,8 +239,8 @@ val state: Status = Status.Ready
 * Khi exhaustive enum `when` được triển khai, `else` có thể bỏ qua chỉ khi mọi
   variant đã xuất hiện đúng một lần; nhánh trùng hoặc thiếu variant là diagnostic.
 
-Phần này là contract đã chốt; parser, semantic và codegen enum được triển khai
-theo các vertical slice tiếp theo.
+Khai báo, type checking, `Enum.Variant`, truyền/trả enum và LLVM tag `u32` đã
+được self-host. Exhaustiveness của enum `when` thuộc vertical slice tiếp theo.
 
 ### Kiểu nullable (Nullable Types)
 

@@ -800,6 +800,36 @@ fn parseStruct(var parser: Parser): u64 {
         subtreeStart, fieldCount + typeParameterCount * 65536);
 }
 
+fn parseEnum(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val start = parserPeek(parser).start;
+    parser.current = parser.current + 1;
+    if (parserExpect(parser, 1) == false) { return 0; }
+    val name = parserPrevious(parser);
+    parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+    if (parserExpect(parser, 52) == false) { return 0; }
+    if (parserCheck(parser, 53)) { parser.ok = false; return 0; }
+    var count: u32 = 0;
+    var parsing = true;
+    while (parsing) {
+        if (parserExpect(parser, 1) == false) { return 0; }
+        val variant = parserPrevious(parser);
+        parserAdd(
+            parser, 45, variant.start, variant.end,
+            parser.nodes.length, 0);
+        count = count + 1;
+        if (parserMatch(parser, 56)) {
+            if (parserCheck(parser, 53)) { parser.ok = false; return 0; }
+        } else {
+            parsing = false;
+        }
+    }
+    if (parserExpect(parser, 53) == false) { return 0; }
+    return parserAdd(
+        parser, 49, start, parserPrevious(parser).end,
+        subtreeStart, count);
+}
+
 fn parseModule(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
@@ -884,6 +914,9 @@ fn parse(tokens: TokenList): ParseResult {
             if (parserCheck(parser, 26)) {
                 parseImport(parser);
             } else {
+                if (parserCheck(parser, 24)) {
+                    parseEnum(parser);
+                } else {
                 if (parserCheck(parser, 11)) {
                     parseStruct(parser);
                 } else {
@@ -891,6 +924,7 @@ fn parse(tokens: TokenList): ParseResult {
                     val declarationStart = parserPeek(parser).start;
                     if (parserMatch(parser, 9)) { isExtern = true; }
                     parseFunction(parser, isExtern, declarationStart);
+                }
                 }
             }
         }

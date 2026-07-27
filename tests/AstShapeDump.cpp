@@ -40,6 +40,14 @@ public:
     }
 
     void program(const k::Program& value) {
+        for (const auto& enumeration : value.enums) {
+            const auto subtree = index_;
+            add(45, enumeration.name, index_);
+            for (const auto& variant : enumeration.variants)
+                add(45, variant.name, index_);
+            add(47, enumeration.span, subtree,
+                static_cast<unsigned>(enumeration.variants.size()));
+        }
         for (const auto& structure : value.structs) {
             const auto subtree = index_;
             add(45, structure.name, index_);
@@ -80,7 +88,7 @@ public:
             add(41, function.span, subtree, aux);
         }
         add(44, value.span, 0,
-            static_cast<unsigned>(value.structs.size() +
+            static_cast<unsigned>(value.enums.size() + value.structs.size() +
                                   value.functions.size()));
     }
 

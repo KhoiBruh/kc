@@ -563,6 +563,7 @@ fn appendType(
         byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
     }
     if (kind == 11) { appendI32(buffer); }
+    if (kind == 20) { appendI32(buffer); }
     if (kind == 13) {
         byteBufferAppend(buffer, 123);
         byteBufferAppend(buffer, 32);
@@ -872,6 +873,7 @@ fn typeAlignment(
     if (kind == 3) { return 4; }
     if (kind == 6) { return 4; }
     if (kind == 11) { return 4; }
+    if (kind == 20) { return 4; }
     if (kind == 17) { return 4; }
     if (kind == 4) { return 8; }
     if (kind == 7) { return 8; }
@@ -923,6 +925,7 @@ fn typeSize(
     if (kind == 3) { return 4; }
     if (kind == 6) { return 4; }
     if (kind == 11) { return 4; }
+    if (kind == 20) { return 4; }
     if (kind == 17) { return 4; }
     if (kind == 4) { return 8; }
     if (kind == 7) { return 8; }
@@ -1122,6 +1125,7 @@ fn appendComparison(
     var unsigned = typeKind == 5;
     if (typeKind == 6) { unsigned = true; }
     if (typeKind == 7) { unsigned = true; }
+    if (typeKind == 20) { unsigned = true; }
     if (kind == 66) {
         if (unsigned) {
             byteBufferAppend(buffer, 117);
@@ -1818,6 +1822,9 @@ fn emitExpression(
         return converted;
     }
     if (node.kind == 17) {
+        if (node.typeKind == 20) {
+            return IrValue(3, 0, 0, node.storage, 20, node.typeName, 0);
+        }
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
         val structureRoot =

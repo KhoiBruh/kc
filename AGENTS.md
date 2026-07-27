@@ -164,6 +164,8 @@ llvm-readobj --file-headers file.obj
 - Collection `for` is self-hosted for fixed arrays and slices. It accepts
   `(value in collection)` or `(value, index in collection)`; value comes first,
   index is immutable `u64`, and both bindings are immutable.
+- Payload-free enums are self-hosted. `Enum.Variant` resolves to a distinct
+  enum type and lowers to its declaration-order `u32` tag.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -179,7 +181,7 @@ llvm-readobj --file-headers file.obj
 - Pattern destructuring and enum exhaustiveness are not lowered yet.
   Expression-valued `when` requires a final `else`.
 - String variables, escape decoding in codegen, concatenation, other print
-  types, enums, and ownership are not lowered.
+  types, payload enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
   type-parameter lists. Type packs, user-defined traits, and overload
   resolution remain unsupported.
@@ -226,11 +228,12 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
   arm is an expression terminated by `;` and a final `else` is required.
 - A value arm may be a scoped block whose final expression omits `;` and
   supplies the arm value.
+- Payload-free enum declarations, variant lookup, enum parameters/returns, and
+  `u32` tag emission are self-hosted; exhaustive enum `when` is not yet checked.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Add payload-free enum declarations, variant symbols, and `Enum.Variant`
-semantic construction as the next vertical slice; codegen and exhaustive
-`when` follow separately.
+Add exhaustive enum `when`: allow omission of `else` only when every variant is
+covered exactly once, with positioned duplicate/missing-variant diagnostics.

@@ -580,6 +580,17 @@ TEST(codegen_lowers_when_expression_to_phi) {
     EXPECT_TRUE(blockIr.find("phi i32") != std::string::npos);
 }
 
+TEST(codegen_lowers_enum_variants_as_u32_tags) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "enum Status { Ready, Running, Done }"
+        "fn tag(): Status { return Status.Done; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define i32 @tag") != std::string::npos);
+    EXPECT_TRUE(ir.find("ret i32 2") != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }

@@ -571,6 +571,18 @@ TEST(semantic_checks_control_flow_conditions_and_scopes) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 3u);
 }
 
+TEST(semantic_resolves_enum_variants_and_rejects_unknown_variants) {
+    SemanticFixture valid{
+        "enum Status { Ready, Done }"
+        "fn current(): Status { return Status.Ready; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "enum Status { Ready, Ready }"
+        "fn current(): Status { return Status.Missing; }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
+}
+
 TEST(semantic_types_when_expressions_and_requires_else) {
     SemanticFixture valid{
         "fn choose(val code: i32): i32 { return when (code) {"

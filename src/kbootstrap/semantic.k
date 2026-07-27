@@ -6,6 +6,7 @@ struct Semantic(
     source: Source,
     nodes: AstList,
     structs: DeclarationList,
+    enums: DeclarationList,
     functions: DeclarationList,
     locals: LocalList,
     genericArguments: TypeValueList,
@@ -540,7 +541,11 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
             return TypeValue(8, nodeHash(semantic, node), start as u32 + typeArgumentCount * 65536);
         }
         
-        return TypeValue(8, nodeHash(semantic, node), 0);
+        val name = nodeHash(semantic, node);
+        if (declarationFind(semantic.enums, name) != semantic.enums.length) {
+            return TypeValue(20, name, 0);
+        }
+        return TypeValue(8, name, 0);
     }
     if (node.kind == 2) {
         val inner = typeFromNode(semantic, root - 1);
@@ -1102,6 +1107,36 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     }
     if (node.kind == 17) {
         val objectRoot = root - 1;
+        val objectNode = semantic.nodes.data[objectRoot];
+        if (objectNode.kind == 10) {
+            val enumIndex = declarationFind(
+                semantic.enums, nodeHash(semantic, objectNode));
+            if (enumIndex != semantic.enums.length) {
+                val enumRoot = semantic.enums.data[enumIndex].node;
+                val enumeration = semantic.nodes.data[enumRoot];
+                val wanted = nodeHash(semantic, node);
+                var position: u32 = 0;
+                while (position < enumeration.aux) {
+                    val variant = semantic.nodes.data[
+                        enumeration.subtreeStart + 1 + position as u64];
+                    if (nodeHash(semantic, variant) == wanted) {
+                        var resolvedObject = objectNode;
+                        resolvedObject.typeKind = 20;
+                        resolvedObject.typeName = semantic.enums.data[enumIndex].name;
+                        semantic.nodes.data[objectRoot] = resolvedObject;
+                        var resolved = node;
+                        resolved.storage = position as u64;
+                        resolved.typeKind = 20;
+                        resolved.typeName = semantic.enums.data[enumIndex].name;
+                        semantic.nodes.data[root] = resolved;
+                        return TypeValue(20, resolved.typeName, 0);
+                    }
+                    position = position + 1;
+                }
+                semanticFail(semantic, 2, node);
+                return invalidType();
+            }
+        }
         val object = expressionType(semantic, objectRoot);
         if (object.kind != 8) {
             semanticFail(semantic, 8, node);
@@ -1481,6 +1516,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
             var comparable = subject.kind == 2;
             if (isIntegerType(subject)) { comparable = true; }
+            if (subject.kind == 20) { comparable = true; }
             if (!comparable) {
                 semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
             }
@@ -1719,6 +1755,32 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             }
             semantic.currentStruct = savedStruct;
         } else {
+            if (declaration.kind == 49) {
+                val nameNode = semantic.nodes.data[declaration.subtreeStart];
+                val name = nodeHash(semantic, nameNode);
+                if (declarationFind(semantic.enums, name) != semantic.enums.length) {
+                    semanticFail(semantic, 1, nameNode);
+                } else {
+                    var enums = semantic.enums;
+                    declarationListAppend(enums, DeclarationInfo(name, root));
+                    semantic.enums = enums;
+                }
+                var left: u32 = 0;
+                while (left < declaration.aux) {
+                    var right = left + 1;
+                    while (right < declaration.aux) {
+                        val leftNode = semantic.nodes.data[
+                            declaration.subtreeStart + 1 + left as u64];
+                        val rightNode = semantic.nodes.data[
+                            declaration.subtreeStart + 1 + right as u64];
+                        if (nodeHash(semantic, leftNode) == nodeHash(semantic, rightNode)) {
+                            semanticFail(semantic, 1, rightNode);
+                        }
+                        right = right + 1;
+                    }
+                    left = left + 1;
+                }
+            } else {
             if (declaration.kind == 41) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = nodeHash(semantic, nameNode);
@@ -1732,6 +1794,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     semantic.functions = functions;
                 }
             }
+            }
         }
         index = index + 1;
     }
@@ -1741,7 +1804,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
 fn analyze(source: Source, nodes: AstList): SemanticResult {
     val genericArguments = typeValueListNew();
     var semantic = Semantic(
-        source, nodes, declarationListNew(), declarationListNew(),
+        source, nodes, declarationListNew(), declarationListNew(), declarationListNew(),
         localListNew(), genericArguments,
         semanticSuccess(genericArguments), unitType(), 0,
         nodes.length, nodes.length, 0);
@@ -1763,6 +1826,7 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
     result.genericArguments = semantic.genericArguments;
     localListFree(semantic.locals);
     declarationListFree(semantic.functions);
+    declarationListFree(semantic.enums);
     declarationListFree(semantic.structs);
     return result;
 }

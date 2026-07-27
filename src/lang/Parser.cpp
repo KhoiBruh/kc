@@ -142,8 +142,16 @@ ParseResult Parser::parseProgram() {
             } else synchronizeTopLevel();
             continue;
         }
+        if (check(TokenKind::KwEnum)) {
+            auto enumeration = parseEnum();
+            if (enumeration) {
+                program.enums.push_back(std::move(*enumeration));
+                seenItem = true;
+            } else synchronizeTopLevel();
+            continue;
+        }
         if (!check(TokenKind::KwFn) && !check(TokenKind::KwExtern)) {
-            report(peek().span, "expected struct or function declaration");
+            report(peek().span, "expected enum, struct, or function declaration");
             synchronizeTopLevel();
             continue;
         }
@@ -426,6 +434,32 @@ StmtPtr Parser::parseWhile() {
     return makeStmt(
         spanFrom(start, bodySpan),
         WhileStmt{std::move(condition), std::move(body)});
+}
+
+std::optional<EnumDecl> Parser::parseEnum() {
+    const auto start = advance().span;
+    if (!expect(TokenKind::Identifier, "expected enum name")) return std::nullopt;
+    const auto name = previous().span;
+    if (!expect(TokenKind::LeftBrace, "expected '{' after enum name"))
+        return std::nullopt;
+    std::vector<EnumVariant> variants;
+    if (check(TokenKind::RightBrace)) {
+        report(peek().span, "enum requires at least one variant");
+        return std::nullopt;
+    }
+    while (true) {
+        if (!expect(TokenKind::Identifier, "expected enum variant"))
+            return std::nullopt;
+        variants.push_back({previous().span, previous().span});
+        if (!match(TokenKind::Comma)) break;
+        if (check(TokenKind::RightBrace)) {
+            report(peek().span, "trailing comma is not allowed in enum");
+            return std::nullopt;
+        }
+    }
+    if (!expect(TokenKind::RightBrace, "expected '}' after enum variants"))
+        return std::nullopt;
+    return EnumDecl{name, std::move(variants), spanFrom(start, previous().span)};
 }
 
 std::unique_ptr<BlockStmt> Parser::parseControlBody(SourceSpan& span) {
@@ -930,7 +964,8 @@ void Parser::synchronizeStatement() {
 
 void Parser::synchronizeTopLevel() {
     while (!atEnd() && !check(TokenKind::KwFn) &&
-           !check(TokenKind::KwExtern) && !check(TokenKind::KwStruct))
+           !check(TokenKind::KwExtern) && !check(TokenKind::KwStruct) &&
+           !check(TokenKind::KwEnum))
         advance();
 }
 

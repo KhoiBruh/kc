@@ -104,7 +104,8 @@ private:
         case SemanticTypeKind::I16:
         case SemanticTypeKind::U16: return llvm::Type::getInt16Ty(context_);
         case SemanticTypeKind::I32:
-        case SemanticTypeKind::U32: return llvm::Type::getInt32Ty(context_);
+        case SemanticTypeKind::U32:
+        case SemanticTypeKind::Enum: return llvm::Type::getInt32Ty(context_);
         case SemanticTypeKind::I64:
         case SemanticTypeKind::U64: return llvm::Type::getInt64Ty(context_);
         case SemanticTypeKind::I128:
@@ -1028,6 +1029,9 @@ private:
                 name + ".value");
         }
         if (const auto* member = std::get_if<MemberExpr>(&expression.node)) {
+            if (const auto value = semantic().enumValues.find(member);
+                value != semantic().enumValues.end())
+                return llvm::ConstantInt::get(builder_.getInt32Ty(), value->second);
             const auto objectType =
                 semantic().expressionTypes.find(member->object.get());
             if (objectType == semantic().expressionTypes.end() ||

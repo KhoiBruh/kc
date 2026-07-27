@@ -29,6 +29,7 @@ enum class SemanticTypeKind {
     F64,
     Pointer,
     Struct,
+    Enum,
     Nullable,
     Array,
     Slice,
@@ -59,6 +60,7 @@ SemanticType pointerType(SemanticType pointee);
 SemanticType structType(
     std::string name,
     std::vector<SemanticType> typeArguments = {});
+SemanticType enumType(std::string name);
 SemanticType arrayType(SemanticType element, std::uint64_t size);
 SemanticType inferredArrayType(SemanticType element);
 SemanticType runtimeArrayType(SemanticType element);

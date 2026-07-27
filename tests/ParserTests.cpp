@@ -337,6 +337,18 @@ TEST(parser_respects_expression_precedence_and_assignment_associativity) {
     EXPECT_TRUE(std::holds_alternative<k::AssignmentExpr>(outer.value->node));
 }
 
+TEST(parser_parses_payload_free_enum_without_trailing_comma) {
+    ParseFixture valid{
+        "enum Status { Ready, Running, Done }"
+        "fn current(): Status { return Status.Ready; }"};
+    EXPECT_TRUE(valid.parsed.diagnostics.empty());
+    EXPECT_EQ(valid.parsed.program.enums.size(), 1u);
+    EXPECT_EQ(valid.parsed.program.enums[0].variants.size(), 3u);
+
+    ParseFixture trailing{"enum Status { Ready, } fn main(): i32 { return 0; }"};
+    EXPECT_TRUE(!trailing.parsed.diagnostics.empty());
+}
+
 TEST(parser_parses_break_and_continue_statements) {
     ParseFixture fixture{
         "fn loop() { while (true) { continue; break; } }"};

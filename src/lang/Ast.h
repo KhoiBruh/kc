@@ -146,6 +146,13 @@ struct StructDecl {
     SourceSpan span;
 };
 
+struct EnumVariant { SourceSpan name; SourceSpan span; };
+struct EnumDecl {
+    SourceSpan name;
+    std::vector<EnumVariant> variants;
+    SourceSpan span;
+};
+
 struct FunctionDecl {
     SourceSpan name;
     std::vector<TypeParameter> typeParameters;
@@ -170,6 +177,7 @@ struct ImportDecl {
 struct Program {
     std::optional<ModuleDecl> module;
     std::vector<ImportDecl> imports;
+    std::vector<EnumDecl> enums;
     std::vector<StructDecl> structs;
     std::vector<FunctionDecl> functions;
     SourceSpan span{0, 0};

@@ -44,6 +44,12 @@ SemanticType structType(
     return type;
 }
 
+SemanticType enumType(std::string name) {
+    SemanticType type{SemanticTypeKind::Enum};
+    type.name = std::move(name);
+    return type;
+}
+
 SemanticType arrayType(SemanticType element, std::uint64_t size) {
     return aggregate(SemanticTypeKind::Array, std::move(element), ArraySizeKind::Known, size);
 }
@@ -94,6 +100,7 @@ std::string semanticTypeName(const SemanticType& type) {
         }
         return result;
     }
+    case SemanticTypeKind::Enum: return type.name;
     case SemanticTypeKind::Nullable: return semanticTypeName(*type.element) + "?";
     case SemanticTypeKind::Array:
         if (type.arraySizeKind == ArraySizeKind::Known) {
