@@ -213,6 +213,72 @@ fn semanticFail(var semantic: Semantic, category: u32, node: AstNode) {
     }
 }
 
+fn whenConditionRoot(
+    semantic: Semantic, branchRoot: u64, valueForm: bool): u64 {
+    if (!valueForm) {
+        val bodyRoot = branchRoot - 1;
+        return semantic.nodes.data[bodyRoot].subtreeStart - 1;
+    }
+    val branch = semantic.nodes.data[branchRoot];
+    val valueRoot = branchRoot - 1;
+    var conditionRoot = semantic.nodes.data[valueRoot].subtreeStart - 1;
+    var statements = branch.aux / 2;
+    while (statements > 0) {
+        conditionRoot = semantic.nodes.data[conditionRoot].subtreeStart - 1;
+        statements = statements - 1;
+    }
+    return conditionRoot;
+}
+
+fn enumWhenExhaustive(
+    var semantic: Semantic, subject: TypeValue, roots: u64*,
+    branchCount: u32, valueForm: bool): bool {
+    if (subject.kind != 20) { return false; }
+    val enumIndex = declarationFind(semantic.enums, subject.name);
+    if (enumIndex == semantic.enums.length) { return false; }
+    val declaration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
+    var unique: u32 = 0;
+    var index: u32 = 0;
+    while (index < branchCount) {
+        val branch = semantic.nodes.data[roots[index as u64]];
+        var isElse = branch.aux == 1;
+        if (valueForm) { isElse = branch.aux % 2 == 1; }
+        if (!isElse) {
+            val conditionRoot = whenConditionRoot(
+                semantic, roots[index as u64], valueForm);
+            val condition = semantic.nodes.data[conditionRoot];
+            if (condition.kind == 17 && condition.typeKind == 20 &&
+                    condition.typeName == subject.name) {
+                var prior: u32 = 0;
+                while (prior < index) {
+                    val priorBranch = semantic.nodes.data[roots[prior as u64]];
+                    var priorElse = priorBranch.aux == 1;
+                    if (valueForm) { priorElse = priorBranch.aux % 2 == 1; }
+                    if (!priorElse) {
+                        val priorRoot = whenConditionRoot(
+                            semantic, roots[prior as u64], valueForm);
+                        val priorCondition = semantic.nodes.data[priorRoot];
+                        if (priorCondition.kind == 17 &&
+                                priorCondition.typeKind == 20 &&
+                                priorCondition.typeName == subject.name &&
+                                priorCondition.storage == condition.storage) {
+                            var diagnostic = condition;
+                            diagnostic.start = semantic.nodes.data[
+                                condition.subtreeStart].start;
+                            semanticFail(semantic, 1, diagnostic);
+                            return false;
+                        }
+                    }
+                    prior = prior + 1;
+                }
+                unique = unique + 1;
+            }
+        }
+        index = index + 1;
+    }
+    return unique == declaration.aux;
+}
+
 fn functionIsExtern(function: AstNode): bool {
     return (function.aux / 65536) % 2 == 1;
 }
@@ -1226,9 +1292,11 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         var result = invalidType();
+        var hasElse = false;
         var index: u32 = 0;
         while (index < branchCount) {
             val branch = semantic.nodes.data[roots[index as u64]];
+            if (branch.aux % 2 == 1) { hasElse = true; }
             val valueRoot = roots[index as u64] - 1;
             val statementCount = branch.aux / 2;
             val statementRoots =
@@ -1287,6 +1355,11 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
             }
             index = index + 1;
+        }
+        val exhaustive = enumWhenExhaustive(
+            semantic, subject, roots, branchCount, true);
+        if (!hasElse && !exhaustive) {
+            semanticFail(semantic, 4, node);
         }
         var resolved = semantic.nodes.data[root];
         resolved.typeKind = result.kind;
@@ -1522,8 +1595,10 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
         }
         var index: u32 = 0;
+        var hasElse = false;
         while (index < branchCount) {
             val current = semantic.nodes.data[roots[index as u64]];
+            if (current.aux == 1) { hasElse = true; }
             val bodyRoot = roots[index as u64] - 1;
             if (current.aux == 0) {
                 val conditionRoot =
@@ -1556,6 +1631,11 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
             checkBlock(semantic, bodyRoot);
             index = index + 1;
+        }
+        val exhaustive = enumWhenExhaustive(
+            semantic, subject, roots, branchCount, false);
+        if (subject.kind == 20 && !hasElse && !exhaustive) {
+            semanticFail(semantic, 4, node);
         }
         k_boot_free(roots as unit*);
         return;

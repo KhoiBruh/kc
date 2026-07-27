@@ -909,7 +909,6 @@ ExprPtr Parser::parseWhenExpression() {
     }
     if (!expect(TokenKind::RightBrace, "expected '}' after when branches"))
         return nullptr;
-    if (!hasElse) report(previous().span, "when expression requires else");
     return makeExpr(spanFrom(start, previous().span),
                     WhenExpr{std::move(subject), std::move(branches)});
 }

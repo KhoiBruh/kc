@@ -495,9 +495,11 @@ private:
                 diagnose("when requires at least one branch", statement.span);
             bool allTerminate = !whenStatement->branches.empty();
             bool hasElse = false;
+            std::vector<const Expr*> patterns;
             for (const auto& branch : whenStatement->branches) {
                 if (branch.condition) {
                     const auto condition = analyzeExpr(*branch.condition, subject);
+                    patterns.push_back(branch.condition.get());
                     if (subject) {
                         if (!compatible(*subject, condition) &&
                             !(isNumeric(*subject) && isNumeric(condition)))
@@ -512,7 +514,10 @@ private:
                 }
                 allTerminate = analyzeBlock(*branch.body, true) && allTerminate;
             }
-            return hasElse && allTerminate;
+            const bool exhaustive =
+                subject && enumWhenExhaustive(*subject, patterns, hasElse,
+                                              statement.span);
+            return (hasElse || exhaustive) && allTerminate;
         }
         if (std::holds_alternative<BreakStmt>(statement.node)) {
             if (loopDepth_ == 0)
@@ -617,10 +622,12 @@ private:
                              when->subject->span);
             }
             bool hasElse = false;
+            std::vector<const Expr*> patterns;
             std::optional<SemanticType> branchType;
             for (const auto& branch : when->branches) {
                 if (branch.condition) {
                     const auto condition = analyzeExpr(*branch.condition, subject);
+                    patterns.push_back(branch.condition.get());
                     if (subject) {
                         if (!compatible(*subject, condition) &&
                             !(isNumeric(*subject) && isNumeric(condition)))
@@ -648,7 +655,12 @@ private:
                     diagnose("when branches must have a common type",
                              branch.value->span);
             }
-            if (!hasElse) diagnose("when expression requires else", expression.span);
+            const bool exhaustive =
+                subject && enumWhenExhaustive(*subject, patterns, hasElse,
+                                              expression.span);
+            if (!hasElse && (!subject ||
+                             subject->kind != SemanticTypeKind::Enum))
+                diagnose("when expression requires else", expression.span);
             type = expected ? *expected : branchType.value_or(SemanticType{});
         } else if (const auto* call = std::get_if<CallExpr>(&expression.node)) {
             type = analyzeCall(*call);
@@ -1347,6 +1359,30 @@ private:
         if (width <= 32) return {SemanticTypeKind::U32};
         if (width <= 64) return {SemanticTypeKind::U64};
         return {SemanticTypeKind::U128};
+    }
+
+    bool enumWhenExhaustive(
+        const SemanticType& subject, const std::vector<const Expr*>& patterns,
+        bool hasElse, SourceSpan span) {
+        if (subject.kind != SemanticTypeKind::Enum) return false;
+        const auto enumeration = result_.enums.find(subject.name);
+        if (enumeration == result_.enums.end()) return false;
+        std::vector<bool> seen(enumeration->second.variants.size(), false);
+        for (const auto* pattern : patterns) {
+            const auto* member = std::get_if<MemberExpr>(&pattern->node);
+            if (!member) continue;
+            const auto value = result_.enumValues.find(member);
+            if (value == result_.enumValues.end() || value->second >= seen.size())
+                continue;
+            if (seen[value->second])
+                diagnose("duplicate enum variant in when", pattern->span);
+            seen[value->second] = true;
+        }
+        const bool exhaustive =
+            std::ranges::all_of(seen, [](bool value) { return value; });
+        if (!hasElse && !exhaustive)
+            diagnose("non-exhaustive enum when", span);
+        return exhaustive;
     }
 
     void declareEnum(const EnumDecl& enumeration) {

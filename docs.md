@@ -236,11 +236,11 @@ val state: Status = Status.Ready
 * Tag bắt đầu từ `0` theo thứ tự khai báo và dùng `u32` nội bộ.
 * Không hỗ trợ payload, generic enum, underlying type công khai hoặc gán tag thủ công trong v0.1.
 * Enum là kiểu riêng, copy ngầm và không chuyển đổi ngầm sang số nguyên.
-* Khi exhaustive enum `when` được triển khai, `else` có thể bỏ qua chỉ khi mọi
+* Với enum `when`, `else` có thể bỏ qua chỉ khi mọi
   variant đã xuất hiện đúng một lần; nhánh trùng hoặc thiếu variant là diagnostic.
 
 Khai báo, type checking, `Enum.Variant`, truyền/trả enum và LLVM tag `u32` đã
-được self-host. Exhaustiveness của enum `when` thuộc vertical slice tiếp theo.
+được self-host, bao gồm kiểm tra exhaustiveness của enum `when`.
 
 ### Kiểu nullable (Nullable Types)
 
@@ -393,7 +393,7 @@ nhánh.
 ### `when`
 
 `when` hiện được hạ như một câu lệnh nhiều nhánh với first-match semantics.
-Dạng có subject nhận `bool` hoặc kiểu số nguyên; dạng không subject yêu cầu mỗi
+Dạng có subject nhận `bool`, kiểu số nguyên hoặc enum; dạng không subject yêu cầu mỗi
 điều kiện có kiểu `bool`. `else` là tùy chọn và phải là nhánh cuối:
 
 ```text
@@ -411,7 +411,8 @@ when {
 ```
 
 Thân nhánh có thể là một block hoặc một câu lệnh đơn. Dạng `when` trả về giá
-trị dùng expression kết thúc bằng `;` ở mỗi arm và bắt buộc có `else`:
+trị dùng expression kết thúc bằng `;` ở mỗi arm. `else` là bắt buộc trừ khi
+subject là enum và mọi variant đã được phủ đúng một lần:
 
 ```text
 return when (code) {

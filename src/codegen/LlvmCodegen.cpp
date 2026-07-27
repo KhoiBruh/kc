@@ -603,6 +603,13 @@ private:
             return;
         }
         builder_.SetInsertPoint(mergeBlock);
+        const auto subjectType = statement.subject
+            ? semantic().expressionTypes.find(statement.subject.get())
+            : semantic().expressionTypes.end();
+        if (!hasElse && allTerminate &&
+            subjectType != semantic().expressionTypes.end() &&
+            subjectType->second.kind == SemanticTypeKind::Enum)
+            builder_.CreateUnreachable();
     }
 
     void emitFor(const ForStmt& statement) {
@@ -746,6 +753,7 @@ private:
                 resultType, static_cast<unsigned>(when->branches.size()),
                 "when.value", mergeBlock);
             llvm::Value* subject = nullptr;
+            bool hasElse = false;
             if (when->subject) {
                 subject = emitExpr(*when->subject);
                 if (!subject) return nullptr;
@@ -774,6 +782,7 @@ private:
                     phi->addIncoming(value, incoming);
                     builder_.SetInsertPoint(nextBlock);
                 } else {
+                    hasElse = true;
                     builder_.CreateBr(bodyBlock);
                     builder_.SetInsertPoint(bodyBlock);
                     const auto outerLocals = locals_;
@@ -787,6 +796,7 @@ private:
                     phi->addIncoming(value, incoming);
                 }
             }
+            if (!hasElse) builder_.CreateUnreachable();
             builder_.SetInsertPoint(mergeBlock);
             return phi;
         }

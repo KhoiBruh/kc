@@ -672,6 +672,15 @@ fn appendUndef(var buffer: ByteBuffer) {
     byteBufferAppend(buffer, 102);
 }
 
+fn appendUnreachable(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 104); byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 101);
+}
+
 fn appendSpecializationSuffix(
     var buffer: ByteBuffer, arguments: TypeValueList,
     start: u64, count: u32) {
@@ -1319,6 +1328,7 @@ fn emitExpression(
                 buffer, source, nodes, genericArguments, branchRoot, counter);
         }
         val mergeBlock = nextBlock(counter);
+        var hasElse = false;
         var index: u32 = 0;
         while (index < branchCount) {
             val branch = nodes.data[roots[index as u64]];
@@ -1367,6 +1377,7 @@ fn emitExpression(
                 appendConditionalBranch(
                     buffer, source, condition, bodyBlock, nextBlockValue);
             } else {
+                hasElse = true;
                 appendBranch(buffer, bodyBlock);
             }
             appendBlockLabel(buffer, counter, bodyBlock);
@@ -1387,6 +1398,7 @@ fn emitExpression(
             k_boot_free(statementRoots as unit*);
             index = index + 1;
         }
+        if (!hasElse) { appendUnreachable(buffer); appendNewline(buffer); }
         appendBlockLabel(buffer, counter, mergeBlock);
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
@@ -2475,6 +2487,10 @@ fn emitWhen(
         if (allTerminate) { return true; }
     }
     appendBlockLabel(buffer, counter, mergeBlock);
+    if (!hasElse && allTerminate && subject.typeKind == 20) {
+        appendUnreachable(buffer); appendNewline(buffer);
+        return true;
+    }
     return false;
 }
 

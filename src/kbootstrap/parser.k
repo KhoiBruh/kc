@@ -267,7 +267,6 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         branchCount = branchCount + 1;
                     }
                     if (!parserExpect(parser, 53)) { return 0; }
-                    if (!hasElse) { parser.ok = false; return 0; }
                     root = parserAdd(
                         parser, 23, first.start, parserPrevious(parser).end,
                         subtreeStart, branchCount + hasSubject * 65536);

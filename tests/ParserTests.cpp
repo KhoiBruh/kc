@@ -349,6 +349,14 @@ TEST(parser_parses_payload_free_enum_without_trailing_comma) {
     EXPECT_TRUE(!trailing.parsed.diagnostics.empty());
 }
 
+TEST(parser_allows_when_expression_without_else_for_semantic_exhaustiveness) {
+    ParseFixture fixture{
+        "enum Status { Ready, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready -> 1; Status.Done -> 2; }; }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+}
+
 TEST(parser_parses_break_and_continue_statements) {
     ParseFixture fixture{
         "fn loop() { while (true) { continue; break; } }"};
@@ -433,7 +441,7 @@ TEST(parser_parses_when_expressions) {
 
     ParseFixture missingElse{
         "fn choose(val code: i32): i32 { return when (code) { 1 -> 10; }; }"};
-    EXPECT_TRUE(!missingElse.parsed.diagnostics.empty());
+    EXPECT_TRUE(missingElse.parsed.diagnostics.empty());
 }
 
 TEST(parser_requires_semicolons_and_recovers_later_statements) {

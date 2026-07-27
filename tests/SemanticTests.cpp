@@ -595,6 +595,30 @@ TEST(semantic_types_when_expressions_and_requires_else) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
 }
 
+TEST(semantic_requires_exhaustive_enum_when_without_else) {
+    SemanticFixture valid{
+        "enum Status { Ready, Running, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready -> 1; Status.Running -> 2; Status.Done -> 3; }; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture missing{
+        "enum Status { Ready, Running, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready -> 1; Status.Done -> 3; }; }"};
+    EXPECT_EQ(missing.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(missing.semantic.diagnostics[0].message,
+              "non-exhaustive enum when");
+
+    SemanticFixture duplicate{
+        "enum Status { Ready, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready -> 1; Status.Ready -> 2; else -> 3; }; }"};
+    EXPECT_EQ(duplicate.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(duplicate.semantic.diagnostics[0].message,
+              "duplicate enum variant in when");
+}
+
 int main() {
     return test::runAll();
 }

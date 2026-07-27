@@ -178,8 +178,8 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- Pattern destructuring and enum exhaustiveness are not lowered yet.
-  Expression-valued `when` requires a final `else`.
+- Pattern destructuring is not lowered yet. Expression-valued `when` requires
+  a final `else` unless its enum subject is exhaustively covered.
 - String variables, escape decoding in codegen, concatenation, other print
   types, payload enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -225,15 +225,16 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 - Statement-form `when` is self-hosted with first-match semantics, an optional
   final `else`, and block or single-statement branch bodies.
 - Expression-valued `when` is self-hosted for return/initializer contexts; each
-  arm is an expression terminated by `;` and a final `else` is required.
+  arm is an expression terminated by `;`. A final `else` may be omitted for an
+  exhaustively covered enum subject.
 - A value arm may be a scoped block whose final expression omits `;` and
   supplies the arm value.
-- Payload-free enum declarations, variant lookup, enum parameters/returns, and
-  `u32` tag emission are self-hosted; exhaustive enum `when` is not yet checked.
+- Payload-free enum declarations, variant lookup, enum parameters/returns,
+  `u32` tag emission, and exhaustive enum `when` are self-hosted.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Add exhaustive enum `when`: allow omission of `else` only when every variant is
-covered exactly once, with positioned duplicate/missing-variant diagnostics.
+Add payload enum declarations and construction as the next vertical slice;
+keep payload pattern matching and destructuring separate.

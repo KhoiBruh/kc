@@ -591,6 +591,18 @@ TEST(codegen_lowers_enum_variants_as_u32_tags) {
     EXPECT_TRUE(ir.find("ret i32 2") != std::string::npos);
 }
 
+TEST(codegen_lowers_exhaustive_enum_when_without_else) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "enum Status { Ready, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready -> 10; Status.Done -> 20; }; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("phi i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("unreachable") != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }
