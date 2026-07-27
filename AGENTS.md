@@ -147,6 +147,8 @@ llvm-readobj --file-headers file.obj
 - `f32`/`f64` casts lower through `fpext`, `fptrunc`, `sitofp`, `uitofp`,
   `fptosi`, and `fptoui`; float-to-integer checks reject out-of-range values,
   `NaN`, and infinity before conversion.
+- Bootstrap float-cast acceptance covers signed/unsigned extrema, fractional
+  lower bounds, `NaN`, infinity, executable behavior, and exact `kc1`-`kc4` IR.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -207,7 +209,7 @@ Integer-cast self-hosting is complete for the approved integer matrix.
 
 ## Recommended next milestone
 
-Complete the float-cast acceptance boundary matrix across `f32`/`f64` and the
-supported signed/unsigned integer widths, including exact extrema, fractional
-lower bounds, `NaN`, and infinity. Preserve `kc1`-`kc4` behavior and IR parity
-before declaring the float-cast milestone self-hosted.
+Run the final Debug and Release milestone audit for float casts, including the
+bootstrap fixed point and all acceptance fixtures. If both configurations pass,
+mark the approved `f32`/`f64` cast matrix self-hosted and choose the next
+demand-driven language feature.

@@ -118,6 +118,9 @@ runtime range check; hằng ngoài miền được báo tại toàn bộ biểu 
 backend C++ và textual bootstrap đã hạ ma trận này bằng `fpext`, `fptrunc`,
 `sitofp`, `uitofp`, `fptosi` và `fptoui`; float sang integer kiểm tra miền bằng
 ordered comparisons trước conversion nên `NaN` và infinity đều `panic`.
+Acceptance bootstrap bao phủ min/max hợp lệ của `i32`, `i64`, `u8`, `u32`,
+`u64` từ cả `f32` và `f64`, lower bound có phần thập phân, giá trị ngoài miền,
+`NaN` và infinity; boundary IR phải giống hệt qua `kc1`–`kc4`.
 
 Frontend semantic của `kc0` và compiler bootstrap hiện áp dụng ma trận integer
 trên, từ chối float cast trong slice này, báo constant ngoài miền tại toàn bộ

@@ -393,7 +393,10 @@ TEST(codegen_lowers_float_casts) {
         "fn extend(val value: f32): f64 { return value as f64; }"
         "fn narrow(val value: f64): f32 { return value as f32; }"
         "fn checkedSigned(val value: f64): i32 { return value as i32; }"
-        "fn checkedUnsigned(val value: f64): u8 { return value as u8; }",
+        "fn checkedSignedWide(val value: f64): i64 { return value as i64; }"
+        "fn checkedUnsigned(val value: f64): u8 { return value as u8; }"
+        "fn checkedUnsigned32(val value: f64): u32 { return value as u32; }"
+        "fn checkedUnsigned64(val value: f64): u64 { return value as u64; }",
         diagnostics);
 
     EXPECT_TRUE(diagnostics.empty());
@@ -403,6 +406,13 @@ TEST(codegen_lowers_float_casts) {
     EXPECT_TRUE(ir.find("fptrunc double") != std::string::npos);
     EXPECT_TRUE(ir.find("fptosi double") != std::string::npos);
     EXPECT_TRUE(ir.find("fptoui double") != std::string::npos);
+    const auto secondSigned = ir.find(
+        "fptosi double", ir.find("fptosi double") + 1);
+    EXPECT_TRUE(secondSigned != std::string::npos);
+    const auto firstUnsigned = ir.find("fptoui double");
+    const auto secondUnsigned = ir.find("fptoui double", firstUnsigned + 1);
+    const auto thirdUnsigned = ir.find("fptoui double", secondUnsigned + 1);
+    EXPECT_TRUE(thirdUnsigned != std::string::npos);
     EXPECT_TRUE(ir.find("fcmp ord") != std::string::npos ||
                 ir.find("fcmp ogt") != std::string::npos);
     EXPECT_TRUE(ir.find("float cast out of range") != std::string::npos);
