@@ -47,6 +47,7 @@ llvm_map_components_to_libnames(K_LLVM_LIBS
 )
 
 add_library(k_std_runtime STATIC
+    src/lib/std/Allocation.cpp
     src/lib/std/Print.cpp
     src/lib/std/platform/StdoutWindows.cpp
 )

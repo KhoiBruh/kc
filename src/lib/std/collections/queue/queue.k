@@ -1,0 +1,3 @@
+module std.collections.queue;
+
+
