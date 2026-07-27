@@ -151,6 +151,9 @@ llvm-readobj --file-headers file.obj
   lower bounds, `NaN`, infinity, executable behavior, and exact `kc1`-`kc4` IR.
 - Logical `&&` and `||` use left-to-right short-circuit CFG lowering with a
   `phi i1` merge in both LLVM emitters; skipped RHS expressions are not evaluated.
+- `break` and `continue` target the nearest enclosing `while`; both LLVM
+  emitters preserve nested-loop targets and semantic analysis rejects them
+  outside loops.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -163,7 +166,7 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- `when`, `for`, `break`, and `continue` are not lowered yet.
+- `when` and `for` are not lowered yet.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -211,6 +214,6 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 
 ## Recommended next milestone
 
-Add `break` and `continue` for `while` as the next vertical slice, including
-positioned diagnostics outside loops and nested-loop target tracking in both
-LLVM emitters. Do not broaden this into labeled control flow or `for` yet.
+Add index-based `for` over fixed arrays and slices as the next vertical slice,
+including empty collections, nested loops, and `break`/`continue`. Do not add a
+general iterator protocol or labeled control flow yet.

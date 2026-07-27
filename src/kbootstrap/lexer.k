@@ -125,6 +125,15 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
         }
     }
     if (length == 5) {
+        if (source.data[start] == 98) {
+            if (source.data[start + 1] == 114) {
+                if (source.data[start + 2] == 101) {
+                    if (source.data[start + 3] == 97) {
+                        if (source.data[start + 4] == 107) { return 89; }
+                    }
+                }
+            }
+        }
         if (source.data[start] == 119) {
             if (source.data[start + 1] == 104) {
                 if (source.data[start + 2] == 105) {
@@ -206,6 +215,23 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                     if (source.data[start + 3] == 101) {
                         if (source.data[start + 4] == 111) {
                             if (source.data[start + 5] == 102) { return 28; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (length == 8) {
+        if (source.data[start] == 99) {
+            if (source.data[start + 1] == 111) {
+                if (source.data[start + 2] == 110) {
+                    if (source.data[start + 3] == 116) {
+                        if (source.data[start + 4] == 105) {
+                            if (source.data[start + 5] == 110) {
+                                if (source.data[start + 6] == 117) {
+                                    if (source.data[start + 7] == 101) { return 90; }
+                                }
+                            }
                         }
                     }
                 }

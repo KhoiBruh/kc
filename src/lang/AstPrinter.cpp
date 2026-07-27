@@ -194,6 +194,14 @@ private:
         printStmtNode(*statement.body, depth + 1);
     }
 
+    void printStmtNode(const BreakStmt&, std::size_t depth) {
+        line(depth, "Break");
+    }
+
+    void printStmtNode(const ContinueStmt&, std::size_t depth) {
+        line(depth, "Continue");
+    }
+
     void printStmtNode(const VariableDecl& variable, std::size_t depth) {
         line(depth, std::string{"Variable "} +
                         (variable.mode == VariableMode::Val ? "val " : "var ") +

@@ -333,6 +333,18 @@ TEST(semantic_requires_bool_logical_operands) {
               "logical operands must be bool");
 }
 
+TEST(semantic_rejects_break_and_continue_outside_loops) {
+    SemanticFixture breakFixture{"fn bad() { break; }"};
+    EXPECT_EQ(breakFixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(breakFixture.semantic.diagnostics[0].message,
+              "break is only valid inside a loop");
+
+    SemanticFixture continueFixture{"fn bad() { continue; }"};
+    EXPECT_EQ(continueFixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(continueFixture.semantic.diagnostics[0].message,
+              "continue is only valid inside a loop");
+}
+
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {
     SemanticFixture fixture{
         "struct Buffer(data: i32*)"

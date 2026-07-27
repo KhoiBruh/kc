@@ -430,6 +430,14 @@ private:
             emitWhile(*whileStatement);
             return;
         }
+        if (std::holds_alternative<BreakStmt>(statement.node)) {
+            builder_.CreateBr(loopTargets_.back().second);
+            return;
+        }
+        if (std::holds_alternative<ContinueStmt>(statement.node)) {
+            builder_.CreateBr(loopTargets_.back().first);
+            return;
+        }
         if (const auto* variable = std::get_if<VariableDecl>(&statement.node)) {
             llvm::Value* value = nullptr;
             const auto declared = semantic().declarationTypes.find(variable);
@@ -530,7 +538,9 @@ private:
         builder_.CreateCondBr(condition, bodyBlock, exitBlock);
 
         builder_.SetInsertPoint(bodyBlock);
+        loopTargets_.push_back({conditionBlock, exitBlock});
         emitScopedBlock(*statement.body);
+        loopTargets_.pop_back();
         if (!builder_.GetInsertBlock()->getTerminator())
             builder_.CreateBr(conditionBlock);
         builder_.SetInsertPoint(exitBlock);
@@ -1297,6 +1307,7 @@ private:
     std::unordered_map<std::string, llvm::StructType*> structs_;
     std::unordered_map<std::string, llvm::StructType*> specializedStructs_;
     std::unordered_map<std::string, LocalSlot> locals_;
+    std::vector<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>> loopTargets_;
 };
 
 }

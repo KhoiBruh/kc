@@ -476,7 +476,12 @@ fn appendCastPanic(var buffer: ByteBuffer) {
 struct IrValue(
     kind: u32, start: u64, end: u64, temporary: u64,
     typeKind: u32, typeName: u64, typePointee: u32)
-struct IrCounter(value: u64, block: u64, currentBlock: u64)
+struct IrCounter(
+    value: u64,
+    block: u64,
+    currentBlock: u64,
+    continueBlock: u64,
+    breakBlock: u64)
 
 fn appendStructSpecializationSuffix(
     var buffer: ByteBuffer, arguments: TypeValueList,
@@ -2056,6 +2061,14 @@ fn emitStatement(
     root: u64,
     var counter: IrCounter): bool {
     val statement = nodes.data[root];
+    if (statement.kind == 36) {
+        appendBranch(buffer, counter.breakBlock);
+        return true;
+    }
+    if (statement.kind == 37) {
+        appendBranch(buffer, counter.continueBlock);
+        return true;
+    }
     if (statement.kind == 33) {
         val initializerRoot = root - 1;
         val initializer = emitExpression(
@@ -2284,9 +2297,15 @@ fn emitStatement(
                     appendConditionalBranch(
                         buffer, source, condition, bodyBlock, endBlock);
                     appendBlockLabel(buffer, counter, bodyBlock);
+                    val outerContinueBlock = counter.continueBlock;
+                    val outerBreakBlock = counter.breakBlock;
+                    counter.continueBlock = conditionBlock;
+                    counter.breakBlock = endBlock;
                     val bodyTerminated = emitBlock(
                         buffer, source, nodes, genericArguments,
                         bodyRoot, counter);
+                    counter.continueBlock = outerContinueBlock;
+                    counter.breakBlock = outerBreakBlock;
                     if (bodyTerminated == false) {
                         appendBranch(buffer, conditionBlock);
                     }
@@ -2510,7 +2529,9 @@ fn emitFunction(
     appendEntry(buffer);
     appendNewline(buffer);
 
-    var counter = IrCounter(0, 0, 18446744073709551615);
+    var counter = IrCounter(
+        0, 0, 18446744073709551615,
+        18446744073709551615, 18446744073709551615);
     parameterIndex = 1;
     while (parameterIndex <= parameterCount) {
         val parameter = nodes.data[

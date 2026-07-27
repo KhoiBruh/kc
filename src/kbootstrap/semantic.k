@@ -13,7 +13,8 @@ struct Semantic(
     returnType: TypeValue,
     scopeStart: u64,
     currentFunction: u64,
-    currentStruct: u64)
+    currentStruct: u64,
+    loopDepth: u32)
 
 struct IntegerConstant(ok: bool, negative: bool, overflow: bool, magnitude: u64)
 
@@ -1189,12 +1190,26 @@ fn checkStatement(var semantic: Semantic, root: u64) {
     }
     if (node.kind == 32) {
         val bodyRoot = root - 1;
+        semantic.loopDepth = semantic.loopDepth + 1;
         checkBlock(semantic, bodyRoot);
+        semantic.loopDepth = semantic.loopDepth - 1;
         val conditionRoot =
             semantic.nodes.data[bodyRoot].subtreeStart - 1;
         if (expressionType(semantic, conditionRoot).kind != 2) {
             semanticFail(
                 semantic, 6, semantic.nodes.data[conditionRoot]);
+        }
+        return;
+    }
+    if (node.kind == 36) {
+        if (semantic.loopDepth == 0) {
+            semanticFail(semantic, 4, node);
+        }
+        return;
+    }
+    if (node.kind == 37) {
+        if (semantic.loopDepth == 0) {
+            semanticFail(semantic, 4, node);
         }
         return;
     }
@@ -1386,7 +1401,8 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
     var semantic = Semantic(
         source, nodes, declarationListNew(), declarationListNew(),
         localListNew(), genericArguments,
-        semanticSuccess(genericArguments), unitType(), 0, nodes.length, nodes.length);
+        semanticSuccess(genericArguments), unitType(), 0,
+        nodes.length, nodes.length, 0);
     val programRoot = nodes.length - 1;
     collectDeclarations(semantic, programRoot);
     if (semantic.result.ok) {

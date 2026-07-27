@@ -337,6 +337,18 @@ TEST(parser_respects_expression_precedence_and_assignment_associativity) {
     EXPECT_TRUE(std::holds_alternative<k::AssignmentExpr>(outer.value->node));
 }
 
+TEST(parser_parses_break_and_continue_statements) {
+    ParseFixture fixture{
+        "fn loop() { while (true) { continue; break; } }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& loop = std::get<k::WhileStmt>(
+        fixture.parsed.program.functions[0].body->statements[0]->node);
+    EXPECT_TRUE(std::holds_alternative<k::ContinueStmt>(
+        loop.body->statements[0]->node));
+    EXPECT_TRUE(std::holds_alternative<k::BreakStmt>(
+        loop.body->statements[1]->node));
+}
+
 TEST(parser_parses_left_associative_integer_casts) {
     ParseFixture fixture{
         "fn convert(val value: i32): u64 { return value as i64 as u64; }"};

@@ -428,6 +428,18 @@ fn parseStatement(var parser: Parser): u64 {
             parser, 32, first.start, end,
             subtreeStart, 0);
     }
+    if (parserMatch(parser, 89)) {
+        if (parserExpect(parser, 58) == false) { return 0; }
+        return parserAdd(
+            parser, 36, first.start, parserPrevious(parser).end,
+            subtreeStart, 0);
+    }
+    if (parserMatch(parser, 90)) {
+        if (parserExpect(parser, 58) == false) { return 0; }
+        return parserAdd(
+            parser, 37, first.start, parserPrevious(parser).end,
+            subtreeStart, 0);
+    }
     var isVariable = first.kind == 6;
     if (first.kind == 7) { isVariable = true; }
     if (isVariable) {

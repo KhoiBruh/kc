@@ -33,7 +33,8 @@ enum class TokenKind {
     PlusEqual, MinusEqual, StarEqual, SlashEqual, PercentEqual,
     EqualEqual, BangEqual, LessEqual, GreaterEqual,
     AndAnd, OrOr,
-    Arrow, FatArrow, Range, RangeExclusive
+    Arrow, FatArrow, Range, RangeExclusive,
+    KwBreak, KwContinue
 };
 
 struct Token {

@@ -416,8 +416,20 @@ private:
             const auto condition = analyzeExpr(*whileStatement->condition);
             if (condition.kind != SemanticTypeKind::Bool)
                 diagnose("while condition must be bool", whileStatement->condition->span);
+            ++loopDepth_;
             analyzeBlock(*whileStatement->body, true);
+            --loopDepth_;
             return false;
+        }
+        if (std::holds_alternative<BreakStmt>(statement.node)) {
+            if (loopDepth_ == 0)
+                diagnose("break is only valid inside a loop", statement.span);
+            return true;
+        }
+        if (std::holds_alternative<ContinueStmt>(statement.node)) {
+            if (loopDepth_ == 0)
+                diagnose("continue is only valid inside a loop", statement.span);
+            return true;
         }
         if (const auto* variable = std::get_if<VariableDecl>(&statement.node)) {
             std::optional<SemanticType> declared;
@@ -1325,6 +1337,7 @@ private:
     std::vector<std::unordered_map<std::string, VariableSymbol>> scopes_;
     std::unordered_map<std::string, TypeParameterSymbol> typeParameters_;
     SemanticType currentReturn_;
+    std::size_t loopDepth_ = 0;
 };
 
 }

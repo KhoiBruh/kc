@@ -50,7 +50,8 @@ std::string_view tokenKindName(TokenKind kind) noexcept {
         K_TOKEN_NAME(BangEqual); K_TOKEN_NAME(LessEqual);
         K_TOKEN_NAME(GreaterEqual); K_TOKEN_NAME(AndAnd); K_TOKEN_NAME(OrOr);
         K_TOKEN_NAME(Arrow); K_TOKEN_NAME(FatArrow); K_TOKEN_NAME(Range);
-        K_TOKEN_NAME(RangeExclusive);
+        K_TOKEN_NAME(RangeExclusive); K_TOKEN_NAME(KwBreak);
+        K_TOKEN_NAME(KwContinue);
     }
 #undef K_TOKEN_NAME
     return "Unknown";

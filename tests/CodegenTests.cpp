@@ -434,6 +434,28 @@ TEST(codegen_lowers_logical_operators_with_short_circuit_control_flow) {
     EXPECT_TRUE(ir.find(" or i1 ") == std::string::npos);
 }
 
+TEST(codegen_lowers_break_and_continue_to_nested_while_targets) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn loop(): i32 {"
+        "var outer = 0; var total = 0;"
+        "while (outer < 3) {"
+        "outer = outer + 1; var inner = 0;"
+        "while (inner < 5) {"
+        "inner = inner + 1;"
+        "if (inner == 2) { continue; }"
+        "if (inner == 4) { break; }"
+        "total = total + 1;"
+        "}"
+        "}"
+        "return total;"
+        "}", diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("br label %while.condition") != std::string::npos);
+    EXPECT_TRUE(ir.find("br label %while.end") != std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

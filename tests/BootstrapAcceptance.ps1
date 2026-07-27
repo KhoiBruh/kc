@@ -81,7 +81,7 @@ $validFixtures = @(
     "generic_structs.k", "integer_casts.k", "integer_cast_panic.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
-    "short_circuit.k"
+    "short_circuit.k", "loop_control.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName
@@ -141,6 +141,9 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "short_circuit.k" -and $stage1Exit -ne 42) {
         Write-Error "short-circuit fixture evaluated a skipped RHS"
+    }
+    if ($fixtureName -eq "loop_control.k" -and $stage1Exit -ne 42) {
+        Write-Error "nested break/continue fixture returned incorrectly"
     }
     if ($fixtureName -eq "float_cast_boundaries.k") {
         $hashes = @($stage1Ll, $stage2Ll, $stage3Ll, $stage4Ll) |

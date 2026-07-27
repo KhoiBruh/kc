@@ -37,6 +37,8 @@ constexpr std::array keywords{
     Spelling{"f16", TokenKind::KwF16}, Spelling{"f32", TokenKind::KwF32},
     Spelling{"f64", TokenKind::KwF64}, Spelling{"char", TokenKind::KwChar},
     Spelling{"string", TokenKind::KwString}, Spelling{"unit", TokenKind::KwUnit},
+    Spelling{"break", TokenKind::KwBreak},
+    Spelling{"continue", TokenKind::KwContinue},
 };
 
 constexpr std::array operators{

@@ -77,6 +77,8 @@ struct WhileStmt {
     ExprPtr condition;
     std::unique_ptr<BlockStmt> body;
 };
+struct BreakStmt {};
+struct ContinueStmt {};
 struct VariableDecl {
     VariableMode mode;
     SourceSpan name;
@@ -87,8 +89,9 @@ struct ReturnStmt { ExprPtr value; };
 struct ExpressionStmt { ExprPtr expression; };
 
 struct Stmt {
-    using Node = std::variant<BlockStmt, IfStmt, WhileStmt, VariableDecl,
-                              ReturnStmt, ExpressionStmt>;
+    using Node = std::variant<BlockStmt, IfStmt, WhileStmt, BreakStmt,
+                              ContinueStmt, VariableDecl, ReturnStmt,
+                              ExpressionStmt>;
     SourceSpan span;
     Node node;
 };

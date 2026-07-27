@@ -60,6 +60,8 @@ $cases = @(
     @("bootstrap-semantic-return.k", 5),
     @("bootstrap-semantic-condition.k", 6),
     @("bootstrap-semantic-logical-type.k", 4),
+    @("bootstrap-semantic-break-outside.k", 4),
+    @("bootstrap-semantic-continue-outside.k", 4),
     @("bootstrap-semantic-immutable.k", 7),
     @("bootstrap-semantic-access.k", 8),
     @("bootstrap-semantic-cast-range.k", 4),

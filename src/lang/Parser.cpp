@@ -367,6 +367,15 @@ std::unique_ptr<BlockStmt> Parser::parseBlock(SourceSpan& span) {
 StmtPtr Parser::parseStatement() {
     if (check(TokenKind::KwIf)) return parseIf();
     if (check(TokenKind::KwWhile)) return parseWhile();
+    if (check(TokenKind::KwBreak) || check(TokenKind::KwContinue)) {
+        const auto keyword = advance();
+        if (!expect(TokenKind::Semicolon, "expected ';' after loop control statement"))
+            return nullptr;
+        const auto span = spanFrom(keyword.span, previous().span);
+        if (keyword.kind == TokenKind::KwBreak)
+            return makeStmt(span, BreakStmt{});
+        return makeStmt(span, ContinueStmt{});
+    }
     if (check(TokenKind::KwVal) || check(TokenKind::KwVar)) return parseVariable();
     if (check(TokenKind::KwReturn)) return parseReturn();
     if (check(TokenKind::LeftBrace)) {
