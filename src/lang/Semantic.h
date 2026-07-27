@@ -70,6 +70,21 @@ struct IntegerCastInfo {
     bool requiresRangeCheck = false;
 };
 
+enum class FloatCastKind {
+    Identity,
+    Extend,
+    Narrow,
+    IntegerToFloat,
+    FloatToInteger,
+};
+
+struct FloatCastInfo {
+    SemanticType sourceType;
+    SemanticType targetType;
+    FloatCastKind kind;
+    bool requiresRangeCheck = false;
+};
+
 struct ImportedSymbol {
     std::vector<std::string> modulePath;
     std::string symbolOrWildcard;
@@ -86,6 +101,7 @@ struct SemanticResult {
     std::unordered_map<const Expr*, SemanticType> sizeofTypes;
     std::unordered_map<const Expr*, SemanticType> implicitConversions;
     std::unordered_map<const CastExpr*, IntegerCastInfo> integerCasts;
+    std::unordered_map<const CastExpr*, FloatCastInfo> floatCasts;
     std::unordered_map<const CallExpr*, ResolvedCall> resolvedCalls;
     std::vector<SpecializationKey> requestedSpecializations;
     std::unordered_map<const VariableDecl*, SemanticType> declarationTypes;

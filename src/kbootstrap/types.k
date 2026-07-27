@@ -42,6 +42,11 @@ fn unitType(): TypeValue { return TypeValue(1, 0, 0); }
 fn boolType(): TypeValue { return TypeValue(2, 0, 0); }
 fn integerLiteralType(): TypeValue { return TypeValue(11, 0, 0); }
 
+fn isFloatType(type: TypeValue): bool {
+    if (type.kind == 17) { return true; }
+    return type.kind == 18;
+}
+
 fn isIntegerType(type: TypeValue): bool {
     if (type.kind >= 3) { return type.kind <= 7; }
     return false;
@@ -106,6 +111,9 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeVal
             if (expected.kind <= 7) { return true; }
         }
     }
+    if (actual.kind == 18) {
+        if (isFloatType(expected)) { return true; }
+    }
     return false;
 }
 
@@ -117,6 +125,8 @@ fn primitiveType(tokenKind: u32): TypeValue {
     if (tokenKind == 38) { return TypeValue(5, 0, 0); }
     if (tokenKind == 40) { return TypeValue(6, 0, 0); }
     if (tokenKind == 41) { return TypeValue(7, 0, 0); }
+    if (tokenKind == 45) { return TypeValue(17, 0, 0); }
+    if (tokenKind == 46) { return TypeValue(18, 0, 0); }
     if (tokenKind == 48) { return TypeValue(10, 0, 0); }
     return invalidType();
 }

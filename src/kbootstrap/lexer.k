@@ -78,6 +78,14 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                 if (source.data[start + 2] == 52) { return 41; }
             }
         }
+        if (source.data[start] == 102) {
+            if (source.data[start + 1] == 51) {
+                if (source.data[start + 2] == 50) { return 45; }
+            }
+            if (source.data[start + 1] == 54) {
+                if (source.data[start + 2] == 52) { return 46; }
+            }
+        }
     }
     if (length == 4) {
         if (source.data[start] == 101) {
@@ -269,6 +277,40 @@ fn scanInteger(source: Source, start: u64): u64 {
     return offset;
 }
 
+struct NumberScan(end: u64, kind: u32)
+
+fn scanNumber(source: Source, start: u64): NumberScan {
+    var offset = scanInteger(source, start);
+    var kind: u32 = 2;
+    if (offset < source.length) {
+        if (source.data[offset] == 46) {
+            if (offset + 1 < source.length) {
+                if (isDigit(source.data[offset + 1])) {
+                    kind = 3;
+                    offset = scanInteger(source, offset + 2);
+                }
+            }
+        }
+    }
+    if (offset < source.length) {
+        var exponentMarker = source.data[offset] == 101;
+        if (source.data[offset] == 69) { exponentMarker = true; }
+        if (exponentMarker) {
+            kind = 3;
+            offset = offset + 1;
+            if (offset < source.length) {
+                var exponentSign = source.data[offset] == 43;
+                if (source.data[offset] == 45) { exponentSign = true; }
+                if (exponentSign) {
+                    offset = offset + 1;
+                }
+            }
+            offset = scanInteger(source, offset);
+        }
+    }
+    return NumberScan(offset, kind);
+}
+
 fn scanString(source: Source, start: u64): u64 {
     var offset = start;
     var escaped = false;
@@ -374,8 +416,9 @@ fn lex(source: Source): LexResult {
                     tokens, Token(keywordKind(source, start, offset), start, offset));
             } else {
                 if (isDigit(value)) {
-                    offset = scanInteger(source, offset + 1);
-                    tokenListAppend(tokens, Token(2, start, offset));
+                    val number = scanNumber(source, offset + 1);
+                    offset = number.end;
+                    tokenListAppend(tokens, Token(number.kind, start, offset));
                 } else {
                     var kind = punctuationKind(value);
                     if (offset + 1 < source.length) {

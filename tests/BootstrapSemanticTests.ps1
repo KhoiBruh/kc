@@ -64,7 +64,7 @@ $cases = @(
     @("bootstrap-semantic-cast-range.k", 4),
     @("bootstrap-semantic-cast-negative.k", 4),
     @("bootstrap-semantic-cast-overflow.k", 4),
-    @("bootstrap-semantic-cast-float.k", 4),
+    @("bootstrap-semantic-cast-float-range.k", 4),
     @("bootstrap-semantic-generic-multiple-unresolved.k", 4)
 )
 foreach ($case in $cases) {

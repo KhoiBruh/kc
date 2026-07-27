@@ -344,16 +344,16 @@ function Write-DepthFixture {
         $lines = @("module $Name.m$index;")
         if ($index -lt $LastModule) {
             $next = $index + 1
-            $lines += "import $Name.m$next.f$next;"
+            $lines += "import $Name.m$next.depthFn$next;"
         }
         $lines += ""
         if ($index -eq 0) {
-            $lines += "fn main(): i32 { return f1(); }"
+            $lines += "fn main(): i32 { return depthFn1(); }"
         } elseif ($index -lt $LastModule) {
             $next = $index + 1
-            $lines += "fn f$index(): i32 { return f$next(); }"
+            $lines += "fn depthFn$index(): i32 { return depthFn$next(); }"
         } else {
-            $lines += "fn f$index(): i32 { return 42; }"
+            $lines += "fn depthFn$index(): i32 { return 42; }"
         }
         [System.IO.File]::WriteAllText(
             (Join-Path $directory "m$index.k"), ($lines -join "`n"))

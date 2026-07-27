@@ -290,9 +290,39 @@ TEST(semantic_validates_integer_casts) {
 
     SemanticFixture floatCast{
         "fn bad(val value: f64): i32 { return value as i32; }"};
-    EXPECT_EQ(floatCast.semantic.diagnostics.size(), 1u);
-    EXPECT_EQ(floatCast.semantic.diagnostics[0].message,
-              "cast requires integer types or raw pointers");
+    EXPECT_TRUE(floatCast.semantic.diagnostics.empty());
+    EXPECT_EQ(floatCast.semantic.floatCasts.size(), 1u);
+}
+
+TEST(semantic_validates_float_casts) {
+    SemanticFixture valid{
+        "fn convert(val small: f32, val wide: f64, val integer: i32): f64 {"
+        "val identity = small as f32;"
+        "val extended = small as f64;"
+        "val narrowed = wide as f32;"
+        "val fromInteger = integer as f64;"
+        "val negativeFraction = -0.5 as u8;"
+        "val signedMinimum = -2147483648.9 as i32;"
+        "val checked = wide as i32;"
+        "return extended;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+    EXPECT_EQ(valid.semantic.floatCasts.size(), 7u);
+
+    SemanticFixture outOfRange{
+        "fn bad(): i32 { return 2147483648.0 as i32; }"};
+    EXPECT_EQ(outOfRange.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(outOfRange.semantic.diagnostics[0].message,
+              "constant float cast is out of range");
+    const auto span = outOfRange.semantic.diagnostics[0].span;
+    EXPECT_EQ(outOfRange.source.text().substr(span.start, span.end - span.start),
+              "2147483648.0 as i32");
+
+    SemanticFixture unsupported{
+        "fn bad(val value: f16): f32 { return value as f32; }"};
+    EXPECT_EQ(unsupported.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(unsupported.semantic.diagnostics[0].message,
+              "float cast currently requires f32 or f64");
 }
 
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {

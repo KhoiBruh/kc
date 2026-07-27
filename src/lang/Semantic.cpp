@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cmath>
+#include <limits>
 #include <optional>
 #include <unordered_map>
 #include <utility>
@@ -600,6 +602,34 @@ private:
                     constant && !integerConstantFits(*constant, type))
                     diagnose("constant integer cast is out of range",
                              expression.span);
+            } else if ((isFloat(from) && isFloat(type)) ||
+                       (isInteger(from) && isFloat(type)) ||
+                       (isFloat(from) && isInteger(type))) {
+                if ((from.kind != SemanticTypeKind::F32 &&
+                     from.kind != SemanticTypeKind::F64 && isFloat(from)) ||
+                    (type.kind != SemanticTypeKind::F32 &&
+                     type.kind != SemanticTypeKind::F64 && isFloat(type))) {
+                    diagnose("float cast currently requires f32 or f64",
+                             expression.span);
+                } else {
+                    FloatCastKind kind = FloatCastKind::Identity;
+                    if (isInteger(from))
+                        kind = FloatCastKind::IntegerToFloat;
+                    else if (isInteger(type))
+                        kind = FloatCastKind::FloatToInteger;
+                    else if (numericBitWidth(from) < numericBitWidth(type))
+                        kind = FloatCastKind::Extend;
+                    else if (numericBitWidth(from) > numericBitWidth(type))
+                        kind = FloatCastKind::Narrow;
+                    result_.floatCasts[cast] = {
+                        from, type, kind, kind == FloatCastKind::FloatToInteger};
+                    if (kind == FloatCastKind::FloatToInteger) {
+                        if (const auto constant = floatConstant(*cast->value);
+                            constant && !floatConstantFits(*constant, type))
+                            diagnose("constant float cast is out of range",
+                                     expression.span);
+                    }
+                }
             } else if (!pointerCast) {
                 diagnose("cast requires integer types or raw pointers",
                          expression.span);
@@ -1216,6 +1246,42 @@ private:
         if (isSignedInteger(source) == isSignedInteger(target))
             return targetWidth < sourceWidth;
         return isSignedInteger(source) || targetWidth <= sourceWidth;
+    }
+
+    std::optional<double> floatConstant(const Expr& expression) const {
+        const Expr* value = &expression;
+        bool negative = false;
+        if (const auto* unary = std::get_if<UnaryExpr>(&value->node);
+            unary && (unary->op == TokenKind::Minus ||
+                      unary->op == TokenKind::Plus)) {
+            negative = unary->op == TokenKind::Minus;
+            value = unary->operand.get();
+        }
+        const auto* literal = std::get_if<LiteralExpr>(&value->node);
+        if (!literal || literal->kind != TokenKind::FloatLiteral)
+            return std::nullopt;
+        const auto text = source_.text().substr(
+            literal->spelling.start,
+            literal->spelling.end - literal->spelling.start);
+        double result = 0.0;
+        const auto parsed = std::from_chars(
+            text.data(), text.data() + text.size(), result,
+            std::chars_format::general);
+        if (parsed.ec == std::errc::result_out_of_range)
+            result = std::numeric_limits<double>::infinity();
+        else if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size())
+            return std::nullopt;
+        return negative ? -result : result;
+    }
+
+    bool floatConstantFits(double value, const SemanticType& target) const {
+        if (!std::isfinite(value)) return false;
+        value = std::trunc(value);
+        const auto width = numericBitWidth(target);
+        if (!isSignedInteger(target))
+            return value >= 0.0 && value < std::ldexp(1.0, width);
+        const auto limit = std::ldexp(1.0, width - 1);
+        return value >= -limit && value < limit;
     }
 
     bool compatible(const SemanticType& expected, const SemanticType& actual) const {

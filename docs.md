@@ -112,6 +112,11 @@ runtime, cùng điều kiện gọi `k_boot_panic`. Vì kiểm tra áp dụng sa
 `-0.5 as u8` hợp lệ và cho `0`. Slice này không thêm implicit coercion và không
 bao gồm `f8`, `f16`, `bool`, `char` hay pointer.
 
+Frontend semantic của `kc0` và compiler bootstrap đã hỗ trợ ma trận `f32`/`f64`
+trên. Mỗi cast lưu loại conversion và đánh dấu riêng float sang integer cần
+runtime range check; hằng ngoài miền được báo tại toàn bộ biểu thức cast. LLVM
+lowering cho các conversion này thuộc vertical slice tiếp theo.
+
 Frontend semantic của `kc0` và compiler bootstrap hiện áp dụng ma trận integer
 trên, từ chối float cast trong slice này, báo constant ngoài miền tại toàn bộ
 biểu thức cast, và lưu metadata cho biết conversion có cần runtime range check.

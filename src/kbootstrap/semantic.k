@@ -63,6 +63,94 @@ fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
     return IntegerConstant(true, negative, overflow, magnitude);
 }
 
+fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
+    var node = semantic.nodes.data[root];
+    var negative = false;
+    if (node.kind == 12) {
+        if (node.aux != 60) {
+            if (node.aux != 61) {
+                return IntegerConstant(false, false, false, 0);
+            }
+        }
+        negative = node.aux == 61;
+        node = semantic.nodes.data[root - 1];
+    }
+    if (node.kind != 11) {
+        return IntegerConstant(false, false, false, 0);
+    }
+    if (node.aux != 3) { return IntegerConstant(false, false, false, 0); }
+    var exponentStart = node.end;
+    var decimalDigits: i64 = 0;
+    var sawDecimal = false;
+    var offset = node.start;
+    while (offset < node.end) {
+        val byte = semantic.source.data[offset];
+        var exponentMarker = byte == 101;
+        if (byte == 69) { exponentMarker = true; }
+        if (exponentMarker) {
+            exponentStart = offset;
+            offset = node.end;
+        } else {
+            if (byte == 46) { sawDecimal = true; }
+            else {
+                if (sawDecimal == false) { decimalDigits = decimalDigits + 1; }
+            }
+            offset = offset + 1;
+        }
+    }
+    var exponent: i64 = 0;
+    if (exponentStart < node.end) {
+        offset = exponentStart + 1;
+        var exponentNegative = false;
+        var exponentSign = semantic.source.data[offset] == 43;
+        if (semantic.source.data[offset] == 45) { exponentSign = true; }
+        if (exponentSign) {
+            exponentNegative = semantic.source.data[offset] == 45;
+            offset = offset + 1;
+        }
+        while (offset < node.end) {
+            if (exponent < 1000) {
+                exponent = exponent * 10 +
+                    (semantic.source.data[offset] - 48) as i64;
+            }
+            offset = offset + 1;
+        }
+        if (exponentNegative) { exponent = 0 - exponent; }
+    }
+    val integerDigits = decimalDigits + exponent;
+    if (integerDigits <= 0) {
+        return IntegerConstant(true, negative, false, 0);
+    }
+    var digitIndex: i64 = 0;
+    var magnitude: u64 = 0;
+    var overflow = false;
+    offset = node.start;
+    while (offset < exponentStart) {
+        val byte = semantic.source.data[offset];
+        if (byte != 46) {
+            if (digitIndex < integerDigits) {
+                val digit = (byte - 48) as u64;
+                if (magnitude > 1844674407370955161) {
+                    overflow = true;
+                } else {
+                    if (magnitude == 1844674407370955161) {
+                        if (digit > 5) { overflow = true; }
+                    }
+                }
+                if (overflow == false) { magnitude = magnitude * 10 + digit; }
+            }
+            digitIndex = digitIndex + 1;
+        }
+        offset = offset + 1;
+    }
+    while (digitIndex < integerDigits) {
+        if (magnitude > 1844674407370955161) { overflow = true; }
+        if (overflow == false) { magnitude = magnitude * 10; }
+        digitIndex = digitIndex + 1;
+    }
+    return IntegerConstant(true, negative, overflow, magnitude);
+}
+
 fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
     if (value.overflow) { return false; }
     if (value.negative) {
@@ -525,6 +613,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     }
     if (node.kind == 11) {
         if (node.aux == 2) { return integerLiteralType(); }
+        if (node.aux == 3) { return TypeValue(18, 0, 0); }
         if (node.aux == 5) { return TypeValue(10, 0, 0); }
         if (node.aux == 29) { return boolType(); }
         if (node.aux == 30) { return boolType(); }
@@ -632,7 +721,36 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             semantic.nodes.data[root] = castNode;
         } else {
-            if (pointerCast == false) { semanticFail(semantic, 4, node); }
+            var floatCast = false;
+            if (isFloatType(source)) {
+                if (isFloatType(target)) { floatCast = true; }
+            }
+            if (isIntegerType(source)) {
+                if (isFloatType(target)) { floatCast = true; }
+            }
+            var floatToInteger = false;
+            if (isFloatType(source)) {
+                if (isIntegerType(target)) { floatToInteger = true; }
+            }
+            if (floatToInteger) {
+                floatCast = true;
+                val constant = floatConstant(semantic, valueRoot);
+                if (constant.ok) {
+                    if (integerConstantFits(constant, target) == false) {
+                        semanticFail(semantic, 4, node);
+                    }
+                }
+            }
+            if (floatCast) {
+                var castNode = semantic.nodes.data[root];
+                castNode.conversionKind = 5;
+                if (floatToInteger) {
+                    castNode.conversionKind = 6;
+                }
+                semantic.nodes.data[root] = castNode;
+            } else {
+                if (pointerCast == false) { semanticFail(semantic, 4, node); }
+            }
         }
         return target;
     }

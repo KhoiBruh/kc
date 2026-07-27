@@ -204,7 +204,7 @@ Integer-cast self-hosting is complete for the approved integer matrix.
 
 ## Recommended next milestone
 
-Implement semantic metadata and positioned constant diagnostics for the
-approved `f32`/`f64` cast matrix. Keep LLVM lowering for the following slice,
-and do not broaden this into `f8`/`f16`, implicit assignment conversions, or
-general numeric coercion.
+Lower the approved `f32`/`f64` cast matrix in the C++ LLVM backend and the
+self-hosted textual LLVM emitter. Reuse the semantic conversion metadata and
+checked float-to-integer contract; do not broaden this into `f8`/`f16` or
+implicit numeric coercion.
