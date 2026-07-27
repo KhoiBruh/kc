@@ -325,6 +325,14 @@ TEST(semantic_validates_float_casts) {
               "float cast currently requires f32 or f64");
 }
 
+TEST(semantic_requires_bool_logical_operands) {
+    SemanticFixture fixture{
+        "fn bad(): bool { return 1 && true; }"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "logical operands must be bool");
+}
+
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {
     SemanticFixture fixture{
         "struct Buffer(data: i32*)"

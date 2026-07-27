@@ -894,8 +894,35 @@ private:
         }
         if (const auto* binary = std::get_if<BinaryExpr>(&expression.node)) {
             auto* left = emitExpr(*binary->left);
+            if (!left) return nullptr;
+            if (binary->op == TokenKind::AndAnd ||
+                binary->op == TokenKind::OrOr) {
+                auto* function = builder_.GetInsertBlock()->getParent();
+                auto* leftBlock = builder_.GetInsertBlock();
+                auto* rhsBlock = llvm::BasicBlock::Create(
+                    context_, "logic.rhs", function);
+                auto* mergeBlock = llvm::BasicBlock::Create(
+                    context_, "logic.merge", function);
+                if (binary->op == TokenKind::AndAnd)
+                    builder_.CreateCondBr(left, rhsBlock, mergeBlock);
+                else
+                    builder_.CreateCondBr(left, mergeBlock, rhsBlock);
+                builder_.SetInsertPoint(rhsBlock);
+                auto* right = emitExpr(*binary->right);
+                if (!right) return nullptr;
+                auto* rightBlock = builder_.GetInsertBlock();
+                builder_.CreateBr(mergeBlock);
+                builder_.SetInsertPoint(mergeBlock);
+                auto* result = builder_.CreatePHI(builder_.getInt1Ty(), 2);
+                result->addIncoming(
+                    binary->op == TokenKind::AndAnd
+                        ? builder_.getFalse() : builder_.getTrue(),
+                    leftBlock);
+                result->addIncoming(right, rightBlock);
+                return result;
+            }
             auto* right = emitExpr(*binary->right);
-            if (!left || !right) return nullptr;
+            if (!right) return nullptr;
             const auto operandType =
                 semantic().expressionTypes.find(binary->left.get());
             const auto operationType =

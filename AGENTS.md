@@ -149,6 +149,8 @@ llvm-readobj --file-headers file.obj
   `NaN`, and infinity before conversion.
 - Bootstrap float-cast acceptance covers signed/unsigned extrema, fractional
   lower bounds, `NaN`, infinity, executable behavior, and exact `kc1`-`kc4` IR.
+- Logical `&&` and `||` use left-to-right short-circuit CFG lowering with a
+  `phi i1` merge in both LLVM emitters; skipped RHS expressions are not evaluated.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -161,8 +163,7 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- Logical short-circuiting, `when`, `for`, `break`, and `continue` are not
-  lowered yet.
+- `when`, `for`, `break`, and `continue` are not lowered yet.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -210,7 +211,6 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 
 ## Recommended next milestone
 
-Add logical short-circuiting for `&&` and `||` as the next vertical slice.
-Preserve left-to-right evaluation and skip the RHS when the LHS determines the
-result; lower through CFG plus `phi i1` in both LLVM emitters. Keep operands
-strictly `bool`, and do not broaden this into truthiness or bitwise operators.
+Add `break` and `continue` for `while` as the next vertical slice, including
+positioned diagnostics outside loops and nested-loop target tracking in both
+LLVM emitters. Do not broaden this into labeled control flow or `for` yet.

@@ -645,10 +645,19 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         val left = expressionType(semantic, leftRoot);
         val right = expressionType(semantic, rightRoot);
+        var logical = node.aux == 83;
+        if (node.aux == 84) { logical = true; }
+        if (logical) {
+            if (left.kind != 2) { semanticFail(semantic, 4, node); }
+            else {
+                if (right.kind != 2) { semanticFail(semantic, 4, node); }
+            }
+            return boolType();
+        }
         var comparison = node.aux == 66;
         if (node.aux == 67) { comparison = true; }
         if (node.aux >= 79) {
-            if (node.aux <= 84) {
+            if (node.aux <= 82) {
                 comparison = true;
             }
         }

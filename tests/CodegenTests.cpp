@@ -418,6 +418,22 @@ TEST(codegen_lowers_float_casts) {
     EXPECT_TRUE(ir.find("float cast out of range") != std::string::npos);
 }
 
+TEST(codegen_lowers_logical_operators_with_short_circuit_control_flow) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn rhs(): bool { val values = [1]; return values[1] == 0; }"
+        "fn testAnd(val left: bool): bool { return left && rhs(); }"
+        "fn testOr(val left: bool): bool { return left || rhs(); }",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("logic.rhs") != std::string::npos);
+    EXPECT_TRUE(ir.find("logic.merge") != std::string::npos);
+    EXPECT_TRUE(ir.find("phi i1") != std::string::npos);
+    EXPECT_TRUE(ir.find(" and i1 ") == std::string::npos);
+    EXPECT_TRUE(ir.find(" or i1 ") == std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

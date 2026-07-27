@@ -476,7 +476,7 @@ fn appendCastPanic(var buffer: ByteBuffer) {
 struct IrValue(
     kind: u32, start: u64, end: u64, temporary: u64,
     typeKind: u32, typeName: u64, typePointee: u32)
-struct IrCounter(value: u64, block: u64)
+struct IrCounter(value: u64, block: u64, currentBlock: u64)
 
 fn appendStructSpecializationSuffix(
     var buffer: ByteBuffer, arguments: TypeValueList,
@@ -997,10 +997,23 @@ fn appendBlockName(var buffer: ByteBuffer, block: u64) {
     appendDecimal(buffer, block);
 }
 
-fn appendBlockLabel(var buffer: ByteBuffer, block: u64) {
+fn appendBlockLabel(
+    var buffer: ByteBuffer, var counter: IrCounter, block: u64) {
     appendBlockName(buffer, block);
     byteBufferAppend(buffer, 58);
     appendNewline(buffer);
+    counter.currentBlock = block;
+}
+
+fn appendBlockReference(var buffer: ByteBuffer, block: u64) {
+    byteBufferAppend(buffer, 37);
+    if (block == 18446744073709551615) {
+        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 110);
+        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
+        byteBufferAppend(buffer, 121);
+    } else {
+        appendBlockName(buffer, block);
+    }
 }
 
 fn appendBranch(var buffer: ByteBuffer, block: u64) {
@@ -1317,6 +1330,47 @@ fn emitExpression(
         val left = emitExpression(
             buffer, source, nodes, genericArguments,
             leftRoot, counter);
+        var logical = node.aux == 83;
+        if (node.aux == 84) { logical = true; }
+        if (logical) {
+            val leftBlock = counter.currentBlock;
+            val rhsBlock = nextBlock(counter);
+            val mergeBlock = nextBlock(counter);
+            if (node.aux == 83) {
+                appendConditionalBranch(
+                    buffer, source, left, rhsBlock, mergeBlock);
+            } else {
+                appendConditionalBranch(
+                    buffer, source, left, mergeBlock, rhsBlock);
+            }
+            appendBlockLabel(buffer, counter, rhsBlock);
+            val right = emitExpression(
+                buffer, source, nodes, genericArguments,
+                rightRoot, counter);
+            val rightBlock = counter.currentBlock;
+            appendBranch(buffer, mergeBlock);
+            appendBlockLabel(buffer, counter, mergeBlock);
+            val temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary);
+            appendEquals(buffer);
+            byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 104);
+            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 91);
+            if (node.aux == 83) { byteBufferAppend(buffer, 48); }
+            else { byteBufferAppend(buffer, 49); }
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            appendBlockReference(buffer, leftBlock);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 91);
+            appendIrValue(buffer, source, right);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            appendBlockReference(buffer, rightBlock);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+            appendNewline(buffer);
+            return IrValue(2, 0, 0, temporary, 2, 0, 0);
+        }
         val right = emitExpression(
             buffer, source, nodes, genericArguments,
             rightRoot, counter);
@@ -1408,9 +1462,9 @@ fn emitExpression(
                 appendConditionalBranch(
                     buffer, source, IrValue(2, 0, 0, check, 2, 0, 0),
                     validBlock, panicBlock);
-                appendBlockLabel(buffer, panicBlock);
+                appendBlockLabel(buffer, counter, panicBlock);
                 appendCastPanic(buffer);
-                appendBlockLabel(buffer, validBlock);
+                appendBlockLabel(buffer, counter, validBlock);
             }
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
@@ -1540,9 +1594,9 @@ fn emitExpression(
             appendConditionalBranch(
                 buffer, source, IrValue(2, 0, 0, check, 2, 0, 0),
                 validBlock, panicBlock);
-            appendBlockLabel(buffer, panicBlock);
+            appendBlockLabel(buffer, counter, panicBlock);
             appendCastPanic(buffer);
-            appendBlockLabel(buffer, validBlock);
+            appendBlockLabel(buffer, counter, validBlock);
         }
         return converted;
     }
@@ -1649,7 +1703,7 @@ fn emitExpression(
             buffer, source,
             IrValue(2, 0, 0, hasValue, 2, 0, 0),
             validBlock, panicBlock);
-        appendBlockLabel(buffer, panicBlock);
+        appendBlockLabel(buffer, counter, panicBlock);
         byteBufferAppend(buffer, 32);
         byteBufferAppend(buffer, 32);
         byteBufferAppend(buffer, 99);
@@ -1707,7 +1761,7 @@ fn emitExpression(
         byteBufferAppend(buffer, 108);
         byteBufferAppend(buffer, 101);
         appendNewline(buffer);
-        appendBlockLabel(buffer, validBlock);
+        appendBlockLabel(buffer, counter, validBlock);
         val value = nextTemporary(counter);
         appendValuePrefix(buffer);
         appendDecimal(buffer, value);
@@ -2184,7 +2238,7 @@ fn emitStatement(
                         appendConditionalBranch(
                             buffer, source, condition, thenBlock, endBlock);
                     }
-                    appendBlockLabel(buffer, thenBlock);
+                    appendBlockLabel(buffer, counter, thenBlock);
                     val thenTerminated = emitBlock(
                         buffer, source, nodes, genericArguments,
                         thenRoot, counter);
@@ -2193,7 +2247,7 @@ fn emitStatement(
                     }
                     var elseTerminated = false;
                     if (statement.aux == 1) {
-                        appendBlockLabel(buffer, elseBlock);
+                        appendBlockLabel(buffer, counter, elseBlock);
                         elseTerminated = emitBlock(
                             buffer, source, nodes, genericArguments,
                             elseRoot, counter);
@@ -2202,15 +2256,15 @@ fn emitStatement(
                         }
                     }
                     if (thenTerminated == false) {
-                        appendBlockLabel(buffer, endBlock);
+                        appendBlockLabel(buffer, counter, endBlock);
                         return false;
                     }
                     if (statement.aux == 0) {
-                        appendBlockLabel(buffer, endBlock);
+                        appendBlockLabel(buffer, counter, endBlock);
                         return false;
                     }
                     if (elseTerminated == false) {
-                        appendBlockLabel(buffer, endBlock);
+                        appendBlockLabel(buffer, counter, endBlock);
                         return false;
                     }
                     return true;
@@ -2223,20 +2277,20 @@ fn emitStatement(
                     val bodyBlock = nextBlock(counter);
                     val endBlock = nextBlock(counter);
                     appendBranch(buffer, conditionBlock);
-                    appendBlockLabel(buffer, conditionBlock);
+                    appendBlockLabel(buffer, counter, conditionBlock);
                     val condition = emitExpression(
                         buffer, source, nodes, genericArguments,
                         conditionRoot, counter);
                     appendConditionalBranch(
                         buffer, source, condition, bodyBlock, endBlock);
-                    appendBlockLabel(buffer, bodyBlock);
+                    appendBlockLabel(buffer, counter, bodyBlock);
                     val bodyTerminated = emitBlock(
                         buffer, source, nodes, genericArguments,
                         bodyRoot, counter);
                     if (bodyTerminated == false) {
                         appendBranch(buffer, conditionBlock);
                     }
-                    appendBlockLabel(buffer, endBlock);
+                    appendBlockLabel(buffer, counter, endBlock);
                     return false;
                 }
             }
@@ -2456,7 +2510,7 @@ fn emitFunction(
     appendEntry(buffer);
     appendNewline(buffer);
 
-    var counter = IrCounter(0, 0);
+    var counter = IrCounter(0, 0, 18446744073709551615);
     parameterIndex = 1;
     while (parameterIndex <= parameterCount) {
         val parameter = nodes.data[
