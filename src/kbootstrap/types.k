@@ -102,7 +102,7 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList
         while (index < leftCount) {
             val leftArg = genericArguments.data[leftStart as u64 + index as u64];
             val rightArg = genericArguments.data[rightStart as u64 + index as u64];
-            if (typeEquals(leftArg, rightArg, genericArguments) == false) {
+            if (!typeEquals(leftArg, rightArg, genericArguments)) {
                 return false;
             }
             index = index + 1;

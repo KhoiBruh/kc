@@ -65,13 +65,13 @@ fn parseType(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val first = parserPeek(parser);
     if (parserMatch(parser, 54)) {
-        if (parserExpect(parser, 55) == false) { return 0; }
+        if (!parserExpect(parser, 55)) { return 0; }
         val element = parseType(parser);
         return parserAdd(
             parser, 4, first.start, parser.nodes.data[element].end,
             subtreeStart, 0);
     }
-    if (isTypeStart(first.kind) == false) {
+    if (!isTypeStart(first.kind)) {
         parser.ok = false;
         return 0;
     }
@@ -83,11 +83,11 @@ fn parseType(var parser: Parser): u64 {
         while (typeArguments) {
             parseType(parser);
             typeArgumentCount = typeArgumentCount + 1;
-            if (parserMatch(parser, 56) == false) {
+            if (!parserMatch(parser, 56)) {
                 typeArguments = false;
             }
         }
-        if (parserExpect(parser, 67) == false) { return 0; }
+        if (!parserExpect(parser, 67)) { return 0; }
     }
     var end = parserPrevious(parser).end;
     var root = parserAdd(
@@ -99,11 +99,11 @@ fn parseType(var parser: Parser): u64 {
     }
     while (parserMatch(parser, 54)) {
         var hasSize: u32 = 0;
-        if (parserCheck(parser, 55) == false) {
+        if (!parserCheck(parser, 55)) {
             parseExpression(parser, 0);
             hasSize = 1;
         }
-        if (parserExpect(parser, 55) == false) { return 0; }
+        if (!parserExpect(parser, 55)) { return 0; }
         end = parserPrevious(parser).end;
         root = parserAdd(
             parser, 5, typeToken.start, end, subtreeStart, hasSize);
@@ -193,7 +193,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
             if (prefixPower != 0) {
                 parser.current = parser.current + 1;
                 val operand = parseExpression(parser, prefixPower);
-                if (parser.ok == false) { return 0; }
+                if (!parser.ok) { return 0; }
                 root = parserAdd(
                     parser, 12, first.start, parser.nodes.data[operand].end,
                     subtreeStart, first.kind);
@@ -202,13 +202,13 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     var hasSubject: u32 = 0;
                     if (parserMatch(parser, 50)) {
                         parseExpression(parser, 0);
-                        if (parserExpect(parser, 51) == false) { return 0; }
+                        if (!parserExpect(parser, 51)) { return 0; }
                         hasSubject = 1;
                     }
-                    if (parserExpect(parser, 52) == false) { return 0; }
+                    if (!parserExpect(parser, 52)) { return 0; }
                     var branchCount: u32 = 0;
                     var hasElse = false;
-                    while (parserCheck(parser, 53) == false) {
+                    while (!parserCheck(parser, 53)) {
                         val branchStart = parser.nodes.length;
                         var isElse: u32 = 0;
                         if (parserMatch(parser, 16)) {
@@ -219,11 +219,11 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             if (hasElse) { parser.ok = false; return 0; }
                             parseExpression(parser, 0);
                         }
-                        if (parserExpect(parser, 85) == false) { return 0; }
+                        if (!parserExpect(parser, 85)) { return 0; }
                         var statementCount: u32 = 0;
                         if (parserMatch(parser, 52)) {
                             var foundTail = false;
-                            while (foundTail == false) {
+                            while (!foundTail) {
                                 if (parserCheck(parser, 53)) {
                                     parser.ok = false;
                                     return 0;
@@ -256,35 +256,35 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                     }
                                 }
                             }
-                            if (parserExpect(parser, 53) == false) { return 0; }
+                            if (!parserExpect(parser, 53)) { return 0; }
                         } else {
                             parseExpression(parser, 0);
-                            if (parserExpect(parser, 58) == false) { return 0; }
+                            if (!parserExpect(parser, 58)) { return 0; }
                         }
                         parserAdd(
                             parser, 24, first.start, parserPrevious(parser).end,
                             branchStart, isElse + statementCount * 2);
                         branchCount = branchCount + 1;
                     }
-                    if (parserExpect(parser, 53) == false) { return 0; }
-                    if (hasElse == false) { parser.ok = false; return 0; }
+                    if (!parserExpect(parser, 53)) { return 0; }
+                    if (!hasElse) { parser.ok = false; return 0; }
                     root = parserAdd(
                         parser, 23, first.start, parserPrevious(parser).end,
                         subtreeStart, branchCount + hasSubject * 65536);
                 } else {
                 if (parserMatch(parser, 54)) {
                     var count: u32 = 0;
-                    if (parserCheck(parser, 55) == false) {
+                    if (!parserCheck(parser, 55)) {
                         var elements = true;
                         while (elements) {
                             parseExpression(parser, 0);
                             count = count + 1;
-                            if (parserMatch(parser, 56) == false) {
+                            if (!parserMatch(parser, 56)) {
                                 elements = false;
                             }
                         }
                     }
-                    if (parserExpect(parser, 55) == false) { return 0; }
+                    if (!parserExpect(parser, 55)) { return 0; }
                     root = parserAdd(
                         parser, 22, first.start, parserPrevious(parser).end,
                         subtreeStart, count);
@@ -296,13 +296,13 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             subtreeStart, 0);
                     } else {
                         root = parseExpression(parser, 0);
-                        if (parserExpect(parser, 51) == false) { return 0; }
+                        if (!parserExpect(parser, 51)) { return 0; }
                     }
                 } else {
                     if (parserMatch(parser, 28)) {
-                        if (parserExpect(parser, 50) == false) { return 0; }
+                        if (!parserExpect(parser, 50)) { return 0; }
                         parseType(parser);
-                        if (parserExpect(parser, 51) == false) { return 0; }
+                        if (!parserExpect(parser, 51)) { return 0; }
                         root = parserAdd(
                             parser, 21, first.start, parserPrevious(parser).end,
                             subtreeStart, 0);
@@ -328,24 +328,24 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 while (typeArguments) {
                     parseType(parser);
                     typeArgumentCount = typeArgumentCount + 1;
-                    if (parserMatch(parser, 56) == false) {
+                    if (!parserMatch(parser, 56)) {
                         typeArguments = false;
                     }
                 }
-                if (parserExpect(parser, 67) == false) { return 0; }
-                if (parserExpect(parser, 50) == false) { return 0; }
+                if (!parserExpect(parser, 67)) { return 0; }
+                if (!parserExpect(parser, 50)) { return 0; }
                 var argumentCount: u32 = 0;
-                if (parserCheck(parser, 51) == false) {
+                if (!parserCheck(parser, 51)) {
                     var arguments = true;
                     while (arguments) {
                         parseExpression(parser, 0);
                         argumentCount = argumentCount + 1;
-                        if (parserMatch(parser, 56) == false) {
+                        if (!parserMatch(parser, 56)) {
                             arguments = false;
                         }
                     }
                 }
-                if (parserExpect(parser, 51) == false) { return 0; }
+                if (!parserExpect(parser, 51)) { return 0; }
                 root = parserAdd(
                     parser, 16, first.start, parserPrevious(parser).end,
                     subtreeStart,
@@ -358,7 +358,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     parser.current = parser.current + 1;
                     val right = parseExpression(
                         parser, rightBindingPower(token.kind));
-                    if (parser.ok == false) { return 0; }
+                    if (!parser.ok) { return 0; }
                     root = parserAdd(
                         parser, 13, first.start,
                         parser.nodes.data[right].end,
@@ -369,15 +369,15 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
         if (token.kind == 50) {
             parser.current = parser.current + 1;
             var argumentCount: u32 = 0;
-            if (parserCheck(parser, 51) == false) {
+            if (!parserCheck(parser, 51)) {
                 var arguments = true;
                 while (arguments) {
                     parseExpression(parser, 0);
                     argumentCount = argumentCount + 1;
-                    if (parserMatch(parser, 56) == false) { arguments = false; }
+                    if (!parserMatch(parser, 56)) { arguments = false; }
                 }
             }
-            if (parserExpect(parser, 51) == false) { return 0; }
+            if (!parserExpect(parser, 51)) { return 0; }
             root = parserAdd(
                 parser, 16, first.start, parserPrevious(parser).end,
                 subtreeStart, argumentCount);
@@ -385,14 +385,14 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
             if (token.kind == 59) {
                 parser.current = parser.current + 1;
                 val name = parserPeek(parser);
-                if (parserExpect(parser, 1) == false) { return 0; }
+                if (!parserExpect(parser, 1)) { return 0; }
                 root = parserAdd(
                     parser, 17, name.start, name.end, subtreeStart, 0);
             } else {
                 if (token.kind == 54) {
                     parser.current = parser.current + 1;
                     parseExpression(parser, 0);
-                    if (parserExpect(parser, 55) == false) { return 0; }
+                    if (!parserExpect(parser, 55)) { return 0; }
                     root = parserAdd(
                         parser, 18, first.start, parserPrevious(parser).end,
                         subtreeStart, 0);
@@ -434,14 +434,14 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                                 assignable = true;
                                             }
                                         }
-                                        if (assignable == false) {
+                                        if (!assignable) {
                                             parser.ok = false;
                                             return 0;
                                         }
                                     }
                                     val right = parseExpression(
                                         parser, rightBindingPower(token.kind));
-                                    if (parser.ok == false) { return 0; }
+                                    if (!parser.ok) { return 0; }
                                     var nodeKind: u32 = 13;
                                     if (isAssignmentKind(token.kind)) {
                                         nodeKind = 14;
@@ -488,7 +488,7 @@ fn parserGenericCallAhead(parser: Parser): bool {
 fn parseBlock(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
-    if (parserExpect(parser, 52) == false) { return 0; }
+    if (!parserExpect(parser, 52)) { return 0; }
     var count: u32 = 0;
     while (parser.ok) {
         if (parserCheck(parser, 53)) {
@@ -519,10 +519,10 @@ fn parseStatement(var parser: Parser): u64 {
         var hasSubject: u32 = 0;
         if (parserMatch(parser, 50)) {
             parseExpression(parser, 0);
-            if (parserExpect(parser, 51) == false) { return 0; }
+            if (!parserExpect(parser, 51)) { return 0; }
             hasSubject = 1;
         }
-        if (parserExpect(parser, 52) == false) { return 0; }
+        if (!parserExpect(parser, 52)) { return 0; }
         var branchCount: u32 = 0;
         var hasElse = false;
         while (parser.ok) {
@@ -542,7 +542,7 @@ fn parseStatement(var parser: Parser): u64 {
                 if (hasElse) { parser.ok = false; return 0; }
                 parseExpression(parser, 0);
             }
-            if (parserExpect(parser, 85) == false) { return 0; }
+            if (!parserExpect(parser, 85)) { return 0; }
             parseControlBody(parser);
             parserAdd(
                 parser, 40, first.start, parserPrevious(parser).end,
@@ -552,9 +552,9 @@ fn parseStatement(var parser: Parser): u64 {
         return 0;
     }
     if (parserMatch(parser, 15)) {
-        if (parserExpect(parser, 50) == false) { return 0; }
+        if (!parserExpect(parser, 50)) { return 0; }
         parseExpression(parser, 0);
-        if (parserExpect(parser, 51) == false) { return 0; }
+        if (!parserExpect(parser, 51)) { return 0; }
         parseControlBody(parser);
         var end = parserPrevious(parser).end;
         var hasElse: u32 = 0;
@@ -566,9 +566,9 @@ fn parseStatement(var parser: Parser): u64 {
         return parserAdd(parser, 31, first.start, end, subtreeStart, hasElse);
     }
     if (parserMatch(parser, 19)) {
-        if (parserExpect(parser, 50) == false) { return 0; }
+        if (!parserExpect(parser, 50)) { return 0; }
         parseExpression(parser, 0);
-        if (parserExpect(parser, 51) == false) { return 0; }
+        if (!parserExpect(parser, 51)) { return 0; }
         parseControlBody(parser);
         val end = parserPrevious(parser).end;
         return parserAdd(
@@ -576,35 +576,35 @@ fn parseStatement(var parser: Parser): u64 {
             subtreeStart, 0);
     }
     if (parserMatch(parser, 89)) {
-        if (parserExpect(parser, 58) == false) { return 0; }
+        if (!parserExpect(parser, 58)) { return 0; }
         return parserAdd(
             parser, 36, first.start, parserPrevious(parser).end,
             subtreeStart, 0);
     }
     if (parserMatch(parser, 17)) {
-        if (parserExpect(parser, 50) == false) { return 0; }
-        if (parserExpect(parser, 1) == false) { return 0; }
+        if (!parserExpect(parser, 50)) { return 0; }
+        if (!parserExpect(parser, 1)) { return 0; }
         val name = parserPrevious(parser);
         parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
         var hasIndex: u32 = 0;
         if (parserMatch(parser, 56)) {
-            if (parserExpect(parser, 1) == false) { return 0; }
+            if (!parserExpect(parser, 1)) { return 0; }
             val indexName = parserPrevious(parser);
             parserAdd(
                 parser, 45, indexName.start, indexName.end,
                 parser.nodes.length, 0);
             hasIndex = 1;
         }
-        if (parserExpect(parser, 18) == false) { return 0; }
+        if (!parserExpect(parser, 18)) { return 0; }
         parseExpression(parser, 0);
-        if (parserExpect(parser, 51) == false) { return 0; }
+        if (!parserExpect(parser, 51)) { return 0; }
         parseControlBody(parser);
         return parserAdd(
             parser, 38, first.start, parserPrevious(parser).end,
             subtreeStart, hasIndex);
     }
     if (parserMatch(parser, 90)) {
-        if (parserExpect(parser, 58) == false) { return 0; }
+        if (!parserExpect(parser, 58)) { return 0; }
         return parserAdd(
             parser, 37, first.start, parserPrevious(parser).end,
             subtreeStart, 0);
@@ -613,33 +613,33 @@ fn parseStatement(var parser: Parser): u64 {
     if (first.kind == 7) { isVariable = true; }
     if (isVariable) {
         parser.current = parser.current + 1;
-        if (parserExpect(parser, 1) == false) { return 0; }
+        if (!parserExpect(parser, 1)) { return 0; }
         val variableName = parserPrevious(parser);
         parserAdd(
             parser, 45, variableName.start, variableName.end,
             parser.nodes.length, 0);
         if (parserMatch(parser, 57)) { parseType(parser); }
-        if (parserExpect(parser, 65) == false) { return 0; }
+        if (!parserExpect(parser, 65)) { return 0; }
         parseExpression(parser, 0);
-        if (parserExpect(parser, 58) == false) { return 0; }
+        if (!parserExpect(parser, 58)) { return 0; }
         return parserAdd(
             parser, 33, first.start, parserPrevious(parser).end,
             subtreeStart, first.kind);
     }
     if (parserMatch(parser, 20)) {
         var hasValue: u32 = 0;
-        if (parserCheck(parser, 58) == false) {
+        if (!parserCheck(parser, 58)) {
             parseExpression(parser, 0);
             hasValue = 1;
         }
-        if (parserExpect(parser, 58) == false) { return 0; }
+        if (!parserExpect(parser, 58)) { return 0; }
         return parserAdd(
             parser, 34, first.start, parserPrevious(parser).end,
             subtreeStart, hasValue);
     }
     if (parserCheck(parser, 52)) { return parseBlock(parser); }
     parseExpression(parser, 0);
-    if (parserExpect(parser, 58) == false) { return 0; }
+    if (!parserExpect(parser, 58)) { return 0; }
     return parserAdd(
         parser, 35, first.start, parserPrevious(parser).end,
         subtreeStart, 0);
@@ -647,8 +647,8 @@ fn parseStatement(var parser: Parser): u64 {
 
 fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
     val subtreeStart = parser.nodes.length;
-    if (parserExpect(parser, 10) == false) { return 0; }
-    if (parserExpect(parser, 1) == false) { return 0; }
+    if (!parserExpect(parser, 10)) { return 0; }
+    if (!parserExpect(parser, 1)) { return 0; }
     val functionName = parserPrevious(parser);
     parserAdd(
         parser, 45, functionName.start, functionName.end,
@@ -659,14 +659,14 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
         while (typeParameters) {
             val parameterSubtree = parser.nodes.length;
             val parameterStart = parserPeek(parser).start;
-            if (parserExpect(parser, 1) == false) { return 0; }
+            if (!parserExpect(parser, 1)) { return 0; }
             val parameterName = parserPrevious(parser);
             parserAdd(
                 parser, 45, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var hasConstraint: u32 = 0;
             if (parserMatch(parser, 57)) {
-                if (parserExpect(parser, 1) == false) { return 0; }
+                if (!parserExpect(parser, 1)) { return 0; }
                 val constraint = parserPrevious(parser);
                 parserAdd(
                     parser, 45, constraint.start, constraint.end,
@@ -677,15 +677,15 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
                 parser, 46, parameterStart, parserPrevious(parser).end,
                 parameterSubtree, hasConstraint);
             typeParameterCount = typeParameterCount + 1;
-            if (parserMatch(parser, 56) == false) {
+            if (!parserMatch(parser, 56)) {
                 typeParameters = false;
             }
         }
-        if (parserExpect(parser, 67) == false) { return 0; }
+        if (!parserExpect(parser, 67)) { return 0; }
     }
-    if (parserExpect(parser, 50) == false) { return 0; }
+    if (!parserExpect(parser, 50)) { return 0; }
     var parameterCount: u32 = 0;
-    if (parserCheck(parser, 51) == false) {
+    if (!parserCheck(parser, 51)) {
         var parameters = true;
         while (parameters) {
             val parameterSubtree = parser.nodes.length;
@@ -695,21 +695,21 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
             else {
                 if (parserMatch(parser, 7)) { mode = 2; }
             }
-            if (parserExpect(parser, 1) == false) { return 0; }
+            if (!parserExpect(parser, 1)) { return 0; }
             val parameterName = parserPrevious(parser);
             parserAdd(
                 parser, 45, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
-            if (parserExpect(parser, 57) == false) { return 0; }
+            if (!parserExpect(parser, 57)) { return 0; }
             val typeNode = parseType(parser);
             parserAdd(
                 parser, 40, parameterStart, parser.nodes.data[typeNode].end,
                 parameterSubtree, mode);
             parameterCount = parameterCount + 1;
-            if (parserMatch(parser, 56) == false) { parameters = false; }
+            if (!parserMatch(parser, 56)) { parameters = false; }
         }
     }
-    if (parserExpect(parser, 51) == false) { return 0; }
+    if (!parserExpect(parser, 51)) { return 0; }
     if (parserMatch(parser, 57)) {
         parseType(parser);
     } else {
@@ -719,7 +719,7 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
     }
     var end: u64 = 0;
     if (isExtern) {
-        if (parserExpect(parser, 58) == false) { return 0; }
+        if (!parserExpect(parser, 58)) { return 0; }
         end = parserPrevious(parser).end;
     } else {
         parseBlock(parser);
@@ -735,7 +735,7 @@ fn parseStruct(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
     parser.current = parser.current + 1;
-    if (parserExpect(parser, 1) == false) { return 0; }
+    if (!parserExpect(parser, 1)) { return 0; }
     val structName = parserPrevious(parser);
     parserAdd(
         parser, 45, structName.start, structName.end,
@@ -746,14 +746,14 @@ fn parseStruct(var parser: Parser): u64 {
         while (typeParameters) {
             val parameterSubtree = parser.nodes.length;
             val parameterStart = parserPeek(parser).start;
-            if (parserExpect(parser, 1) == false) { return 0; }
+            if (!parserExpect(parser, 1)) { return 0; }
             val parameterName = parserPrevious(parser);
             parserAdd(
                 parser, 45, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var hasConstraint: u32 = 0;
             if (parserMatch(parser, 57)) {
-                if (parserExpect(parser, 1) == false) { return 0; }
+                if (!parserExpect(parser, 1)) { return 0; }
                 val constraint = parserPrevious(parser);
                 parserAdd(
                     parser, 45, constraint.start, constraint.end,
@@ -764,36 +764,36 @@ fn parseStruct(var parser: Parser): u64 {
                 parser, 46, parameterStart, parserPrevious(parser).end,
                 parameterSubtree, hasConstraint);
             typeParameterCount = typeParameterCount + 1;
-            if (parserMatch(parser, 56) == false) {
+            if (!parserMatch(parser, 56)) {
                 typeParameters = false;
             }
         }
-        if (parserExpect(parser, 67) == false) { return 0; }
+        if (!parserExpect(parser, 67)) { return 0; }
     }
-    if (parserExpect(parser, 50) == false) { return 0; }
+    if (!parserExpect(parser, 50)) { return 0; }
     var fieldCount: u32 = 0;
-    if (parserCheck(parser, 51) == false) {
+    if (!parserCheck(parser, 51)) {
         var fields = true;
         while (fields) {
             val fieldSubtree = parser.nodes.length;
             val fieldStart = parserPeek(parser).start;
-            if (parserExpect(parser, 1) == false) { return 0; }
+            if (!parserExpect(parser, 1)) { return 0; }
             val fieldName = parserPrevious(parser);
             parserAdd(
                 parser, 45, fieldName.start, fieldName.end,
                 parser.nodes.length, 0);
-            if (parserExpect(parser, 57) == false) { return 0; }
+            if (!parserExpect(parser, 57)) { return 0; }
             val typeNode = parseType(parser);
             parserAdd(
                 parser, 42, fieldStart, parser.nodes.data[typeNode].end,
                 fieldSubtree, 0);
             fieldCount = fieldCount + 1;
-            if (parserMatch(parser, 56) == false) { fields = false; }
+            if (!parserMatch(parser, 56)) { fields = false; }
         }
     }
-    if (parserExpect(parser, 51) == false) { return 0; }
+    if (!parserExpect(parser, 51)) { return 0; }
     if (parserMatch(parser, 52)) {
-        if (parserExpect(parser, 53) == false) { return 0; }
+        if (!parserExpect(parser, 53)) { return 0; }
     }
     return parserAdd(
         parser, 43, start, parserPrevious(parser).end,
@@ -804,21 +804,21 @@ fn parseModule(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
     parser.current = parser.current + 1;
-    if (parserExpect(parser, 1) == false) { return 0; }
+    if (!parserExpect(parser, 1)) { return 0; }
     val firstName = parserPrevious(parser);
     parserAdd(
         parser, 45, firstName.start, firstName.end,
         parser.nodes.length, 0);
     var partCount: u32 = 1;
     while (parserMatch(parser, 59)) {
-        if (parserExpect(parser, 1) == false) { return 0; }
+        if (!parserExpect(parser, 1)) { return 0; }
         val name = parserPrevious(parser);
         parserAdd(
             parser, 45, name.start, name.end,
             parser.nodes.length, 0);
         partCount = partCount + 1;
     }
-    if (parserExpect(parser, 58) == false) { return 0; }
+    if (!parserExpect(parser, 58)) { return 0; }
     return parserAdd(
         parser, 47, start, parserPrevious(parser).end,
         subtreeStart, partCount);
@@ -828,7 +828,7 @@ fn parseImport(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
     parser.current = parser.current + 1;
-    if (parserExpect(parser, 1) == false) { return 0; }
+    if (!parserExpect(parser, 1)) { return 0; }
     val firstName = parserPrevious(parser);
     parserAdd(
         parser, 45, firstName.start, firstName.end,
@@ -837,7 +837,7 @@ fn parseImport(var parser: Parser): u64 {
     var isWildcard: u32 = 0;
     var importing = true;
     while (importing) {
-        if (parserMatch(parser, 59) == false) {
+        if (!parserMatch(parser, 59)) {
             importing = false;
         } else {
             if (parserMatch(parser, 62)) {
@@ -845,7 +845,7 @@ fn parseImport(var parser: Parser): u64 {
                 partCount = partCount + 1;
                 importing = false;
             } else {
-                if (parserExpect(parser, 1) == false) { return 0; }
+                if (!parserExpect(parser, 1)) { return 0; }
                 val name = parserPrevious(parser);
                 parserAdd(
                     parser, 45, name.start, name.end,
@@ -854,7 +854,7 @@ fn parseImport(var parser: Parser): u64 {
             }
         }
     }
-    if (parserExpect(parser, 58) == false) { return 0; }
+    if (!parserExpect(parser, 58)) { return 0; }
     return parserAdd(
         parser, 48, start, parserPrevious(parser).end,
         subtreeStart, partCount + isWildcard * 65536);

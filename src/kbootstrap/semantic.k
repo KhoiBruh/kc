@@ -58,7 +58,7 @@ fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
                 if (digit > 5) { overflow = true; }
             }
         }
-        if (overflow == false) { magnitude = magnitude * 10 + digit; }
+        if (!overflow) { magnitude = magnitude * 10 + digit; }
         offset = offset + 1;
     }
     return IntegerConstant(true, negative, overflow, magnitude);
@@ -94,7 +94,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
         } else {
             if (byte == 46) { sawDecimal = true; }
             else {
-                if (sawDecimal == false) { decimalDigits = decimalDigits + 1; }
+                if (!sawDecimal) { decimalDigits = decimalDigits + 1; }
             }
             offset = offset + 1;
         }
@@ -138,7 +138,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
                         if (digit > 5) { overflow = true; }
                     }
                 }
-                if (overflow == false) { magnitude = magnitude * 10 + digit; }
+                if (!overflow) { magnitude = magnitude * 10 + digit; }
             }
             digitIndex = digitIndex + 1;
         }
@@ -146,7 +146,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
     }
     while (digitIndex < integerDigits) {
         if (magnitude > 1844674407370955161) { overflow = true; }
-        if (overflow == false) { magnitude = magnitude * 10; }
+        if (!overflow) { magnitude = magnitude * 10; }
         digitIndex = digitIndex + 1;
     }
     return IntegerConstant(true, negative, overflow, magnitude);
@@ -156,7 +156,7 @@ fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
     if (value.overflow) { return false; }
     if (value.negative) {
         if (value.magnitude == 0) { return true; }
-        if (integerTypeIsSigned(target) == false) { return false; }
+        if (!integerTypeIsSigned(target)) { return false; }
         if (target.kind == 4) {
             return value.magnitude <= 9223372036854775808;
         }
@@ -558,7 +558,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         var size: u64 = 0;
         if (node.aux == 1) {
             val constant = integerConstant(semantic, childRoot);
-            if (constant.ok == false) {
+            if (!constant.ok) {
                 semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
                 return invalidType();
             }
@@ -608,7 +608,7 @@ fn expressionType(var semantic: Semantic, root: u64): TypeValue {
 }
 
 fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
-    if (semantic.result.ok == false) { return invalidType(); }
+    if (!semantic.result.ok) { return invalidType(); }
     val node = semantic.nodes.data[root];
     if (node.kind == 10) {
         val name = nodeHash(semantic, node);
@@ -653,6 +653,13 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             return TypeValue(9, operand.name, operand.kind);
         }
+        if (node.aux == 73) {
+            if (operand.kind != 2) {
+                semanticFail(semantic, 4, node);
+                return invalidType();
+            }
+            return TypeValue(2, 0, 0);
+        }
         return operand;
     }
     if (node.kind == 13) {
@@ -677,8 +684,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         if (comparison) {
-            if (typeAccepts(left, right, semantic.genericArguments) == false) {
-                if (typeAccepts(right, left, semantic.genericArguments) == false) {
+            if (!typeAccepts(left, right, semantic.genericArguments)) {
+                if (!typeAccepts(right, left, semantic.genericArguments)) {
                     semanticFail(semantic, 4, node);
                 }
             }
@@ -700,14 +707,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 semanticFail(semantic, 2, target);
                 return invalidType();
             }
-            if (semantic.locals.data[local].mutable == false) {
+            if (!semantic.locals.data[local].mutable) {
                 semanticFail(semantic, 7, target);
                 return invalidType();
             }
         }
         val left = expressionType(semantic, leftRoot);
         val right = expressionType(semantic, rightRoot);
-        if (typeAccepts(left, right, semantic.genericArguments) == false) {
+        if (!typeAccepts(left, right, semantic.genericArguments)) {
             semanticFail(semantic, 4, node);
         }
         return left;
@@ -734,7 +741,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (integerCast) {
             val constant = integerConstant(semantic, valueRoot);
             if (constant.ok) {
-                if (integerConstantFits(constant, target) == false) {
+                if (!integerConstantFits(constant, target)) {
                     semanticFail(semantic, 4, node);
                 }
             }
@@ -760,7 +767,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 floatCast = true;
                 val constant = floatConstant(semantic, valueRoot);
                 if (constant.ok) {
-                    if (integerConstantFits(constant, target) == false) {
+                    if (!integerConstantFits(constant, target)) {
                         semanticFail(semantic, 4, node);
                     }
                 }
@@ -773,7 +780,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
                 semantic.nodes.data[root] = castNode;
             } else {
-                if (pointerCast == false) { semanticFail(semantic, 4, node); }
+                if (!pointerCast) { semanticFail(semantic, 4, node); }
             }
         }
         return target;
@@ -885,9 +892,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         if (typeArguments[position as u64].kind == 0) {
                             typeArguments[position as u64] = inferredActual;
                         } else {
-                            if (typeEquals(
+                            if (
+                                !typeEquals(
                                     typeArguments[position as u64],
-                                    inferredActual, semantic.genericArguments) == false) {
+                                    inferredActual, semantic.genericArguments
+                                )
+                            ) {
                                 semanticFail(
                                     semantic, 4,
                                     semantic.nodes.data[
@@ -908,7 +918,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     semantic, structureRoot, pattern,
                     TypeValueList(typeArguments, typeCount as u64, typeCount as u64),
                     0, typeCount);
-                if (typeAccepts(expected, actual, semantic.genericArguments) == false) {
+                if (!typeAccepts(expected, actual, semantic.genericArguments)) {
                     semanticFail(
                         semantic, 4,
                         semantic.nodes.data[
@@ -928,11 +938,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                             semantic,
                             semantic.nodes.data[parameterRoot - 1]));
                 }
-                if (constraintAcceptsType(
+
+                if (
+                    !constraintAcceptsType(
                         constraint,
-                        typeArguments[explicit as u64]) == false) {
-                    semanticFail(semantic, 4, callee);
-                }
+                        typeArguments[explicit as u64]
+                    )
+                ) semanticFail(semantic, 4, callee);
+
                 explicit = explicit + 1;
             }
             var start: u32 = 0;
@@ -1012,9 +1025,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     if (typeArguments[position as u64].kind == 0) {
                         typeArguments[position as u64] = inferredActual;
                     } else {
-                        if (typeEquals(
+                        if (
+                            !typeEquals(
                                 typeArguments[position as u64],
-                                inferredActual, semantic.genericArguments) == false) {
+                                inferredActual, semantic.genericArguments
+                            )
+                        ) {
                             semanticFail(
                                 semantic, 4,
                                 semantic.nodes.data[
@@ -1026,7 +1042,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val expected = substituteGenericType(
                 semantic, functionRoot, pattern,
                 typeArguments, typeCount);
-            if (typeAccepts(expected, actual, semantic.genericArguments) == false) {
+            if (!typeAccepts(expected, actual, semantic.genericArguments)) {
                 semanticFail(
                     semantic, 4,
                     semantic.nodes.data[
@@ -1046,11 +1062,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         semantic,
                         semantic.nodes.data[parameterRoot - 1]));
             }
-            if (constraintAcceptsType(
+
+            if (
+                !constraintAcceptsType(
                     constraint,
-                    typeArguments[explicit as u64]) == false) {
-                semanticFail(semantic, 4, callee);
-            }
+                    typeArguments[explicit as u64]
+                )
+            ) semanticFail(semantic, 4, callee);
+
             explicit = explicit + 1;
         }
         val savedFunction = semantic.currentFunction;
@@ -1190,7 +1209,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val conditionRoot = beforeValue;
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
-                    if (typeAccepts(subject, condition, semantic.genericArguments) == false) {
+                    if (!typeAccepts(subject, condition, semantic.genericArguments)) {
                         semanticFail(semantic, 4, semantic.nodes.data[conditionRoot]);
                     } else {
                         var conditionNode = semantic.nodes.data[conditionRoot];
@@ -1222,7 +1241,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             if (result.kind == 0) {
                 result = value;
             } else {
-                if (typeAccepts(result, value, semantic.genericArguments) == false) {
+                if (!typeAccepts(result, value, semantic.genericArguments)) {
                     semanticFail(semantic, 4, semantic.nodes.data[valueRoot]);
                 } else {
                     var valueNode = semantic.nodes.data[valueRoot];
@@ -1250,7 +1269,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         var remaining = node.aux;
         while (remaining > 0) {
             val actual = expressionType(semantic, childRoot);
-            if (typeAccepts(element, actual, semantic.genericArguments) == false) {
+            if (!typeAccepts(element, actual, semantic.genericArguments)) {
                 semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
                 return invalidType();
             }
@@ -1325,7 +1344,7 @@ fn resolveWhenResultType(
 }
 
 fn checkStatement(var semantic: Semantic, root: u64) {
-    if (semantic.result.ok == false) { return; }
+    if (!semantic.result.ok) { return; }
     val node = semantic.nodes.data[root];
     if (node.kind == 30) {
         checkBlock(semantic, root);
@@ -1381,7 +1400,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         } else {
             var collection = valueType.kind == 13;
             if (valueType.kind == 19) { collection = true; }
-            if (collection == false) {
+            if (!collection) {
                 semanticFail(semantic, 4, collectionNode);
                 return;
             }
@@ -1407,7 +1426,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             semantic.nodes.data[leftRoot] = leftNode;
         }
         if (range) {
-            if (isIntegerType(valueType) == false) {
+            if (!isIntegerType(valueType)) {
                 semanticFail(semantic, 4, collectionNode);
                 return;
             }
@@ -1462,7 +1481,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
             var comparable = subject.kind == 2;
             if (isIntegerType(subject)) { comparable = true; }
-            if (comparable == false) {
+            if (!comparable) {
                 semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
             }
         }
@@ -1475,9 +1494,12 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                     semantic.nodes.data[bodyRoot].subtreeStart - 1;
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
-                    if (typeAccepts(
+                    if (
+                        !typeAccepts(
                             subject, condition,
-                            semantic.genericArguments) == false) {
+                            semantic.genericArguments
+                        )
+                    ) {
                         semanticFail(
                             semantic, 4,
                             semantic.nodes.data[conditionRoot]);
@@ -1538,7 +1560,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             valueType = typeFromNode(
                 semantic,
                 semantic.nodes.data[initializerRoot].subtreeStart - 1);
-            if (typeAccepts(valueType, initializer, semantic.genericArguments) == false) {
+            if (!typeAccepts(valueType, initializer, semantic.genericArguments)) {
                 semanticFail(
                     semantic, 4, semantic.nodes.data[initializerRoot]);
             }
@@ -1566,7 +1588,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (node.aux == 1) {
             actual = expressionType(semantic, root - 1);
         }
-        if (typeAccepts(semantic.returnType, actual, semantic.genericArguments) == false) {
+        if (!typeAccepts(semantic.returnType, actual, semantic.genericArguments)) {
             if (node.aux == 1) {
                 semanticFail(
                     semantic, 5, semantic.nodes.data[root - 1]);

@@ -85,18 +85,19 @@ fn mainPathError(kind: u32) {
 }
 
 fn hasKExtension(argument: Argument): bool {
-    if (argument.length < 2) { return false; }
-    if (argument.data[argument.length - 2] != 46) { return false; }
+    if (argument.length < 2) return false;
+    if (argument.data[argument.length - 2] != 46) return false;
     return argument.data[argument.length - 1] == 107;
 }
 
 fn freeArgument(argument: Argument) {
-    if (argument.ok) { k_boot_free(argument.data as unit*); }
+    if (argument.ok) k_boot_free(argument.data as unit*);
 }
 
 fn freeArguments(
     input: Argument, llOutput: Argument, opt: Argument, clang: Argument,
-    stdRuntime: Argument, bootstrapRuntime: Argument, executable: Argument) {
+    stdRuntime: Argument, bootstrapRuntime: Argument, executable: Argument
+) {
     freeArgument(executable); freeArgument(bootstrapRuntime);
     freeArgument(stdRuntime); freeArgument(clang); freeArgument(opt);
     freeArgument(llOutput); freeArgument(input);
@@ -115,7 +116,10 @@ fn readArgument(index: i32): Argument {
 }
 
 fn main(): i32 {
-    if (k_boot_arg_count() != 8) { mainError(1); return 1; }
+    if (k_boot_arg_count() != 8) {
+        mainError(1); 
+        return 1;
+    }
     val input = readArgument(1);
     val llOutput = readArgument(2);
     val opt = readArgument(3);
@@ -123,34 +127,35 @@ fn main(): i32 {
     val stdRuntime = readArgument(5);
     val bootstrapRuntime = readArgument(6);
     val executable = readArgument(7);
+
     var argumentsOk = true;
-    if (input.ok == false) { argumentsOk = false; }
-    if (llOutput.ok == false) { argumentsOk = false; }
-    if (opt.ok == false) { argumentsOk = false; }
-    if (clang.ok == false) { argumentsOk = false; }
-    if (stdRuntime.ok == false) { argumentsOk = false; }
-    if (bootstrapRuntime.ok == false) { argumentsOk = false; }
-    if (executable.ok == false) { argumentsOk = false; }
-    if (argumentsOk == false) {
+    if (!input.ok) argumentsOk = false;
+    if (!llOutput.ok) argumentsOk = false;
+    if (!opt.ok) argumentsOk = false;
+    if (!clang.ok) argumentsOk = false;
+    if (!stdRuntime.ok) argumentsOk = false;
+    if (!bootstrapRuntime.ok) argumentsOk = false;
+    if (!executable.ok) argumentsOk = false;
+
+    if (!argumentsOk) {
         mainError(1);
-        freeArguments(
-            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+        freeArguments(input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
         return 1;
     }
-    if (hasKExtension(input) == false) {
+    if (!hasKExtension(input)) {
         mainPathError(1);
-        freeArguments(
-            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+        freeArguments(input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
         return 1;
     }
     var pathsOk = true;
-    if (llOutput.length == 0) { pathsOk = false; }
-    if (opt.length == 0) { pathsOk = false; }
-    if (clang.length == 0) { pathsOk = false; }
-    if (stdRuntime.length == 0) { pathsOk = false; }
-    if (bootstrapRuntime.length == 0) { pathsOk = false; }
-    if (executable.length == 0) { pathsOk = false; }
-    if (pathsOk == false) {
+    if (llOutput.length == 0) pathsOk = false;
+    if (opt.length == 0) pathsOk = false;
+    if (clang.length == 0) pathsOk = false;
+    if (stdRuntime.length == 0) pathsOk = false;
+    if (bootstrapRuntime.length == 0) pathsOk = false;
+    if (executable.length == 0) pathsOk = false;
+
+    if (!pathsOk) {
         mainPathError(2);
         freeArguments(
             input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
@@ -158,9 +163,9 @@ fn main(): i32 {
     }
 
     val loaded = loadModules(input.data, input.length);
-    if (loaded.ok == false) {
+    if (!loaded.ok) {
         sourceMapFree(loaded.sourceMap);
-        if (loaded.failureKind == 1) { mainError(2); }
+        if (loaded.failureKind == 1) mainError(2);
         freeArguments(
             input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
         return loaded.failureKind;
@@ -169,7 +174,8 @@ fn main(): i32 {
     var result = compileToLl(
         loaded.source.data, loaded.source.length, loaded.sourceMap,
         llOutput.data, llOutput.length,
-        opt.data, opt.length);
+        opt.data, opt.length
+    );
     if (result == 0) {
         result = linkLl(
             llOutput.data, llOutput.length, clang.data, clang.length,
@@ -177,6 +183,7 @@ fn main(): i32 {
             bootstrapRuntime.data, bootstrapRuntime.length,
             executable.data, executable.length);
     }
+
     k_boot_free(loaded.source.data as unit*);
     sourceMapFree(loaded.sourceMap);
     freeArguments(

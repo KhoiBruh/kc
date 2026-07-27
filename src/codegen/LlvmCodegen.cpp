@@ -1268,6 +1268,7 @@ private:
                 return isFloat(semanticType)
                     ? builder_.CreateFNeg(operand) : builder_.CreateNeg(operand);
             if (unary->op == TokenKind::Plus) return operand;
+            if (unary->op == TokenKind::Bang) return builder_.CreateNot(operand);
         }
         diagnose("expression is not supported by the LLVM backend yet", expression.span);
         return nullptr;

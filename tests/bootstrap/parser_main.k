@@ -36,7 +36,7 @@ fn main(): i32 {
     }
 
     val lexed = lex(Source(sourceData, sourceLength));
-    if (lexed.ok == false) {
+    if (!lexed.ok) {
         print("error:");
         print(lexed.errorStart as i32);
         tokenListFree(lexed.tokens);
@@ -45,7 +45,7 @@ fn main(): i32 {
         return 2;
     }
     val parsed = parse(lexed.tokens);
-    if (parsed.ok == false) {
+    if (!parsed.ok) {
         print("error:");
         print(parsed.errorStart as i32);
         astListFree(parsed.nodes);

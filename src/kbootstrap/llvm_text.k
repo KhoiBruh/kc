@@ -1508,6 +1508,22 @@ fn emitExpression(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
         }
+        if (node.aux == 73) {
+            val temporary = nextTemporary(counter);
+            appendValuePrefix(buffer);
+            appendDecimal(buffer, temporary);
+            appendEquals(buffer);
+            byteBufferAppend(buffer, 120); byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 32);
+            appendNodeType(buffer, genericArguments, node);
+            byteBufferAppend(buffer, 32);
+            appendIrValue(buffer, source, operand);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 101);
+            appendNewline(buffer);
+            return IrValue(
+                2, 0, 0, temporary,
+                node.typeKind, node.typeName, node.typePointee);
+        }
         return operand;
     }
     if (node.kind == 10) {
@@ -1817,7 +1833,7 @@ fn emitExpression(
         if (objectNode.kind == 12) {
             if (objectNode.aux == 62) { addressable = true; }
         }
-        if (addressable == false) {
+        if (!addressable) {
             val object = emitExpression(
                 buffer, source, nodes, genericArguments,
                 objectRoot, counter);
@@ -2238,7 +2254,7 @@ fn emitBlock(
     var index: u32 = 0;
     var terminated = false;
     while (index < nodes.data[root].aux) {
-        if (terminated == false) {
+        if (!terminated) {
             terminated = emitStatement(
                 buffer, source, nodes, genericArguments,
                 roots[index as u64], counter);
@@ -2354,7 +2370,7 @@ fn emitCollectionFor(
     val terminated = emitBlock(
         buffer, source, nodes, genericArguments, bodyRoot, counter);
     counter.continueBlock = outerContinueBlock; counter.breakBlock = outerBreakBlock;
-    if (terminated == false) { appendBranch(buffer, incrementBlock); }
+    if (!terminated) { appendBranch(buffer, incrementBlock); }
     appendBlockLabel(buffer, counter, incrementBlock);
     val loaded = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
@@ -2431,8 +2447,8 @@ fn emitWhen(
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
                 buffer, source, nodes, genericArguments, bodyRoot, counter);
-            if (terminated == false) { appendBranch(buffer, mergeBlock); }
-            if (terminated == false) { allTerminate = false; }
+            if (!terminated) { appendBranch(buffer, mergeBlock); }
+            if (!terminated) { allTerminate = false; }
             if (index + 1 < branchCount) {
                 appendBlockLabel(buffer, counter, nextBlockValue);
             }
@@ -2442,8 +2458,8 @@ fn emitWhen(
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
                 buffer, source, nodes, genericArguments, bodyRoot, counter);
-            if (terminated == false) { appendBranch(buffer, mergeBlock); }
-            if (terminated == false) { allTerminate = false; }
+            if (!terminated) { appendBranch(buffer, mergeBlock); }
+            if (!terminated) { allTerminate = false; }
         }
         index = index + 1;
     }
@@ -2480,7 +2496,7 @@ fn emitStatement(
             range = collectionNode.aux == 87;
             if (collectionNode.aux == 88) { range = true; }
         }
-        if (range == false) {
+        if (!range) {
             return emitCollectionFor(
                 buffer, source, nodes, genericArguments, root, counter);
         }
@@ -2529,7 +2545,7 @@ fn emitStatement(
             buffer, source, nodes, genericArguments, bodyRoot, counter);
         counter.continueBlock = outerContinueBlock;
         counter.breakBlock = outerBreakBlock;
-        if (terminated == false) { appendBranch(buffer, incrementBlock); }
+        if (!terminated) { appendBranch(buffer, incrementBlock); }
         appendBlockLabel(buffer, counter, incrementBlock);
         val loaded = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
@@ -2741,7 +2757,7 @@ fn emitStatement(
                     val thenTerminated = emitBlock(
                         buffer, source, nodes, genericArguments,
                         thenRoot, counter);
-                    if (thenTerminated == false) {
+                    if (!thenTerminated) {
                         appendBranch(buffer, endBlock);
                     }
                     var elseTerminated = false;
@@ -2750,11 +2766,11 @@ fn emitStatement(
                         elseTerminated = emitBlock(
                             buffer, source, nodes, genericArguments,
                             elseRoot, counter);
-                        if (elseTerminated == false) {
+                        if (!elseTerminated) {
                             appendBranch(buffer, endBlock);
                         }
                     }
-                    if (thenTerminated == false) {
+                    if (!thenTerminated) {
                         appendBlockLabel(buffer, counter, endBlock);
                         return false;
                     }
@@ -2762,7 +2778,7 @@ fn emitStatement(
                         appendBlockLabel(buffer, counter, endBlock);
                         return false;
                     }
-                    if (elseTerminated == false) {
+                    if (!elseTerminated) {
                         appendBlockLabel(buffer, counter, endBlock);
                         return false;
                     }
@@ -2792,7 +2808,7 @@ fn emitStatement(
                         bodyRoot, counter);
                     counter.continueBlock = outerContinueBlock;
                     counter.breakBlock = outerBreakBlock;
-                    if (bodyTerminated == false) {
+                    if (!bodyTerminated) {
                         appendBranch(buffer, conditionBlock);
                     }
                     appendBlockLabel(buffer, counter, endBlock);
@@ -2808,7 +2824,7 @@ fn parameterRoot(
     nodes: AstList, functionRoot: u64, position: u32): u64 {
     val function = nodes.data[functionRoot];
     var root = functionRoot - 1;
-    if (functionIsExtern(function) == false) {
+    if (!functionIsExtern(function)) {
         root = nodes.data[root].subtreeStart - 1;
     }
     var remaining = functionParameterCount(function);
@@ -2957,7 +2973,7 @@ fn emitBlockAllocas(
                     elementKind, collection.typeName, 0);
             }
             appendNewline(buffer);
-            if (range == false) {
+            if (!range) {
                 var indexStorage = statement.start;
                 if (statement.aux == 1) {
                     indexStorage = nodes.data[statement.subtreeStart + 1].start;
@@ -3104,7 +3120,7 @@ fn emitFunction(
         emitBlock(
             buffer, source, nodes, genericArguments,
             blockRoot, counter);
-    if (terminated == false) {
+    if (!terminated) {
         if (returnType.typeKind == 1) {
             byteBufferAppend(buffer, 32);
             byteBufferAppend(buffer, 32);
@@ -3469,9 +3485,12 @@ fn specializationArgumentsEqual(
     if (leftCount != rightCount) { return false; }
     var index: u32 = 0;
     while (index < leftCount) {
-        if (typeEquals(
+        if (
+            !typeEquals(
                 arguments.data[leftStart + index as u64],
-                arguments.data[rightStart + index as u64], arguments) == false) {
+                arguments.data[rightStart + index as u64], arguments
+            )
+        ) {
             return false;
         }
         index = index + 1;
@@ -3555,9 +3574,12 @@ fn emitModule(
                 if (structArgumentsAreConcrete(genericArguments, start as u64, count)) {
                     val structureRoot = structRootByName(source, nodes, node.typeName);
                     if (structureRoot != nodes.length) {
-                        if (structSpecializationRequestExists(
+                        if (
+                            !structSpecializationRequestExists(
                                 structRequests, genericArguments,
-                                structureRoot, start as u64, count) == false) {
+                                structureRoot, start as u64, count
+                            )
+                        ) {
                             structSpecializationRequestListAppend(
                                 structRequests,
                                 StructSpecializationRequest(
@@ -3607,11 +3629,14 @@ fn emitModule(
                         sourceHash(
                             source, callee.start, callee.end));
                 if (functionRoot != nodes.length) {
-                    if (specializationRequestExists(
+                    if (
+                        !specializationRequestExists(
                             requests, genericArguments,
                             functionRoot,
                             call.genericArgumentStart,
-                            call.genericArgumentCount) == false) {
+                            call.genericArgumentCount
+                        )
+                    ) {
                         specializationRequestListAppend(
                             requests,
                             SpecializationRequest(
@@ -3659,10 +3684,13 @@ fn emitModule(
                             genericArguments, concrete);
                         nestedArgument = nestedArgument + 1;
                     }
-                    if (specializationRequestExists(
+                    if (
+                        !specializationRequestExists(
                             requests, genericArguments,
                             nestedFunctionRoot, concreteStart,
-                            nestedCall.genericArgumentCount) == false) {
+                            nestedCall.genericArgumentCount
+                        )
+                    ) {
                         specializationRequestListAppend(
                             requests,
                             SpecializationRequest(

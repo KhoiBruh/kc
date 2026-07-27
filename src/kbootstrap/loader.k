@@ -278,7 +278,7 @@ fn loaderRelative(
     wildcard: bool): ByteBuffer {
     var result = byteBufferNew();
     var count = partCount;
-    if (wildcard == false) { count = count - 1; }
+    if (!wildcard) { count = count - 1; }
     var index: u64 = 0;
     while (index < count) {
         if (index > 0) { byteBufferAppend(result, 47); }
@@ -316,7 +316,7 @@ fn loaderResolveImport(
         loaderReport(currentPath, source, start, 2);
         return false;
     }
-    if (wildcard == false) {
+    if (!wildcard) {
         if (partCount < 2) {
             loaderReport(currentPath, source, start, 1);
             return false;
@@ -368,7 +368,7 @@ fn loaderScanImports(
     var loader: ModuleLoader, path: LoadedPath, source: Source,
     depth: u64): bool {
     val lexed = lex(source);
-    if (lexed.ok == false) {
+    if (!lexed.ok) {
         loader.failureKind = 2;
         var category: u32 = 4;
         if (lexed.errorKind == 1) { category = 3; }
@@ -420,9 +420,12 @@ fn loaderScanImports(
             return false;
         }
         current = current + 1;
-        if (loaderResolveImport(
+        if (
+            !loaderResolveImport(
                 loader, path, source, tokens, first, partCount, wildcard,
-                start, end, depth + 1) == false) {
+                start, end, depth + 1
+            )
+        ) {
             tokenListFree(tokens);
             return false;
         }
@@ -442,8 +445,7 @@ fn loaderLoadModule(
     val canonicalPlaceholder = k_boot_alloc(1);
     var canonicalData = canonicalPlaceholder as u8*;
     var canonicalLength: u64 = 0;
-    if (k_boot_canonical_path(
-            path, pathLength, &canonicalData, &canonicalLength) == false) {
+    if (!k_boot_canonical_path(path, pathLength, &canonicalData, &canonicalLength)) {
         loader.failureKind = 1;
         k_boot_free(canonicalData as unit*);
         if (hasSuppliedData) { k_boot_free(suppliedData as unit*); }
@@ -461,11 +463,11 @@ fn loaderLoadModule(
     loader.visited = visited;
     var data = suppliedData;
     var length = suppliedLength;
-    if (hasSuppliedData == false) {
+    if (!hasSuppliedData) {
         val sourcePlaceholder = k_boot_alloc(1);
         data = sourcePlaceholder as u8*;
         length = 0;
-        if (k_boot_read_file(path, pathLength, &data, &length) == false) {
+        if (!k_boot_read_file(path, pathLength, &data, &length)) {
             loader.failureKind = 1;
             k_boot_free(sourcePlaceholder);
             return false;
@@ -473,7 +475,7 @@ fn loaderLoadModule(
         k_boot_free(sourcePlaceholder);
     }
     val source = Source(data, length);
-    if (loaderScanImports(loader, canonical, source, depth) == false) {
+    if (!loaderScanImports(loader, canonical, source, depth)) {
         k_boot_free(data as unit*);
         return false;
     }
@@ -487,7 +489,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     val workingPlaceholder = k_boot_alloc(1);
     var workingData = workingPlaceholder as u8*;
     var workingLength: u64 = 0;
-    if (k_boot_current_directory(&workingData, &workingLength) == false) {
+    if (!k_boot_current_directory(&workingData, &workingLength)) {
         k_boot_free(workingData as unit*);
         return LoadResult(Source(workingData, 0), sourceMapNew(), false, 1);
     }
@@ -514,7 +516,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
             index = index + 1;
         }
     }
-    if (loaded == false) {
+    if (!loaded) {
         var pathIndex: u64 = 0;
         while (pathIndex < loader.visited.length) {
             k_boot_free(loader.visited.data[pathIndex].data as unit*);
@@ -525,7 +527,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     k_boot_free(loader.visited.data as unit*);
     k_boot_free(loader.workingDirectory.data as unit*);
     byteBufferFree(loader.entryDirectory);
-    if (loaded == false) {
+    if (!loaded) {
         byteBufferFree(combined);
         sourceMapFree(sourceMap);
         return LoadResult(

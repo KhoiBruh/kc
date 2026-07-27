@@ -23,7 +23,7 @@ fn main(): i32 {
     }
 
     val lexed = lex(Source(sourceData, sourceLength));
-    if (lexed.ok == false) {
+    if (!lexed.ok) {
         print("0:");
         print(lexed.errorStart as i32);
         print(":");
@@ -34,7 +34,7 @@ fn main(): i32 {
         return 2;
     }
     val parsed = parse(lexed.tokens);
-    if (parsed.ok == false) {
+    if (!parsed.ok) {
         print("0:");
         print(parsed.errorStart as i32);
         print(":");
@@ -47,7 +47,7 @@ fn main(): i32 {
     }
 
     val checked = analyze(Source(sourceData, sourceLength), parsed.nodes);
-    if (checked.ok == false) {
+    if (!checked.ok) {
         print(checked.category as i32);
         print(":");
         print(checked.start as i32);

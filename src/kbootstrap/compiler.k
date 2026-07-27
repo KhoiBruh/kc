@@ -132,7 +132,7 @@ fn compileToLl(
     optPathLength: u64): i32 {
     val source = Source(sourceData, sourceLength);
     val lexed = lex(source);
-    if (lexed.ok == false) {
+    if (!lexed.ok) {
         printDiagnostic(
             source, sourceMap, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1);
@@ -140,7 +140,7 @@ fn compileToLl(
         return 2;
     }
     val parsed = parse(lexed.tokens);
-    if (parsed.ok == false) {
+    if (!parsed.ok) {
         printDiagnostic(
             source, sourceMap, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1);
@@ -149,7 +149,7 @@ fn compileToLl(
         return 2;
     }
     var checked = analyze(source, parsed.nodes);
-    if (checked.ok == false) {
+    if (!checked.ok) {
         printDiagnostic(
             source, sourceMap, checked.category, checked.start, checked.end);
         typeValueListFree(checked.genericArguments);
@@ -172,7 +172,7 @@ fn compileToLl(
     byteBufferAppend(temporaryPath, 108);
     val written = k_boot_write_file(
         temporaryPath.data, temporaryPath.length, output.data, output.length);
-    if (written == false) {
+    if (!written) {
         compilerFailure(1);
         byteBufferFree(temporaryPath);
         byteBufferFree(output);
@@ -461,7 +461,7 @@ fn printDiagnostic(
     var found = false;
     while (segmentIndex < sourceMap.length) {
         val segment = sourceMap.data[segmentIndex];
-        if (found == false) {
+        if (!found) {
             if (start >= segment.sourceStart) {
                 if (start <= segment.sourceStart + segment.sourceLength) {
                     appendRaw(buf, segment.path, segment.pathLength);
