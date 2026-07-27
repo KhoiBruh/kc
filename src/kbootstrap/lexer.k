@@ -253,31 +253,33 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
 }
 
 fn punctuationKind(value: u8): u32 {
-    if (value == 40) { return 50; }
-    if (value == 41) { return 51; }
-    if (value == 123) { return 52; }
-    if (value == 125) { return 53; }
-    if (value == 91) { return 54; }
-    if (value == 93) { return 55; }
-    if (value == 44) { return 56; }
-    if (value == 58) { return 57; }
-    if (value == 59) { return 58; }
-    if (value == 46) { return 59; }
-    if (value == 43) { return 60; }
-    if (value == 45) { return 61; }
-    if (value == 42) { return 62; }
-    if (value == 47) { return 63; }
-    if (value == 37) { return 64; }
-    if (value == 61) { return 65; }
-    if (value == 60) { return 66; }
-    if (value == 62) { return 67; }
-    if (value == 38) { return 68; }
-    if (value == 124) { return 69; }
-    if (value == 94) { return 70; }
-    if (value == 126) { return 71; }
-    if (value == 63) { return 72; }
-    if (value == 33) { return 73; }
-    return 0;
+    when (value) {
+        40 -> return 50;
+        41 -> return 51;
+        123 -> return 52;
+        125 -> return 53;
+        91 -> return 54;
+        93 -> return 55;
+        44 -> return 56;
+        58 -> return 57;
+        59 -> return 58;
+        46 -> return 59;
+        43 -> return 60;
+        45 -> return 61;
+        42 -> return 62;
+        47 -> return 63;
+        37 -> return 64;
+        61 -> return 65;
+        60 -> return 66;
+        62 -> return 67;
+        38 -> return 68;
+        124 -> return 69;
+        94 -> return 70;
+        126 -> return 71;
+        63 -> return 72;
+        33 -> return 73;
+        else -> return 0;
+    }
 }
 
 fn scanIdentifier(source: Source, start: u64): u64 {
