@@ -719,6 +719,11 @@ alongside exact semantic diagnostic parity.
 Acceptance yêu cầu chương trình cast hợp lệ trả `42`, cast ngoài miền trả `2`,
 mọi IR qua verifier, và `kc3.ll`/`kc4.ll` giữ fixed-point ở Debug và Release.
 
+**Float-cast self-hosting milestone: complete.** Ma trận `f32`/`f64`, constant
+diagnostics, checked float-to-integer, `NaN`/infinity, các biên signed/unsigned
+và LLVM IR parity đều pass qua `kc1`–`kc4`. Debug và Release giữ cùng behavior,
+IR hợp lệ và fixed-point `kc3.ll == kc4.ll`.
+
 The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
 and the bootstrap-manifest test requires every listed K source to be reachable
 from `main.k` through imports. It currently supports the

@@ -179,6 +179,7 @@ llvm-readobj --file-headers file.obj
 Module/import self-hosting is complete for the current contract.
 Bootstrap diagnostics and CLI parity are complete for the current contract.
 Integer-cast self-hosting is complete for the approved integer matrix.
+Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
@@ -209,7 +210,5 @@ Integer-cast self-hosting is complete for the approved integer matrix.
 
 ## Recommended next milestone
 
-Run the final Debug and Release milestone audit for float casts, including the
-bootstrap fixed point and all acceptance fixtures. If both configurations pass,
-mark the approved `f32`/`f64` cast matrix self-hosted and choose the next
-demand-driven language feature.
+Choose the next demand-driven language feature after the completed float-cast
+self-hosting milestone.
