@@ -735,6 +735,52 @@ private:
             if (!type) return nullptr;
             return llvm::ConstantExpr::getSizeOf(type);
         }
+        if (const auto* when = std::get_if<WhenExpr>(&expression.node)) {
+            auto* function = builder_.GetInsertBlock()->getParent();
+            auto* mergeBlock = llvm::BasicBlock::Create(
+                context_, "when.merge", function);
+            auto* resultType = lowerType(semanticType, expression.span);
+            if (!resultType) return nullptr;
+            auto* phi = llvm::PHINode::Create(
+                resultType, static_cast<unsigned>(when->branches.size()),
+                "when.value", mergeBlock);
+            llvm::Value* subject = nullptr;
+            if (when->subject) {
+                subject = emitExpr(*when->subject);
+                if (!subject) return nullptr;
+            }
+            for (std::size_t i = 0; i < when->branches.size(); ++i) {
+                const auto& branch = when->branches[i];
+                auto* bodyBlock = llvm::BasicBlock::Create(
+                    context_, "when.body", function);
+                if (branch.condition) {
+                    auto* condition = emitExpr(*branch.condition);
+                    if (!condition) return nullptr;
+                    if (subject)
+                        condition = builder_.CreateICmpEQ(subject, condition);
+                    auto* nextBlock = llvm::BasicBlock::Create(
+                        context_, "when.next", function);
+                    builder_.CreateCondBr(condition, bodyBlock, nextBlock);
+                    builder_.SetInsertPoint(bodyBlock);
+                    auto* value = emitExpr(*branch.value);
+                    if (!value) return nullptr;
+                    auto* incoming = builder_.GetInsertBlock();
+                    builder_.CreateBr(mergeBlock);
+                    phi->addIncoming(value, incoming);
+                    builder_.SetInsertPoint(nextBlock);
+                } else {
+                    builder_.CreateBr(bodyBlock);
+                    builder_.SetInsertPoint(bodyBlock);
+                    auto* value = emitExpr(*branch.value);
+                    if (!value) return nullptr;
+                    auto* incoming = builder_.GetInsertBlock();
+                    builder_.CreateBr(mergeBlock);
+                    phi->addIncoming(value, incoming);
+                }
+            }
+            builder_.SetInsertPoint(mergeBlock);
+            return phi;
+        }
         if (const auto* array = std::get_if<ArrayLiteralExpr>(&expression.node)) {
             auto* type = lowerType(semanticType, expression.span);
             if (!type) return nullptr;

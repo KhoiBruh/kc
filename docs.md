@@ -393,7 +393,7 @@ if (condition) {
 thế `when`; `when` vẫn được dùng cho pattern-style branching và biểu thức nhiều
 nhánh.
 
-### Câu lệnh `when`
+### `when`
 
 `when` hiện được hạ như một câu lệnh nhiều nhánh với first-match semantics.
 Dạng có subject nhận `bool` hoặc kiểu số nguyên; dạng không subject yêu cầu mỗi
@@ -414,8 +414,19 @@ when {
 ```
 
 Thân nhánh có thể là một block hoặc một câu lệnh đơn. Dạng `when` trả về giá
-trị, pattern destructuring và kiểm tra exhaustiveness cho enum chưa thuộc subset
-hiện tại.
+trị dùng expression kết thúc bằng `;` ở mỗi arm và bắt buộc có `else`:
+
+```text
+return when (code) {
+    200 -> 1;
+    404 -> 2;
+    else -> 0;
+};
+```
+
+Mọi arm phải có kiểu tương thích. Subject chỉ được đánh giá một lần và nhánh
+khớp đầu tiên thắng. Block-valued arm, pattern destructuring và kiểm tra
+exhaustiveness cho enum chưa thuộc subset hiện tại.
 
 ### Vòng lặp (Loops)
 

@@ -753,6 +753,7 @@ ExprPtr Parser::parsePrefix() {
 }
 
 ExprPtr Parser::parsePrimary() {
+    if (check(TokenKind::KwWhen)) return parseWhenExpression();
     if (match(TokenKind::KwSizeof)) {
         const auto start = previous().span;
         if (!expect(TokenKind::LeftParen, "expected '(' after 'sizeof'"))
@@ -802,6 +803,44 @@ ExprPtr Parser::parsePrimary() {
     report(peek().span, "expected expression, found '" +
                             std::string{peek().lexeme(source_)} + "'");
     return nullptr;
+}
+
+ExprPtr Parser::parseWhenExpression() {
+    const auto start = advance().span;
+    ExprPtr subject;
+    if (match(TokenKind::LeftParen)) {
+        subject = parseExpression();
+        if (!subject) return nullptr;
+        if (!expect(TokenKind::RightParen, "expected ')' after when subject"))
+            return nullptr;
+    }
+    if (!expect(TokenKind::LeftBrace, "expected '{' before when branches"))
+        return nullptr;
+    std::vector<WhenExprBranch> branches;
+    bool hasElse = false;
+    while (!check(TokenKind::RightBrace) && !atEnd()) {
+        ExprPtr condition;
+        if (match(TokenKind::KwElse)) {
+            if (hasElse) report(previous().span, "duplicate else branch");
+            hasElse = true;
+        } else {
+            if (hasElse) report(peek().span, "else branch must be last");
+            condition = parseExpression();
+            if (!condition) return nullptr;
+        }
+        if (!expect(TokenKind::Arrow, "expected '->' after when condition"))
+            return nullptr;
+        auto value = parseExpression();
+        if (!value) return nullptr;
+        if (!expect(TokenKind::Semicolon, "expected ';' after when value"))
+            return nullptr;
+        branches.push_back({std::move(condition), std::move(value)});
+    }
+    if (!expect(TokenKind::RightBrace, "expected '}' after when branches"))
+        return nullptr;
+    if (!hasElse) report(previous().span, "when expression requires else");
+    return makeExpr(spanFrom(start, previous().span),
+                    WhenExpr{std::move(subject), std::move(branches)});
 }
 
 bool Parser::genericCallAhead() const noexcept {

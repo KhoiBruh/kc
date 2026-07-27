@@ -1295,6 +1295,94 @@ fn emitExpression(
             1, node.start, node.end, 0,
             node.typeKind, node.typeName, node.typePointee);
     }
+    if (node.kind == 23) {
+        val branchCount = node.aux % 65536;
+        val hasSubject = node.aux / 65536;
+        val roots = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
+        val values =
+            k_boot_alloc((branchCount as u64) * sizeof(IrValue)) as IrValue*;
+        val blocks = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
+        var branchRoot = root - 1;
+        var remaining = branchCount;
+        while (remaining > 0) {
+            roots[remaining as u64 - 1] = branchRoot;
+            branchRoot = nodes.data[branchRoot].subtreeStart - 1;
+            remaining = remaining - 1;
+        }
+        var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
+        if (hasSubject == 1) {
+            subject = emitExpression(
+                buffer, source, nodes, genericArguments, branchRoot, counter);
+        }
+        val mergeBlock = nextBlock(counter);
+        var index: u32 = 0;
+        while (index < branchCount) {
+            val branch = nodes.data[roots[index as u64]];
+            val valueRoot = roots[index as u64] - 1;
+            val bodyBlock = nextBlock(counter);
+            var nextBlockValue = mergeBlock;
+            if (branch.aux == 0) {
+                val conditionRoot = nodes.data[valueRoot].subtreeStart - 1;
+                var condition = emitExpression(
+                    buffer, source, nodes, genericArguments,
+                    conditionRoot, counter);
+                if (hasSubject == 1) {
+                    val compared = nextTemporary(counter);
+                    appendValuePrefix(buffer); appendDecimal(buffer, compared);
+                    appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
+                    byteBufferAppend(buffer, 32);
+                    appendType(
+                        buffer, genericArguments,
+                        subject.typeKind, subject.typeName, subject.typePointee);
+                    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
+                    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                    appendIrValue(buffer, source, condition); appendNewline(buffer);
+                    condition = IrValue(2, 0, 0, compared, 2, 0, 0);
+                }
+                nextBlockValue = nextBlock(counter);
+                appendConditionalBranch(
+                    buffer, source, condition, bodyBlock, nextBlockValue);
+            } else {
+                appendBranch(buffer, bodyBlock);
+            }
+            appendBlockLabel(buffer, counter, bodyBlock);
+            values[index as u64] = emitExpression(
+                buffer, source, nodes, genericArguments, valueRoot, counter);
+            blocks[index as u64] = counter.currentBlock;
+            appendBranch(buffer, mergeBlock);
+            if (branch.aux == 0) {
+                appendBlockLabel(buffer, counter, nextBlockValue);
+            }
+            index = index + 1;
+        }
+        appendBlockLabel(buffer, counter, mergeBlock);
+        val temporary = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, temporary);
+        appendEquals(buffer);
+        byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 104);
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, node);
+        byteBufferAppend(buffer, 32);
+        index = 0;
+        while (index < branchCount) {
+            if (index > 0) {
+                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            }
+            byteBufferAppend(buffer, 91); byteBufferAppend(buffer, 32);
+            appendIrValue(buffer, source, values[index as u64]);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            appendBlockReference(buffer, blocks[index as u64]);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+            index = index + 1;
+        }
+        appendNewline(buffer);
+        k_boot_free(blocks as unit*);
+        k_boot_free(values as unit*);
+        k_boot_free(roots as unit*);
+        return IrValue(
+            2, 0, 0, temporary,
+            node.typeKind, node.typeName, node.typePointee);
+    }
     if (node.kind == 22) {
         if (node.aux == 0) {
             return IrValue(

@@ -566,6 +566,18 @@ TEST(semantic_checks_control_flow_conditions_and_scopes) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 3u);
 }
 
+TEST(semantic_types_when_expressions_and_requires_else) {
+    SemanticFixture valid{
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1 -> 10; else -> 20; }; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "fn bad(val code: i32): i32 { return when (code) {"
+        "1 -> 10; else -> true; }; }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
+}
+
 int main() {
     return test::runAll();
 }

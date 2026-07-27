@@ -253,33 +253,33 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
 }
 
 fn punctuationKind(value: u8): u32 {
-    when (value) {
-        40 -> return 50;
-        41 -> return 51;
-        123 -> return 52;
-        125 -> return 53;
-        91 -> return 54;
-        93 -> return 55;
-        44 -> return 56;
-        58 -> return 57;
-        59 -> return 58;
-        46 -> return 59;
-        43 -> return 60;
-        45 -> return 61;
-        42 -> return 62;
-        47 -> return 63;
-        37 -> return 64;
-        61 -> return 65;
-        60 -> return 66;
-        62 -> return 67;
-        38 -> return 68;
-        124 -> return 69;
-        94 -> return 70;
-        126 -> return 71;
-        63 -> return 72;
-        33 -> return 73;
-        else -> return 0;
-    }
+    return when (value) {
+        40 -> 50;
+        41 -> 51;
+        123 -> 52;
+        125 -> 53;
+        91 -> 54;
+        93 -> 55;
+        44 -> 56;
+        58 -> 57;
+        59 -> 58;
+        46 -> 59;
+        43 -> 60;
+        45 -> 61;
+        42 -> 62;
+        47 -> 63;
+        37 -> 64;
+        61 -> 65;
+        60 -> 66;
+        62 -> 67;
+        38 -> 68;
+        124 -> 69;
+        94 -> 70;
+        126 -> 71;
+        63 -> 72;
+        33 -> 73;
+        else -> 0;
+    };
 }
 
 fn scanIdentifier(source: Source, start: u64): u64 {

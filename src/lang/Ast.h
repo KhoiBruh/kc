@@ -39,12 +39,17 @@ struct PostfixExpr { ExprPtr value; TokenKind op; };
 struct UnitLiteralExpr {};
 struct ArrayLiteralExpr { std::vector<ExprPtr> elements; };
 struct SizeofExpr { TypePtr type; };
+struct WhenExprBranch { ExprPtr condition; ExprPtr value; };
+struct WhenExpr {
+    ExprPtr subject;
+    std::vector<WhenExprBranch> branches;
+};
 
 struct Expr {
     using Node = std::variant<IdentifierExpr, LiteralExpr, UnaryExpr, BinaryExpr,
                               AssignmentExpr, CastExpr, CallExpr, MemberExpr,
                               IndexExpr, PostfixExpr, UnitLiteralExpr,
-                              ArrayLiteralExpr, SizeofExpr>;
+                              ArrayLiteralExpr, SizeofExpr, WhenExpr>;
     SourceSpan span;
     Node node;
 };

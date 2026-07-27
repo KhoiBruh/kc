@@ -67,6 +67,7 @@ $cases = @(
     @("bootstrap-semantic-for-binding.k", 7),
     @("bootstrap-semantic-when-condition.k", 6),
     @("bootstrap-semantic-when-pattern.k", 4),
+    @("bootstrap-semantic-when-expression-type.k", 4),
     @("bootstrap-semantic-immutable.k", 7),
     @("bootstrap-semantic-access.k", 8),
     @("bootstrap-semantic-cast-range.k", 4),

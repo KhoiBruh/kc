@@ -138,19 +138,19 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeVal
 }
 
 fn primitiveType(tokenKind: u32): TypeValue {
-    when (tokenKind) {
-        49 -> return unitType();
-        32 -> return boolType();
-        35 -> return TypeValue(3, 0, 0);
-        36 -> return TypeValue(4, 0, 0);
-        38 -> return TypeValue(5, 0, 0);
-        40 -> return TypeValue(6, 0, 0);
-        41 -> return TypeValue(7, 0, 0);
-        45 -> return TypeValue(17, 0, 0);
-        46 -> return TypeValue(18, 0, 0);
-        48 -> return TypeValue(10, 0, 0);
-        else -> return invalidType();
-    }
+    return when (tokenKind) {
+        49 -> unitType();
+        32 -> boolType();
+        35 -> TypeValue(3, 0, 0);
+        36 -> TypeValue(4, 0, 0);
+        38 -> TypeValue(5, 0, 0);
+        40 -> TypeValue(6, 0, 0);
+        41 -> TypeValue(7, 0, 0);
+        45 -> TypeValue(17, 0, 0);
+        46 -> TypeValue(18, 0, 0);
+        48 -> TypeValue(10, 0, 0);
+        else -> invalidType();
+    };
 }
 
 struct LocalInfo(

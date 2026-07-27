@@ -1,9 +1,9 @@
 fn choose(code: i32): i32 {
-    when (code) {
-        1 -> return 10;
-        2 -> return 20;
-        else -> return 12;
-    }
+    return when (code) {
+        1 -> 10;
+        2 -> 20;
+        else -> 12;
+    };
 }
 
 fn main(): i32 {

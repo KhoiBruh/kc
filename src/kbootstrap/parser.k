@@ -198,6 +198,41 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     parser, 12, first.start, parser.nodes.data[operand].end,
                     subtreeStart, first.kind);
             } else {
+                if (parserMatch(parser, 14)) {
+                    var hasSubject: u32 = 0;
+                    if (parserMatch(parser, 50)) {
+                        parseExpression(parser, 0);
+                        if (parserExpect(parser, 51) == false) { return 0; }
+                        hasSubject = 1;
+                    }
+                    if (parserExpect(parser, 52) == false) { return 0; }
+                    var branchCount: u32 = 0;
+                    var hasElse = false;
+                    while (parserCheck(parser, 53) == false) {
+                        val branchStart = parser.nodes.length;
+                        var isElse: u32 = 0;
+                        if (parserMatch(parser, 16)) {
+                            if (hasElse) { parser.ok = false; return 0; }
+                            hasElse = true;
+                            isElse = 1;
+                        } else {
+                            if (hasElse) { parser.ok = false; return 0; }
+                            parseExpression(parser, 0);
+                        }
+                        if (parserExpect(parser, 85) == false) { return 0; }
+                        parseExpression(parser, 0);
+                        if (parserExpect(parser, 58) == false) { return 0; }
+                        parserAdd(
+                            parser, 24, first.start, parserPrevious(parser).end,
+                            branchStart, isElse);
+                        branchCount = branchCount + 1;
+                    }
+                    if (parserExpect(parser, 53) == false) { return 0; }
+                    if (hasElse == false) { parser.ok = false; return 0; }
+                    root = parserAdd(
+                        parser, 23, first.start, parserPrevious(parser).end,
+                        subtreeStart, branchCount + hasSubject * 65536);
+                } else {
                 if (parserMatch(parser, 54)) {
                     var count: u32 = 0;
                     if (parserCheck(parser, 55) == false) {
@@ -236,6 +271,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parser.ok = false;
                         return 0;
                     }
+                }
                 }
                 }
             }

@@ -588,6 +588,40 @@ private:
         } else if (const auto* size = std::get_if<SizeofExpr>(&expression.node)) {
             result_.sizeofTypes[&expression] = resolve(*size->type);
             type = {SemanticTypeKind::U64};
+        } else if (const auto* when = std::get_if<WhenExpr>(&expression.node)) {
+            std::optional<SemanticType> subject;
+            if (when->subject) {
+                subject = analyzeExpr(*when->subject);
+                if (subject->kind != SemanticTypeKind::Bool && !isInteger(*subject))
+                    diagnose("when subject must be bool or integer",
+                             when->subject->span);
+            }
+            bool hasElse = false;
+            std::optional<SemanticType> branchType;
+            for (const auto& branch : when->branches) {
+                if (branch.condition) {
+                    const auto condition = analyzeExpr(*branch.condition, subject);
+                    if (subject) {
+                        if (!compatible(*subject, condition) &&
+                            !(isNumeric(*subject) && isNumeric(condition)))
+                            diagnose("when pattern type does not match subject",
+                                     branch.condition->span);
+                    } else if (condition.kind != SemanticTypeKind::Bool) {
+                        diagnose("when condition must be bool", branch.condition->span);
+                    }
+                } else {
+                    hasElse = true;
+                }
+                const auto value = analyzeExpr(
+                    *branch.value, expected ? expected : branchType);
+                if (!branchType) branchType = value;
+                else if (!compatible(*branchType, value) &&
+                         !(isNumeric(*branchType) && isNumeric(value)))
+                    diagnose("when branches must have a common type",
+                             branch.value->span);
+            }
+            if (!hasElse) diagnose("when expression requires else", expression.span);
+            type = expected ? *expected : branchType.value_or(SemanticType{});
         } else if (const auto* call = std::get_if<CallExpr>(&expression.node)) {
             type = analyzeCall(*call);
         } else if (const auto* member = std::get_if<MemberExpr>(&expression.node)) {

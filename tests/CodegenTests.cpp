@@ -562,6 +562,17 @@ TEST(codegen_lowers_array_to_slice_and_slice_indexing) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_when_expression_to_phi) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1 -> 10; 2 -> 20; else -> 12; }; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("when.merge") != std::string::npos);
+    EXPECT_TRUE(ir.find("phi i32") != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }

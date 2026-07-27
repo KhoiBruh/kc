@@ -398,6 +398,23 @@ TEST(parser_parses_left_associative_integer_casts) {
     EXPECT_EQ(fixture.text(target.parts[0]), "u64");
 }
 
+TEST(parser_parses_when_expressions) {
+    ParseFixture fixture{
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1 -> 10; else -> 20; }; }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& returned = std::get<k::ReturnStmt>(
+        fixture.parsed.program.functions[0].body->statements[0]->node);
+    const auto& expression = std::get<k::WhenExpr>(returned.value->node);
+    EXPECT_TRUE(expression.subject != nullptr);
+    EXPECT_EQ(expression.branches.size(), 2u);
+    EXPECT_TRUE(expression.branches.back().condition == nullptr);
+
+    ParseFixture missingElse{
+        "fn choose(val code: i32): i32 { return when (code) { 1 -> 10; }; }"};
+    EXPECT_TRUE(!missingElse.parsed.diagnostics.empty());
+}
+
 TEST(parser_requires_semicolons_and_recovers_later_statements) {
     ParseFixture fixture{
         "fn main() { val missing = 1 val kept = 2; return kept; }"};

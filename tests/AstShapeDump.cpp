@@ -200,6 +200,19 @@ private:
         add(22, value.span, subtree,
             static_cast<unsigned>(item.elements.size()));
     }
+    void exprNode(const k::WhenExpr& item, const k::Expr& value,
+                  std::size_t subtree) {
+        if (item.subject) expression(*item.subject);
+        for (const auto& branch : item.branches) {
+            const auto branchSubtree = index_;
+            if (branch.condition) expression(*branch.condition);
+            expression(*branch.value);
+            add(24, value.span, branchSubtree, branch.condition ? 0 : 1);
+        }
+        add(23, value.span, subtree,
+            static_cast<unsigned>(item.branches.size() +
+                                  (item.subject ? 65536 : 0)));
+    }
     template <typename T>
     void exprNode(const T&, const k::Expr& value, std::size_t subtree) {
         add(0, value.span, subtree);
