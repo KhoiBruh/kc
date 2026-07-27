@@ -38,6 +38,8 @@ private:
     [[nodiscard]] StmtPtr parseStatement();
     [[nodiscard]] StmtPtr parseIf();
     [[nodiscard]] StmtPtr parseWhile();
+    [[nodiscard]] StmtPtr parseFor();
+    [[nodiscard]] std::unique_ptr<BlockStmt> parseControlBody(SourceSpan& span);
     [[nodiscard]] StmtPtr parseVariable();
     [[nodiscard]] StmtPtr parseReturn();
     [[nodiscard]] StmtPtr parseExpressionStatement();

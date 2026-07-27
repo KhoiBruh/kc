@@ -345,6 +345,18 @@ TEST(semantic_rejects_break_and_continue_outside_loops) {
               "continue is only valid inside a loop");
 }
 
+TEST(semantic_rejects_non_range_for_collections) {
+    SemanticFixture invalid{"fn f() { for (item in 42) print(item); }"};
+    EXPECT_EQ(invalid.semantic.diagnostics[0].message,
+              "for collection must be an integer range");
+}
+
+TEST(semantic_accepts_integer_for_ranges) {
+    SemanticFixture fixture{
+        "fn f() { for (i in 0..10) print(i); for (i in 0..<10) print(i); }"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {
     SemanticFixture fixture{
         "struct Buffer(data: i32*)"

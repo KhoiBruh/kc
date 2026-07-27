@@ -456,6 +456,18 @@ TEST(codegen_lowers_break_and_continue_to_nested_while_targets) {
     EXPECT_TRUE(ir.find("br label %while.end") != std::string::npos);
 }
 
+TEST(codegen_lowers_inclusive_and_exclusive_integer_ranges) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn ranges(): i32 { var total = 0; "
+        "for (i in 0..2) total = total + i; "
+        "for (i in 0..<3) total = total + i; return total; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("icmp sle") != std::string::npos);
+    EXPECT_TRUE(ir.find("icmp slt") != std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

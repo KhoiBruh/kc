@@ -349,6 +349,18 @@ TEST(parser_parses_break_and_continue_statements) {
         loop.body->statements[1]->node));
 }
 
+TEST(parser_accepts_single_statement_control_flow_bodies) {
+    ParseFixture fixture{
+        "fn f() {"
+        "if (true)\nreturn; else while (false) continue;"
+        "for (item in 0..<2) print(item);"
+        "}"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& statements = fixture.parsed.program.functions[0].body->statements;
+    EXPECT_TRUE(std::holds_alternative<k::IfStmt>(statements[0]->node));
+    EXPECT_TRUE(std::holds_alternative<k::ForStmt>(statements[1]->node));
+}
+
 TEST(parser_parses_left_associative_integer_casts) {
     ParseFixture fixture{
         "fn convert(val value: i32): u64 { return value as i64 as u64; }"};

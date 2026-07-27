@@ -367,6 +367,7 @@ std::unique_ptr<BlockStmt> Parser::parseBlock(SourceSpan& span) {
 StmtPtr Parser::parseStatement() {
     if (check(TokenKind::KwIf)) return parseIf();
     if (check(TokenKind::KwWhile)) return parseWhile();
+    if (check(TokenKind::KwFor)) return parseFor();
     if (check(TokenKind::KwBreak) || check(TokenKind::KwContinue)) {
         const auto keyword = advance();
         if (!expect(TokenKind::Semicolon, "expected ';' after loop control statement"))
@@ -395,13 +396,13 @@ StmtPtr Parser::parseIf() {
     if (!expect(TokenKind::RightParen, "expected ')' after if condition"))
         return nullptr;
     SourceSpan thenSpan{};
-    auto thenBranch = parseBlock(thenSpan);
+    auto thenBranch = parseControlBody(thenSpan);
     if (!thenBranch) return nullptr;
     std::unique_ptr<BlockStmt> elseBranch;
     auto end = thenSpan;
     if (match(TokenKind::KwElse)) {
         SourceSpan elseSpan{};
-        elseBranch = parseBlock(elseSpan);
+        elseBranch = parseControlBody(elseSpan);
         if (!elseBranch) return nullptr;
         end = elseSpan;
     }
@@ -419,11 +420,38 @@ StmtPtr Parser::parseWhile() {
     if (!expect(TokenKind::RightParen, "expected ')' after while condition"))
         return nullptr;
     SourceSpan bodySpan{};
-    auto body = parseBlock(bodySpan);
+    auto body = parseControlBody(bodySpan);
     if (!body) return nullptr;
     return makeStmt(
         spanFrom(start, bodySpan),
         WhileStmt{std::move(condition), std::move(body)});
+}
+
+std::unique_ptr<BlockStmt> Parser::parseControlBody(SourceSpan& span) {
+    if (check(TokenKind::LeftBrace)) return parseBlock(span);
+    auto statement = parseStatement();
+    if (!statement) return nullptr;
+    span = statement->span;
+    auto block = std::make_unique<BlockStmt>();
+    block->statements.push_back(std::move(statement));
+    return block;
+}
+
+StmtPtr Parser::parseFor() {
+    const auto start = advance().span;
+    if (!expect(TokenKind::LeftParen, "expected '(' after 'for'")) return nullptr;
+    if (!expect(TokenKind::Identifier, "expected loop variable")) return nullptr;
+    const auto valueName = previous().span;
+    if (!expect(TokenKind::KwIn, "expected 'in' after loop variable")) return nullptr;
+    auto collection = parseExpression();
+    if (!collection) return nullptr;
+    if (!expect(TokenKind::RightParen, "expected ')' after for collection"))
+        return nullptr;
+    SourceSpan bodySpan{};
+    auto body = parseControlBody(bodySpan);
+    if (!body) return nullptr;
+    return makeStmt(spanFrom(start, bodySpan),
+                    ForStmt{valueName, std::move(collection), std::move(body)});
 }
 
 StmtPtr Parser::parseVariable() {

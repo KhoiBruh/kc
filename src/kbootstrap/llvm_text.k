@@ -2069,6 +2069,76 @@ fn emitStatement(
         appendBranch(buffer, counter.continueBlock);
         return true;
     }
+    if (statement.kind == 38) {
+        val bodyRoot = root - 1;
+        val collectionRoot = expressionChildBefore(nodes, bodyRoot);
+        val rightRoot = collectionRoot - 1;
+        val leftRoot = expressionChildBefore(nodes, rightRoot);
+        val start = emitExpression(
+            buffer, source, nodes, genericArguments, leftRoot, counter);
+        val finish = emitExpression(
+            buffer, source, nodes, genericArguments, rightRoot, counter);
+        val name = nodes.data[statement.subtreeStart];
+        appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
+        appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
+        appendNewline(buffer);
+        val conditionBlock = nextBlock(counter);
+        val bodyBlock = nextBlock(counter);
+        val incrementBlock = nextBlock(counter);
+        val endBlock = nextBlock(counter);
+        appendBranch(buffer, conditionBlock);
+        appendBlockLabel(buffer, counter, conditionBlock);
+        val current = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, current); appendEquals(buffer);
+        appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
+        appendNewline(buffer);
+        val compared = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
+        if (nodes.data[collectionRoot].aux == 87) {
+            appendComparison(buffer, 79, start.typeKind);
+        } else {
+            appendComparison(buffer, 66, start.typeKind);
+        }
+        byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, finish); appendNewline(buffer);
+        appendConditionalBranch(
+            buffer, source, IrValue(2, 0, 0, compared, 2, 0, 0), bodyBlock, endBlock);
+        appendBlockLabel(buffer, counter, bodyBlock);
+        val outerContinueBlock = counter.continueBlock;
+        val outerBreakBlock = counter.breakBlock;
+        counter.continueBlock = incrementBlock;
+        counter.breakBlock = endBlock;
+        val terminated = emitBlock(
+            buffer, source, nodes, genericArguments, bodyRoot, counter);
+        counter.continueBlock = outerContinueBlock;
+        counter.breakBlock = outerBreakBlock;
+        if (terminated == false) { appendBranch(buffer, incrementBlock); }
+        appendBlockLabel(buffer, counter, incrementBlock);
+        val loaded = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
+        appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
+        appendNewline(buffer);
+        val advanced = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
+        appendOperator(buffer, 60, start.typeKind); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, start.typeKind, start.typeName, start.typePointee));
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+        appendNewline(buffer);
+        appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, start.typeKind, start.typeName, start.typePointee));
+        appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
+        appendNewline(buffer); appendBranch(buffer, conditionBlock);
+        appendBlockLabel(buffer, counter, endBlock);
+        return false;
+    }
     if (statement.kind == 33) {
         val initializerRoot = root - 1;
         val initializer = emitExpression(
@@ -2445,6 +2515,17 @@ fn emitBlockAllocas(
         }
         if (statement.kind == 32) {
             emitBlockAllocas(buffer, genericArguments, nodes, root - 1);
+        }
+        if (statement.kind == 38) {
+            val bodyRoot = root - 1;
+            val collectionRoot = expressionChildBefore(nodes, bodyRoot);
+            val name = nodes.data[statement.subtreeStart];
+            appendValuePrefix(buffer); appendLocalPrefix(buffer);
+            appendDecimal(buffer, name.start); appendEquals(buffer);
+            appendAlloca(buffer);
+            appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+            appendNewline(buffer);
+            emitBlockAllocas(buffer, genericArguments, nodes, bodyRoot);
         }
         index = index + 1;
     }

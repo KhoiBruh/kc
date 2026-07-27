@@ -216,6 +216,13 @@ private:
         block(*item.body);
         add(32, value.span, subtree);
     }
+    void stmtNode(const k::ForStmt& item, const k::Stmt& value,
+                  std::size_t subtree) {
+        add(45, item.valueName, index_);
+        expression(*item.collection);
+        block(*item.body);
+        add(38, value.span, subtree);
+    }
     void stmtNode(const k::BreakStmt&, const k::Stmt& value,
                   std::size_t subtree) {
         add(36, value.span, subtree);

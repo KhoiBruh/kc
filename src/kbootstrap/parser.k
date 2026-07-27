@@ -401,6 +401,13 @@ fn parseBlock(var parser: Parser): u64 {
     return 0;
 }
 
+fn parseControlBody(var parser: Parser): u64 {
+    if (parserCheck(parser, 52)) { return parseBlock(parser); }
+    val subtreeStart = parser.nodes.length;
+    parseStatement(parser);
+    return parserAdd(parser, 30, 0, 0, subtreeStart, 1);
+}
+
 fn parseStatement(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val first = parserPeek(parser);
@@ -408,11 +415,11 @@ fn parseStatement(var parser: Parser): u64 {
         if (parserExpect(parser, 50) == false) { return 0; }
         parseExpression(parser, 0);
         if (parserExpect(parser, 51) == false) { return 0; }
-        parseBlock(parser);
+        parseControlBody(parser);
         var end = parserPrevious(parser).end;
         var hasElse: u32 = 0;
         if (parserMatch(parser, 16)) {
-            parseBlock(parser);
+            parseControlBody(parser);
             end = parserPrevious(parser).end;
             hasElse = 1;
         }
@@ -422,7 +429,7 @@ fn parseStatement(var parser: Parser): u64 {
         if (parserExpect(parser, 50) == false) { return 0; }
         parseExpression(parser, 0);
         if (parserExpect(parser, 51) == false) { return 0; }
-        parseBlock(parser);
+        parseControlBody(parser);
         val end = parserPrevious(parser).end;
         return parserAdd(
             parser, 32, first.start, end,
@@ -432,6 +439,19 @@ fn parseStatement(var parser: Parser): u64 {
         if (parserExpect(parser, 58) == false) { return 0; }
         return parserAdd(
             parser, 36, first.start, parserPrevious(parser).end,
+            subtreeStart, 0);
+    }
+    if (parserMatch(parser, 17)) {
+        if (parserExpect(parser, 50) == false) { return 0; }
+        if (parserExpect(parser, 1) == false) { return 0; }
+        val name = parserPrevious(parser);
+        parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+        if (parserExpect(parser, 18) == false) { return 0; }
+        parseExpression(parser, 0);
+        if (parserExpect(parser, 51) == false) { return 0; }
+        parseControlBody(parser);
+        return parserAdd(
+            parser, 38, first.start, parserPrevious(parser).end,
             subtreeStart, 0);
     }
     if (parserMatch(parser, 90)) {

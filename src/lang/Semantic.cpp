@@ -421,6 +421,32 @@ private:
             --loopDepth_;
             return false;
         }
+        if (const auto* forStatement = std::get_if<ForStmt>(&statement.node)) {
+            const auto collection = analyzeExpr(*forStatement->collection);
+            SemanticType element;
+            const auto* range = std::get_if<BinaryExpr>(&forStatement->collection->node);
+            if (range && (range->op == TokenKind::Range ||
+                          range->op == TokenKind::RangeExclusive)) {
+                if (!isInteger(collection))
+                    diagnose("for range bounds must be integers",
+                             forStatement->collection->span);
+                else {
+                    element = collection;
+                }
+            } else {
+                diagnose("for collection must be an integer range",
+                         forStatement->collection->span);
+            }
+            scopes_.emplace_back();
+            scopes_.back().emplace(
+                spelling(source_, forStatement->valueName),
+                VariableSymbol{element, false});
+            ++loopDepth_;
+            analyzeBlock(*forStatement->body, false);
+            --loopDepth_;
+            scopes_.pop_back();
+            return false;
+        }
         if (std::holds_alternative<BreakStmt>(statement.node)) {
             if (loopDepth_ == 0)
                 diagnose("break is only valid inside a loop", statement.span);

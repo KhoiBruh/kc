@@ -430,6 +430,10 @@ private:
             emitWhile(*whileStatement);
             return;
         }
+        if (const auto* forStatement = std::get_if<ForStmt>(&statement.node)) {
+            emitFor(*forStatement);
+            return;
+        }
         if (std::holds_alternative<BreakStmt>(statement.node)) {
             builder_.CreateBr(loopTargets_.back().second);
             return;
@@ -543,6 +547,59 @@ private:
         loopTargets_.pop_back();
         if (!builder_.GetInsertBlock()->getTerminator())
             builder_.CreateBr(conditionBlock);
+        builder_.SetInsertPoint(exitBlock);
+    }
+
+    void emitFor(const ForStmt& statement) {
+        if (const auto* range = std::get_if<BinaryExpr>(&statement.collection->node);
+            range && (range->op == TokenKind::Range ||
+                      range->op == TokenKind::RangeExclusive)) {
+            emitRangeFor(statement, *range);
+            return;
+        }
+        diagnose("for collection must be an integer range",
+                 statement.collection->span);
+    }
+
+    void emitRangeFor(const ForStmt& statement, const BinaryExpr& range) {
+        auto* start = emitExpr(*range.left);
+        auto* end = emitExpr(*range.right);
+        if (!start || !end) return;
+        auto* function = builder_.GetInsertBlock()->getParent();
+        const auto name = spelling(source(), statement.valueName);
+        auto* valueSlot = createEntryAlloca(*function, start->getType(), name);
+        builder_.CreateStore(start, valueSlot);
+        auto* conditionBlock = llvm::BasicBlock::Create(context_, "for.condition", function);
+        auto* bodyBlock = llvm::BasicBlock::Create(context_, "for.body", function);
+        auto* incrementBlock = llvm::BasicBlock::Create(context_, "for.increment", function);
+        auto* exitBlock = llvm::BasicBlock::Create(context_, "for.end", function);
+        builder_.CreateBr(conditionBlock);
+        builder_.SetInsertPoint(conditionBlock);
+        auto* value = builder_.CreateLoad(start->getType(), valueSlot);
+        const auto rangeType = semantic().expressionTypes.find(statement.collection.get());
+        const bool signedRange = rangeType == semantic().expressionTypes.end() ||
+            isSignedInteger(rangeType->second);
+        llvm::Value* condition = nullptr;
+        if (range.op == TokenKind::Range)
+            condition = signedRange ? builder_.CreateICmpSLE(value, end)
+                                    : builder_.CreateICmpULE(value, end);
+        else
+            condition = signedRange ? builder_.CreateICmpSLT(value, end)
+                                    : builder_.CreateICmpULT(value, end);
+        builder_.CreateCondBr(condition, bodyBlock, exitBlock);
+        builder_.SetInsertPoint(bodyBlock);
+        const auto outerLocals = locals_;
+        locals_[name] = {valueSlot, start->getType()};
+        loopTargets_.push_back({incrementBlock, exitBlock});
+        emitScopedBlock(*statement.body);
+        loopTargets_.pop_back();
+        locals_ = outerLocals;
+        if (!builder_.GetInsertBlock()->getTerminator()) builder_.CreateBr(incrementBlock);
+        builder_.SetInsertPoint(incrementBlock);
+        auto* current = builder_.CreateLoad(start->getType(), valueSlot);
+        builder_.CreateStore(builder_.CreateAdd(
+            current, llvm::ConstantInt::get(start->getType(), 1)), valueSlot);
+        builder_.CreateBr(conditionBlock);
         builder_.SetInsertPoint(exitBlock);
     }
 

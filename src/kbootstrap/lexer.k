@@ -52,6 +52,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
     if (length == 2) {
         if (matches2(source, start, 102, 110)) { return 10; }
         if (matches2(source, start, 105, 102)) { return 15; }
+        if (matches2(source, start, 105, 110)) { return 18; }
         if (matches2(source, start, 117, 56)) { return 38; }
         if (matches2(source, start, 97, 115)) { return 27; }
     }
@@ -79,6 +80,9 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
             }
         }
         if (source.data[start] == 102) {
+            if (source.data[start + 1] == 111) {
+                if (source.data[start + 2] == 114) { return 17; }
+            }
             if (source.data[start + 1] == 51) {
                 if (source.data[start + 2] == 50) { return 45; }
             }
@@ -447,6 +451,17 @@ fn lex(source: Source): LexResult {
                     tokenListAppend(tokens, Token(number.kind, start, offset));
                 } else {
                     var kind = punctuationKind(value);
+                    if (value == 46) {
+                        if (offset + 2 < source.length) {
+                            if (source.data[offset + 1] == 46) {
+                                if (source.data[offset + 2] == 60) {
+                                    kind = 88;
+                                    offset = offset + 2;
+                                }
+                            }
+                        }
+                    }
+                    if (kind != 88) {
                     if (offset + 1 < source.length) {
                         val pairKind =
                             doublePunctuationKind(value, source.data[offset + 1]);
@@ -454,6 +469,7 @@ fn lex(source: Source): LexResult {
                             kind = pairKind;
                             offset = offset + 1;
                         }
+                    }
                     }
                     if (kind == 0) {
                         return LexResult(tokens, false, start, 2);

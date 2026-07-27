@@ -194,6 +194,12 @@ private:
         printStmtNode(*statement.body, depth + 1);
     }
 
+    void printStmtNode(const ForStmt& statement, std::size_t depth) {
+        line(depth, "For " + text(statement.valueName));
+        printExpr(*statement.collection, depth + 1);
+        printStmtNode(*statement.body, depth + 1);
+    }
+
     void printStmtNode(const BreakStmt&, std::size_t depth) {
         line(depth, "Break");
     }

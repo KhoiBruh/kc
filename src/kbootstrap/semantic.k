@@ -1201,6 +1201,54 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         return;
     }
+    if (node.kind == 38) {
+        val bodyRoot = root - 1;
+        val collectionRoot =
+            semantic.nodes.data[bodyRoot].subtreeStart - 1;
+        var collectionNode = semantic.nodes.data[collectionRoot];
+        var valueType = expressionType(semantic, collectionRoot);
+        var range = collectionNode.kind == 13;
+        if (range) {
+            range = collectionNode.aux == 87;
+            if (collectionNode.aux == 88) { range = true; }
+        }
+        if (range == false) {
+            semanticFail(semantic, 4, collectionNode);
+            return;
+        }
+        if (valueType.kind == 11) {
+            valueType = TypeValue(3, 0, 0);
+            collectionNode.typeKind = 3;
+            semantic.nodes.data[collectionRoot] = collectionNode;
+            val rightRoot = collectionRoot - 1;
+            val leftRoot =
+                semantic.nodes.data[rightRoot].subtreeStart - 1;
+            var rightNode = semantic.nodes.data[rightRoot];
+            var leftNode = semantic.nodes.data[leftRoot];
+            rightNode.typeKind = 3;
+            leftNode.typeKind = 3;
+            semantic.nodes.data[rightRoot] = rightNode;
+            semantic.nodes.data[leftRoot] = leftNode;
+        }
+        if (isIntegerType(valueType) == false) {
+            semanticFail(semantic, 4, collectionNode);
+            return;
+        }
+        val savedLocals = semantic.locals.length;
+        val nameNode = semantic.nodes.data[node.subtreeStart];
+        var locals = semantic.locals;
+        localListAppend(
+            locals, LocalInfo(
+                nodeHash(semantic, nameNode), valueType, false, nameNode.start));
+        semantic.locals = locals;
+        semantic.loopDepth = semantic.loopDepth + 1;
+        checkBlock(semantic, bodyRoot);
+        semantic.loopDepth = semantic.loopDepth - 1;
+        var restored = semantic.locals;
+        restored.length = savedLocals;
+        semantic.locals = restored;
+        return;
+    }
     if (node.kind == 36) {
         if (semantic.loopDepth == 0) {
             semanticFail(semantic, 4, node);
@@ -1225,6 +1273,12 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             return;
         }
         var valueType = initializer;
+        if (valueType.kind == 11) {
+            valueType = TypeValue(3, 0, 0);
+            var initializerNode = semantic.nodes.data[initializerRoot];
+            initializerNode.typeKind = 3;
+            semantic.nodes.data[initializerRoot] = initializerNode;
+        }
         val afterName = node.subtreeStart + 1;
         if (afterName < semantic.nodes.data[initializerRoot].subtreeStart) {
             valueType = typeFromNode(

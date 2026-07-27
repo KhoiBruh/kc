@@ -423,9 +423,14 @@ Sử dụng cú pháp dựa trên phạm vi (Ranges) và Iterator, loại bỏ v
 * Duyệt mảng: `for (a in arr)`
 * Duyệt mảng kèm chỉ số: `for (a, i in arr)`
 * Vòng lặp điều kiện: `while (condition) { ... }`
-* `break;` thoát vòng lặp `while` gần nhất; `continue;` chuyển sang lần kiểm tra
-  điều kiện tiếp theo. Cả hai câu lệnh đều bắt buộc có dấu `;` và bị từ chối khi
+* `break;` thoát vòng lặp gần nhất; `continue;` chuyển sang lần lặp tiếp theo.
+  Cả hai câu lệnh đều bắt buộc có dấu `;` và bị từ chối khi
   nằm ngoài vòng lặp.
+
+Thân của `if`, `else`, `while` và `for` có thể là một block `{ ... }` hoặc đúng
+một statement, kể cả khi statement bắt đầu ở dòng kế tiếp. `else` luôn gắn với
+`if` chưa có `else` gần nhất. Hiện backend self-hosted hỗ trợ `for` với range số
+nguyên: `..` gồm cận cuối, còn `..<` không gồm cận cuối.
 
 ---
 
@@ -656,7 +661,8 @@ kc --emit-llvm program.k -o program.ll
 ```
 
 Backend hiện hỗ trợ hàm và lời gọi hàm, parameter, `val`/`var`, assignment,
-literal và toán tử số, comparison, `if`/`else`, `while`, `break`, `continue`,
+literal và toán tử số, comparison, `if`/`else`, `while`, integer-range `for`,
+`break`, `continue`,
 `return`, raw pointer,
 integer casts có kiểm tra, cast `f32`/`f64`, fixed struct, fixed array và slice.
 `unit` được hạ
