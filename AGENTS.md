@@ -197,6 +197,7 @@ Module/import self-hosting is complete for the current contract.
 Bootstrap diagnostics and CLI parity are complete for the current contract.
 Integer-cast self-hosting is complete for the approved integer matrix.
 Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
+Payload-free enum self-hosting is complete for the current contract.
 
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.

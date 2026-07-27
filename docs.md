@@ -433,8 +433,8 @@ tail expression cuối block không có `;` và là giá trị của arm:
 }
 ```
 
-Pattern destructuring và kiểm tra exhaustiveness cho enum chưa thuộc subset
-hiện tại.
+Pattern destructuring chưa thuộc subset hiện tại. Enum `when` không payload đã
+kiểm tra exhaustiveness và cho phép bỏ `else` khi mọi variant xuất hiện đúng một lần.
 
 ### Vòng lặp (Loops)
 
@@ -771,6 +771,10 @@ diagnostics, checked float-to-integer, `NaN`/infinity, các biên signed/unsigne
 và LLVM IR parity đều pass qua `kc1`–`kc4`. Debug và Release giữ cùng behavior,
 IR hợp lệ và fixed-point `kc3.ll == kc4.ll`.
 
+**Payload-free enum self-hosting milestone: complete.** Khai báo enum,
+`Enum.Variant`, truyền/trả enum, tag `u32`, và exhaustive enum `when` có
+diagnostic span/category parity đều được compiler K tự biên dịch qua `kc1`–`kc4`.
+
 The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
 and the bootstrap-manifest test requires every listed K source to be reachable
 from `main.k` through imports. It currently supports the
@@ -811,4 +815,4 @@ Bootstrap generic functions and structs accept arbitrary ordered type-parameter
 lists. Specialization identity and LLVM symbol names include every concrete
 type argument in declaration order; struct construction remains explicit (for
 example, `Pair<i32, bool>(40, true)`). Type packs, overload resolution,
-ownership/moves, enums, and user-defined traits remain unsupported.
+ownership/moves, payload enums, and user-defined traits remain unsupported.
