@@ -173,7 +173,9 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- `when` is not lowered yet.
+- Expression-valued `when`, pattern destructuring, and enum exhaustiveness are
+  not lowered yet; statement-form `when` supports integer/bool subjects and
+  subjectless bool conditions.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -216,10 +218,12 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
   generic functions and structs, and minimal nullable values emit typed LLVM
   text directly from K.
+- Statement-form `when` is self-hosted with first-match semantics, an optional
+  final `else`, and block or single-statement branch bodies.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Add `when` as the next vertical slice with first-match semantics, an optional
-`else`, positioned diagnostics, and bootstrap behavior fixtures.
+Add expression-valued `when` with branch result typing and exhaustiveness rules
+as the next vertical slice.

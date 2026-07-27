@@ -440,6 +440,42 @@ fn parseControlBody(var parser: Parser): u64 {
 fn parseStatement(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val first = parserPeek(parser);
+    if (parserMatch(parser, 14)) {
+        var hasSubject: u32 = 0;
+        if (parserMatch(parser, 50)) {
+            parseExpression(parser, 0);
+            if (parserExpect(parser, 51) == false) { return 0; }
+            hasSubject = 1;
+        }
+        if (parserExpect(parser, 52) == false) { return 0; }
+        var branchCount: u32 = 0;
+        var hasElse = false;
+        while (parser.ok) {
+            if (parserCheck(parser, 53)) {
+                parser.current = parser.current + 1;
+                return parserAdd(
+                    parser, 39, first.start, parserPrevious(parser).end,
+                    subtreeStart, branchCount + hasSubject * 65536);
+            }
+            val branchStart = parser.nodes.length;
+            var isElse: u32 = 0;
+            if (parserMatch(parser, 16)) {
+                if (hasElse) { parser.ok = false; return 0; }
+                hasElse = true;
+                isElse = 1;
+            } else {
+                if (hasElse) { parser.ok = false; return 0; }
+                parseExpression(parser, 0);
+            }
+            if (parserExpect(parser, 85) == false) { return 0; }
+            parseControlBody(parser);
+            parserAdd(
+                parser, 40, first.start, parserPrevious(parser).end,
+                branchStart, isElse);
+            branchCount = branchCount + 1;
+        }
+        return 0;
+    }
     if (parserMatch(parser, 15)) {
         if (parserExpect(parser, 50) == false) { return 0; }
         parseExpression(parser, 0);

@@ -368,6 +368,7 @@ StmtPtr Parser::parseStatement() {
     if (check(TokenKind::KwIf)) return parseIf();
     if (check(TokenKind::KwWhile)) return parseWhile();
     if (check(TokenKind::KwFor)) return parseFor();
+    if (check(TokenKind::KwWhen)) return parseWhen();
     if (check(TokenKind::KwBreak) || check(TokenKind::KwContinue)) {
         const auto keyword = advance();
         if (!expect(TokenKind::Semicolon, "expected ';' after loop control statement"))
@@ -459,6 +460,46 @@ StmtPtr Parser::parseFor() {
     return makeStmt(spanFrom(start, bodySpan),
                     ForStmt{valueName, indexName, std::move(collection),
                             std::move(body)});
+}
+
+StmtPtr Parser::parseWhen() {
+    const auto start = advance().span;
+    ExprPtr subject;
+    if (match(TokenKind::LeftParen)) {
+        subject = parseExpression();
+        if (!subject) return nullptr;
+        if (!expect(TokenKind::RightParen, "expected ')' after when subject"))
+            return nullptr;
+    }
+    if (!expect(TokenKind::LeftBrace, "expected '{' before when branches"))
+        return nullptr;
+    std::vector<WhenBranch> branches;
+    bool hasElse = false;
+    while (!check(TokenKind::RightBrace) && !atEnd()) {
+        ExprPtr condition;
+        if (match(TokenKind::KwElse)) {
+            if (hasElse) report(previous().span, "duplicate else branch");
+            hasElse = true;
+        } else {
+            if (hasElse) {
+                report(peek().span, "else branch must be last");
+                return nullptr;
+            }
+            condition = parseExpression();
+            if (!condition) return nullptr;
+        }
+        if (!expect(TokenKind::Arrow, "expected '->' after when branch"))
+            return nullptr;
+        SourceSpan bodySpan{};
+        auto body = parseControlBody(bodySpan);
+        if (!body) return nullptr;
+        branches.push_back({std::move(condition), std::move(body)});
+    }
+    if (!expect(TokenKind::RightBrace, "expected '}' after when branches"))
+        return nullptr;
+    return makeStmt(
+        spanFrom(start, previous().span),
+        WhenStmt{std::move(subject), std::move(branches)});
 }
 
 StmtPtr Parser::parseVariable() {

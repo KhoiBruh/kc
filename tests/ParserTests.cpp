@@ -373,6 +373,19 @@ TEST(parser_accepts_collection_for_with_optional_index_binding) {
     EXPECT_EQ(fixture.text(*second.indexName), "i");
 }
 
+TEST(parser_accepts_subject_and_condition_when_statements) {
+    ParseFixture fixture{
+        "fn f(code: i32) { when (code) { 1 -> return; else -> return; } "
+        "when { code == 2 -> print(code); else -> print(0); } }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& statements = fixture.parsed.program.functions[0].body->statements;
+    const auto& subject = std::get<k::WhenStmt>(statements[0]->node);
+    const auto& condition = std::get<k::WhenStmt>(statements[1]->node);
+    EXPECT_TRUE(subject.subject != nullptr);
+    EXPECT_TRUE(condition.subject == nullptr);
+    EXPECT_TRUE(subject.branches.back().condition == nullptr);
+}
+
 TEST(parser_parses_left_associative_integer_casts) {
     ParseFixture fixture{
         "fn convert(val value: i32): u64 { return value as i64 as u64; }"};

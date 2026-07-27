@@ -370,6 +370,17 @@ TEST(semantic_rejects_index_binding_on_range_for) {
               "range for does not accept an index binding");
 }
 
+TEST(semantic_checks_when_subject_patterns_and_conditions) {
+    SemanticFixture valid{
+        "fn f(code: i32) { when (code) { 1 -> return; else -> return; } "
+        "when { true -> return; else -> return; } }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{"fn f() { when { 1 -> return; } }"};
+    EXPECT_EQ(invalid.semantic.diagnostics[0].message,
+              "when condition must be bool");
+}
+
 TEST(semantic_allows_indexing_raw_pointer_struct_fields) {
     SemanticFixture fixture{
         "struct Buffer(data: i32*)"

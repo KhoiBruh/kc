@@ -236,6 +236,19 @@ private:
         block(*item.body);
         add(38, value.span, subtree, item.indexName ? 1 : 0);
     }
+    void stmtNode(const k::WhenStmt& item, const k::Stmt& value,
+                  std::size_t subtree) {
+        if (item.subject) expression(*item.subject);
+        for (const auto& branch : item.branches) {
+            const auto branchSubtree = index_;
+            if (branch.condition) expression(*branch.condition);
+            block(*branch.body);
+            add(40, value.span, branchSubtree, branch.condition ? 0 : 1);
+        }
+        add(39, value.span, subtree,
+            static_cast<unsigned>(item.branches.size()) +
+                (item.subject ? 65536u : 0u));
+    }
     void stmtNode(const k::BreakStmt&, const k::Stmt& value,
                   std::size_t subtree) {
         add(36, value.span, subtree);

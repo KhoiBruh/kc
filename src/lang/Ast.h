@@ -83,6 +83,14 @@ struct ForStmt {
     ExprPtr collection;
     std::unique_ptr<BlockStmt> body;
 };
+struct WhenBranch {
+    ExprPtr condition;
+    std::unique_ptr<BlockStmt> body;
+};
+struct WhenStmt {
+    ExprPtr subject;
+    std::vector<WhenBranch> branches;
+};
 struct BreakStmt {};
 struct ContinueStmt {};
 struct VariableDecl {
@@ -95,9 +103,9 @@ struct ReturnStmt { ExprPtr value; };
 struct ExpressionStmt { ExprPtr expression; };
 
 struct Stmt {
-    using Node = std::variant<BlockStmt, IfStmt, WhileStmt, ForStmt, BreakStmt,
-                              ContinueStmt, VariableDecl, ReturnStmt,
-                              ExpressionStmt>;
+    using Node = std::variant<BlockStmt, IfStmt, WhileStmt, ForStmt, WhenStmt,
+                              BreakStmt, ContinueStmt, VariableDecl,
+                              ReturnStmt, ExpressionStmt>;
     SourceSpan span;
     Node node;
 };

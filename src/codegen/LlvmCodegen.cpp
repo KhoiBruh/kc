@@ -434,6 +434,10 @@ private:
             emitFor(*forStatement);
             return;
         }
+        if (const auto* whenStatement = std::get_if<WhenStmt>(&statement.node)) {
+            emitWhen(*whenStatement);
+            return;
+        }
         if (std::holds_alternative<BreakStmt>(statement.node)) {
             builder_.CreateBr(loopTargets_.back().second);
             return;
@@ -548,6 +552,56 @@ private:
         if (!builder_.GetInsertBlock()->getTerminator())
             builder_.CreateBr(conditionBlock);
         builder_.SetInsertPoint(exitBlock);
+    }
+
+    void emitWhen(const WhenStmt& statement) {
+        auto* function = builder_.GetInsertBlock()->getParent();
+        auto* mergeBlock = llvm::BasicBlock::Create(context_, "when.end", function);
+        llvm::Value* subject = statement.subject
+            ? emitExpr(*statement.subject) : nullptr;
+        bool allTerminate = !statement.branches.empty();
+        bool hasElse = false;
+        for (std::size_t i = 0; i < statement.branches.size(); ++i) {
+            const auto& branch = statement.branches[i];
+            auto* bodyBlock = llvm::BasicBlock::Create(
+                context_, branch.condition ? "when.branch" : "when.else",
+                function);
+            if (branch.condition) {
+                auto* condition = emitExpr(*branch.condition);
+                if (!condition) return;
+                if (subject) {
+                    condition = subject->getType()->isFloatingPointTy()
+                        ? builder_.CreateFCmpOEQ(subject, condition)
+                        : builder_.CreateICmpEQ(subject, condition);
+                }
+                const bool last = i + 1 == statement.branches.size();
+                auto* next = last ? mergeBlock : llvm::BasicBlock::Create(
+                    context_, "when.next", function);
+                builder_.CreateCondBr(condition, bodyBlock, next);
+                builder_.SetInsertPoint(bodyBlock);
+                emitScopedBlock(*branch.body);
+                const bool terminates = builder_.GetInsertBlock()->getTerminator();
+                allTerminate = allTerminate && terminates;
+                if (!terminates)
+                    builder_.CreateBr(mergeBlock);
+                if (!last) builder_.SetInsertPoint(next);
+            } else {
+                hasElse = true;
+                builder_.CreateBr(bodyBlock);
+                builder_.SetInsertPoint(bodyBlock);
+                emitScopedBlock(*branch.body);
+                const bool terminates = builder_.GetInsertBlock()->getTerminator();
+                allTerminate = allTerminate && terminates;
+                if (!terminates)
+                    builder_.CreateBr(mergeBlock);
+            }
+        }
+        if (statement.branches.empty()) builder_.CreateBr(mergeBlock);
+        if (hasElse && allTerminate) {
+            mergeBlock->eraseFromParent();
+            return;
+        }
+        builder_.SetInsertPoint(mergeBlock);
     }
 
     void emitFor(const ForStmt& statement) {

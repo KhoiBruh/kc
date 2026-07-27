@@ -479,6 +479,18 @@ TEST(codegen_lowers_collection_for_with_value_and_index) {
     EXPECT_TRUE(ir.find("getelementptr inbounds i32") != std::string::npos);
 }
 
+TEST(codegen_lowers_when_with_first_match_control_flow) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn choose(code: i32): i32 { when (code) { "
+        "1 -> return 10; 2 -> return 20; else -> return 12; } }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("when.branch") != std::string::npos);
+    EXPECT_TRUE(ir.find("when.next") != std::string::npos);
+    EXPECT_TRUE(ir.find("icmp eq i32") != std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

@@ -202,6 +202,16 @@ private:
         printStmtNode(*statement.body, depth + 1);
     }
 
+    void printStmtNode(const WhenStmt& statement, std::size_t depth) {
+        line(depth, "When");
+        if (statement.subject) printExpr(*statement.subject, depth + 1);
+        for (const auto& branch : statement.branches) {
+            line(depth + 1, branch.condition ? "Branch" : "Else");
+            if (branch.condition) printExpr(*branch.condition, depth + 2);
+            printStmtNode(*branch.body, depth + 2);
+        }
+    }
+
     void printStmtNode(const BreakStmt&, std::size_t depth) {
         line(depth, "Break");
     }

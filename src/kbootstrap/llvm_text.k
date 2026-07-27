@@ -2259,6 +2259,86 @@ fn emitCollectionFor(
     return false;
 }
 
+fn emitWhen(
+    var buffer: ByteBuffer, source: Source, nodes: AstList,
+    genericArguments: TypeValueList, root: u64,
+    var counter: IrCounter): bool {
+    val statement = nodes.data[root];
+    val branchCount = statement.aux % 65536;
+    val hasSubject = statement.aux / 65536;
+    val roots =
+        k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
+    var branchRoot = root - 1;
+    var remaining = branchCount;
+    while (remaining > 0) {
+        roots[remaining as u64 - 1] = branchRoot;
+        branchRoot = nodes.data[branchRoot].subtreeStart - 1;
+        remaining = remaining - 1;
+    }
+    var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
+    if (hasSubject == 1) {
+        subject = emitExpression(
+            buffer, source, nodes, genericArguments, branchRoot, counter);
+    }
+    val mergeBlock = nextBlock(counter);
+    var hasElse = false;
+    var allTerminate = branchCount > 0;
+    var index: u32 = 0;
+    while (index < branchCount) {
+        val branch = nodes.data[roots[index as u64]];
+        val bodyRoot = roots[index as u64] - 1;
+        val bodyBlock = nextBlock(counter);
+        if (branch.aux == 0) {
+            val conditionRoot = expressionChildBefore(nodes, bodyRoot);
+            var condition = emitExpression(
+                buffer, source, nodes, genericArguments,
+                conditionRoot, counter);
+            if (hasSubject == 1) {
+                val compared = nextTemporary(counter);
+                appendValuePrefix(buffer); appendDecimal(buffer, compared);
+                appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
+                byteBufferAppend(buffer, 32);
+                appendType(
+                    buffer, genericArguments,
+                    subject.typeKind, subject.typeName, subject.typePointee);
+                byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
+                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                appendIrValue(buffer, source, condition); appendNewline(buffer);
+                condition = IrValue(2, 0, 0, compared, 2, 0, 0);
+            }
+            var nextBlockValue = mergeBlock;
+            if (index + 1 < branchCount) {
+                nextBlockValue = nextBlock(counter);
+            }
+            appendConditionalBranch(
+                buffer, source, condition, bodyBlock, nextBlockValue);
+            appendBlockLabel(buffer, counter, bodyBlock);
+            val terminated = emitBlock(
+                buffer, source, nodes, genericArguments, bodyRoot, counter);
+            if (terminated == false) { appendBranch(buffer, mergeBlock); }
+            if (terminated == false) { allTerminate = false; }
+            if (index + 1 < branchCount) {
+                appendBlockLabel(buffer, counter, nextBlockValue);
+            }
+        } else {
+            hasElse = true;
+            appendBranch(buffer, bodyBlock);
+            appendBlockLabel(buffer, counter, bodyBlock);
+            val terminated = emitBlock(
+                buffer, source, nodes, genericArguments, bodyRoot, counter);
+            if (terminated == false) { appendBranch(buffer, mergeBlock); }
+            if (terminated == false) { allTerminate = false; }
+        }
+        index = index + 1;
+    }
+    k_boot_free(roots as unit*);
+    if (hasElse) {
+        if (allTerminate) { return true; }
+    }
+    appendBlockLabel(buffer, counter, mergeBlock);
+    return false;
+}
+
 fn emitStatement(
     var buffer: ByteBuffer,
     source: Source,
@@ -2354,6 +2434,10 @@ fn emitStatement(
         appendNewline(buffer); appendBranch(buffer, conditionBlock);
         appendBlockLabel(buffer, counter, endBlock);
         return false;
+    }
+    if (statement.kind == 39) {
+        return emitWhen(
+            buffer, source, nodes, genericArguments, root, counter);
     }
     if (statement.kind == 33) {
         val initializerRoot = root - 1;
@@ -2767,6 +2851,17 @@ fn emitBlockAllocas(
                 appendAlloca(buffer); appendI64(buffer); appendNewline(buffer);
             }
             emitBlockAllocas(buffer, genericArguments, nodes, bodyRoot);
+        }
+        if (statement.kind == 39) {
+            val branchCount = statement.aux % 65536;
+            var branchRoot = root - 1;
+            var remaining = branchCount;
+            while (remaining > 0) {
+                emitBlockAllocas(
+                    buffer, genericArguments, nodes, branchRoot - 1);
+                branchRoot = nodes.data[branchRoot].subtreeStart - 1;
+                remaining = remaining - 1;
+            }
         }
         index = index + 1;
     }

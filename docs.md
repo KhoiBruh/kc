@@ -393,26 +393,29 @@ if (condition) {
 thế `when`; `when` vẫn được dùng cho pattern-style branching và biểu thức nhiều
 nhánh.
 
-### Biểu thức `when`
+### Câu lệnh `when`
 
-Thay thế chuỗi điều kiện nhiều nhánh và `switch` truyền thống. Có thể dùng như
-một biểu thức gán và hỗ trợ toán tử logic:
+`when` hiện được hạ như một câu lệnh nhiều nhánh với first-match semantics.
+Dạng có subject nhận `bool` hoặc kiểu số nguyên; dạng không subject yêu cầu mỗi
+điều kiện có kiểu `bool`. `else` là tùy chọn và phải là nhánh cuối:
 
 ```text
-// Thay thế switch (Biên dịch thành Jump Table)
-val result = when (code) {
-    200 -> "OK"
-    404 -> "Not Found"
-    else -> "Unknown" // Bắt buộc có else khi gán (Exhaustiveness checking)
+when (code) {
+    200 -> handleOk();
+    404 -> handleMissing();
+    else -> handleUnknown();
 }
 
 // Thay thế if-else
 when {
-    a + b == c -> print("Match")
-    a < b && c > b -> print("Between")
+    a + b == c -> print("Match");
+    a < b && c > b -> print("Between");
 }
-
 ```
+
+Thân nhánh có thể là một block hoặc một câu lệnh đơn. Dạng `when` trả về giá
+trị, pattern destructuring và kiểm tra exhaustiveness cho enum chưa thuộc subset
+hiện tại.
 
 ### Vòng lặp (Loops)
 

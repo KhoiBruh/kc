@@ -1317,6 +1317,74 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         semantic.locals = restored;
         return;
     }
+    if (node.kind == 39) {
+        val branchCount = node.aux % 65536;
+        val hasSubject = node.aux / 65536;
+        if (branchCount == 0) {
+            semanticFail(semantic, 4, node);
+            return;
+        }
+        val roots =
+            k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
+        var branchRoot = root - 1;
+        var remaining = branchCount;
+        while (remaining > 0) {
+            roots[remaining as u64 - 1] = branchRoot;
+            branchRoot = semantic.nodes.data[branchRoot].subtreeStart - 1;
+            remaining = remaining - 1;
+        }
+        var subject = invalidType();
+        if (hasSubject == 1) {
+            val subjectRoot = branchRoot;
+            subject = expressionType(semantic, subjectRoot);
+            if (subject.kind == 11) {
+                subject = TypeValue(3, 0, 0);
+                var subjectNode = semantic.nodes.data[subjectRoot];
+                subjectNode.typeKind = 3;
+                semantic.nodes.data[subjectRoot] = subjectNode;
+            }
+            var comparable = subject.kind == 2;
+            if (isIntegerType(subject)) { comparable = true; }
+            if (comparable == false) {
+                semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
+            }
+        }
+        var index: u32 = 0;
+        while (index < branchCount) {
+            val current = semantic.nodes.data[roots[index as u64]];
+            val bodyRoot = roots[index as u64] - 1;
+            if (current.aux == 0) {
+                val conditionRoot =
+                    semantic.nodes.data[bodyRoot].subtreeStart - 1;
+                val condition = expressionType(semantic, conditionRoot);
+                if (hasSubject == 1) {
+                    if (typeAccepts(
+                            subject, condition,
+                            semantic.genericArguments) == false) {
+                        semanticFail(
+                            semantic, 4,
+                            semantic.nodes.data[conditionRoot]);
+                    } else {
+                        var conditionNode = semantic.nodes.data[conditionRoot];
+                        conditionNode.typeKind = subject.kind;
+                        conditionNode.typeName = subject.name;
+                        conditionNode.typePointee = subject.pointee;
+                        semantic.nodes.data[conditionRoot] = conditionNode;
+                    }
+                } else {
+                    if (condition.kind != 2) {
+                        semanticFail(
+                            semantic, 6,
+                            semantic.nodes.data[conditionRoot]);
+                    }
+                }
+            }
+            checkBlock(semantic, bodyRoot);
+            index = index + 1;
+        }
+        k_boot_free(roots as unit*);
+        return;
+    }
     if (node.kind == 36) {
         if (semantic.loopDepth == 0) {
             semanticFail(semantic, 4, node);

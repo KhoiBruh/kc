@@ -464,6 +464,37 @@ private:
             scopes_.pop_back();
             return false;
         }
+        if (const auto* whenStatement = std::get_if<WhenStmt>(&statement.node)) {
+            std::optional<SemanticType> subject;
+            if (whenStatement->subject) {
+                subject = analyzeExpr(*whenStatement->subject);
+                if (subject->kind != SemanticTypeKind::Bool && !isInteger(*subject))
+                    diagnose("when subject must be bool or integer",
+                             whenStatement->subject->span);
+            }
+            if (whenStatement->branches.empty())
+                diagnose("when requires at least one branch", statement.span);
+            bool allTerminate = !whenStatement->branches.empty();
+            bool hasElse = false;
+            for (const auto& branch : whenStatement->branches) {
+                if (branch.condition) {
+                    const auto condition = analyzeExpr(*branch.condition, subject);
+                    if (subject) {
+                        if (!compatible(*subject, condition) &&
+                            !(isNumeric(*subject) && isNumeric(condition)))
+                            diagnose("when pattern type does not match subject",
+                                     branch.condition->span);
+                    } else if (condition.kind != SemanticTypeKind::Bool) {
+                        diagnose("when condition must be bool",
+                                 branch.condition->span);
+                    }
+                } else {
+                    hasElse = true;
+                }
+                allTerminate = analyzeBlock(*branch.body, true) && allTerminate;
+            }
+            return hasElse && allTerminate;
+        }
         if (std::holds_alternative<BreakStmt>(statement.node)) {
             if (loopDepth_ == 0)
                 diagnose("break is only valid inside a loop", statement.span);
