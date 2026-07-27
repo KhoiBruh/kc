@@ -96,6 +96,22 @@ saturate. `bool`, `char`, float và pointer không tham gia ma trận integer n�
 pointer cast hiện có vẫn là một contract riêng. Float casts được để lại cho
 vertical slice sau khi integer casts đã self-hosted.
 
+Vertical slice float đầu tiên chỉ hỗ trợ `f32` và `f64`:
+
+| Nguồn → đích | Hành vi |
+| --- | --- |
+| Cùng kiểu float | Identity, luôn thành công |
+| `f32` → `f64` | Mở rộng chính xác, luôn thành công |
+| `f64` → `f32` | Làm tròn IEEE 754; overflow thành infinity; không `panic` |
+| Integer → `f32`/`f64` | Chuyển theo signedness và làm tròn IEEE 754; cho phép mất độ chính xác và infinity; không `panic` |
+| `f32`/`f64` → integer | Cắt về phía `0`, rồi kiểm tra miền đích |
+
+Cast float sang integer từ hằng `NaN`, infinity hoặc kết quả sau khi cắt nằm
+ngoài miền đích gây semantic diagnostic tại toàn bộ biểu thức cast; với dữ liệu
+runtime, cùng điều kiện gọi `k_boot_panic`. Vì kiểm tra áp dụng sau khi cắt,
+`-0.5 as u8` hợp lệ và cho `0`. Slice này không thêm implicit coercion và không
+bao gồm `f8`, `f16`, `bool`, `char` hay pointer.
+
 Frontend semantic của `kc0` và compiler bootstrap hiện áp dụng ma trận integer
 trên, từ chối float cast trong slice này, báo constant ngoài miền tại toàn bộ
 biểu thức cast, và lưu metadata cho biết conversion có cần runtime range check.

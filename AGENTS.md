@@ -204,6 +204,7 @@ Integer-cast self-hosting is complete for the approved integer matrix.
 
 ## Recommended next milestone
 
-Add float casts as a separate vertical slice, preserving the approved checked
-float-to-integer behavior and IEEE narrowing rules. Do not broaden this into
-implicit assignment conversions or general numeric coercion.
+Implement semantic metadata and positioned constant diagnostics for the
+approved `f32`/`f64` cast matrix. Keep LLVM lowering for the following slice,
+and do not broaden this into `f8`/`f16`, implicit assignment conversions, or
+general numeric coercion.
