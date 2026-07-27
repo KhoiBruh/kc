@@ -80,6 +80,22 @@ Phiên bản đầu tiên của K chưa cung cấp các phép toán wrapping, sa
 * Cast float sang integer cắt phần thập phân về phía `0`. Giá trị ngoài miền integer, `NaN` hoặc infinity gây lỗi biên dịch nếu biết trước, nếu không thì `panic`.
 * Cast từ float rộng xuống float hẹp tuân theo IEEE 754: làm tròn về giá trị gần nhất, giá trị hữu hạn quá lớn trở thành infinity, còn `NaN` và infinity được giữ nguyên. Phép cast này không `panic`.
 
+Vertical slice đầu tiên chỉ triển khai cast tường minh giữa các kiểu integer
+`i8`–`i128` và `u8`–`u128`:
+
+| Nguồn → đích | Hành vi |
+| --- | --- |
+| Cùng kiểu | Identity, luôn thành công |
+| Cùng signedness, đích rộng hơn | Luôn thành công |
+| Unsigned → signed rộng hơn nguồn | Luôn thành công |
+| Narrowing hoặc mọi đổi signedness còn lại | Kiểm tra miền giá trị |
+
+Giá trị hằng nằm ngoài miền đích gây semantic diagnostic tại biểu thức cast.
+Giá trị runtime nằm ngoài miền đích gọi `panic`; cast không được wrap hay
+saturate. `bool`, `char`, float và pointer không tham gia ma trận integer này;
+pointer cast hiện có vẫn là một contract riêng. Float casts được để lại cho
+vertical slice sau khi integer casts đã self-hosted.
+
 ### Văn bản và Unicode (Text & Unicode)
 
 `char` biểu diễn đúng một Unicode scalar value và được lưu bằng 32 bit. `string` sở hữu một buffer UTF-8 hợp lệ; dữ liệu nhị phân sử dụng `[]u8` thay vì `string`.

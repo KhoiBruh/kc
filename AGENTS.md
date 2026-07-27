@@ -201,5 +201,7 @@ Bootstrap diagnostics and CLI parity are complete for the current contract.
 
 ## Recommended next milestone
 
-Add numeric casts as the next demand-driven frontend/codegen vertical slice,
-including bootstrap acceptance and positioned diagnostics.
+Implement the approved integer-cast matrix as the next frontend/codegen vertical
+slice: integer types only, checked narrowing and signedness changes, positioned
+constant diagnostics, runtime panic checks, and bootstrap acceptance. Defer float
+casts until integer casts are self-hosted.
