@@ -173,6 +173,7 @@ llvm-readobj --file-headers file.obj
 
 Module/import self-hosting is complete for the current contract.
 Bootstrap diagnostics and CLI parity are complete for the current contract.
+Integer-cast self-hosting is complete for the approved integer matrix.
 
 - `src/kbootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
@@ -203,6 +204,6 @@ Bootstrap diagnostics and CLI parity are complete for the current contract.
 
 ## Recommended next milestone
 
-Close the integer-cast self-hosting milestone: run Debug and Release bootstrap
-acceptance through `kc4`, require fixed-point parity, then mark the milestone
-complete. Keep float casts deferred.
+Add float casts as a separate vertical slice, preserving the approved checked
+float-to-integer behavior and IEEE narrowing rules. Do not broaden this into
+implicit assignment conversions or general numeric coercion.

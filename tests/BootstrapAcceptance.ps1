@@ -115,6 +115,12 @@ foreach ($fixtureName in $validFixtures) {
         $stage1Output -cne $stage4Output) {
         Write-Error "bootstrap stage behavior differs for $fixtureName"
     }
+    if ($fixtureName -eq "integer_casts.k" -and $stage1Exit -ne 42) {
+        Write-Error "checked integer cast fixture did not return 42"
+    }
+    if ($fixtureName -eq "integer_cast_panic.k" -and $stage1Exit -ne 2) {
+        Write-Error "out-of-range integer cast did not panic with exit code 2"
+    }
     & $Opt -passes=verify -disable-output $stage1Ll
     if ($LASTEXITCODE -ne 0) { Write-Error "kc1 IR failed verification" }
     & $Opt -passes=verify -disable-output $stage2Ll

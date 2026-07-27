@@ -618,7 +618,8 @@ kc --emit-llvm program.k -o program.ll
 
 Backend hiện hỗ trợ hàm và lời gọi hàm, parameter, `val`/`var`, assignment,
 literal và toán tử số, comparison, `if`/`else`, `while`, `return`, raw pointer,
-integer casts có kiểm tra, fixed struct, fixed array và slice. `unit` được hạ thành LLVM `void`; `bool`
+integer casts có kiểm tra, fixed struct, fixed array và slice. `unit` được hạ
+thành LLVM `void`; `bool`
 thành `i1`; raw pointer thành opaque `ptr`; slice thành `{ptr, i64}`. Truy cập
 array/slice động sinh bounds check gọi `k_boot_panic`. Backend chạy LLVM verifier
 trước khi ghi tệp `.ll`; cấu trúc chưa hỗ trợ được từ chối bằng diagnostic thay
@@ -685,6 +686,11 @@ semantic, import, argument, filesystem, tool-launch, verification, and linker
 failures use the established exit-code split. Acceptance requires every stable
 CLI failure message exactly once and identically across `kc1` through `kc4`,
 alongside exact semantic diagnostic parity.
+
+**Integer-cast self-hosting milestone: complete.** `kc0` và compiler bootstrap
+áp dụng cùng ma trận integer, constant diagnostics và checked runtime panic.
+Acceptance yêu cầu chương trình cast hợp lệ trả `42`, cast ngoài miền trả `2`,
+mọi IR qua verifier, và `kc3.ll`/`kc4.ll` giữ fixed-point ở Debug và Release.
 
 The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
 and the bootstrap-manifest test requires every listed K source to be reachable
