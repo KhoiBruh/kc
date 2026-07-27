@@ -219,31 +219,28 @@ Slice không được sống lâu hơn mảng hoặc vùng dữ liệu mà nó t
 
 ### Kiểu liệt kê (Enums)
 
-`enum` định nghĩa một tập hợp hữu hạn các giá trị có tên:
+Contract enum v0.1 là tập hữu hạn các variant không mang payload:
 
 ```text
 enum Status {
-    OK,              // 0
-    CREATED,         // 1
-    NOT_FOUND = 404,
-    SERVER_ERROR     // 405
+    Ready,
+    Running,
+    Done
 }
 
-val state: Status = Status.OK
-
-enum CStatus: i32 {
-    OK = 0,
-    ERROR = -1
-}
+val state: Status = Status.Ready
 ```
 
-* Phần tử đầu tiên không được gán thủ công có giá trị `0`. Mỗi phần tử không được gán tiếp theo nhận giá trị của phần tử trước cộng `1`.
-* Một enum có thể trộn phần tử được đánh số tự động và phần tử được gán số thủ công.
-* Có thể ghi rõ kiểu số nền sau tên enum, ví dụ `enum CStatus: i32`. Mọi giá trị phải nằm trong miền của kiểu nền, nếu không trình biên dịch sẽ báo lỗi.
-* Nếu không ghi kiểu nền, trình biên dịch chọn kiểu số nguyên nhỏ nhất chứa được toàn bộ giá trị. Enum có giá trị âm sử dụng kiểu có dấu; enum không có giá trị âm sử dụng kiểu không dấu.
-* Enum dùng để tương tác với C phải ghi rõ kiểu nền; không được dựa vào kiểu do trình biên dịch suy luận.
-* Mỗi giá trị enum phải được truy cập qua tên kiểu để tránh xung đột tên.
-* Trình biên dịch kiểm tra đầy đủ các nhánh khi `when` hoạt động trên enum; nhánh `else` có thể được bỏ qua nếu mọi giá trị đã được xử lý.
+* Dấu phẩy là bắt buộc giữa hai variant; trailing comma trước `}` bị từ chối.
+* Variant được tạo và truy cập qua tên enum, ví dụ `Status.Ready`.
+* Tag bắt đầu từ `0` theo thứ tự khai báo và dùng `u32` nội bộ.
+* Không hỗ trợ payload, generic enum, underlying type công khai hoặc gán tag thủ công trong v0.1.
+* Enum là kiểu riêng, copy ngầm và không chuyển đổi ngầm sang số nguyên.
+* Khi exhaustive enum `when` được triển khai, `else` có thể bỏ qua chỉ khi mọi
+  variant đã xuất hiện đúng một lần; nhánh trùng hoặc thiếu variant là diagnostic.
+
+Phần này là contract đã chốt; parser, semantic và codegen enum được triển khai
+theo các vertical slice tiếp theo.
 
 ### Kiểu nullable (Nullable Types)
 

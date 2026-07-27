@@ -66,6 +66,9 @@ source.k
 - Owned strings, arrays, and resource-owning structs are intended to be
   move-only with explicit `.copy()`; this is not implemented yet.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
+- Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
+  no trailing comma, accessed as `Enum.Variant`, and use declaration-order
+  `u32` tags internally; manual tags and public underlying types are excluded.
 - `print` is currently a builtin overload only for a string literal and `i32`.
   It does not add spaces, formatting, or a newline.
 
@@ -228,5 +231,6 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 
 ## Recommended next milestone
 
-Add enum declarations and exhaustive enum `when` as the next vertical slice;
-keep payload patterns and destructuring separate.
+Add payload-free enum declarations, variant symbols, and `Enum.Variant`
+semantic construction as the next vertical slice; codegen and exhaustive
+`when` follow separately.
