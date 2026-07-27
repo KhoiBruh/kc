@@ -1,7 +1,13 @@
 fn choose(code: i32): i32 {
     return when (code) {
-        1 -> 10;
-        2 -> 20;
+        1 -> {
+            val base = 9;
+            base + 1
+        }
+        2 -> {
+            val base = 18;
+            base + 2
+        }
         else -> 12;
     };
 }

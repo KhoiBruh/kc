@@ -1176,9 +1176,18 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         while (index < branchCount) {
             val branch = semantic.nodes.data[roots[index as u64]];
             val valueRoot = roots[index as u64] - 1;
-            if (branch.aux == 0) {
-                val conditionRoot =
-                    semantic.nodes.data[valueRoot].subtreeStart - 1;
+            val statementCount = branch.aux / 2;
+            val statementRoots =
+                k_boot_alloc((statementCount as u64) * sizeof(u64)) as u64*;
+            var beforeValue = semantic.nodes.data[valueRoot].subtreeStart - 1;
+            var statementRemaining = statementCount;
+            while (statementRemaining > 0) {
+                statementRoots[statementRemaining as u64 - 1] = beforeValue;
+                beforeValue = semantic.nodes.data[beforeValue].subtreeStart - 1;
+                statementRemaining = statementRemaining - 1;
+            }
+            if (branch.aux % 2 == 0) {
+                val conditionRoot = beforeValue;
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
                     if (typeAccepts(subject, condition, semantic.genericArguments) == false) {
@@ -1196,7 +1205,20 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     }
                 }
             }
+            val savedLocals = semantic.locals.length;
+            val savedScopeStart = semantic.scopeStart;
+            semantic.scopeStart = savedLocals;
+            var statementIndex: u32 = 0;
+            while (statementIndex < statementCount) {
+                checkStatement(semantic, statementRoots[statementIndex as u64]);
+                statementIndex = statementIndex + 1;
+            }
             var value = expressionType(semantic, valueRoot);
+            var restoredLocals = semantic.locals;
+            restoredLocals.length = savedLocals;
+            semantic.locals = restoredLocals;
+            semantic.scopeStart = savedScopeStart;
+            k_boot_free(statementRoots as unit*);
             if (result.kind == 0) {
                 result = value;
             } else {

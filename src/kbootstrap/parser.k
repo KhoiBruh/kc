@@ -220,11 +220,50 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             parseExpression(parser, 0);
                         }
                         if (parserExpect(parser, 85) == false) { return 0; }
-                        parseExpression(parser, 0);
-                        if (parserExpect(parser, 58) == false) { return 0; }
+                        var statementCount: u32 = 0;
+                        if (parserMatch(parser, 52)) {
+                            var foundTail = false;
+                            while (foundTail == false) {
+                                if (parserCheck(parser, 53)) {
+                                    parser.ok = false;
+                                    return 0;
+                                }
+                                val next = parserPeek(parser).kind;
+                                var statementStart = next == 6;
+                                if (next == 7) { statementStart = true; }
+                                if (next == 15) { statementStart = true; }
+                                if (next == 17) { statementStart = true; }
+                                if (next == 19) { statementStart = true; }
+                                if (next == 20) { statementStart = true; }
+                                if (next == 52) { statementStart = true; }
+                                if (next == 89) { statementStart = true; }
+                                if (next == 90) { statementStart = true; }
+                                if (statementStart) {
+                                    parseStatement(parser);
+                                    statementCount = statementCount + 1;
+                                } else {
+                                    val valueStart = parser.nodes.length;
+                                    val valueFirst = parserPeek(parser);
+                                    parseExpression(parser, 0);
+                                    if (parserMatch(parser, 58)) {
+                                        parserAdd(
+                                            parser, 35, valueFirst.start,
+                                            parserPrevious(parser).end,
+                                            valueStart, 0);
+                                        statementCount = statementCount + 1;
+                                    } else {
+                                        foundTail = true;
+                                    }
+                                }
+                            }
+                            if (parserExpect(parser, 53) == false) { return 0; }
+                        } else {
+                            parseExpression(parser, 0);
+                            if (parserExpect(parser, 58) == false) { return 0; }
+                        }
                         parserAdd(
                             parser, 24, first.start, parserPrevious(parser).end,
-                            branchStart, isElse);
+                            branchStart, isElse + statementCount * 2);
                         branchCount = branchCount + 1;
                     }
                     if (parserExpect(parser, 53) == false) { return 0; }

@@ -425,8 +425,18 @@ return when (code) {
 ```
 
 Mọi arm phải có kiểu tương thích. Subject chỉ được đánh giá một lần và nhánh
-khớp đầu tiên thắng. Block-valued arm, pattern destructuring và kiểm tra
-exhaustiveness cho enum chưa thuộc subset hiện tại.
+khớp đầu tiên thắng. Arm cũng có thể là block; các statement vẫn cần `;`, còn
+tail expression cuối block không có `;` và là giá trị của arm:
+
+```text
+1 -> {
+    val value = calculate();
+    value + 1
+}
+```
+
+Pattern destructuring và kiểm tra exhaustiveness cho enum chưa thuộc subset
+hiện tại.
 
 ### Vòng lặp (Loops)
 

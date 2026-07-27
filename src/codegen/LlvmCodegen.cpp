@@ -762,7 +762,11 @@ private:
                         context_, "when.next", function);
                     builder_.CreateCondBr(condition, bodyBlock, nextBlock);
                     builder_.SetInsertPoint(bodyBlock);
+                    const auto outerLocals = locals_;
+                    for (const auto& statement : branch.body->statements)
+                        emitStatement(*statement);
                     auto* value = emitExpr(*branch.value);
+                    locals_ = outerLocals;
                     if (!value) return nullptr;
                     auto* incoming = builder_.GetInsertBlock();
                     builder_.CreateBr(mergeBlock);
@@ -771,7 +775,11 @@ private:
                 } else {
                     builder_.CreateBr(bodyBlock);
                     builder_.SetInsertPoint(bodyBlock);
+                    const auto outerLocals = locals_;
+                    for (const auto& statement : branch.body->statements)
+                        emitStatement(*statement);
                     auto* value = emitExpr(*branch.value);
+                    locals_ = outerLocals;
                     if (!value) return nullptr;
                     auto* incoming = builder_.GetInsertBlock();
                     builder_.CreateBr(mergeBlock);

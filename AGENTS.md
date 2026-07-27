@@ -173,8 +173,8 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- Block-valued `when` arms, pattern destructuring, and enum exhaustiveness are
-  not lowered yet. Expression-valued `when` requires a final `else`.
+- Pattern destructuring and enum exhaustiveness are not lowered yet.
+  Expression-valued `when` requires a final `else`.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
@@ -221,10 +221,12 @@ Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
   final `else`, and block or single-statement branch bodies.
 - Expression-valued `when` is self-hosted for return/initializer contexts; each
   arm is an expression terminated by `;` and a final `else` is required.
+- A value arm may be a scoped block whose final expression omits `;` and
+  supplies the arm value.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Add block-valued `when` arms with an explicit final value as the next vertical
-slice; keep enum exhaustiveness and pattern destructuring separate.
+Add enum declarations and exhaustive enum `when` as the next vertical slice;
+keep payload patterns and destructuring separate.

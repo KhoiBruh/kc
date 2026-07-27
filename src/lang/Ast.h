@@ -19,6 +19,8 @@ using ExprPtr = std::unique_ptr<Expr>;
 using TypePtr = std::unique_ptr<Type>;
 using StmtPtr = std::unique_ptr<Stmt>;
 
+struct BlockStmt { std::vector<StmtPtr> statements; };
+
 enum class ParameterMode { Owned, ImmutableBorrow, MutableBorrow };
 enum class VariableMode { Val, Var };
 
@@ -39,7 +41,11 @@ struct PostfixExpr { ExprPtr value; TokenKind op; };
 struct UnitLiteralExpr {};
 struct ArrayLiteralExpr { std::vector<ExprPtr> elements; };
 struct SizeofExpr { TypePtr type; };
-struct WhenExprBranch { ExprPtr condition; ExprPtr value; };
+struct WhenExprBranch {
+    ExprPtr condition;
+    std::unique_ptr<BlockStmt> body;
+    ExprPtr value;
+};
 struct WhenExpr {
     ExprPtr subject;
     std::vector<WhenExprBranch> branches;
@@ -72,7 +78,6 @@ struct Type {
     Node node;
 };
 
-struct BlockStmt { std::vector<StmtPtr> statements; };
 struct IfStmt {
     ExprPtr condition;
     std::unique_ptr<BlockStmt> thenBranch;

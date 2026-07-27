@@ -257,6 +257,11 @@ TEST(semantic_validates_integer_casts) {
         "return widened as u64;"
         "}"};
     EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture blockValid{
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1 -> { val value = 9; value + 1 } else -> { 20 } }; }"};
+    EXPECT_TRUE(blockValid.semantic.diagnostics.empty());
     EXPECT_EQ(valid.semantic.integerCasts.size(), 3u);
     std::size_t checked = 0;
     for (const auto& [cast, info] : valid.semantic.integerCasts) {

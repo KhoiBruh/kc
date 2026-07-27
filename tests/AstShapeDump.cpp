@@ -206,8 +206,12 @@ private:
         for (const auto& branch : item.branches) {
             const auto branchSubtree = index_;
             if (branch.condition) expression(*branch.condition);
+            for (const auto& statement : branch.body->statements)
+                this->statement(*statement);
             expression(*branch.value);
-            add(24, value.span, branchSubtree, branch.condition ? 0 : 1);
+            add(24, value.span, branchSubtree,
+                static_cast<unsigned>((branch.condition ? 0 : 1) +
+                                      branch.body->statements.size() * 2));
         }
         add(23, value.span, subtree,
             static_cast<unsigned>(item.branches.size() +

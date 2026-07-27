@@ -410,6 +410,15 @@ TEST(parser_parses_when_expressions) {
     EXPECT_EQ(expression.branches.size(), 2u);
     EXPECT_TRUE(expression.branches.back().condition == nullptr);
 
+    ParseFixture blockFixture{
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1 -> { val value = 9; value + 1 } else -> { 20 } }; }"};
+    EXPECT_TRUE(blockFixture.parsed.diagnostics.empty());
+    const auto& blockReturn = std::get<k::ReturnStmt>(
+        blockFixture.parsed.program.functions[0].body->statements[0]->node);
+    const auto& blockWhen = std::get<k::WhenExpr>(blockReturn.value->node);
+    EXPECT_EQ(blockWhen.branches[0].body->statements.size(), 1u);
+
     ParseFixture missingElse{
         "fn choose(val code: i32): i32 { return when (code) { 1 -> 10; }; }"};
     EXPECT_TRUE(!missingElse.parsed.diagnostics.empty());

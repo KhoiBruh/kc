@@ -333,6 +333,8 @@ private:
         for (const auto& branch : expression.branches) {
             line(depth + 1, branch.condition ? "Branch" : "Else");
             if (branch.condition) printExpr(*branch.condition, depth + 2);
+            for (const auto& statement : branch.body->statements)
+                printStmt(*statement, depth + 2);
             printExpr(*branch.value, depth + 2);
         }
     }

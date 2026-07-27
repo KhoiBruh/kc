@@ -830,11 +830,48 @@ ExprPtr Parser::parseWhenExpression() {
         }
         if (!expect(TokenKind::Arrow, "expected '->' after when condition"))
             return nullptr;
-        auto value = parseExpression();
-        if (!value) return nullptr;
-        if (!expect(TokenKind::Semicolon, "expected ';' after when value"))
-            return nullptr;
-        branches.push_back({std::move(condition), std::move(value)});
+        auto body = std::make_unique<BlockStmt>();
+        ExprPtr value;
+        if (match(TokenKind::LeftBrace)) {
+            while (!check(TokenKind::RightBrace) && !atEnd()) {
+                const bool statementStart =
+                    check(TokenKind::KwVal) || check(TokenKind::KwVar) ||
+                    check(TokenKind::KwReturn) || check(TokenKind::KwIf) ||
+                    check(TokenKind::KwWhile) || check(TokenKind::KwFor) ||
+                    check(TokenKind::KwBreak) || check(TokenKind::KwContinue) ||
+                    check(TokenKind::LeftBrace);
+                if (statementStart) {
+                    auto statement = parseStatement();
+                    if (!statement) return nullptr;
+                    body->statements.push_back(std::move(statement));
+                    continue;
+                }
+                auto candidate = parseExpression();
+                if (!candidate) return nullptr;
+                if (match(TokenKind::Semicolon)) {
+                    const auto span = spanFrom(candidate->span, previous().span);
+                    body->statements.push_back(makeStmt(
+                        span, ExpressionStmt{std::move(candidate)}));
+                    continue;
+                }
+                value = std::move(candidate);
+                break;
+            }
+            if (!value) {
+                report(peek().span, "when value block requires a tail expression");
+                return nullptr;
+            }
+            if (!expect(TokenKind::RightBrace,
+                        "expected '}' after when value block"))
+                return nullptr;
+        } else {
+            value = parseExpression();
+            if (!value) return nullptr;
+            if (!expect(TokenKind::Semicolon, "expected ';' after when value"))
+                return nullptr;
+        }
+        branches.push_back(
+            {std::move(condition), std::move(body), std::move(value)});
     }
     if (!expect(TokenKind::RightBrace, "expected '}' after when branches"))
         return nullptr;

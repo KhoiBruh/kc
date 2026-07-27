@@ -1319,10 +1319,30 @@ fn emitExpression(
         while (index < branchCount) {
             val branch = nodes.data[roots[index as u64]];
             val valueRoot = roots[index as u64] - 1;
+            val statementCount = branch.aux / 2;
+            val statementRoots =
+                k_boot_alloc((statementCount as u64) * sizeof(u64)) as u64*;
+            var beforeValue = nodes.data[valueRoot].subtreeStart - 1;
+            var statementRemaining = statementCount;
+            while (statementRemaining > 0) {
+                statementRoots[statementRemaining as u64 - 1] = beforeValue;
+                beforeValue = nodes.data[beforeValue].subtreeStart - 1;
+                statementRemaining = statementRemaining - 1;
+            }
+            var statementIndex: u32 = 0;
+            while (statementIndex < statementCount) {
+                val statement = nodes.data[statementRoots[statementIndex as u64]];
+                if (statement.kind == 33) {
+                    emitVariableAlloca(
+                        buffer, genericArguments, nodes,
+                        statementRoots[statementIndex as u64]);
+                }
+                statementIndex = statementIndex + 1;
+            }
             val bodyBlock = nextBlock(counter);
             var nextBlockValue = mergeBlock;
-            if (branch.aux == 0) {
-                val conditionRoot = nodes.data[valueRoot].subtreeStart - 1;
+            if (branch.aux % 2 == 0) {
+                val conditionRoot = beforeValue;
                 var condition = emitExpression(
                     buffer, source, nodes, genericArguments,
                     conditionRoot, counter);
@@ -1346,13 +1366,21 @@ fn emitExpression(
                 appendBranch(buffer, bodyBlock);
             }
             appendBlockLabel(buffer, counter, bodyBlock);
+            statementIndex = 0;
+            while (statementIndex < statementCount) {
+                emitStatement(
+                    buffer, source, nodes, genericArguments,
+                    statementRoots[statementIndex as u64], counter);
+                statementIndex = statementIndex + 1;
+            }
             values[index as u64] = emitExpression(
                 buffer, source, nodes, genericArguments, valueRoot, counter);
             blocks[index as u64] = counter.currentBlock;
             appendBranch(buffer, mergeBlock);
-            if (branch.aux == 0) {
+            if (branch.aux % 2 == 0) {
                 appendBlockLabel(buffer, counter, nextBlockValue);
             }
+            k_boot_free(statementRoots as unit*);
             index = index + 1;
         }
         appendBlockLabel(buffer, counter, mergeBlock);

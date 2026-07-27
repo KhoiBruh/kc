@@ -571,6 +571,13 @@ TEST(codegen_lowers_when_expression_to_phi) {
     EXPECT_TRUE(diagnostics.empty());
     EXPECT_TRUE(ir.find("when.merge") != std::string::npos);
     EXPECT_TRUE(ir.find("phi i32") != std::string::npos);
+
+    const auto blockIr = generateIr(
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1 -> { val value = 9; value + 1 } else -> { 20 } }; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(blockIr.find("phi i32") != std::string::npos);
 }
 
 int main() {

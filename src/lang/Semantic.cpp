@@ -612,8 +612,16 @@ private:
                 } else {
                     hasElse = true;
                 }
+                scopes_.emplace_back();
+                for (const auto& statement : branch.body->statements) {
+                    if (analyzeStatement(*statement))
+                        diagnose(
+                            "when value block cannot terminate before its tail expression",
+                            statement->span);
+                }
                 const auto value = analyzeExpr(
                     *branch.value, expected ? expected : branchType);
+                scopes_.pop_back();
                 if (!branchType) branchType = value;
                 else if (!compatible(*branchType, value) &&
                          !(isNumeric(*branchType) && isNumeric(value)))
