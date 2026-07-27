@@ -340,6 +340,50 @@ fn appendNewline(var buffer: ByteBuffer) {
     byteBufferAppend(buffer, 10);
 }
 
+fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
+    if (kind == 1) { byteBufferAppend(buffer, 115); }
+    if (kind == 2) { byteBufferAppend(buffer, 122); }
+    if (kind <= 2) {
+        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
+        byteBufferAppend(buffer, 116); return;
+    }
+    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 99);
+}
+
+fn appendCastPanic(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 118);
+    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 64); byteBufferAppend(buffer, 107);
+    byteBufferAppend(buffer, 95); byteBufferAppend(buffer, 98);
+    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 111);
+    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 40);
+    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 117);
+    byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 41);
+    appendNewline(buffer);
+    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 104); byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 101); appendNewline(buffer);
+}
+
 struct IrValue(
     kind: u32, start: u64, end: u64, temporary: u64,
     typeKind: u32, typeName: u64, typePointee: u32)
@@ -1198,39 +1242,112 @@ fn emitExpression(
         if (node.typeKind == value.typeKind) { return value; }
         if (node.typeKind == 9) { return value; }
         if (value.typeKind == 9) { return value; }
-        val temporary = nextTemporary(counter);
-        appendValuePrefix(buffer);
-        appendDecimal(buffer, temporary);
-        appendEquals(buffer);
-        var widening = false;
-        if (node.typeKind == 4) { widening = true; }
-        if (node.typeKind == 7) { widening = true; }
-        if (widening) {
-            byteBufferAppend(buffer, 122);
-            byteBufferAppend(buffer, 101);
-            byteBufferAppend(buffer, 120);
-            byteBufferAppend(buffer, 116);
-        } else {
-            byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 114);
-            byteBufferAppend(buffer, 117);
-            byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 99);
-        }
-        byteBufferAppend(buffer, 32);
-        appendType(
-            buffer, genericArguments, value.typeKind, value.typeName, value.typePointee);
-        byteBufferAppend(buffer, 32);
-        appendIrValue(buffer, source, value);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 32);
-        appendNodeType(buffer, genericArguments, node);
-        appendNewline(buffer);
-        return IrValue(
-            2, 0, 0, temporary,
+        val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
+        val targetType = TypeValue(node.typeKind, node.typeName, node.typePointee);
+        val sourceWidth = integerTypeWidth(sourceType);
+        val targetWidth = integerTypeWidth(targetType);
+        var converted = IrValue(
+            value.kind, value.start, value.end, value.temporary,
             node.typeKind, node.typeName, node.typePointee);
+        if (sourceWidth != targetWidth) {
+            val temporary = nextTemporary(counter);
+            appendValuePrefix(buffer);
+            appendDecimal(buffer, temporary);
+            appendEquals(buffer);
+            var opcode: u32 = 3;
+            if (targetWidth > sourceWidth) {
+                opcode = 2;
+                if (integerTypeIsSigned(sourceType)) { opcode = 1; }
+            }
+            appendCastOpcode(buffer, opcode);
+            byteBufferAppend(buffer, 32);
+            appendType(
+                buffer, genericArguments, value.typeKind,
+                value.typeName, value.typePointee);
+            byteBufferAppend(buffer, 32);
+            appendIrValue(buffer, source, value);
+            byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 116);
+            byteBufferAppend(buffer, 111);
+            byteBufferAppend(buffer, 32);
+            appendNodeType(buffer, genericArguments, node);
+            appendNewline(buffer);
+            converted = IrValue(
+                2, 0, 0, temporary,
+                node.typeKind, node.typeName, node.typePointee);
+        }
+        if (node.conversionKind == 4) {
+            var check: u64 = 0;
+            if (sourceWidth != targetWidth) {
+                val roundTrip = nextTemporary(counter);
+                check = nextTemporary(counter);
+                appendValuePrefix(buffer); appendDecimal(buffer, roundTrip);
+                appendEquals(buffer);
+                var reverseOpcode: u32 = 2;
+                if (integerTypeIsSigned(targetType)) { reverseOpcode = 1; }
+                appendCastOpcode(buffer, reverseOpcode);
+                byteBufferAppend(buffer, 32);
+                appendNodeType(buffer, genericArguments, node);
+                byteBufferAppend(buffer, 32);
+                appendIrValue(buffer, source, converted);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
+                byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 32);
+                appendType(
+                    buffer, genericArguments, value.typeKind,
+                    value.typeName, value.typePointee);
+                appendNewline(buffer);
+                appendValuePrefix(buffer); appendDecimal(buffer, check);
+                appendEquals(buffer);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
+                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 101);
+                byteBufferAppend(buffer, 113); byteBufferAppend(buffer, 32);
+                appendType(
+                    buffer, genericArguments, value.typeKind,
+                    value.typeName, value.typePointee);
+                byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
+                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                byteBufferAppend(buffer, 37); appendDecimal(buffer, roundTrip);
+                appendNewline(buffer);
+            } else {
+                check = nextTemporary(counter);
+                appendValuePrefix(buffer); appendDecimal(buffer, check);
+                appendEquals(buffer);
+                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
+                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
+                byteBufferAppend(buffer, 32);
+                var sourceSigned = integerTypeIsSigned(sourceType);
+                if (sourceSigned) {
+                    byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 103);
+                    byteBufferAppend(buffer, 101);
+                } else {
+                    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 108);
+                    byteBufferAppend(buffer, 101);
+                }
+                byteBufferAppend(buffer, 32);
+                appendType(
+                    buffer, genericArguments, value.typeKind,
+                    value.typeName, value.typePointee);
+                byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
+                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                if (sourceSigned) {
+                    byteBufferAppend(buffer, 48);
+                } else {
+                    if (sourceWidth == 32) { appendDecimal(buffer, 2147483647); }
+                    else { appendDecimal(buffer, 9223372036854775807); }
+                }
+                appendNewline(buffer);
+            }
+            val validBlock = nextBlock(counter);
+            val panicBlock = nextBlock(counter);
+            appendConditionalBranch(
+                buffer, source, IrValue(2, 0, 0, check, 2, 0, 0),
+                validBlock, panicBlock);
+            appendBlockLabel(buffer, panicBlock);
+            appendCastPanic(buffer);
+            appendBlockLabel(buffer, validBlock);
+        }
+        return converted;
     }
     if (node.kind == 17) {
         val objectRoot = root - 1;

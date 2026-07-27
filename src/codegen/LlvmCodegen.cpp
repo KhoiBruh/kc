@@ -574,6 +574,14 @@ private:
                 isInteger(sourceType->second) && isInteger(semanticType)) {
                 auto* value = emitExpr(*cast->value);
                 if (!value) return nullptr;
+                const auto castInfo = semantic().integerCasts.find(cast);
+                if (castInfo == semantic().integerCasts.end()) {
+                    diagnose("integer cast is missing semantic metadata",
+                             expression.span);
+                    return nullptr;
+                }
+                if (castInfo->second.requiresRangeCheck)
+                    emitIntegerCastRangeCheck(value, castInfo->second);
                 const auto sourceWidth = numericBitWidth(sourceType->second);
                 const auto targetWidth = numericBitWidth(semanticType);
                 auto* targetType = lowerType(semanticType, expression.span);
@@ -1094,6 +1102,63 @@ private:
         builder_.CreateCondBr(inBounds, validBlock, panicBlock);
         builder_.SetInsertPoint(panicBlock);
         constexpr std::string_view message{"index out of bounds"};
+        auto* text = builder_.CreateGlobalString(message);
+        auto panic = result_.module->getOrInsertFunction(
+            "k_boot_panic",
+            llvm::FunctionType::get(
+                llvm::Type::getVoidTy(context_),
+                {builder_.getPtrTy(), builder_.getInt64Ty()}, false));
+        builder_.CreateCall(
+            panic,
+            {text, llvm::ConstantInt::get(
+                       builder_.getInt64Ty(), message.size())});
+        builder_.CreateUnreachable();
+        builder_.SetInsertPoint(validBlock);
+    }
+
+    void emitIntegerCastRangeCheck(
+        llvm::Value* value, const IntegerCastInfo& cast) {
+        const auto sourceWidth = numericBitWidth(cast.sourceType);
+        const auto targetWidth = numericBitWidth(cast.targetType);
+        llvm::Value* valid = builder_.getTrue();
+        const auto append = [&](llvm::Value* condition) {
+            valid = builder_.CreateAnd(valid, condition);
+        };
+        if (isSignedInteger(cast.sourceType)) {
+            if (!isSignedInteger(cast.targetType)) {
+                append(builder_.CreateICmpSGE(
+                    value, llvm::ConstantInt::get(value->getType(), 0)));
+                if (targetWidth < sourceWidth) {
+                    const auto maximum =
+                        llvm::APInt::getMaxValue(targetWidth).zext(sourceWidth);
+                    append(builder_.CreateICmpSLE(
+                        value, llvm::ConstantInt::get(context_, maximum)));
+                }
+            } else {
+                const auto minimum =
+                    llvm::APInt::getSignedMinValue(targetWidth).sext(sourceWidth);
+                const auto maximum =
+                    llvm::APInt::getSignedMaxValue(targetWidth).sext(sourceWidth);
+                append(builder_.CreateICmpSGE(
+                    value, llvm::ConstantInt::get(context_, minimum)));
+                append(builder_.CreateICmpSLE(
+                    value, llvm::ConstantInt::get(context_, maximum)));
+            }
+        } else {
+            const auto maximum = isSignedInteger(cast.targetType)
+                ? llvm::APInt::getSignedMaxValue(targetWidth).zext(sourceWidth)
+                : llvm::APInt::getMaxValue(targetWidth).zext(sourceWidth);
+            append(builder_.CreateICmpULE(
+                value, llvm::ConstantInt::get(context_, maximum)));
+        }
+        auto* function = builder_.GetInsertBlock()->getParent();
+        auto* validBlock =
+            llvm::BasicBlock::Create(context_, "cast.valid", function);
+        auto* panicBlock =
+            llvm::BasicBlock::Create(context_, "cast.panic", function);
+        builder_.CreateCondBr(valid, validBlock, panicBlock);
+        builder_.SetInsertPoint(panicBlock);
+        constexpr std::string_view message{"integer cast out of range"};
         auto* text = builder_.CreateGlobalString(message);
         auto panic = result_.module->getOrInsertFunction(
             "k_boot_panic",

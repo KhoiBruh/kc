@@ -143,7 +143,7 @@ llvm-readobj --file-headers file.obj
   demand-driven monomorphization.
 - Minimal tagged nullable values, `null`, lifting `T` to `T?`, and postfix `!`.
 - Integer casts have semantic source/target metadata, positioned constant range
-  diagnostics, and bootstrap parity; checked runtime lowering is still pending.
+  diagnostics, checked runtime panic lowering, and bootstrap IR/behavior fixtures.
 - `return`.
 - Windows x64 textual IR, COFF object, and executable output.
 - Builtin `print("literal")` and `print(i32)`.
@@ -156,7 +156,7 @@ llvm-readobj --file-headers file.obj
 
 ## Important current limitations
 
-- Numeric casts, logical short-circuiting, `when`, `for`, `break`, and
+- Float casts, logical short-circuiting, `when`, `for`, `break`, and
   `continue` are not lowered yet.
 - String variables, escape decoding in codegen, concatenation, other print
   types, enums, and ownership are not lowered.
@@ -203,7 +203,6 @@ Bootstrap diagnostics and CLI parity are complete for the current contract.
 
 ## Recommended next milestone
 
-Lower the approved integer-cast metadata in both LLVM backends: use identity,
-`sext`, and `zext` for infallible conversions; emit range checks plus `panic`
-before checked narrowing or signedness changes. Defer float casts until integer
-casts are self-hosted.
+Close the integer-cast self-hosting milestone: run Debug and Release bootstrap
+acceptance through `kc4`, require fixed-point parity, then mark the milestone
+complete. Keep float casts deferred.

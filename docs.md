@@ -99,7 +99,9 @@ vertical slice sau khi integer casts đã self-hosted.
 Frontend semantic của `kc0` và compiler bootstrap hiện áp dụng ma trận integer
 trên, từ chối float cast trong slice này, báo constant ngoài miền tại toàn bộ
 biểu thức cast, và lưu metadata cho biết conversion có cần runtime range check.
-Lowering runtime check vẫn là bước codegen kế tiếp.
+Cả LLVM backend C++ và textual bootstrap dùng identity/`sext`/`zext` cho cast
+an toàn; narrowing hoặc đổi signedness được kiểm tra trước khi giá trị được sử
+dụng và gọi `k_boot_panic` nếu ngoài miền.
 
 ### Văn bản và Unicode (Text & Unicode)
 
@@ -616,7 +618,7 @@ kc --emit-llvm program.k -o program.ll
 
 Backend hiện hỗ trợ hàm và lời gọi hàm, parameter, `val`/`var`, assignment,
 literal và toán tử số, comparison, `if`/`else`, `while`, `return`, raw pointer,
-fixed struct, fixed array và slice. `unit` được hạ thành LLVM `void`; `bool`
+integer casts có kiểm tra, fixed struct, fixed array và slice. `unit` được hạ thành LLVM `void`; `bool`
 thành `i1`; raw pointer thành opaque `ptr`; slice thành `{ptr, i64}`. Truy cập
 array/slice động sinh bounds check gọi `k_boot_panic`. Backend chạy LLVM verifier
 trước khi ghi tệp `.ll`; cấu trúc chưa hỗ trợ được từ chối bằng diagnostic thay

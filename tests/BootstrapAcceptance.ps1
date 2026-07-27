@@ -78,7 +78,7 @@ if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
     "generics.k", "generics_multiple.k", "generic_nullable.k",
-    "generic_structs.k"
+    "generic_structs.k", "integer_casts.k", "integer_cast_panic.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName

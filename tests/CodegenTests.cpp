@@ -370,12 +370,19 @@ TEST(codegen_lowers_integer_width_casts) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
         "fn narrow(val value: u64): i32 { return value as i32; }"
-        "fn widen(val value: i32): i64 { return value as i64; }",
+        "fn changeSign(val value: i32): u32 { return value as u32; }"
+        "fn widen(val value: i32): i64 { return value as i64; }"
+        "fn widenUnsigned(val value: u32): i64 { return value as i64; }",
         diagnostics);
 
     EXPECT_TRUE(diagnostics.empty());
     EXPECT_TRUE(ir.find("trunc i64") != std::string::npos);
     EXPECT_TRUE(ir.find("sext i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("zext i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("cast.valid") != std::string::npos);
+    EXPECT_TRUE(ir.find("cast.panic") != std::string::npos);
+    EXPECT_TRUE(ir.find("integer cast out of range") != std::string::npos);
+    EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
 TEST(codegen_lowers_struct_construction_and_field_access) {
