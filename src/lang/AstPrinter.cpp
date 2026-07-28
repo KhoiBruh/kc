@@ -211,8 +211,9 @@ private:
         line(depth, "When");
         if (statement.subject) printExpr(*statement.subject, depth + 1);
         for (const auto& branch : statement.branches) {
-            line(depth + 1, branch.condition ? "Branch" : "Else");
-            if (branch.condition) printExpr(*branch.condition, depth + 2);
+            line(depth + 1, branch.conditions.empty() ? "Else" : "Branch");
+            for (const auto& condition : branch.conditions)
+                printExpr(*condition, depth + 2);
             printStmtNode(*branch.body, depth + 2);
         }
     }
@@ -336,8 +337,9 @@ private:
         line(depth, "WhenExpression");
         if (expression.subject) printExpr(*expression.subject, depth + 1);
         for (const auto& branch : expression.branches) {
-            line(depth + 1, branch.condition ? "Branch" : "Else");
-            if (branch.condition) printExpr(*branch.condition, depth + 2);
+            line(depth + 1, branch.conditions.empty() ? "Else" : "Branch");
+            for (const auto& condition : branch.conditions)
+                printExpr(*condition, depth + 2);
             for (const auto& statement : branch.body->statements)
                 printStmt(*statement, depth + 2);
             printExpr(*branch.value, depth + 2);

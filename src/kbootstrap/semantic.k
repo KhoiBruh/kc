@@ -222,12 +222,26 @@ fn whenConditionRoot(
     val branch = semantic.nodes.data[branchRoot];
     val valueRoot = branchRoot - 1;
     var conditionRoot = semantic.nodes.data[valueRoot].subtreeStart - 1;
-    var statements = branch.aux / 2;
+    var statements = (branch.aux % 65536) / 2;
     while (statements > 0) {
         conditionRoot = semantic.nodes.data[conditionRoot].subtreeStart - 1;
         statements = statements - 1;
     }
     return conditionRoot;
+}
+
+fn whenPatternRoot(
+    semantic: Semantic, branchRoot: u64, valueForm: bool,
+    patternIndex: u32): u64 {
+    val branch = semantic.nodes.data[branchRoot];
+    val patternCount = branch.aux / 65536;
+    var root = whenConditionRoot(semantic, branchRoot, valueForm);
+    var remaining = patternCount - patternIndex - 1;
+    while (remaining > 0) {
+        root = semantic.nodes.data[root].subtreeStart - 1;
+        remaining = remaining - 1;
+    }
+    return root;
 }
 
 fn enumWhenExhaustive(
@@ -241,22 +255,28 @@ fn enumWhenExhaustive(
     var index: u32 = 0;
     while (index < branchCount) {
         val branch = semantic.nodes.data[roots[index as u64]];
-        var isElse = branch.aux == 1;
-        if (valueForm) isElse = branch.aux % 2 == 1;
+        val isElse = branch.aux % 2 == 1;
         if (!isElse) {
-            val conditionRoot = whenConditionRoot(
-                semantic, roots[index as u64], valueForm);
+          var patternIndex: u32 = 0;
+          val patternCount = branch.aux / 65536;
+          while (patternIndex < patternCount) {
+            val conditionRoot = whenPatternRoot(
+                semantic, roots[index as u64], valueForm, patternIndex);
             val condition = semantic.nodes.data[conditionRoot];
             if (condition.kind == 17 && condition.typeKind == 20 &&
                     condition.typeName == subject.name) {
                 var prior: u32 = 0;
-                while (prior < index) {
+                while (prior <= index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
-                    var priorElse = priorBranch.aux == 1;
-                    if (valueForm) priorElse = priorBranch.aux % 2 == 1;
+                    val priorElse = priorBranch.aux % 2 == 1;
                     if (!priorElse) {
-                        val priorRoot = whenConditionRoot(
-                            semantic, roots[prior as u64], valueForm);
+                      var priorPattern: u32 = 0;
+                      var priorCount = priorBranch.aux / 65536;
+                      if (prior == index) priorCount = patternIndex;
+                      while (priorPattern < priorCount) {
+                        val priorRoot = whenPatternRoot(
+                            semantic, roots[prior as u64], valueForm,
+                            priorPattern);
                         val priorCondition = semantic.nodes.data[priorRoot];
                         if (priorCondition.kind == 17 &&
                                 priorCondition.typeKind == 20 &&
@@ -268,11 +288,15 @@ fn enumWhenExhaustive(
                             semanticFail(semantic, 1, diagnostic);
                             return false;
                         }
+                        priorPattern = priorPattern + 1;
+                      }
                     }
                     prior = prior + 1;
                 }
                 unique = unique + 1;
             }
+            patternIndex = patternIndex + 1;
+          }
         }
         index = index + 1;
     }
@@ -1298,7 +1322,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val branch = semantic.nodes.data[roots[index as u64]];
             if (branch.aux % 2 == 1) hasElse = true;
             val valueRoot = roots[index as u64] - 1;
-            val statementCount = branch.aux / 2;
+            val statementCount = (branch.aux % 65536) / 2;
             val statementRoots =
                 k_boot_alloc((statementCount as u64) * sizeof(u64)) as u64*;
             var beforeValue = semantic.nodes.data[valueRoot].subtreeStart - 1;
@@ -1309,7 +1333,11 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 statementRemaining = statementRemaining - 1;
             }
             if (branch.aux % 2 == 0) {
-                val conditionRoot = beforeValue;
+              var patternIndex: u32 = 0;
+              val patternCount = branch.aux / 65536;
+              while (patternIndex < patternCount) {
+                val conditionRoot = whenPatternRoot(
+                    semantic, roots[index as u64], true, patternIndex);
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
                     if (!typeAccepts(subject, condition, semantic.genericArguments)) {
@@ -1326,6 +1354,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         semanticFail(semantic, 6, semantic.nodes.data[conditionRoot]);
                     }
                 }
+                patternIndex = patternIndex + 1;
+              }
             }
             val savedLocals = semantic.locals.length;
             val savedScopeStart = semantic.scopeStart;
@@ -1598,11 +1628,14 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         var hasElse = false;
         while (index < branchCount) {
             val current = semantic.nodes.data[roots[index as u64]];
-            if (current.aux == 1) hasElse = true;
+            if (current.aux % 2 == 1) hasElse = true;
             val bodyRoot = roots[index as u64] - 1;
-            if (current.aux == 0) {
-                val conditionRoot =
-                    semantic.nodes.data[bodyRoot].subtreeStart - 1;
+            if (current.aux % 2 == 0) {
+              var patternIndex: u32 = 0;
+              val patternCount = current.aux / 65536;
+              while (patternIndex < patternCount) {
+                val conditionRoot = whenPatternRoot(
+                    semantic, roots[index as u64], false, patternIndex);
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
                     if (
@@ -1628,6 +1661,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                             semantic.nodes.data[conditionRoot]);
                     }
                 }
+                patternIndex = patternIndex + 1;
+              }
             }
             checkBlock(semantic, bodyRoot);
             index = index + 1;

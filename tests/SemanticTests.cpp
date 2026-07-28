@@ -619,6 +619,22 @@ TEST(semantic_requires_exhaustive_enum_when_without_else) {
               "duplicate enum variant in when");
 }
 
+TEST(semantic_counts_grouped_enum_patterns_for_exhaustiveness) {
+    SemanticFixture valid{
+        "enum Status { Ready, Running, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready, Status.Running -> 1; Status.Done -> 2; }; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture duplicate{
+        "enum Status { Ready, Done }"
+        "fn score(val status: Status): i32 { return when (status) {"
+        "Status.Ready, Status.Ready -> 1; Status.Done -> 2; }; }"};
+    EXPECT_EQ(duplicate.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(duplicate.semantic.diagnostics[0].message,
+              "duplicate enum variant in when");
+}
+
 int main() {
     return test::runAll();
 }

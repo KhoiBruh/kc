@@ -2,8 +2,7 @@ enum Status { Ready, Running, Done }
 
 fn score(status: Status): i32 {
     return when (status) {
-        Status.Ready -> 10;
-        Status.Running -> 20;
+        Status.Ready, Status.Running -> 10;
         Status.Done -> 42;
     };
 }

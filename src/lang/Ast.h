@@ -42,7 +42,7 @@ struct UnitLiteralExpr {};
 struct ArrayLiteralExpr { std::vector<ExprPtr> elements; };
 struct SizeofExpr { TypePtr type; };
 struct WhenExprBranch {
-    ExprPtr condition;
+    std::vector<ExprPtr> conditions;
     std::unique_ptr<BlockStmt> body;
     ExprPtr value;
 };
@@ -94,7 +94,7 @@ struct ForStmt {
     std::unique_ptr<BlockStmt> body;
 };
 struct WhenBranch {
-    ExprPtr condition;
+    std::vector<ExprPtr> conditions;
     std::unique_ptr<BlockStmt> body;
 };
 struct WhenStmt {

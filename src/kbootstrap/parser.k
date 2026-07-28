@@ -215,6 +215,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     while (!parserCheck(parser, 53)) {
                         val branchStart = parser.nodes.length;
                         var isElse: u32 = 0;
+                        var patternCount: u32 = 0;
                         if (parserMatch(parser, 16)) {
                             if (hasElse) {
                                 parser.ok = false; 
@@ -227,7 +228,13 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                 parser.ok = false;
                                 return 0;
                             }
-                            parseExpression(parser, 0);
+                            var patterns = true;
+                            while (patterns) {
+                                parseExpression(parser, 0);
+                                patternCount = patternCount + 1;
+                                if (hasSubject == 0) patterns = false;
+                                else if (!parserMatch(parser, 56)) patterns = false;
+                            }
                         }
                         if (!parserExpect(parser, 85)) return 0;
                         var statementCount: u32 = 0;
@@ -273,7 +280,8 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         }
                         parserAdd(
                             parser, 24, first.start, parserPrevious(parser).end,
-                            branchStart, isElse + statementCount * 2);
+                            branchStart,
+                            isElse + statementCount * 2 + patternCount * 65536);
                         branchCount = branchCount + 1;
                     }
                     if (!parserExpect(parser, 53)) return 0;
@@ -543,6 +551,7 @@ fn parseStatement(var parser: Parser): u64 {
             }
             val branchStart = parser.nodes.length;
             var isElse: u32 = 0;
+            var patternCount: u32 = 0;
             if (parserMatch(parser, 16)) {
                 if (hasElse) {
                     parser.ok = false;
@@ -555,13 +564,19 @@ fn parseStatement(var parser: Parser): u64 {
                     parser.ok = false;
                     return 0;
                 }
-                parseExpression(parser, 0);
+                var patterns = true;
+                while (patterns) {
+                    parseExpression(parser, 0);
+                    patternCount = patternCount + 1;
+                    if (hasSubject == 0) patterns = false;
+                    else if (!parserMatch(parser, 56)) patterns = false;
+                }
             }
             if (!parserExpect(parser, 85)) return 0;
             parseControlBody(parser);
             parserAdd(
                 parser, 40, first.start, parserPrevious(parser).end,
-                branchStart, isElse);
+                branchStart, isElse + patternCount * 65536);
             branchCount = branchCount + 1;
         }
         return 0;

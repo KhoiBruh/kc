@@ -1,10 +1,10 @@
 fn choose(code: i32): i32 {
     return when (code) {
-        1 -> {
+        1, 3 -> {
             val base = 9;
             base + 1
         }
-        2 -> {
+        2, 4 -> {
             val base = 18;
             base + 2
         }
@@ -20,7 +20,7 @@ fn main(): i32 {
         else -> total = 98;
     }
     when (1) {
-        1 -> total = total + 12;
+        1, 2, 3 -> total = total + 12;
         else -> total = 0;
     }
     return total;

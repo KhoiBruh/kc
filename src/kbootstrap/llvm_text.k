@@ -1337,7 +1337,7 @@ fn emitExpression(
         while (index < branchCount) {
             val branch = nodes.data[roots[index as u64]];
             val valueRoot = roots[index as u64] - 1;
-            val statementCount = branch.aux / 2;
+            val statementCount = (branch.aux % 65536) / 2;
             val statementRoots =
                 k_boot_alloc((statementCount as u64) * sizeof(u64)) as u64*;
             var beforeValue = nodes.data[valueRoot].subtreeStart - 1;
@@ -1360,26 +1360,45 @@ fn emitExpression(
             val bodyBlock = nextBlock(counter);
             var nextBlockValue = mergeBlock;
             if (branch.aux % 2 == 0) {
-                val conditionRoot = beforeValue;
-                var condition = emitExpression(
-                    buffer, source, nodes, genericArguments,
-                    conditionRoot, counter);
-                if (hasSubject == 1) {
-                    val compared = nextTemporary(counter);
-                    appendValuePrefix(buffer); appendDecimal(buffer, compared);
-                    appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                    byteBufferAppend(buffer, 32);
-                    appendType(
-                        buffer, genericArguments,
-                        subject.typeKind, subject.typeName, subject.typePointee);
-                    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
-                    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-                    appendIrValue(buffer, source, condition); appendNewline(buffer);
-                    condition = IrValue(2, 0, 0, compared, 2, 0, 0);
-                }
                 nextBlockValue = nextBlock(counter);
-                appendConditionalBranch(
-                    buffer, source, condition, bodyBlock, nextBlockValue);
+                val patternCount = branch.aux / 65536;
+                val patternRoots =
+                    k_boot_alloc((patternCount as u64) * sizeof(u64)) as u64*;
+                var patternRoot = beforeValue;
+                var patternRemaining = patternCount;
+                while (patternRemaining > 0) {
+                    patternRoots[patternRemaining as u64 - 1] = patternRoot;
+                    patternRoot = nodes.data[patternRoot].subtreeStart - 1;
+                    patternRemaining = patternRemaining - 1;
+                }
+                var patternIndex: u32 = 0;
+                while (patternIndex < patternCount) {
+                    var condition = emitExpression(
+                        buffer, source, nodes, genericArguments,
+                        patternRoots[patternIndex as u64], counter);
+                    if (hasSubject == 1) {
+                        val compared = nextTemporary(counter);
+                        appendValuePrefix(buffer); appendDecimal(buffer, compared);
+                        appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
+                        byteBufferAppend(buffer, 32);
+                        appendType(
+                            buffer, genericArguments,
+                            subject.typeKind, subject.typeName, subject.typePointee);
+                        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
+                        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                        appendIrValue(buffer, source, condition); appendNewline(buffer);
+                        condition = IrValue(2, 0, 0, compared, 2, 0, 0);
+                    }
+                    var missBlock = nextBlockValue;
+                    if (patternIndex + 1 < patternCount) missBlock = nextBlock(counter);
+                    appendConditionalBranch(
+                        buffer, source, condition, bodyBlock, missBlock);
+                    patternIndex = patternIndex + 1;
+                    if (patternIndex < patternCount) {
+                        appendBlockLabel(buffer, counter, missBlock);
+                    }
+                }
+                k_boot_free(patternRoots as unit*);
             } else {
                 hasElse = true;
                 appendBranch(buffer, bodyBlock);
@@ -2446,30 +2465,49 @@ fn emitWhen(
         val branch = nodes.data[roots[index as u64]];
         val bodyRoot = roots[index as u64] - 1;
         val bodyBlock = nextBlock(counter);
-        if (branch.aux == 0) {
-            val conditionRoot = expressionChildBefore(nodes, bodyRoot);
-            var condition = emitExpression(
-                buffer, source, nodes, genericArguments,
-                conditionRoot, counter);
-            if (hasSubject == 1) {
-                val compared = nextTemporary(counter);
-                appendValuePrefix(buffer); appendDecimal(buffer, compared);
-                appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                byteBufferAppend(buffer, 32);
-                appendType(
-                    buffer, genericArguments,
-                    subject.typeKind, subject.typeName, subject.typePointee);
-                byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
-                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-                appendIrValue(buffer, source, condition); appendNewline(buffer);
-                condition = IrValue(2, 0, 0, compared, 2, 0, 0);
-            }
+        if (branch.aux % 2 == 0) {
             var nextBlockValue = mergeBlock;
             if (index + 1 < branchCount) {
                 nextBlockValue = nextBlock(counter);
             }
-            appendConditionalBranch(
-                buffer, source, condition, bodyBlock, nextBlockValue);
+            val patternCount = branch.aux / 65536;
+            val patternRoots =
+                k_boot_alloc((patternCount as u64) * sizeof(u64)) as u64*;
+            var patternRoot = expressionChildBefore(nodes, bodyRoot);
+            var patternRemaining = patternCount;
+            while (patternRemaining > 0) {
+                patternRoots[patternRemaining as u64 - 1] = patternRoot;
+                patternRoot = nodes.data[patternRoot].subtreeStart - 1;
+                patternRemaining = patternRemaining - 1;
+            }
+            var patternIndex: u32 = 0;
+            while (patternIndex < patternCount) {
+                var condition = emitExpression(
+                    buffer, source, nodes, genericArguments,
+                    patternRoots[patternIndex as u64], counter);
+                if (hasSubject == 1) {
+                    val compared = nextTemporary(counter);
+                    appendValuePrefix(buffer); appendDecimal(buffer, compared);
+                    appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
+                    byteBufferAppend(buffer, 32);
+                    appendType(
+                        buffer, genericArguments,
+                        subject.typeKind, subject.typeName, subject.typePointee);
+                    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
+                    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                    appendIrValue(buffer, source, condition); appendNewline(buffer);
+                    condition = IrValue(2, 0, 0, compared, 2, 0, 0);
+                }
+                var missBlock = nextBlockValue;
+                if (patternIndex + 1 < patternCount) missBlock = nextBlock(counter);
+                appendConditionalBranch(
+                    buffer, source, condition, bodyBlock, missBlock);
+                patternIndex = patternIndex + 1;
+                if (patternIndex < patternCount) {
+                    appendBlockLabel(buffer, counter, missBlock);
+                }
+            }
+            k_boot_free(patternRoots as unit*);
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
                 buffer, source, nodes, genericArguments, bodyRoot, counter);

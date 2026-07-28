@@ -580,6 +580,22 @@ TEST(codegen_lowers_when_expression_to_phi) {
     EXPECT_TRUE(blockIr.find("phi i32") != std::string::npos);
 }
 
+TEST(codegen_lowers_grouped_when_patterns_to_one_value_arm) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn choose(val code: i32): i32 { return when (code) {"
+        "1, 2, 3, 4, 5 -> 1; 6, 7, 8, 9 -> 2; else -> 0; }; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("phi i32") != std::string::npos);
+    std::size_t comparisons = 0;
+    for (std::size_t offset = 0;
+         (offset = ir.find("icmp eq i32", offset)) != std::string::npos;
+         offset += 11)
+        ++comparisons;
+    EXPECT_EQ(comparisons, 9u);
+}
+
 TEST(codegen_lowers_enum_variants_as_u32_tags) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

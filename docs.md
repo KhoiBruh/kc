@@ -398,8 +398,8 @@ Dạng có subject nhận `bool`, kiểu số nguyên hoặc enum; dạng không
 
 ```text
 when (code) {
-    200 -> handleOk();
-    404 -> handleMissing();
+    200, 201, 204 -> handleOk();
+    404, 410 -> handleMissing();
     else -> handleUnknown();
 }
 
@@ -409,6 +409,10 @@ when {
     a < b && c > b -> print("Between");
 }
 ```
+
+Với `when` có subject, nhiều pattern phân cách bằng dấu phẩy có thể dùng chung
+một arm. Các pattern được kiểm tra từ trái sang phải; arm khớp đầu tiên được chọn.
+`when` không subject vẫn nhận đúng một điều kiện cho mỗi arm.
 
 Thân nhánh có thể là một block hoặc một câu lệnh đơn. Dạng `when` trả về giá
 trị dùng expression kết thúc bằng `;` ở mỗi arm. `else` là bắt buộc trừ khi

@@ -565,20 +565,25 @@ private:
         for (std::size_t i = 0; i < statement.branches.size(); ++i) {
             const auto& branch = statement.branches[i];
             auto* bodyBlock = llvm::BasicBlock::Create(
-                context_, branch.condition ? "when.branch" : "when.else",
+                context_, branch.conditions.empty() ? "when.else" : "when.branch",
                 function);
-            if (branch.condition) {
-                auto* condition = emitExpr(*branch.condition);
-                if (!condition) return;
-                if (subject) {
-                    condition = subject->getType()->isFloatingPointTy()
-                        ? builder_.CreateFCmpOEQ(subject, condition)
-                        : builder_.CreateICmpEQ(subject, condition);
-                }
+            if (!branch.conditions.empty()) {
                 const bool last = i + 1 == statement.branches.size();
                 auto* next = last ? mergeBlock : llvm::BasicBlock::Create(
                     context_, "when.next", function);
-                builder_.CreateCondBr(condition, bodyBlock, next);
+                for (std::size_t j = 0; j < branch.conditions.size(); ++j) {
+                    auto* condition = emitExpr(*branch.conditions[j]);
+                    if (!condition) return;
+                    if (subject) {
+                        condition = subject->getType()->isFloatingPointTy()
+                            ? builder_.CreateFCmpOEQ(subject, condition)
+                            : builder_.CreateICmpEQ(subject, condition);
+                    }
+                    auto* miss = j + 1 == branch.conditions.size() ? next
+                        : llvm::BasicBlock::Create(context_, "when.pattern", function);
+                    builder_.CreateCondBr(condition, bodyBlock, miss);
+                    if (j + 1 < branch.conditions.size()) builder_.SetInsertPoint(miss);
+                }
                 builder_.SetInsertPoint(bodyBlock);
                 emitScopedBlock(*branch.body);
                 const bool terminates = builder_.GetInsertBlock()->getTerminator();
@@ -762,14 +767,19 @@ private:
                 const auto& branch = when->branches[i];
                 auto* bodyBlock = llvm::BasicBlock::Create(
                     context_, "when.body", function);
-                if (branch.condition) {
-                    auto* condition = emitExpr(*branch.condition);
-                    if (!condition) return nullptr;
-                    if (subject)
-                        condition = builder_.CreateICmpEQ(subject, condition);
+                if (!branch.conditions.empty()) {
                     auto* nextBlock = llvm::BasicBlock::Create(
                         context_, "when.next", function);
-                    builder_.CreateCondBr(condition, bodyBlock, nextBlock);
+                    for (std::size_t j = 0; j < branch.conditions.size(); ++j) {
+                        auto* condition = emitExpr(*branch.conditions[j]);
+                        if (!condition) return nullptr;
+                        if (subject)
+                            condition = builder_.CreateICmpEQ(subject, condition);
+                        auto* miss = j + 1 == branch.conditions.size() ? nextBlock
+                            : llvm::BasicBlock::Create(context_, "when.pattern", function);
+                        builder_.CreateCondBr(condition, bodyBlock, miss);
+                        if (j + 1 < branch.conditions.size()) builder_.SetInsertPoint(miss);
+                    }
                     builder_.SetInsertPoint(bodyBlock);
                     const auto outerLocals = locals_;
                     for (const auto& statement : branch.body->statements)

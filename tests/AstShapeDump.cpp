@@ -213,13 +213,14 @@ private:
         if (item.subject) expression(*item.subject);
         for (const auto& branch : item.branches) {
             const auto branchSubtree = index_;
-            if (branch.condition) expression(*branch.condition);
+            for (const auto& condition : branch.conditions) expression(*condition);
             for (const auto& statement : branch.body->statements)
                 this->statement(*statement);
             expression(*branch.value);
             add(24, value.span, branchSubtree,
-                static_cast<unsigned>((branch.condition ? 0 : 1) +
-                                      branch.body->statements.size() * 2));
+                static_cast<unsigned>((branch.conditions.empty() ? 1 : 0) +
+                                      branch.body->statements.size() * 2 +
+                                      branch.conditions.size() * 65536));
         }
         add(23, value.span, subtree,
             static_cast<unsigned>(item.branches.size() +
@@ -266,9 +267,11 @@ private:
         if (item.subject) expression(*item.subject);
         for (const auto& branch : item.branches) {
             const auto branchSubtree = index_;
-            if (branch.condition) expression(*branch.condition);
+            for (const auto& condition : branch.conditions) expression(*condition);
             block(*branch.body);
-            add(40, value.span, branchSubtree, branch.condition ? 0 : 1);
+            add(40, value.span, branchSubtree,
+                static_cast<unsigned>((branch.conditions.empty() ? 1 : 0) +
+                                      branch.conditions.size() * 65536));
         }
         add(39, value.span, subtree,
             static_cast<unsigned>(item.branches.size()) +

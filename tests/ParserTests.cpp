@@ -403,7 +403,20 @@ TEST(parser_accepts_subject_and_condition_when_statements) {
     const auto& condition = std::get<k::WhenStmt>(statements[1]->node);
     EXPECT_TRUE(subject.subject != nullptr);
     EXPECT_TRUE(condition.subject == nullptr);
-    EXPECT_TRUE(subject.branches.back().condition == nullptr);
+    EXPECT_TRUE(subject.branches.back().conditions.empty());
+}
+
+TEST(parser_accepts_grouped_subject_when_patterns) {
+    ParseFixture fixture{
+        "fn f(code: i32): i32 { return when (code) {"
+        "1, 2, 3 -> 1; 4, 5 -> 2; else -> 0; }; }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& returned = std::get<k::ReturnStmt>(
+        fixture.parsed.program.functions[0].body->statements[0]->node);
+    const auto& expression = std::get<k::WhenExpr>(returned.value->node);
+    EXPECT_EQ(expression.branches[0].conditions.size(), 3u);
+    EXPECT_EQ(expression.branches[1].conditions.size(), 2u);
+    EXPECT_TRUE(expression.branches.back().conditions.empty());
 }
 
 TEST(parser_parses_left_associative_integer_casts) {
@@ -428,7 +441,7 @@ TEST(parser_parses_when_expressions) {
     const auto& expression = std::get<k::WhenExpr>(returned.value->node);
     EXPECT_TRUE(expression.subject != nullptr);
     EXPECT_EQ(expression.branches.size(), 2u);
-    EXPECT_TRUE(expression.branches.back().condition == nullptr);
+    EXPECT_TRUE(expression.branches.back().conditions.empty());
 
     ParseFixture blockFixture{
         "fn choose(val code: i32): i32 { return when (code) {"

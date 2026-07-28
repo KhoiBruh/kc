@@ -510,7 +510,7 @@ StmtPtr Parser::parseWhen() {
     std::vector<WhenBranch> branches;
     bool hasElse = false;
     while (!check(TokenKind::RightBrace) && !atEnd()) {
-        ExprPtr condition;
+        std::vector<ExprPtr> conditions;
         if (match(TokenKind::KwElse)) {
             if (hasElse) report(previous().span, "duplicate else branch");
             hasElse = true;
@@ -519,15 +519,18 @@ StmtPtr Parser::parseWhen() {
                 report(peek().span, "else branch must be last");
                 return nullptr;
             }
-            condition = parseExpression();
-            if (!condition) return nullptr;
+            do {
+                auto condition = parseExpression();
+                if (!condition) return nullptr;
+                conditions.push_back(std::move(condition));
+            } while (subject && match(TokenKind::Comma));
         }
         if (!expect(TokenKind::Arrow, "expected '->' after when branch"))
             return nullptr;
         SourceSpan bodySpan{};
         auto body = parseControlBody(bodySpan);
         if (!body) return nullptr;
-        branches.push_back({std::move(condition), std::move(body)});
+        branches.push_back({std::move(conditions), std::move(body)});
     }
     if (!expect(TokenKind::RightBrace, "expected '}' after when branches"))
         return nullptr;
@@ -853,14 +856,17 @@ ExprPtr Parser::parseWhenExpression() {
     std::vector<WhenExprBranch> branches;
     bool hasElse = false;
     while (!check(TokenKind::RightBrace) && !atEnd()) {
-        ExprPtr condition;
+        std::vector<ExprPtr> conditions;
         if (match(TokenKind::KwElse)) {
             if (hasElse) report(previous().span, "duplicate else branch");
             hasElse = true;
         } else {
             if (hasElse) report(peek().span, "else branch must be last");
-            condition = parseExpression();
-            if (!condition) return nullptr;
+            do {
+                auto condition = parseExpression();
+                if (!condition) return nullptr;
+                conditions.push_back(std::move(condition));
+            } while (subject && match(TokenKind::Comma));
         }
         if (!expect(TokenKind::Arrow, "expected '->' after when condition"))
             return nullptr;
@@ -905,7 +911,7 @@ ExprPtr Parser::parseWhenExpression() {
                 return nullptr;
         }
         branches.push_back(
-            {std::move(condition), std::move(body), std::move(value)});
+            {std::move(conditions), std::move(body), std::move(value)});
     }
     if (!expect(TokenKind::RightBrace, "expected '}' after when branches"))
         return nullptr;

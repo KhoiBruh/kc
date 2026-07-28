@@ -497,17 +497,19 @@ private:
             bool hasElse = false;
             std::vector<const Expr*> patterns;
             for (const auto& branch : whenStatement->branches) {
-                if (branch.condition) {
-                    const auto condition = analyzeExpr(*branch.condition, subject);
-                    patterns.push_back(branch.condition.get());
+                if (!branch.conditions.empty()) {
+                    for (const auto& pattern : branch.conditions) {
+                    const auto condition = analyzeExpr(*pattern, subject);
+                    patterns.push_back(pattern.get());
                     if (subject) {
                         if (!compatible(*subject, condition) &&
                             !(isNumeric(*subject) && isNumeric(condition)))
                             diagnose("when pattern type does not match subject",
-                                     branch.condition->span);
+                                     pattern->span);
                     } else if (condition.kind != SemanticTypeKind::Bool) {
                         diagnose("when condition must be bool",
-                                 branch.condition->span);
+                                 pattern->span);
+                    }
                     }
                 } else {
                     hasElse = true;
@@ -625,16 +627,18 @@ private:
             std::vector<const Expr*> patterns;
             std::optional<SemanticType> branchType;
             for (const auto& branch : when->branches) {
-                if (branch.condition) {
-                    const auto condition = analyzeExpr(*branch.condition, subject);
-                    patterns.push_back(branch.condition.get());
+                if (!branch.conditions.empty()) {
+                    for (const auto& pattern : branch.conditions) {
+                    const auto condition = analyzeExpr(*pattern, subject);
+                    patterns.push_back(pattern.get());
                     if (subject) {
                         if (!compatible(*subject, condition) &&
                             !(isNumeric(*subject) && isNumeric(condition)))
                             diagnose("when pattern type does not match subject",
-                                     branch.condition->span);
+                                     pattern->span);
                     } else if (condition.kind != SemanticTypeKind::Bool) {
-                        diagnose("when condition must be bool", branch.condition->span);
+                        diagnose("when condition must be bool", pattern->span);
+                    }
                     }
                 } else {
                     hasElse = true;
