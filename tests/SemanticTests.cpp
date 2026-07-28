@@ -595,6 +595,25 @@ TEST(semantic_types_when_expressions_and_requires_else) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
 }
 
+TEST(semantic_types_if_expressions) {
+    SemanticFixture valid{
+        "fn choose(val b: i32, val c: i32): i32 {"
+        "return if (b > c) b else 1; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalidCondition{
+        "fn choose(): i32 { return if (1) 2 else 3; }"};
+    EXPECT_EQ(invalidCondition.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(invalidCondition.semantic.diagnostics[0].message,
+              "if condition must be bool");
+
+    SemanticFixture invalidBranches{
+        "fn choose(val b: bool): i32 { return if (b) 1 else true; }"};
+    EXPECT_EQ(invalidBranches.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(invalidBranches.semantic.diagnostics[0].message,
+              "if branches must have a common type");
+}
+
 TEST(semantic_requires_exhaustive_enum_when_without_else) {
     SemanticFixture valid{
         "enum Status { Ready, Running, Done }"

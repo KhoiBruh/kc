@@ -23,5 +23,8 @@ fn main(): i32 {
         1, 2, 3 -> total = total + 12;
         else -> total = 0;
     }
-    return total;
+    return if (total == 42) {
+        val selected = total;
+        selected
+    } else 0;
 }

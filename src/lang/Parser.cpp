@@ -791,6 +791,7 @@ ExprPtr Parser::parsePrefix() {
 
 ExprPtr Parser::parsePrimary() {
     if (check(TokenKind::KwWhen)) return parseWhenExpression();
+    if (check(TokenKind::KwIf)) return parseIfExpression();
     if (match(TokenKind::KwSizeof)) {
         const auto start = previous().span;
         if (!expect(TokenKind::LeftParen, "expected '(' after 'sizeof'"))
@@ -840,6 +841,67 @@ ExprPtr Parser::parsePrimary() {
     report(peek().span, "expected expression, found '" +
                             std::string{peek().lexeme(source_)} + "'");
     return nullptr;
+}
+
+ExprPtr Parser::parseIfExpression() {
+    const auto start = advance().span;
+    if (!expect(TokenKind::LeftParen, "expected '(' after 'if'")) return nullptr;
+    auto condition = parseExpression();
+    if (!condition) return nullptr;
+    if (!expect(TokenKind::RightParen, "expected ')' after if condition"))
+        return nullptr;
+
+    auto parseBranch = [&]() -> std::optional<IfExprBranch> {
+        auto body = std::make_unique<BlockStmt>();
+        ExprPtr value;
+        if (match(TokenKind::LeftBrace)) {
+            while (!check(TokenKind::RightBrace) && !atEnd()) {
+                const bool statementStart =
+                    check(TokenKind::KwVal) || check(TokenKind::KwVar) ||
+                    check(TokenKind::KwReturn) || check(TokenKind::KwIf) ||
+                    check(TokenKind::KwWhile) || check(TokenKind::KwFor) ||
+                    check(TokenKind::KwWhen) || check(TokenKind::KwBreak) ||
+                    check(TokenKind::KwContinue) || check(TokenKind::LeftBrace);
+                if (statementStart) {
+                    auto statement = parseStatement();
+                    if (!statement) return std::nullopt;
+                    body->statements.push_back(std::move(statement));
+                    continue;
+                }
+                auto candidate = parseExpression();
+                if (!candidate) return std::nullopt;
+                if (match(TokenKind::Semicolon)) {
+                    const auto span = spanFrom(candidate->span, previous().span);
+                    body->statements.push_back(makeStmt(
+                        span, ExpressionStmt{std::move(candidate)}));
+                    continue;
+                }
+                value = std::move(candidate);
+                break;
+            }
+            if (!value) {
+                report(peek().span, "if value block requires a tail expression");
+                return std::nullopt;
+            }
+            if (!expect(TokenKind::RightBrace,
+                        "expected '}' after if value block"))
+                return std::nullopt;
+        } else {
+            value = parseExpression();
+            if (!value) return std::nullopt;
+        }
+        return IfExprBranch{std::move(body), std::move(value)};
+    };
+
+    auto thenBranch = parseBranch();
+    if (!thenBranch) return nullptr;
+    if (!expect(TokenKind::KwElse, "if expression requires else")) return nullptr;
+    auto elseBranch = parseBranch();
+    if (!elseBranch) return nullptr;
+    const auto end = elseBranch->value->span;
+    return makeExpr(spanFrom(start, end),
+                    IfExpr{std::move(condition), std::move(*thenBranch),
+                           std::move(*elseBranch)});
 }
 
 ExprPtr Parser::parseWhenExpression() {

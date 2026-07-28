@@ -390,6 +390,17 @@ if (condition) {
 thế `when`; `when` vẫn được dùng cho pattern-style branching và biểu thức nhiều
 nhánh.
 
+`if` cũng có dạng expression và luôn yêu cầu `else`. Hai nhánh phải trả về cùng
+một kiểu, bằng expression trực tiếp hoặc tail expression trong block:
+
+```text
+val maximum = if (a > b) a else b;
+val adjusted = if (value > 0) {
+    val offset = value + 1;
+    offset
+} else 0;
+```
+
 ### `when`
 
 `when` hiện được hạ như một câu lệnh nhiều nhánh với first-match semantics.

@@ -55,6 +55,7 @@ private:
     [[nodiscard]] ExprPtr parsePrefix();
     [[nodiscard]] ExprPtr parsePrimary();
     [[nodiscard]] ExprPtr parseWhenExpression();
+    [[nodiscard]] ExprPtr parseIfExpression();
     [[nodiscard]] ExprPtr parseCall(
         ExprPtr callee, std::vector<TypePtr> typeArguments = {});
     [[nodiscard]] bool genericCallAhead() const noexcept;

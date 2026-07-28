@@ -169,6 +169,50 @@ fn isLiteralKind(kind: u32): bool {
     return false;
 }
 
+fn parseValueExpressionBranch(var parser: Parser): u32 {
+    var statementCount: u32 = 0;
+    if (parserMatch(parser, 52)) {
+        var foundTail = false;
+        while (!foundTail) {
+            if (parserCheck(parser, 53)) {
+                parser.ok = false;
+                return 0;
+            }
+            val next = parserPeek(parser).kind;
+            var statementStart = next == 6;
+            if (next == 7) statementStart = true;
+            if (next == 14) statementStart = true;
+            if (next == 15) statementStart = true;
+            if (next == 17) statementStart = true;
+            if (next == 19) statementStart = true;
+            if (next == 20) statementStart = true;
+            if (next == 52) statementStart = true;
+            if (next == 89) statementStart = true;
+            if (next == 90) statementStart = true;
+            if (statementStart) {
+                parseStatement(parser);
+                statementCount = statementCount + 1;
+            } else {
+                val valueStart = parser.nodes.length;
+                val valueFirst = parserPeek(parser);
+                parseExpression(parser, 0);
+                if (parserMatch(parser, 58)) {
+                    parserAdd(
+                        parser, 35, valueFirst.start,
+                        parserPrevious(parser).end, valueStart, 0);
+                    statementCount = statementCount + 1;
+                } else {
+                    foundTail = true;
+                }
+            }
+        }
+        if (!parserExpect(parser, 53)) return 0;
+    } else {
+        parseExpression(parser, 0);
+    }
+    return statementCount;
+}
+
 fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
     val subtreeStart = parser.nodes.length;
     val first = parserPeek(parser);
@@ -192,6 +236,17 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     parser, 12, first.start, parser.nodes.data[operand].end,
                     subtreeStart, first.kind);
             } else {
+                if (parserMatch(parser, 15)) {
+                    if (!parserExpect(parser, 50)) return 0;
+                    parseExpression(parser, 0);
+                    if (!parserExpect(parser, 51)) return 0;
+                    val thenCount = parseValueExpressionBranch(parser);
+                    if (!parserExpect(parser, 16)) return 0;
+                    val elseCount = parseValueExpressionBranch(parser);
+                    root = parserAdd(
+                        parser, 25, first.start, parserPrevious(parser).end,
+                        subtreeStart, thenCount + elseCount * 65536);
+                } else {
                 if (parserMatch(parser, 14)) {
                     var hasSubject: u32 = 0;
                     if (parserMatch(parser, 50)) {
@@ -317,7 +372,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parser.ok = false;
                         return 0;
                     }
-                }
+                }}
                 }
                 }
             }

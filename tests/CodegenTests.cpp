@@ -580,6 +580,17 @@ TEST(codegen_lowers_when_expression_to_phi) {
     EXPECT_TRUE(blockIr.find("phi i32") != std::string::npos);
 }
 
+TEST(codegen_lowers_if_expression_to_phi) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn choose(val b: i32, val c: i32): i32 {"
+        "return if (b > c) b else 1; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("if.value") != std::string::npos);
+    EXPECT_TRUE(ir.find("phi i32") != std::string::npos);
+}
+
 TEST(codegen_lowers_grouped_when_patterns_to_one_value_arm) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

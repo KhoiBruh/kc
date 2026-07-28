@@ -457,6 +457,21 @@ TEST(parser_parses_when_expressions) {
     EXPECT_TRUE(missingElse.parsed.diagnostics.empty());
 }
 
+TEST(parser_parses_if_expressions) {
+    ParseFixture fixture{
+        "fn choose(val b: i32, val c: i32): i32 {"
+        "val a = if (b > c) b else 1; return a; }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& declaration = std::get<k::VariableDecl>(
+        fixture.parsed.program.functions[0].body->statements[0]->node);
+    EXPECT_TRUE(std::holds_alternative<k::IfExpr>(declaration.initializer->node));
+
+    ParseFixture blocks{
+        "fn choose(val b: i32): i32 { return if (b > 0) {"
+        "val value = b + 1; value } else { 0 }; }"};
+    EXPECT_TRUE(blocks.parsed.diagnostics.empty());
+}
+
 TEST(parser_requires_semicolons_and_recovers_later_statements) {
     ParseFixture fixture{
         "fn main() { val missing = 1 val kept = 2; return kept; }"};

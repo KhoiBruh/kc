@@ -1312,6 +1312,105 @@ fn emitExpression(
             1, node.start, node.end, 0,
             node.typeKind, node.typeName, node.typePointee);
     }
+    if (node.kind == 25) {
+        val thenCount = node.aux % 65536;
+        val elseCount = node.aux / 65536;
+        val elseValueRoot = root - 1;
+        val elseRoots =
+            k_boot_alloc((elseCount as u64) * sizeof(u64)) as u64*;
+        var childRoot = nodes.data[elseValueRoot].subtreeStart - 1;
+        var remaining = elseCount;
+        while (remaining > 0) {
+            elseRoots[remaining as u64 - 1] = childRoot;
+            childRoot = nodes.data[childRoot].subtreeStart - 1;
+            remaining = remaining - 1;
+        }
+        val thenValueRoot = childRoot;
+        val thenRoots =
+            k_boot_alloc((thenCount as u64) * sizeof(u64)) as u64*;
+        childRoot = nodes.data[thenValueRoot].subtreeStart - 1;
+        remaining = thenCount;
+        while (remaining > 0) {
+            thenRoots[remaining as u64 - 1] = childRoot;
+            childRoot = nodes.data[childRoot].subtreeStart - 1;
+            remaining = remaining - 1;
+        }
+        val condition = emitExpression(
+            buffer, source, nodes, genericArguments, childRoot, counter);
+        val thenBlock = nextBlock(counter);
+        val elseBlock = nextBlock(counter);
+        val mergeBlock = nextBlock(counter);
+        appendConditionalBranch(
+            buffer, source, condition, thenBlock, elseBlock);
+        appendBlockLabel(buffer, counter, thenBlock);
+        var index: u32 = 0;
+        while (index < thenCount) {
+            val statement = nodes.data[thenRoots[index as u64]];
+            if (statement.kind == 33) {
+                emitVariableAlloca(
+                    buffer, genericArguments, nodes,
+                    thenRoots[index as u64]);
+            }
+            index = index + 1;
+        }
+        index = 0;
+        while (index < thenCount) {
+            emitStatement(
+                buffer, source, nodes, genericArguments,
+                thenRoots[index as u64], counter);
+            index = index + 1;
+        }
+        val thenValue = emitExpression(
+            buffer, source, nodes, genericArguments, thenValueRoot, counter);
+        val thenValueBlock = counter.currentBlock;
+        appendBranch(buffer, mergeBlock);
+        appendBlockLabel(buffer, counter, elseBlock);
+        index = 0;
+        while (index < elseCount) {
+            val statement = nodes.data[elseRoots[index as u64]];
+            if (statement.kind == 33) {
+                emitVariableAlloca(
+                    buffer, genericArguments, nodes,
+                    elseRoots[index as u64]);
+            }
+            index = index + 1;
+        }
+        index = 0;
+        while (index < elseCount) {
+            emitStatement(
+                buffer, source, nodes, genericArguments,
+                elseRoots[index as u64], counter);
+            index = index + 1;
+        }
+        val elseValue = emitExpression(
+            buffer, source, nodes, genericArguments, elseValueRoot, counter);
+        val elseValueBlock = counter.currentBlock;
+        appendBranch(buffer, mergeBlock);
+        appendBlockLabel(buffer, counter, mergeBlock);
+        val temporary = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, temporary);
+        appendEquals(buffer);
+        byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 104);
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, node);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 91);
+        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, thenValue);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendBlockReference(buffer, thenValueBlock);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 91); byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, elseValue);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendBlockReference(buffer, elseValueBlock);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+        appendNewline(buffer);
+        k_boot_free(thenRoots as unit*);
+        k_boot_free(elseRoots as unit*);
+        return IrValue(
+            2, 0, 0, temporary,
+            node.typeKind, node.typeName, node.typePointee);
+    }
     if (node.kind == 23) {
         val branchCount = node.aux % 65536;
         val hasSubject = node.aux / 65536;

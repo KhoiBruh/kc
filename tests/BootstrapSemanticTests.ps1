@@ -68,6 +68,8 @@ $cases = @(
     @("bootstrap-semantic-when-condition.k", 6),
     @("bootstrap-semantic-when-pattern.k", 4),
     @("bootstrap-semantic-when-expression-type.k", 4),
+    @("bootstrap-semantic-if-expression-condition.k", 6),
+    @("bootstrap-semantic-if-expression-type.k", 4),
     @("bootstrap-semantic-enum-duplicate.k", 1),
     @("bootstrap-semantic-enum-unknown.k", 2),
     @("bootstrap-semantic-enum-when-missing.k", 4),

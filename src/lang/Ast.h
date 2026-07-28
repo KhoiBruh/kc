@@ -50,12 +50,21 @@ struct WhenExpr {
     ExprPtr subject;
     std::vector<WhenExprBranch> branches;
 };
+struct IfExprBranch {
+    std::unique_ptr<BlockStmt> body;
+    ExprPtr value;
+};
+struct IfExpr {
+    ExprPtr condition;
+    IfExprBranch thenBranch;
+    IfExprBranch elseBranch;
+};
 
 struct Expr {
     using Node = std::variant<IdentifierExpr, LiteralExpr, UnaryExpr, BinaryExpr,
                               AssignmentExpr, CastExpr, CallExpr, MemberExpr,
                               IndexExpr, PostfixExpr, UnitLiteralExpr,
-                              ArrayLiteralExpr, SizeofExpr, WhenExpr>;
+                              ArrayLiteralExpr, SizeofExpr, WhenExpr, IfExpr>;
     SourceSpan span;
     Node node;
 };

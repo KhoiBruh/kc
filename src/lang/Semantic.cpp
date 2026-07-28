@@ -614,6 +614,32 @@ private:
         } else if (const auto* size = std::get_if<SizeofExpr>(&expression.node)) {
             result_.sizeofTypes[&expression] = resolve(*size->type);
             type = {SemanticTypeKind::U64};
+        } else if (const auto* conditional = std::get_if<IfExpr>(&expression.node)) {
+            const auto condition = analyzeExpr(*conditional->condition);
+            if (condition.kind != SemanticTypeKind::Bool)
+                diagnose("if condition must be bool", conditional->condition->span);
+            auto analyzeBranch = [&](const IfExprBranch& branch,
+                                     std::optional<SemanticType> branchExpected) {
+                scopes_.emplace_back();
+                for (const auto& statement : branch.body->statements) {
+                    if (analyzeStatement(*statement))
+                        diagnose(
+                            "if value block cannot terminate before its tail expression",
+                            statement->span);
+                }
+                const auto value = analyzeExpr(*branch.value, branchExpected);
+                scopes_.pop_back();
+                return value;
+            };
+            const auto thenType = analyzeBranch(conditional->thenBranch, expected);
+            const auto elseType = analyzeBranch(
+                conditional->elseBranch, expected ? expected
+                                                  : std::optional{thenType});
+            if (!compatible(thenType, elseType) &&
+                !(isNumeric(thenType) && isNumeric(elseType)))
+                diagnose("if branches must have a common type",
+                         conditional->elseBranch.value->span);
+            type = expected ? *expected : thenType;
         } else if (const auto* when = std::get_if<WhenExpr>(&expression.node)) {
             std::optional<SemanticType> subject;
             if (when->subject) {

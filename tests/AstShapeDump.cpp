@@ -226,6 +226,19 @@ private:
             static_cast<unsigned>(item.branches.size() +
                                   (item.subject ? 65536 : 0)));
     }
+    void exprNode(const k::IfExpr& item, const k::Expr& value,
+                  std::size_t subtree) {
+        expression(*item.condition);
+        for (const auto& statement : item.thenBranch.body->statements)
+            this->statement(*statement);
+        expression(*item.thenBranch.value);
+        for (const auto& statement : item.elseBranch.body->statements)
+            this->statement(*statement);
+        expression(*item.elseBranch.value);
+        add(25, value.span, subtree,
+            static_cast<unsigned>(item.thenBranch.body->statements.size() +
+                item.elseBranch.body->statements.size() * 65536));
+    }
     template <typename T>
     void exprNode(const T&, const k::Expr& value, std::size_t subtree) {
         add(0, value.span, subtree);

@@ -346,6 +346,19 @@ private:
         }
     }
 
+    void printExprNode(const IfExpr& expression, std::size_t depth) {
+        line(depth, "IfExpression");
+        printExpr(*expression.condition, depth + 1);
+        line(depth + 1, "Then");
+        for (const auto& statement : expression.thenBranch.body->statements)
+            printStmt(*statement, depth + 2);
+        printExpr(*expression.thenBranch.value, depth + 2);
+        line(depth + 1, "Else");
+        for (const auto& statement : expression.elseBranch.body->statements)
+            printStmt(*statement, depth + 2);
+        printExpr(*expression.elseBranch.value, depth + 2);
+    }
+
     const Source& source_;
     std::ostringstream output_;
 };

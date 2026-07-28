@@ -748,6 +748,37 @@ private:
             if (!type) return nullptr;
             return llvm::ConstantExpr::getSizeOf(type);
         }
+        if (const auto* conditional = std::get_if<IfExpr>(&expression.node)) {
+            auto* condition = emitExpr(*conditional->condition);
+            if (!condition) return nullptr;
+            auto* function = builder_.GetInsertBlock()->getParent();
+            auto* thenBlock = llvm::BasicBlock::Create(context_, "if.then", function);
+            auto* elseBlock = llvm::BasicBlock::Create(context_, "if.else", function);
+            auto* mergeBlock = llvm::BasicBlock::Create(context_, "if.merge", function);
+            auto* resultType = lowerType(semanticType, expression.span);
+            if (!resultType) return nullptr;
+            auto* phi = llvm::PHINode::Create(resultType, 2, "if.value", mergeBlock);
+            builder_.CreateCondBr(condition, thenBlock, elseBlock);
+            auto emitBranch = [&](llvm::BasicBlock* block,
+                                  const IfExprBranch& branch) -> bool {
+                builder_.SetInsertPoint(block);
+                const auto outerLocals = locals_;
+                for (const auto& statement : branch.body->statements)
+                    emitStatement(*statement);
+                auto* value = emitExpr(*branch.value);
+                locals_ = outerLocals;
+                if (!value) return false;
+                auto* incoming = builder_.GetInsertBlock();
+                builder_.CreateBr(mergeBlock);
+                phi->addIncoming(value, incoming);
+                return true;
+            };
+            if (!emitBranch(thenBlock, conditional->thenBranch) ||
+                !emitBranch(elseBlock, conditional->elseBranch))
+                return nullptr;
+            builder_.SetInsertPoint(mergeBlock);
+            return phi;
+        }
         if (const auto* when = std::get_if<WhenExpr>(&expression.node)) {
             auto* function = builder_.GetInsertBlock()->getParent();
             auto* mergeBlock = llvm::BasicBlock::Create(
