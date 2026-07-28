@@ -83,7 +83,7 @@ $validFixtures = @(
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k",
     "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
-    "constants.k"
+    "constants.k", "expression_functions.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName

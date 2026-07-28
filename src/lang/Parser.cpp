@@ -325,27 +325,62 @@ std::optional<FunctionDecl> Parser::parseFunction(bool isExtern) {
     const auto closeParen = previous().span;
 
     TypePtr returnType;
+    bool infersReturnType = false;
     if (match(TokenKind::Colon)) {
         returnType = parseType();
         if (!returnType) return std::nullopt;
     } else {
         returnType = makeType(closeParen, UnitType{});
+        infersReturnType = check(TokenKind::FatArrow);
     }
 
     SourceSpan bodySpan{};
     std::unique_ptr<BlockStmt> body;
+    bool isExpressionBody = false;
     if (isExtern) {
         if (!expect(TokenKind::Semicolon,
                     "expected ';' after extern function declaration"))
             return std::nullopt;
         bodySpan = previous().span;
+    } else if (match(TokenKind::FatArrow)) {
+        isExpressionBody = true;
+        body = std::make_unique<BlockStmt>();
+        if (check(TokenKind::KwIf) && !arrowIfHasElseAhead()) {
+            auto statement = parseIf();
+            if (!statement) return std::nullopt;
+            bodySpan = statement->span;
+            body->statements.push_back(std::move(statement));
+        } else {
+            auto value = parseExpression();
+            if (!value) return std::nullopt;
+            if (!expect(TokenKind::Semicolon,
+                        "expected ';' after expression-bodied function"))
+                return std::nullopt;
+            bodySpan = previous().span;
+            const auto valueSpan = value->span;
+            body->statements.push_back(makeStmt(
+                valueSpan, ReturnStmt{std::move(value)}));
+        }
     } else {
         body = parseBlock(bodySpan);
         if (!body) return std::nullopt;
     }
     return FunctionDecl{name, std::move(typeParameters),
                         std::move(parameters), std::move(returnType),
-                        std::move(body), spanFrom(start, bodySpan), isExtern};
+                        std::move(body), spanFrom(start, bodySpan), isExtern,
+                        isExpressionBody, infersReturnType};
+}
+
+bool Parser::arrowIfHasElseAhead() const noexcept {
+    for (auto cursor = current_; cursor < tokens_.size(); ++cursor) {
+        const auto kind = tokens_[cursor].kind;
+        if (kind == TokenKind::KwElse) return true;
+        if (kind == TokenKind::EndOfFile || kind == TokenKind::KwFn ||
+            kind == TokenKind::KwExtern || kind == TokenKind::KwStruct ||
+            kind == TokenKind::KwEnum || kind == TokenKind::KwConst)
+            return false;
+    }
+    return false;
 }
 
 std::optional<Parameter> Parser::parseParameter() {

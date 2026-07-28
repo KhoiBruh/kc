@@ -177,6 +177,8 @@ struct FunctionDecl {
     std::unique_ptr<BlockStmt> body;
     SourceSpan span;
     bool isExtern = false;
+    bool isExpressionBody = false;
+    bool infersReturnType = false;
 };
 
 struct ModuleDecl {

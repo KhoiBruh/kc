@@ -148,29 +148,24 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeVal
     return false;
 }
 
-fn primitiveType(tokenKind: u32): TypeValue {
-    return when (tokenKind) {
-        49 -> unitType();
-        32 -> boolType();
-        35 -> TypeValue(3, 0, 0);
-        36 -> TypeValue(4, 0, 0);
-        38 -> TypeValue(5, 0, 0);
-        40 -> TypeValue(6, 0, 0);
-        41 -> TypeValue(7, 0, 0);
-        45 -> TypeValue(17, 0, 0);
-        46 -> TypeValue(18, 0, 0);
-        48 -> TypeValue(10, 0, 0);
-        else -> invalidType();
-    };
-}
+fn primitiveType(tokenKind: u32) => when (tokenKind) {
+    49 -> unitType();
+    32 -> boolType();
+    35 -> TypeValue(3, 0, 0);
+    36 -> TypeValue(4, 0, 0);
+    38 -> TypeValue(5, 0, 0);
+    40 -> TypeValue(6, 0, 0);
+    41 -> TypeValue(7, 0, 0);
+    45 -> TypeValue(17, 0, 0);
+    46 -> TypeValue(18, 0, 0);
+    48 -> TypeValue(10, 0, 0);
+    else -> invalidType();
+};
 
-struct LocalInfo(
-    name: u64, valueType: TypeValue, mutable: bool, storage: u64)
+struct LocalInfo(name: u64, valueType: TypeValue, mutable: bool, storage: u64)
 struct LocalList(data: LocalInfo*, length: u64, capacity: u64)
 
-fn localListNew(): LocalList {
-    return LocalList(k_boot_alloc(8 * sizeof(LocalInfo)) as LocalInfo*, 0, 8);
-}
+fn localListNew() => LocalList(k_boot_alloc(8 * sizeof(LocalInfo)) as LocalInfo*, 0, 8);
 
 fn localListGrow(var list: LocalList) {
     val capacity = list.capacity * 2;
@@ -191,23 +186,16 @@ fn localListAppend(var list: LocalList, value: LocalInfo) {
     list.length = list.length + 1;
 }
 
-fn localListFree(list: LocalList) {
-    k_boot_free(list.data as unit*);
-}
+fn localListFree(list: LocalList) => k_boot_free(list.data as unit*);
 
 struct DeclarationInfo(name: u64, node: u64)
-struct DeclarationList(
-    data: DeclarationInfo*, length: u64, capacity: u64)
+struct DeclarationList(data: DeclarationInfo*, length: u64, capacity: u64)
 
-fn declarationListNew(): DeclarationList {
-    return DeclarationList(
-        k_boot_alloc(8 * sizeof(DeclarationInfo)) as DeclarationInfo*, 0, 8);
-}
+fn declarationListNew() => DeclarationList(k_boot_alloc(8 * sizeof(DeclarationInfo)) as DeclarationInfo*, 0, 8);
 
 fn declarationListGrow(var list: DeclarationList) {
     val capacity = list.capacity * 2;
-    val data =
-        k_boot_alloc(capacity * sizeof(DeclarationInfo)) as DeclarationInfo*;
+    val data = k_boot_alloc(capacity * sizeof(DeclarationInfo)) as DeclarationInfo*;
     var index: u64 = 0;
     while (index < list.length) {
         data[index] = list.data[index];
@@ -225,6 +213,4 @@ fn declarationListAppend(
     list.length = list.length + 1;
 }
 
-fn declarationListFree(list: DeclarationList) {
-    k_boot_free(list.data as unit*);
-}
+fn declarationListFree(list: DeclarationList) => k_boot_free(list.data as unit*);

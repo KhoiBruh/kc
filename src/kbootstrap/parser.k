@@ -720,6 +720,23 @@ fn parseStatement(var parser: Parser): u64 {
         subtreeStart, 0);
 }
 
+fn arrowIfHasElseAhead(parser: Parser): bool {
+    var cursor = parser.current;
+    while (cursor < parser.tokens.length) {
+        val kind = parser.tokens.data[cursor].kind;
+        if (kind == 16) return true;
+        var declaration = kind == 0;
+        if (kind == 8) declaration = true;
+        if (kind == 9) declaration = true;
+        if (kind == 10) declaration = true;
+        if (kind == 11) declaration = true;
+        if (kind == 24) declaration = true;
+        if (declaration) return false;
+        cursor = cursor + 1;
+    }
+    return false;
+}
+
 fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
     val subtreeStart = parser.nodes.length;
     if (!parserExpect(parser, 10)) return 0;
@@ -785,25 +802,50 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
         }
     }
     if (!parserExpect(parser, 51)) return 0;
+    var infersReturn: u32 = 0;
     if (parserMatch(parser, 57)) {
         parseType(parser);
     } else {
         parserAdd(
             parser, 1, parserPrevious(parser).end,
             parserPrevious(parser).end, parser.nodes.length, 49);
+        if (parserCheck(parser, 86)) infersReturn = 1;
     }
     var end: u64 = 0;
+    var expressionBody: u32 = 0;
     if (isExtern) {
         if (!parserExpect(parser, 58)) return 0;
         end = parserPrevious(parser).end;
     } else {
+        if (parserMatch(parser, 86)) {
+            expressionBody = 1;
+            val bodyStart = parser.nodes.length;
+            if (parserCheck(parser, 15) && !arrowIfHasElseAhead(parser)) {
+                parseStatement(parser);
+            } else {
+                val expressionRoot = parseExpression(parser, 0);
+                if (!parserExpect(parser, 58)) return 0;
+                parserAdd(
+                    parser, 34,
+                    parser.nodes.data[expressionRoot].start,
+                    parser.nodes.data[expressionRoot].end,
+                    bodyStart, 1);
+            }
+            parserAdd(parser, 30, 0, 0, bodyStart, 1);
+            end = parserPrevious(parser).end;
+        } else {
         parseBlock(parser);
         end = parserPrevious(parser).end;
+        }
     }
     var aux = parameterCount;
     if (isExtern) aux = aux + 65536;
     aux = aux + typeParameterCount * 131072;
-    return parserAdd(parser, 41, start, end, subtreeStart, aux);
+    val root = parserAdd(parser, 41, start, end, subtreeStart, aux);
+    var function = parser.nodes.data[root];
+    function.storage = (expressionBody + infersReturn * 2) as u64;
+    parser.nodes.data[root] = function;
+    return root;
 }
 
 fn parseStruct(var parser: Parser): u64 {

@@ -3609,7 +3609,19 @@ fn emitFunction(
     } else {
         appendDefine(buffer);
     }
-    appendNodeType(buffer, genericArguments, returnType);
+    if (functionInfersReturn(function)) {
+        var inferred = TypeValue(
+            function.typeKind, function.typeName, function.typePointee);
+        if (specializationCount > 0) {
+            inferred = substituteEmitterType(
+                source, nodes, functionRoot, inferred,
+                genericArguments,
+                specializationArgumentStart, specializationCount);
+        }
+        appendType(
+            buffer, genericArguments,
+            inferred.kind, inferred.name, inferred.pointee);
+    } else appendNodeType(buffer, genericArguments, returnType);
     appendFunctionOpen(buffer);
     appendSource(buffer, source, name.start, name.end);
     if (specializationCount > 0) {
@@ -3706,7 +3718,11 @@ fn emitFunction(
             buffer, source, nodes, genericArguments,
             blockRoot, counter);
     if (!terminated) {
-        if (returnType.typeKind == 1) {
+        var returnsUnit = returnType.typeKind == 1;
+        if (returnType.kind == 1 && returnType.aux == 49) returnsUnit = true;
+        if (functionInfersReturn(function) && function.typeKind == 1)
+            returnsUnit = true;
+        if (returnsUnit) {
             byteBufferAppend(buffer, 32);
             byteBufferAppend(buffer, 32);
             byteBufferAppend(buffer, 114);

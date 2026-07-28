@@ -683,6 +683,37 @@ TEST(semantic_infers_constant_array_sizes) {
               "cannot infer type from this initializer");
 }
 
+TEST(semantic_infers_expression_function_returns_and_rejects_cycles) {
+    SemanticFixture valid{
+        "fn first() => second(); fn second() => 42;"
+        "fn main(): i32 => first();"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+    EXPECT_EQ(valid.semantic.functions.at("first").returnType,
+              k::SemanticType{k::SemanticTypeKind::I32});
+
+    SemanticFixture recursive{
+        "fn recurse(val n: i32) => recurse(n);"
+        "fn main(): i32 { return 0; }"};
+    EXPECT_EQ(recursive.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(recursive.semantic.diagnostics[0].message,
+              "cannot infer return type of recursive function 'recurse'");
+}
+
+TEST(semantic_treats_statement_like_arrow_bodies_as_unit) {
+    SemanticFixture fixture{
+        "extern fn release_raw(value: unit*);"
+        "fn release(value: unit*) => release_raw(value);"
+        "fn assign(a: i32, b: i32) => a = b;"
+        "fn assign_if(a: i32, b: i32) => if (a != b) a = b;"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+    EXPECT_EQ(fixture.semantic.functions.at("release").returnType,
+              k::SemanticType{k::SemanticTypeKind::Unit});
+    EXPECT_EQ(fixture.semantic.functions.at("assign").returnType,
+              k::SemanticType{k::SemanticTypeKind::Unit});
+    EXPECT_EQ(fixture.semantic.functions.at("assign_if").returnType,
+              k::SemanticType{k::SemanticTypeKind::Unit});
+}
+
 int main() {
     return test::runAll();
 }

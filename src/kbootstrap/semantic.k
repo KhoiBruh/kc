@@ -16,17 +16,14 @@ struct Semantic(
     scopeStart: u64,
     currentFunction: u64,
     currentStruct: u64,
-    loopDepth: u32)
+    loopDepth: u32
+)
 
 struct IntegerConstant(ok: bool, negative: bool, overflow: bool, magnitude: u64)
 
 fn sourceHash(source: Source, start: u64, end: u64): u64 {
     var value: u64 = 5381;
-    var offset = start;
-    while (offset < end) {
-        value = value * 33 + source.data[offset] as u64;
-        offset = offset + 1;
-    }
+    for (i in start..<end) value = value * 33 + source.data[i] as u64;
     return value;
 }
 
@@ -50,9 +47,9 @@ fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
     if (node.aux != 2) return IntegerConstant(false, false, false, 0);
     var magnitude: u64 = 0;
     var overflow = false;
-    var offset = node.start;
-    while (offset < node.end) {
-        val digit = (semantic.source.data[offset] - 48) as u64;
+
+    for (i in node.start..<node.end) {
+        val digit = (semantic.source.data[i] - 48) as u64;
         if (magnitude > 1844674407370955161) {
             overflow = true;
         } else {
@@ -61,8 +58,8 @@ fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
             }
         }
         if (!overflow) magnitude = magnitude * 10 + digit;
-        offset = offset + 1;
     }
+
     return IntegerConstant(true, negative, overflow, magnitude);
 }
 
@@ -86,6 +83,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
     var decimalDigits: i64 = 0;
     var sawDecimal = false;
     var offset = node.start;
+
     while (offset < node.end) {
         val byte = semantic.source.data[offset];
         var exponentMarker = byte == 101;
@@ -101,6 +99,7 @@ fn floatConstant(semantic: Semantic, root: u64): IntegerConstant {
             offset = offset + 1;
         }
     }
+
     var exponent: i64 = 0;
     if (exponentStart < node.end) {
         offset = exponentStart + 1;
@@ -181,11 +180,7 @@ fn nodeIsPrint(semantic: Semantic, node: AstNode): bool {
 }
 
 fn declarationFind(list: DeclarationList, name: u64): u64 {
-    var index: u64 = 0;
-    while (index < list.length) {
-        if (list.data[index].name == name) return index;
-        index = index + 1;
-    }
+    for (i in 0..<list.length) if (list.data[i].name == name) return i;
     return list.length;
 }
 
@@ -207,15 +202,11 @@ fn localFindFrom(locals: LocalList, name: u64, start: u64): u64 {
     return locals.length;
 }
 
-fn semanticFail(var semantic: Semantic, category: u32, node: AstNode) {
-    if (semantic.result.ok) {
-        semantic.result =
-            semanticError(category, node, semantic.genericArguments);
-    }
-}
+fn semanticFail(var semantic: Semantic, category: u32, node: AstNode) =>
+    if (semantic.result.ok) 
+        semantic.result = semanticError(category, node, semantic.genericArguments);
 
-fn whenConditionRoot(
-    semantic: Semantic, branchRoot: u64, valueForm: bool): u64 {
+fn whenConditionRoot(semantic: Semantic, branchRoot: u64, valueForm: bool): u64 {
     if (!valueForm) {
         val bodyRoot = branchRoot - 1;
         return semantic.nodes.data[bodyRoot].subtreeStart - 1;
@@ -232,8 +223,9 @@ fn whenConditionRoot(
 }
 
 fn whenPatternRoot(
-    semantic: Semantic, branchRoot: u64, valueForm: bool,
-    patternIndex: u32): u64 {
+    semantic: Semantic, branchRoot: u64, 
+    valueForm: bool, patternIndex: u32
+): u64 {
     val branch = semantic.nodes.data[branchRoot];
     val patternCount = branch.aux / 65536;
     var root = whenConditionRoot(semantic, branchRoot, valueForm);
@@ -246,8 +238,9 @@ fn whenPatternRoot(
 }
 
 fn enumWhenExhaustive(
-    var semantic: Semantic, subject: TypeValue, roots: u64*,
-    branchCount: u32, valueForm: bool): bool {
+    var semantic: Semantic, subject: TypeValue, 
+    roots: u64*, branchCount: u32, valueForm: bool
+): bool {
     if (subject.kind != 20) return false;
     val enumIndex = declarationFind(semantic.enums, subject.name);
     if (enumIndex == semantic.enums.length) return false;
@@ -257,6 +250,7 @@ fn enumWhenExhaustive(
     while (index < branchCount) {
         val branch = semantic.nodes.data[roots[index as u64]];
         val isElse = branch.aux % 2 == 1;
+
         if (!isElse) {
           var patternIndex: u32 = 0;
           val patternCount = branch.aux / 65536;
@@ -301,29 +295,96 @@ fn enumWhenExhaustive(
         }
         index = index + 1;
     }
+
     return unique == declaration.aux;
 }
 
-fn functionIsExtern(function: AstNode): bool {
-    return (function.aux / 65536) % 2 == 1;
+fn functionIsExtern(function: AstNode) => (function.aux / 65536) % 2 == 1;
+
+fn functionInfersReturn(function: AstNode) => (function.storage / 2) % 2 == 1;
+
+fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
+    var function = semantic.nodes.data[functionRoot];
+    if ((function.storage / 8) % 2 == 1)
+        return TypeValue(function.typeKind, function.typeName, function.typePointee);
+    if ((function.storage / 4) % 2 == 1) {
+        semanticFail(semantic, 4, function);
+        return invalidType();
+    }
+    function.storage = function.storage + 4;
+    semantic.nodes.data[functionRoot] = function;
+    val savedLength = semantic.locals.length;
+    val savedScope = semantic.scopeStart;
+    val savedFunction = semantic.currentFunction;
+    val savedReturn = semantic.returnType;
+    semantic.currentFunction = functionRoot;
+    var position: u32 = 0;
+    while (position < functionParameterCount(function)) {
+        val parameterRoot = functionParameterRoot(semantic, functionRoot, position + 1);
+        val parameter = semantic.nodes.data[parameterRoot];
+        val nameNode = semantic.nodes.data[parameter.subtreeStart];
+        var locals = semantic.locals;
+        localListAppend(
+            locals,
+            LocalInfo(
+                nodeHash(semantic, nameNode),
+                typeFromNode(semantic, parameterRoot - 1),
+                parameter.aux != 1, nameNode.start));
+        semantic.locals = locals;
+        position = position + 1;
+    }
+    val statementRoot = functionRoot - 2;
+    val statement = semantic.nodes.data[statementRoot];
+    var inferred = unitType();
+    if (statement.kind == 34) {
+        val expressionRoot = statementRoot - 1;
+        inferred = expressionType(semantic, expressionRoot);
+        if (inferred.kind == 1 || semantic.nodes.data[expressionRoot].kind == 14) {
+            inferred = unitType();
+            var expressionStatement = statement;
+            expressionStatement.kind = 35;
+            semantic.nodes.data[statementRoot] = expressionStatement;
+        }
+    } else {
+        semantic.returnType = unitType();
+        checkStatement(semantic, statementRoot);
+    }
+    function = semantic.nodes.data[functionRoot];
+    function.typeKind = inferred.kind;
+    function.typeName = inferred.name;
+    function.typePointee = inferred.pointee;
+    function.storage = function.storage - 4 + 8;
+    semantic.nodes.data[functionRoot] = function;
+    var locals = semantic.locals;
+    locals.length = savedLength;
+    semantic.locals = locals;
+    semantic.scopeStart = savedScope;
+    semantic.currentFunction = savedFunction;
+    semantic.returnType = savedReturn;
+    return inferred;
 }
 
-fn functionTypeParameterCount(function: AstNode): u32 {
-    return function.aux / 131072;
+fn functionReturnTypeValue(var semantic: Semantic, functionRoot: u64): TypeValue {
+    val function = semantic.nodes.data[functionRoot];
+    
+    return if (functionInfersReturn(function))
+            inferFunctionReturn(semantic, functionRoot)
+        else typeFromNode(semantic, functionReturnRoot(semantic, functionRoot));
 }
 
-fn constraintFromHash(hash: u64): u32 {
-    if (hash == 8246182162010039579) return 1;
-    if (hash == 229477778387914) return 2;
-    if (hash == 6953836814478) return 3;
-    if (hash == 229469892001299) return 4;
-    if (hash == 7573017822976354) return 5;
-    if (hash == 210712519067) return 6;
-    return 0;
-}
+fn functionTypeParameterCount(function: AstNode) => function.aux / 131072;
 
-fn functionTypeParameterRoot(
-    semantic: Semantic, functionRoot: u64, position: u32): u64 {
+fn constraintFromHash(hash: u64): u32 => when (hash) {
+    8246182162010039579 -> 1;
+    229477778387914 -> 2;
+    6953836814478 -> 3;
+    229469892001299 -> 4;
+    7573017822976354 -> 5;
+    210712519067 -> 6;
+    else -> 0;
+};
+
+fn functionTypeParameterRoot(semantic: Semantic, functionRoot: u64, position: u32): u64 {
     val function = semantic.nodes.data[functionRoot];
     var root = functionReturnRoot(semantic, functionRoot);
     var parameters = functionParameterCount(function);
@@ -339,16 +400,11 @@ fn functionTypeParameterRoot(
     return root;
 }
 
-fn structTypeParameterCount(structure: AstNode): u32 {
-    return structure.aux / 65536;
-}
+fn structTypeParameterCount(structure: AstNode) => structure.aux / 65536;
 
-fn structFieldCount(structure: AstNode): u32 {
-    return structure.aux % 65536;
-}
+fn structFieldCount(structure: AstNode) => structure.aux % 65536;
 
-fn structTypeParameterRoot(
-    semantic: Semantic, structureRoot: u64, position: u32): u64 {
+fn structTypeParameterRoot(semantic: Semantic, structureRoot: u64, position: u32): u64 {
     val structure = semantic.nodes.data[structureRoot];
     var root = structureRoot - 1;
     var fields = structFieldCount(structure);
@@ -364,18 +420,13 @@ fn structTypeParameterRoot(
     return root;
 }
 
-fn structTypeParameterPosition(
-    semantic: Semantic, structureRoot: u64, name: u64): u32 {
-    val count = structTypeParameterCount(
-        semantic.nodes.data[structureRoot]);
+fn structTypeParameterPosition(semantic: Semantic, structureRoot: u64, name: u64): u32 {
+    val count = structTypeParameterCount(semantic.nodes.data[structureRoot]);
     var position: u32 = 1;
     while (position <= count) {
-        val root = structTypeParameterRoot(
-            semantic, structureRoot, position);
+        val root = structTypeParameterRoot(semantic, structureRoot, position);
         val parameter = semantic.nodes.data[root];
-        if (nodeHash(
-                semantic,
-                semantic.nodes.data[parameter.subtreeStart]) == name) {
+        if (nodeHash(semantic, semantic.nodes.data[parameter.subtreeStart]) == name) {
             return position - 1;
         }
         position = position + 1;
@@ -383,11 +434,9 @@ fn structTypeParameterPosition(
     return count;
 }
 
-fn fieldRootAt(
-    nodes: AstList, structureRoot: u64, wanted: u32): u64 {
+fn fieldRootAt(nodes: AstList, structureRoot: u64, wanted: u32): u64 {
     val structure = nodes.data[structureRoot];
-    var roots =
-        k_boot_alloc((structFieldCount(structure) as u64) * sizeof(u64)) as u64*;
+    var roots = k_boot_alloc((structFieldCount(structure) as u64) * sizeof(u64)) as u64*;
     var root = structureRoot - 1;
     var remaining = structFieldCount(structure);
     while (remaining > 0) {
@@ -403,7 +452,8 @@ fn fieldRootAt(
 fn substituteStructType(
     semantic: Semantic, structureRoot: u64,
     type: TypeValue, arguments: TypeValueList,
-    argumentStart: u64, count: u32): TypeValue {
+    argumentStart: u64, count: u32
+): TypeValue {
     if (type.kind == 14) {
         val position =
             structTypeParameterPosition(semantic, structureRoot, type.name);
@@ -415,15 +465,14 @@ fn substituteStructType(
         val argCount = type.pointee / 65536;
         if (argCount == 0) return type;
         val newStart = semantic.genericArguments.length;
-        var index: u32 = 0;
-        while (index < argCount) {
-            val arg = semantic.genericArguments.data[start as u64 + index as u64];
+
+        for (i in 0..<argCount) {
+            val arg = semantic.genericArguments.data[start as u64 + i as u64];
             val substituted = substituteStructType(
                 semantic, structureRoot, arg, arguments, argumentStart, count);
             var resolved = semantic.genericArguments;
             typeValueListAppend(resolved, substituted);
             semantic.genericArguments = resolved;
-            index = index + 1;
         }
         return TypeValue(8, type.name, newStart as u32 + argCount * 65536);
     }
@@ -689,9 +738,7 @@ fn functionParameterRoot(
     return root;
 }
 
-fn functionParameterCount(function: AstNode): u32 {
-    return function.aux % 65536;
-}
+fn functionParameterCount(function: AstNode) => function.aux % 65536;
 
 fn expressionType(var semantic: Semantic, root: u64): TypeValue {
     val value = inferExpressionType(semantic, root);
@@ -1180,8 +1227,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val savedFunction = semantic.currentFunction;
         semantic.currentFunction = functionRoot;
-        val returnPattern = typeFromNode(
-            semantic, functionReturnRoot(semantic, functionRoot));
+        val returnPattern = functionReturnTypeValue(semantic, functionRoot);
         semantic.currentFunction = savedFunction;
         val returnType = substituteGenericType(
             semantic, functionRoot, returnPattern,
@@ -1845,6 +1891,21 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (node.aux == 1) {
             actual = expressionType(semantic, root - 1);
         }
+        val function = semantic.nodes.data[semantic.currentFunction];
+        if (function.storage % 2 == 1 && node.aux == 1) {
+            var statementLike = actual.kind == 1;
+            if (semantic.nodes.data[root - 1].kind == 14) statementLike = true;
+            if (statementLike) {
+                if (semantic.returnType.kind != 1)
+                    semanticFail(semantic, 5, semantic.nodes.data[root - 1]);
+                else {
+                    var expressionStatement = node;
+                    expressionStatement.kind = 35;
+                    semantic.nodes.data[root] = expressionStatement;
+                }
+                return;
+            }
+        }
         if (!typeAccepts(semantic.returnType, actual, semantic.genericArguments)) {
             if (node.aux == 1) {
                 semanticFail(
@@ -1908,8 +1969,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
     emptyLocals.length = 0;
     semantic.locals = emptyLocals;
     semantic.scopeStart = 0;
-    semantic.returnType =
-        typeFromNode(semantic, functionReturnRoot(semantic, root));
+    semantic.returnType = functionReturnTypeValue(semantic, root);
     var position: u32 = 0;
     val count = functionParameterCount(function);
     while (position < count) {
@@ -1917,7 +1977,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
             functionParameterRoot(semantic, root, position + 1);
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
-        val mutable = parameter.aux == 2;
+        val mutable = parameter.aux != 1;
         val parameterName = nodeHash(semantic, nameNode);
         if (localFindFrom(
                 semantic.locals, parameterName, 0) !=
@@ -2107,7 +2167,8 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
         declarationListNew(),
         localListNew(), genericArguments,
         semanticSuccess(genericArguments), unitType(), 0,
-        nodes.length, nodes.length, 0);
+        nodes.length, nodes.length, 0
+    );
     val programRoot = nodes.length - 1;
     collectDeclarations(semantic, programRoot);
     if (semantic.result.ok) {

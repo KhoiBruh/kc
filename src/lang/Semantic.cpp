@@ -124,6 +124,8 @@ public:
         for (const auto& structure : program_.structs) declareStruct(structure);
         for (const auto& structure : program_.structs) defineStruct(structure);
         for (const auto& function : program_.functions) collect(function);
+        for (const auto& function : program_.functions)
+            if (function.infersReturnType) inferFunctionReturn(function);
         for (const auto& constant : program_.constants) {
             const auto name = spelling(source_, constant.name);
             if (result_.constants.contains(name) || result_.functions.contains(name) ||
@@ -162,7 +164,7 @@ public:
         }
         for (const auto& function : program_.functions) {
             const auto found = result_.functions.find(spelling(source_, function.name));
-            if (found != result_.functions.end() &&
+            if (!function.infersReturnType && found != result_.functions.end() &&
                 found->second.declaration == &function) {
                 analyzeFunction(function, found->second);
             }
@@ -186,6 +188,60 @@ public:
     }
 
 private:
+    SemanticType inferFunctionReturn(const FunctionDecl& function) {
+        const auto name = spelling(source_, function.name);
+        auto symbol = result_.functions.find(name);
+        if (symbol == result_.functions.end()) return {};
+        const auto state = inferredReturnStates_[&function];
+        if (state == 2) return symbol->second.returnType;
+        if (state == 1) {
+            diagnose("cannot infer return type of recursive function '" + name + "'",
+                     function.name);
+            symbol->second.returnType = {};
+            inferredReturnStates_[&function] = 2;
+            return {};
+        }
+        inferredReturnStates_[&function] = 1;
+        auto savedScopes = std::move(scopes_);
+        auto savedTypeParameters = std::move(typeParameters_);
+        const auto savedReturn = currentReturn_;
+        scopes_.clear();
+        scopes_.emplace_back();
+        typeParameters_.clear();
+        for (const auto& parameter : symbol->second.typeParameters)
+            typeParameters_.emplace(parameter.name, parameter);
+        for (std::size_t i = 0; i < function.parameters.size(); ++i)
+            scopes_.back().emplace(
+                spelling(source_, function.parameters[i].name),
+                VariableSymbol{
+                    symbol->second.parameterTypes[i],
+                    function.parameters[i].mode != ParameterMode::ImmutableBorrow});
+        SemanticType inferred;
+        if (function.body && function.body->statements.size() == 1) {
+            const auto& bodyStatement = *function.body->statements[0];
+            if (const auto* statement =
+                    std::get_if<ReturnStmt>(&bodyStatement.node);
+                statement && statement->value) {
+                inferred = analyzeExpr(*statement->value);
+                if (inferred.kind == SemanticTypeKind::Unit ||
+                    std::holds_alternative<AssignmentExpr>(statement->value->node))
+                    inferred = {SemanticTypeKind::Unit};
+            } else {
+                analyzeStatement(bodyStatement);
+                inferred = {SemanticTypeKind::Unit};
+            }
+        }
+        symbol = result_.functions.find(name);
+        if (inferredReturnStates_[&function] != 2) {
+            symbol->second.returnType = inferred;
+            inferredReturnStates_[&function] = 2;
+        }
+        scopes_ = std::move(savedScopes);
+        typeParameters_ = std::move(savedTypeParameters);
+        currentReturn_ = savedReturn;
+        return symbol->second.returnType;
+    }
+
     bool isConstantExpression(const Expr& expression) const {
         if (std::holds_alternative<LiteralExpr>(expression.node) ||
             std::holds_alternative<UnitLiteralExpr>(expression.node)) return true;
@@ -413,7 +469,7 @@ private:
             parameters.push_back(resolve(*parameter.type));
         result_.functions.emplace(name, FunctionSymbol{
             &function, std::move(typeParameters), std::move(parameters),
-            resolve(*function.returnType)});
+            function.infersReturnType ? SemanticType{} : resolve(*function.returnType)});
         typeParameters_.clear();
     }
 
@@ -439,6 +495,31 @@ private:
         for (const auto& parameter : function.parameters)
             validateRuntimeArraySize(*parameter.type);
         validateRuntimeArraySize(*function.returnType);
+        if (function.isExpressionBody && function.body->statements.size() == 1) {
+            const auto& bodyStatement = *function.body->statements[0];
+            if (const auto* value = std::get_if<ReturnStmt>(&bodyStatement.node);
+                value && value->value) {
+                const auto actual = analyzeExpr(*value->value, currentReturn_);
+                const bool statementLike =
+                    actual.kind == SemanticTypeKind::Unit ||
+                    std::holds_alternative<AssignmentExpr>(value->value->node);
+                if (statementLike) {
+                    if (currentReturn_.kind != SemanticTypeKind::Unit)
+                        diagnose("expression-bodied statement requires unit return type",
+                                 value->value->span);
+                } else if (!compatible(currentReturn_, actual)) {
+                    diagnose("return type does not match function return type",
+                             value->value->span);
+                }
+            } else {
+                analyzeStatement(bodyStatement);
+                if (currentReturn_.kind != SemanticTypeKind::Unit)
+                    diagnose("expression-bodied statement requires unit return type",
+                             bodyStatement.span);
+            }
+            typeParameters_.clear();
+            return;
+        }
         const bool terminates = analyzeBlock(*function.body, false);
         if (currentReturn_.kind != SemanticTypeKind::Unit && !terminates)
             diagnose("non-unit function may reach the end without returning", function.name);
@@ -1102,6 +1183,9 @@ private:
             for (const auto& argument : call.arguments) analyzeExpr(*argument);
             return {};
         }
+        if (function->second.declaration->infersReturnType &&
+            function->second.returnType.kind == SemanticTypeKind::Error)
+            inferFunctionReturn(*function->second.declaration);
         if (!function->second.typeParameters.empty()) {
             const auto& symbol = function->second;
             std::vector<SemanticType> typeArguments;
@@ -1633,6 +1717,7 @@ private:
     std::unordered_map<std::string, TypeParameterSymbol> typeParameters_;
     SemanticType currentReturn_;
     std::size_t loopDepth_ = 0;
+    std::unordered_map<const FunctionDecl*, int> inferredReturnStates_;
 };
 
 }

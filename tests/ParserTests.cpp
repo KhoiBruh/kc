@@ -532,6 +532,16 @@ TEST(ast_printer_is_deterministic) {
         "        Identifier answer\n");
 }
 
+TEST(parser_accepts_expression_bodied_functions) {
+    ParseFixture fixture{
+        "fn explicit(): i32 => 42; fn inferred() => explicit();"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    EXPECT_TRUE(fixture.parsed.program.functions[0].isExpressionBody);
+    EXPECT_TRUE(!fixture.parsed.program.functions[0].infersReturnType);
+    EXPECT_TRUE(fixture.parsed.program.functions[1].isExpressionBody);
+    EXPECT_TRUE(fixture.parsed.program.functions[1].infersReturnType);
+}
+
 int main() {
     return test::runAll();
 }

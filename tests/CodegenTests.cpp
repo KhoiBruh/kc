@@ -669,6 +669,29 @@ TEST(codegen_inlines_fixed_array_constants) {
     EXPECT_TRUE(ir.find("[4 x i32]") != std::string::npos);
 }
 
+TEST(codegen_lowers_expression_bodied_functions_with_inferred_returns) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn add(val a: i32, val b: i32): i32 => a + b;"
+        "fn answer() => add(40, 2);",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define i32 @answer") != std::string::npos);
+    EXPECT_TRUE(ir.find("ret i32") != std::string::npos);
+}
+
+TEST(codegen_lowers_statement_like_arrow_bodies_as_unit) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "extern fn release_raw(value: unit*);"
+        "fn release(value: unit*) => release_raw(value);"
+        "fn assign(a: i32, b: i32) => a = b;",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define void @release") != std::string::npos);
+    EXPECT_TRUE(ir.find("define void @assign") != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }

@@ -3,16 +3,12 @@ module kbootstrap.compiler;
 import kbootstrap.*;
 import kbootstrap.loader.LoadResult;
 
-extern fn k_boot_write_file(
-    path: u8*, pathLength: u64, data: u8*, length: u64): bool;
+extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
+
 fn appendRaw(
     var buffer: ByteBuffer, data: u8*, length: u64) {
-    var index: u64 = 0;
-    while (index < length) {
-        byteBufferAppend(buffer, data[index]);
-        index = index + 1;
-    }
+    for (i in 0..<length) byteBufferAppend(buffer, data[i]);
 }
 
 fn appendQuoted(
@@ -129,7 +125,8 @@ fn compileToLl(
     outputPath: u8*,
     outputPathLength: u64,
     optPath: u8*,
-    optPathLength: u64): i32 {
+    optPathLength: u64
+): i32 {
     val source = Source(sourceData, sourceLength);
     val lexed = lex(source);
     if (!lexed.ok) {
@@ -236,11 +233,7 @@ fn linkLl(
 
 fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
     var line: u64 = 1;
-    var index = sourceStart;
-    while (index < offset) {
-        if (source.data[index] == 10) line = line + 1;
-        index = index + 1;
-    }
+    for (i in sourceStart..<offset) if (source.data[i] == 10) line = line + 1;
     return line;
 }
 
@@ -255,9 +248,7 @@ fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     return col;
 }
 
-fn stderrWrite(data: u8*, length: u64) {
-    k_boot_stderr(data, length);
-}
+fn stderrWrite(data: u8*, length: u64) => k_boot_stderr(data, length);
 
 fn stderrNumber(value: u64): ByteBuffer {
     var buf = byteBufferNew();
@@ -454,7 +445,8 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
 
 fn printDiagnostic(
     source: Source, sourceMap: SourceMap,
-    category: u32, start: u64, end: u64) {
+    category: u32, start: u64, end: u64
+) {
     var buf = byteBufferNew();
     var sourceStart: u64 = 0;
     var segmentIndex: u64 = 0;

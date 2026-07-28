@@ -644,11 +644,22 @@ fn log(message: string): unit {
 
 Hàm trả về `unit` không được trả về một giá trị. Biểu thức `()` là giá trị `unit`, nhưng trong thân hàm phải dùng `return;` để thoát sớm; `return ();` là lỗi ngữ nghĩa.
 
-* **Hàm rút gọn (Expression Body):** 
+* **Hàm rút gọn (Expression Body):** `=> expression;` tương đương với thân hàm chỉ `return expression;`. Có thể ghi kiểu trả về hoặc để compiler suy luận:
 
-`fn add(a: i32, b: i32) => a + b;`
+```text
+fn add(a: i32, b: i32): i32 => a + b;
+fn add(a: i32, b: i32) => a + b;
+```
 
-`fn setA(a: i32, b: i32) => a = b;`
+Chỉ expression-bodied function mới suy luận kiểu trả về; block body không ghi kiểu vẫn là `unit`. Hàm suy luận kiểu không được đệ quy trực tiếp hoặc tạo vòng gọi lẫn nhau; khi cần đệ quy phải ghi kiểu trả về tường minh. `extern fn` không hỗ trợ expression body.
+
+Call trả về `unit`, assignment, và `if` không có `else` trong arrow body là statement-like body và khiến hàm trả về `unit`; chúng không được biến thành `return value`:
+
+```text
+fn release(value: unit*) => k_boot_free(value);
+fn assign(a: i32, b: i32) => a = b;
+fn assignIf(a: i32, b: i32) => if (a != b) a = b;
+```
 
 * **Hệ thống Module:**
 ```text

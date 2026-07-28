@@ -60,6 +60,7 @@ private:
     [[nodiscard]] ExprPtr parseCall(
         ExprPtr callee, std::vector<TypePtr> typeArguments = {});
     [[nodiscard]] bool genericCallAhead() const noexcept;
+    [[nodiscard]] bool arrowIfHasElseAhead() const noexcept;
 
     void synchronizeStatement();
     void synchronizeTopLevel();

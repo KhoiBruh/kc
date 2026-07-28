@@ -448,9 +448,19 @@ private:
             ++parameterIndex;
         }
 
-        for (const auto& statement : declaration.body->statements) {
-            emitStatement(*statement);
-            if (builder_.GetInsertBlock()->getTerminator()) break;
+        if (declaration.isExpressionBody && function->getReturnType()->isVoidTy() &&
+            declaration.body->statements.size() == 1) {
+            const auto& statement = *declaration.body->statements[0];
+            if (const auto* value = std::get_if<ReturnStmt>(&statement.node);
+                value && value->value)
+                emitExpr(*value->value);
+            else
+                emitStatement(statement);
+        } else {
+            for (const auto& statement : declaration.body->statements) {
+                emitStatement(*statement);
+                if (builder_.GetInsertBlock()->getTerminator()) break;
+            }
         }
         if (!builder_.GetInsertBlock()->getTerminator() &&
             function->getReturnType()->isVoidTy()) {
