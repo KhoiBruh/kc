@@ -2031,6 +2031,15 @@ fn emitExpression(
         return operand;
     }
     if (node.kind == 10) {
+        var isConstant = node.aux == 1;
+        if (node.storage < nodes.length) {
+            if (nodes.data[node.storage].kind == 50) isConstant = true;
+        }
+        if (isConstant) {
+            return emitExpression(
+                buffer, source, nodes, genericArguments,
+                node.storage - 1, counter);
+        }
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);

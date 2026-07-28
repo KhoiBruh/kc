@@ -162,6 +162,13 @@ struct EnumDecl {
     SourceSpan span;
 };
 
+struct ConstantDecl {
+    SourceSpan name;
+    TypePtr declaredType;
+    ExprPtr initializer;
+    SourceSpan span;
+};
+
 struct FunctionDecl {
     SourceSpan name;
     std::vector<TypeParameter> typeParameters;
@@ -187,6 +194,7 @@ struct Program {
     std::optional<ModuleDecl> module;
     std::vector<ImportDecl> imports;
     std::vector<EnumDecl> enums;
+    std::vector<ConstantDecl> constants;
     std::vector<StructDecl> structs;
     std::vector<FunctionDecl> functions;
     SourceSpan span{0, 0};

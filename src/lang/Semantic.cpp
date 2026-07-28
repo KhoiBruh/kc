@@ -124,6 +124,32 @@ public:
         for (const auto& structure : program_.structs) declareStruct(structure);
         for (const auto& structure : program_.structs) defineStruct(structure);
         for (const auto& function : program_.functions) collect(function);
+        for (const auto& constant : program_.constants) {
+            const auto name = spelling(source_, constant.name);
+            if (result_.constants.contains(name) || result_.functions.contains(name) ||
+                result_.structs.contains(name) || result_.enums.contains(name)) {
+                diagnose("duplicate declaration '" + name + "'", constant.name);
+                continue;
+            }
+            const auto actual = analyzeExpr(
+                *constant.initializer,
+                constant.declaredType
+                    ? std::optional<SemanticType>{resolve(*constant.declaredType)}
+                    : std::nullopt);
+            auto type = actual;
+            if (constant.declaredType) {
+                type = resolve(*constant.declaredType);
+                if (!compatible(type, actual))
+                    diagnose("constant initializer type does not match declared type",
+                             constant.initializer->span);
+                else if (!(type == actual))
+                    result_.implicitConversions[constant.initializer.get()] = type;
+            }
+            if (!isConstantExpression(*constant.initializer))
+                diagnose("constant initializer must be a compile-time expression",
+                         constant.initializer->span);
+            result_.constants.emplace(name, ConstantSymbol{&constant, type});
+        }
         for (const auto& function : program_.functions) {
             const auto found = result_.functions.find(spelling(source_, function.name));
             if (found != result_.functions.end() &&
@@ -150,6 +176,21 @@ public:
     }
 
 private:
+    bool isConstantExpression(const Expr& expression) const {
+        if (std::holds_alternative<LiteralExpr>(expression.node) ||
+            std::holds_alternative<UnitLiteralExpr>(expression.node)) return true;
+        if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node))
+            return result_.constants.contains(spelling(source_, identifier->name));
+        if (const auto* unary = std::get_if<UnaryExpr>(&expression.node))
+            return isConstantExpression(*unary->operand);
+        if (const auto* binary = std::get_if<BinaryExpr>(&expression.node))
+            return isConstantExpression(*binary->left) &&
+                   isConstantExpression(*binary->right);
+        if (const auto* cast = std::get_if<CastExpr>(&expression.node))
+            return isConstantExpression(*cast->value);
+        return false;
+    }
+
     SemanticType resolve(const Type& syntax) {
         if (std::holds_alternative<UnitType>(syntax.node)) return {SemanticTypeKind::Unit};
         if (const auto* named = std::get_if<NamedType>(&syntax.node)) {
@@ -310,7 +351,7 @@ private:
 
     void collect(const FunctionDecl& function) {
         const auto name = spelling(source_, function.name);
-        if (result_.functions.contains(name)) {
+        if (result_.functions.contains(name) || result_.constants.contains(name)) {
             if (extraFunctions_.contains(name)) {
                 extraFunctions_.erase(name);
             }
@@ -600,6 +641,8 @@ private:
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
             if (const auto* variable = findVariable(name)) type = variable->type;
+            else if (const auto constant = result_.constants.find(name);
+                    constant != result_.constants.end()) type = constant->second.type;
             else if (result_.functions.contains(name)) {
                 type = result_.functions.find(name)->second.returnType;
             } else {

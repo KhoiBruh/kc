@@ -65,6 +65,11 @@ public:
             for (const auto& variant : enumeration.variants)
                 line(2, "Variant " + text(variant.name));
         }
+        for (const auto& constant : program.constants) {
+            line(1, "Constant " + text(constant.name));
+            if (constant.declaredType) printType(*constant.declaredType, 2);
+            printExpr(*constant.initializer, 2);
+        }
         for (const auto& structure : program.structs) printStruct(structure, 1);
         for (const auto& function : program.functions) printFunction(function, 1);
         return output_.str();

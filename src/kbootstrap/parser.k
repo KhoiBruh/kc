@@ -971,6 +971,21 @@ fn parseImport(var parser: Parser): u64 {
         subtreeStart, partCount + isWildcard * 65536);
 }
 
+fn parseConstant(var parser: Parser): u64 {
+    val subtreeStart = parser.nodes.length;
+    val start = parserPeek(parser).start;
+    parser.current = parser.current + 1;
+    if (!parserExpect(parser, 1)) return 0;
+    val name = parserPrevious(parser);
+    parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+    var hasType: u32 = 0;
+    if (parserMatch(parser, 57)) { parseType(parser); hasType = 1; }
+    if (!parserExpect(parser, 65)) return 0;
+    parseExpression(parser, 0);
+    if (!parserExpect(parser, 58)) return 0;
+    return parserAdd(parser, 50, start, parserPrevious(parser).end, subtreeStart, hasType);
+}
+
 fn parse(tokens: TokenList): ParseResult {
     var parser = Parser(tokens, astListNew(), 0, true, 0);
     val start = parserPeek(parser).start;
@@ -998,6 +1013,9 @@ fn parse(tokens: TokenList): ParseResult {
                 if (parserCheck(parser, 24)) {
                     parseEnum(parser);
                 } else {
+                if (parserCheck(parser, 8)) {
+                    parseConstant(parser);
+                } else {
                 if (parserCheck(parser, 11)) {
                     parseStruct(parser);
                 } else {
@@ -1005,6 +1023,7 @@ fn parse(tokens: TokenList): ParseResult {
                     val declarationStart = parserPeek(parser).start;
                     if (parserMatch(parser, 9)) isExtern = true;
                     parseFunction(parser, isExtern, declarationStart);
+                }
                 }
                 }
             }

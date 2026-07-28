@@ -8,6 +8,7 @@ struct Semantic(
     structs: DeclarationList,
     enums: DeclarationList,
     functions: DeclarationList,
+    constants: DeclarationList,
     locals: LocalList,
     genericArguments: TypeValueList,
     result: SemanticResult,
@@ -717,6 +718,16 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (declarationFind(semantic.functions, name) !=
                 semantic.functions.length) {
             return TypeValue(12, name, 0);
+        }
+        val constant = declarationFind(semantic.constants, name);
+        if (constant != semantic.constants.length) {
+            val declarationRoot = semantic.constants.data[constant].node;
+            var resolved = semantic.nodes.data[root];
+            resolved.storage = declarationRoot;
+            resolved.aux = 1;
+            semantic.nodes.data[root] = resolved;
+            val declaration = semantic.nodes.data[declarationRoot];
+            return TypeValue(declaration.typeKind, declaration.typeName, declaration.typePointee);
         }
         semanticFail(semantic, 2, node);
         return invalidType();
@@ -1928,6 +1939,29 @@ fn checkFunction(var semantic: Semantic, root: u64) {
     checkBlock(semantic, root - 1);
 }
 
+fn isConstantExpression(semantic: Semantic, root: u64): bool {
+    val node = semantic.nodes.data[root];
+    if (node.kind == 11) return true;
+    if (node.kind == 10) {
+        return declarationFind(
+            semantic.constants, nodeHash(semantic, node)) !=
+            semantic.constants.length;
+    }
+    if (node.kind == 12) return isConstantExpression(semantic, root - 1);
+    if (node.kind == 13) {
+        val rightRoot = root - 1;
+        val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
+        return isConstantExpression(semantic, leftRoot) &&
+            isConstantExpression(semantic, rightRoot);
+    }
+    if (node.kind == 15) {
+        val typeRoot = root - 1;
+        return isConstantExpression(
+            semantic, semantic.nodes.data[typeRoot].subtreeStart - 1);
+    }
+    return false;
+}
+
 fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
     val program = semantic.nodes.data[programRoot];
     val roots =
@@ -1967,6 +2001,29 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             }
             semantic.currentStruct = savedStruct;
         } else {
+            if (declaration.kind == 50) {
+                val nameNode = semantic.nodes.data[declaration.subtreeStart];
+                val name = nodeHash(semantic, nameNode);
+                val initializerRoot = root - 1;
+                var actual = expressionType(semantic, initializerRoot);
+                if (!isConstantExpression(semantic, initializerRoot))
+                    semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
+                if (declaration.aux == 1) {
+                    val expected = typeFromNode(
+                        semantic, semantic.nodes.data[initializerRoot].subtreeStart - 1);
+                    if (!typeAccepts(expected, actual, semantic.genericArguments))
+                        semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
+                    actual = expected;
+                }
+                var typed = declaration;
+                typed.typeKind = actual.kind;
+                typed.typeName = actual.name;
+                typed.typePointee = actual.pointee;
+                semantic.nodes.data[root] = typed;
+                var constants = semantic.constants;
+                declarationListAppend(constants, DeclarationInfo(name, root));
+                semantic.constants = constants;
+            } else {
             if (declaration.kind == 49) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = nodeHash(semantic, nameNode);
@@ -2007,6 +2064,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 }
             }
             }
+            }
         }
         index = index + 1;
     }
@@ -2017,6 +2075,7 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
     val genericArguments = typeValueListNew();
     var semantic = Semantic(
         source, nodes, declarationListNew(), declarationListNew(), declarationListNew(),
+        declarationListNew(),
         localListNew(), genericArguments,
         semanticSuccess(genericArguments), unitType(), 0,
         nodes.length, nodes.length, 0);
@@ -2038,6 +2097,7 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
     result.genericArguments = semantic.genericArguments;
     localListFree(semantic.locals);
     declarationListFree(semantic.functions);
+    declarationListFree(semantic.constants);
     declarationListFree(semantic.enums);
     declarationListFree(semantic.structs);
     return result;

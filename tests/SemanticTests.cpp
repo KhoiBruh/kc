@@ -654,6 +654,20 @@ TEST(semantic_counts_grouped_enum_patterns_for_exhaustiveness) {
               "duplicate enum variant in when");
 }
 
+TEST(semantic_accepts_prior_constants_and_rejects_runtime_initializers) {
+    SemanticFixture valid{
+        "const BASE = 10; const ANSWER: i32 = BASE + 32;"
+        "fn main(): i32 { return ANSWER; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture runtime{
+        "fn value(): i32 { return 1; } const BAD = value();"
+        "fn main(): i32 { return 0; }"};
+    EXPECT_EQ(runtime.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(runtime.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+}
+
 int main() {
     return test::runAll();
 }

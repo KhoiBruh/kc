@@ -644,6 +644,19 @@ TEST(codegen_lowers_exhaustive_enum_when_without_else) {
     EXPECT_TRUE(ir.find("unreachable") != std::string::npos);
 }
 
+TEST(codegen_inlines_module_constants_with_optional_types) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "const BASE = 10; const ANSWER: i32 = BASE + 32;"
+        "const WIDE: i64 = 10;"
+        "fn answer(): i32 { return ANSWER; }"
+        "fn wide(): i64 { return WIDE; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("ret i32 42") != std::string::npos);
+    EXPECT_TRUE(ir.find("ret i64 10") != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }

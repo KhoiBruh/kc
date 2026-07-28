@@ -150,8 +150,16 @@ ParseResult Parser::parseProgram() {
             } else synchronizeTopLevel();
             continue;
         }
+        if (check(TokenKind::KwConst)) {
+            auto constant = parseConstant();
+            if (constant) {
+                program.constants.push_back(std::move(*constant));
+                seenItem = true;
+            } else synchronizeTopLevel();
+            continue;
+        }
         if (!check(TokenKind::KwFn) && !check(TokenKind::KwExtern)) {
-            report(peek().span, "expected enum, struct, or function declaration");
+            report(peek().span, "expected const, enum, struct, or function declaration");
             synchronizeTopLevel();
             continue;
         }
@@ -434,6 +442,25 @@ StmtPtr Parser::parseWhile() {
     return makeStmt(
         spanFrom(start, bodySpan),
         WhileStmt{std::move(condition), std::move(body)});
+}
+
+std::optional<ConstantDecl> Parser::parseConstant() {
+    const auto start = advance().span;
+    if (!expect(TokenKind::Identifier, "expected constant name")) return std::nullopt;
+    const auto name = previous().span;
+    TypePtr declaredType;
+    if (match(TokenKind::Colon)) {
+        declaredType = parseType();
+        if (!declaredType) return std::nullopt;
+    }
+    if (!expect(TokenKind::Equal, "expected '=' in constant declaration"))
+        return std::nullopt;
+    auto initializer = parseExpression();
+    if (!initializer) return std::nullopt;
+    if (!expect(TokenKind::Semicolon, "expected ';' after constant declaration"))
+        return std::nullopt;
+    return ConstantDecl{name, std::move(declaredType), std::move(initializer),
+                        spanFrom(start, previous().span)};
 }
 
 std::optional<EnumDecl> Parser::parseEnum() {

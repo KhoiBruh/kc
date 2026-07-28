@@ -34,6 +34,7 @@ private:
     [[nodiscard]] std::optional<FunctionDecl> parseFunction(bool isExtern);
     [[nodiscard]] std::optional<StructDecl> parseStruct();
     [[nodiscard]] std::optional<EnumDecl> parseEnum();
+    [[nodiscard]] std::optional<ConstantDecl> parseConstant();
     [[nodiscard]] std::optional<Parameter> parseParameter();
     [[nodiscard]] std::unique_ptr<BlockStmt> parseBlock(SourceSpan& span);
     [[nodiscard]] StmtPtr parseStatement();

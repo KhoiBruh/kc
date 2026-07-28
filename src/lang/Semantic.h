@@ -69,6 +69,11 @@ struct EnumSymbol {
     std::unordered_map<std::string, std::uint32_t> variants;
 };
 
+struct ConstantSymbol {
+    const ConstantDecl* declaration;
+    SemanticType type;
+};
+
 struct IntegerCastInfo {
     SemanticType sourceType;
     SemanticType targetType;
@@ -103,6 +108,7 @@ struct SemanticResult {
     std::unordered_map<std::string, StructSymbol> structs;
     std::unordered_map<std::string, EnumSymbol> enums;
     std::unordered_map<std::string, FunctionSymbol> functions;
+    std::unordered_map<std::string, ConstantSymbol> constants;
     std::unordered_map<const Expr*, SemanticType> expressionTypes;
     std::unordered_map<const Expr*, SemanticType> sizeofTypes;
     std::unordered_map<const Expr*, SemanticType> implicitConversions;

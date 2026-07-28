@@ -1129,6 +1129,9 @@ private:
             const auto name = spelling(source(), identifier->name);
             const auto found = locals_.find(name);
             if (found == locals_.end()) {
+                const auto constant = semantic().constants.find(name);
+                if (constant != semantic().constants.end())
+                    return emitExpr(*constant->second.declaration->initializer);
                 diagnose("unknown local during LLVM codegen", identifier->name);
                 return nullptr;
             }
