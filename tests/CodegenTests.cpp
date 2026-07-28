@@ -657,6 +657,18 @@ TEST(codegen_inlines_module_constants_with_optional_types) {
     EXPECT_TRUE(ir.find("ret i64 10") != std::string::npos);
 }
 
+TEST(codegen_inlines_fixed_array_constants) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "const A = [1, 2, 3, 4];"
+        "const B: i32[] = [5, 6, 7, 8];"
+        "const C: i32[4] = [9, 10, 11, 12];"
+        "fn value(): i32 { return A[0] + B[1] + C[2]; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("[4 x i32]") != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }

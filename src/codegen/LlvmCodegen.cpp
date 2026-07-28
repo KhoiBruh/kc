@@ -1412,8 +1412,8 @@ private:
         }
         const auto name = spelling(source(), object->name);
         const auto local = locals_.find(name);
-        if (local == locals_.end()) return nullptr;
         if (type->second.kind == SemanticTypeKind::Slice) {
+            if (local == locals_.end()) return nullptr;
             auto* sliceType = llvm::cast<llvm::StructType>(
                 lowerType(type->second, index.object->span));
             auto* slice =
@@ -1441,6 +1441,17 @@ private:
         }
         auto* arrayType = llvm::cast<llvm::ArrayType>(
             lowerType(type->second, index.object->span));
+        llvm::Value* address = nullptr;
+        if (local != locals_.end()) {
+            address = local->second.address;
+        } else if (semantic().constants.contains(name)) {
+            auto* value = emitExpr(*index.object);
+            if (!value) return nullptr;
+            address = builder_.CreateAlloca(arrayType, nullptr, name + ".const");
+            builder_.CreateStore(value, address);
+        } else {
+            return nullptr;
+        }
         auto* indexValue = emitExpr(*index.index);
         if (!indexValue) return nullptr;
         if (!std::holds_alternative<LiteralExpr>(index.index->node)) {
@@ -1449,7 +1460,7 @@ private:
             emitBoundsCheck(indexValue, length);
         }
         return builder_.CreateInBoundsGEP(
-            arrayType, local->second.address,
+            arrayType, address,
             {builder_.getInt32(0), indexValue});
     }
 

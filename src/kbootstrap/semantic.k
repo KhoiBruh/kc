@@ -1959,6 +1959,16 @@ fn isConstantExpression(semantic: Semantic, root: u64): bool {
         return isConstantExpression(
             semantic, semantic.nodes.data[typeRoot].subtreeStart - 1);
     }
+    if (node.kind == 22) {
+        var childRoot = root - 1;
+        var remaining = node.aux;
+        while (remaining > 0) {
+            if (!isConstantExpression(semantic, childRoot)) return false;
+            childRoot = semantic.nodes.data[childRoot].subtreeStart - 1;
+            remaining = remaining - 1;
+        }
+        return true;
+    }
     return false;
 }
 
@@ -2006,14 +2016,33 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 val name = nodeHash(semantic, nameNode);
                 val initializerRoot = root - 1;
                 var actual = expressionType(semantic, initializerRoot);
+                if (declaration.aux == 0) {
+                    if (actual.kind == 19) {
+                        if (arrayElement(actual).kind == 0)
+                            semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
+                    }
+                }
                 if (!isConstantExpression(semantic, initializerRoot))
                     semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
                 if (declaration.aux == 1) {
                     val expected = typeFromNode(
                         semantic, semantic.nodes.data[initializerRoot].subtreeStart - 1);
-                    if (!typeAccepts(expected, actual, semantic.genericArguments))
+                    val typeNode = semantic.nodes.data[
+                        semantic.nodes.data[initializerRoot].subtreeStart - 1];
+                    var accepted = typeAccepts(
+                        expected, actual, semantic.genericArguments);
+                    if (expected.kind == 19 && typeNode.kind == 5 &&
+                        typeNode.aux == 0 && actual.kind == 19) {
+                        accepted = typeAccepts(
+                            arrayElement(expected), arrayElement(actual),
+                            semantic.genericArguments);
+                    }
+                    if (!accepted)
                         semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
-                    actual = expected;
+                    if (expected.kind == 19 && typeNode.kind == 5 &&
+                        typeNode.aux == 0 && actual.kind == 19) {
+                        actual = arrayType(arrayElement(expected), arraySize(actual));
+                    } else actual = expected;
                 }
                 var typed = declaration;
                 typed.typeKind = actual.kind;

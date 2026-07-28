@@ -668,6 +668,21 @@ TEST(semantic_accepts_prior_constants_and_rejects_runtime_initializers) {
               "constant initializer must be a compile-time expression");
 }
 
+TEST(semantic_infers_constant_array_sizes) {
+    SemanticFixture valid{
+        "const A = [1, 2, 3, 4];"
+        "const B: i32[] = [1, 2, 3, 4];"
+        "const C: i32[4] = [1, 2, 3, 4];"
+        "const EMPTY: i32[] = [];"
+        "fn main(): i32 { return A[0] + B[1] + C[2]; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture empty{"const EMPTY = []; fn main(): i32 { return 0; }"};
+    EXPECT_EQ(empty.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(empty.semantic.diagnostics[0].message,
+              "cannot infer type from this initializer");
+}
+
 int main() {
     return test::runAll();
 }

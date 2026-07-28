@@ -137,6 +137,12 @@ public:
                     ? std::optional<SemanticType>{resolve(*constant.declaredType)}
                     : std::nullopt);
             auto type = actual;
+            if (!constant.declaredType && actual.kind == SemanticTypeKind::Array &&
+                actual.arraySizeKind == ArraySizeKind::Inferred) {
+                diagnose("cannot infer type from this initializer",
+                         constant.initializer->span);
+                type = {};
+            }
             if (constant.declaredType) {
                 type = resolve(*constant.declaredType);
                 if (!compatible(type, actual))
@@ -144,6 +150,10 @@ public:
                              constant.initializer->span);
                 else if (!(type == actual))
                     result_.implicitConversions[constant.initializer.get()] = type;
+                if (type.kind == SemanticTypeKind::Array &&
+                    type.arraySizeKind == ArraySizeKind::Inferred &&
+                    actual.kind == SemanticTypeKind::Array)
+                    type = actual;
             }
             if (!isConstantExpression(*constant.initializer))
                 diagnose("constant initializer must be a compile-time expression",
@@ -188,6 +198,11 @@ private:
                    isConstantExpression(*binary->right);
         if (const auto* cast = std::get_if<CastExpr>(&expression.node))
             return isConstantExpression(*cast->value);
+        if (const auto* array = std::get_if<ArrayLiteralExpr>(&expression.node)) {
+            for (const auto& element : array->elements)
+                if (!isConstantExpression(*element)) return false;
+            return true;
+        }
         return false;
     }
 

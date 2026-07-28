@@ -2387,6 +2387,37 @@ fn emitExpression(
             node.typeKind, node.typeName, node.typePointee);
     }
     if (node.kind == 18) {
+        val indexRoot = root - 1;
+        val objectRoot = expressionChildBefore(nodes, indexRoot);
+        val objectNode = nodes.data[objectRoot];
+        var constantArray = false;
+        if (objectNode.kind == 10) {
+            if (objectNode.storage < nodes.length) {
+                if (nodes.data[objectNode.storage].kind == 50) constantArray = true;
+            }
+        }
+        var constantIndex = constantArray;
+        if (nodes.data[indexRoot].kind != 11) constantIndex = false;
+        if (constantIndex) {
+            val object = emitExpression(
+                buffer, source, nodes, genericArguments,
+                objectRoot, counter);
+            val temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary);
+            appendEquals(buffer); appendExtractValue(buffer);
+            appendType(
+                buffer, genericArguments,
+                object.typeKind, object.typeName, object.typePointee);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, object);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            appendSource(
+                buffer, source,
+                nodes.data[indexRoot].start, nodes.data[indexRoot].end);
+            appendNewline(buffer);
+            return IrValue(
+                2, 0, 0, temporary,
+                node.typeKind, node.typeName, node.typePointee);
+        }
         val address = emitAddress(
             buffer, source, nodes, genericArguments, root, counter);
         val temporary = nextTemporary(counter);
