@@ -135,7 +135,9 @@ dụng và gọi `k_boot_panic` nếu ngoài miền.
 
 #### Mutability và lưu trữ
 
-`string` là một owned mutable buffer gồm độ dài và capacity. Binding `val` chỉ cho phép đọc string, còn binding `var` có thể thay đổi nội dung:
+ABI của `string` gồm `{ pointer, byteLength, capacity }`. String literal dùng vùng nhớ tĩnh chỉ đọc, có null terminator ẩn, `byteLength` không tính terminator và `capacity = 0`. Cấp phát, mutation và ownership của string động chưa được hạ trong milestone hiện tại.
+
+Thiết kế đích là một owned mutable buffer. Binding `val` chỉ cho phép đọc string, còn binding `var` có thể thay đổi nội dung:
 
 ```text
 var text = "abc"
@@ -725,7 +727,7 @@ Khi link executable, `kc` tạo object tạm cạnh file đích. Object tạm đ
 
 ### Runtime `print` thử nghiệm
 
-Runtime Windows nhẹ nằm trong `src/lib/std/` và ghi trực tiếp ra stdout bằng `WriteFile`; không dùng `printf`, `sprintf`, iostream hoặc thư viện format. Hiện tại `print` chỉ nhận string literal và `i32`, không tự chèn khoảng trắng hay xuống dòng:
+Runtime Windows nhẹ nằm trong `src/lib/std/` và ghi trực tiếp ra stdout bằng `WriteFile`; không dùng `printf`, `sprintf`, iostream hoặc thư viện format. Hiện tại `print` nhận giá trị `string` và `i32`, không tự chèn khoảng trắng hay xuống dòng:
 
 ```text
 print("value=");

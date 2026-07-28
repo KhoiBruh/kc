@@ -22,6 +22,53 @@ std::string spelling(const Source& source, SourceSpan span) {
     return std::string{source.text().substr(span.start, span.end - span.start)};
 }
 
+void appendUtf8(std::string& output, std::uint32_t value) {
+    if (value <= 0x7f) output.push_back(static_cast<char>(value));
+    else if (value <= 0x7ff) {
+        output.push_back(static_cast<char>(0xc0 | (value >> 6)));
+        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    } else if (value <= 0xffff) {
+        output.push_back(static_cast<char>(0xe0 | (value >> 12)));
+        output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    } else {
+        output.push_back(static_cast<char>(0xf0 | (value >> 18)));
+        output.push_back(static_cast<char>(0x80 | ((value >> 12) & 0x3f)));
+        output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    }
+}
+
+std::string decodeStringLiteral(std::string_view spelling) {
+    std::string output;
+    for (std::size_t index = 1; index + 1 < spelling.size(); ++index) {
+        if (spelling[index] != '\\') {
+            output.push_back(spelling[index]);
+            continue;
+        }
+        const auto escaped = spelling[++index];
+        if (escaped == 'n') output.push_back('\n');
+        else if (escaped == 'r') output.push_back('\r');
+        else if (escaped == 't') output.push_back('\t');
+        else if (escaped == '0') output.push_back('\0');
+        else if (escaped == '\\' || escaped == '"' || escaped == '\'' ||
+                 escaped == '$') output.push_back(escaped);
+        else {
+            index += 2;
+            std::uint32_t value = 0;
+            while (spelling[index] != '}') {
+                const auto digit = spelling[index++];
+                value = value * 16 + static_cast<std::uint32_t>(
+                    digit >= '0' && digit <= '9' ? digit - '0'
+                    : digit >= 'a' && digit <= 'f' ? digit - 'a' + 10
+                                                   : digit - 'A' + 10);
+            }
+            appendUtf8(output, value);
+        }
+    }
+    return output;
+}
+
 class Generator {
 public:
     const Source& source() const { return *current_->source; }
@@ -114,6 +161,10 @@ private:
         case SemanticTypeKind::F64: return llvm::Type::getDoubleTy(context_);
         case SemanticTypeKind::Pointer:
             return llvm::PointerType::getUnqual(context_);
+        case SemanticTypeKind::String:
+            return llvm::StructType::get(
+                context_, {builder_.getPtrTy(), builder_.getInt64Ty(),
+                           builder_.getInt64Ty()});
         case SemanticTypeKind::Struct: {
             if (!type.typeArguments.empty())
                 return getOrDeclareStructSpecialization(type, span);
@@ -921,22 +972,17 @@ private:
                 const auto argumentType = semantic().expressionTypes.find(&argument);
                 if (argumentType != semantic().expressionTypes.end() &&
                     argumentType->second.kind == SemanticTypeKind::String) {
-                    const auto* literal = std::get_if<LiteralExpr>(&argument.node);
-                    if (!literal) {
-                        diagnose("print string currently requires a literal", argument.span);
-                        return nullptr;
-                    }
-                    auto text = spelling(source(), literal->spelling);
-                    text = text.substr(1, text.size() - 2);
-                    auto* pointer = builder_.CreateGlobalString(text);
+                    auto* value = emitExpr(argument);
+                    if (!value) return nullptr;
+                    auto* pointer = builder_.CreateExtractValue(value, 0);
+                    auto* length = builder_.CreateExtractValue(value, 1);
                     auto function = result_.module->getOrInsertFunction(
                         "k_std_print_bytes",
                         llvm::FunctionType::get(
                             llvm::Type::getVoidTy(context_),
                             {builder_.getPtrTy(), builder_.getInt64Ty()}, false));
                     return builder_.CreateCall(
-                        function,
-                        {pointer, llvm::ConstantInt::get(builder_.getInt64Ty(), text.size())});
+                        function, {pointer, length});
                 }
                 auto* value = emitExpr(argument);
                 if (!value) return nullptr;
@@ -1052,6 +1098,17 @@ private:
                     value, builder_.getFalse(), 0);
             }
             auto text = spelling(source(), literal->spelling);
+            if (semanticType.kind == SemanticTypeKind::String) {
+                const auto decoded = decodeStringLiteral(text);
+                llvm::Value* value = llvm::UndefValue::get(type);
+                value = builder_.CreateInsertValue(
+                    value, builder_.CreateGlobalString(decoded), 0);
+                value = builder_.CreateInsertValue(
+                    value, llvm::ConstantInt::get(
+                        builder_.getInt64Ty(), decoded.size()), 1);
+                return builder_.CreateInsertValue(
+                    value, llvm::ConstantInt::get(builder_.getInt64Ty(), 0), 2);
+            }
             if (semanticType.kind == SemanticTypeKind::Bool)
                 return llvm::ConstantInt::get(
                     type, literal->kind == TokenKind::KwTrue);

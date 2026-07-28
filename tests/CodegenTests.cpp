@@ -385,6 +385,20 @@ TEST(codegen_lowers_integer_width_casts) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_string_literals_as_static_string_values) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn identity(value: string): string { return value; }"
+        "fn main(): i32 { val text = identity(\"A\\n\\u{1F600}\"); "
+        "print(text); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("{ ptr, i64, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("i64 6, i64 0") != std::string::npos);
+    EXPECT_TRUE(ir.find("extractvalue { ptr, i64, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("call void @k_std_print_bytes") != std::string::npos);
+}
+
 TEST(codegen_lowers_float_casts) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

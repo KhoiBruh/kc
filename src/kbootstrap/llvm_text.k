@@ -183,6 +183,351 @@ fn appendPrintDeclaration(var buffer: ByteBuffer) {
     byteBufferAppend(buffer, 41);
     byteBufferAppend(buffer, 10);
     byteBufferAppend(buffer, 10);
+    appendPrintBytesDeclaration(buffer);
+}
+fn appendPrintBytesDeclaration(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 118);
+    byteBufferAppend(buffer, 111);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 64);
+    byteBufferAppend(buffer, 107);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 115);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 98);
+    byteBufferAppend(buffer, 121);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 115);
+    byteBufferAppend(buffer, 40);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 41);
+    byteBufferAppend(buffer, 10);
+    byteBufferAppend(buffer, 10);
+}
+
+fn appendPrivateStringPrefix(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 61);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 118);
+    byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 117);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 109);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 111);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 115);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 91);
+}
+
+fn appendStringArrayPrefix(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 120);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 56);
+    byteBufferAppend(buffer, 93);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 34);
+}
+
+fn appendStringTerminator(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 92);
+    byteBufferAppend(buffer, 48);
+    byteBufferAppend(buffer, 48);
+    byteBufferAppend(buffer, 34);
+    byteBufferAppend(buffer, 10);
+}
+
+fn appendStringType(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 123);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 125);
+}
+
+fn appendStringInsertPointer(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 123);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 125);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 117);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 102);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 64);
+    byteBufferAppend(buffer, 46);
+    byteBufferAppend(buffer, 107);
+    byteBufferAppend(buffer, 115);
+}
+
+fn appendIndexZero(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 48);
+    byteBufferAppend(buffer, 10);
+}
+
+fn appendSpacedStringType(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 123);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 125);
+    byteBufferAppend(buffer, 32);
+}
+
+fn appendI64Prefix(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 32);
+}
+
+fn appendIndexOne(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 49);
+    byteBufferAppend(buffer, 10);
+}
+
+fn appendStringCapacity(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 54);
+    byteBufferAppend(buffer, 52);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 48);
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 50);
+    byteBufferAppend(buffer, 10);
+}
+
+fn appendExtractLengthAndPrint(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 44);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 49);
+    byteBufferAppend(buffer, 10);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 99);
+    byteBufferAppend(buffer, 97);
+    byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 108);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 118);
+    byteBufferAppend(buffer, 111);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 32);
+    byteBufferAppend(buffer, 64);
+    byteBufferAppend(buffer, 107);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 115);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 100);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 105);
+    byteBufferAppend(buffer, 110);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 95);
+    byteBufferAppend(buffer, 98);
+    byteBufferAppend(buffer, 121);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 101);
+    byteBufferAppend(buffer, 115);
+    byteBufferAppend(buffer, 40);
+    byteBufferAppend(buffer, 112);
+    byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 114);
+    byteBufferAppend(buffer, 32);
+}
+
+fn appendCloseLine(var buffer: ByteBuffer) {
+    byteBufferAppend(buffer, 41);
+    byteBufferAppend(buffer, 10);
+}
+
+
+
+fn hexDigit(value: u8): u8 {
+    if (value < 10) return 48 + value;
+    return 55 + value;
+}
+
+fn appendEscapedByte(var buffer: ByteBuffer, value: u8) {
+    if (value >= 32 && value <= 126 && value != 34 && value != 92) {
+        byteBufferAppend(buffer, value);
+        return;
+    }
+    byteBufferAppend(buffer, 92);
+    byteBufferAppend(buffer, hexDigit(value / 16));
+    byteBufferAppend(buffer, hexDigit(value % 16));
+}
+
+fn appendUtf8(var buffer: ByteBuffer, codepoint: u32) {
+    if (codepoint <= 127) { byteBufferAppend(buffer, codepoint as u8); return; }
+    if (codepoint <= 2047) {
+        byteBufferAppend(buffer, (192 + codepoint / 64) as u8);
+        byteBufferAppend(buffer, (128 + codepoint % 64) as u8);
+        return;
+    }
+    if (codepoint <= 65535) {
+        byteBufferAppend(buffer, (224 + codepoint / 4096) as u8);
+        byteBufferAppend(buffer, (128 + (codepoint / 64) % 64) as u8);
+        byteBufferAppend(buffer, (128 + codepoint % 64) as u8);
+        return;
+    }
+    byteBufferAppend(buffer, (240 + codepoint / 262144) as u8);
+    byteBufferAppend(buffer, (128 + (codepoint / 4096) % 64) as u8);
+    byteBufferAppend(buffer, (128 + (codepoint / 64) % 64) as u8);
+    byteBufferAppend(buffer, (128 + codepoint % 64) as u8);
+}
+
+fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
+    var result = byteBufferNew();
+    var offset = node.start + 1;
+    while (offset + 1 < node.end) {
+        var value = source.data[offset];
+        if (value != 92) { byteBufferAppend(result, value); offset = offset + 1; continue; }
+        offset = offset + 1;
+        value = source.data[offset];
+        if (value == 110) byteBufferAppend(result, 10);
+        else if (value == 114) byteBufferAppend(result, 13);
+        else if (value == 116) byteBufferAppend(result, 9);
+        else if (value == 48) byteBufferAppend(result, 0);
+        else if (value == 117) {
+            offset = offset + 2;
+            var codepoint: u32 = 0;
+            while (source.data[offset] != 125) {
+                val digit = source.data[offset];
+                var numeric = (digit - 48) as u32;
+                if (digit >= 65) numeric = (digit - 55) as u32;
+                if (digit >= 97) numeric = (digit - 87) as u32;
+                codepoint = codepoint * 16 + numeric;
+                offset = offset + 1;
+            }
+            appendUtf8(result, codepoint);
+        } else byteBufferAppend(result, value);
+        offset = offset + 1;
+    }
+    return result;
+}
+
+fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, root: u64) {
+    var decoded = decodeStringLiteral(source, node);
+    byteBufferAppend(buffer, 64); byteBufferAppend(buffer, 46); byteBufferAppend(buffer, 107);
+    byteBufferAppend(buffer, 115); appendDecimal(buffer, root);
+    appendPrivateStringPrefix(buffer);
+    appendDecimal(buffer, decoded.length + 1);
+    appendStringArrayPrefix(buffer);
+    var index: u64 = 0;
+    while (index < decoded.length) { appendEscapedByte(buffer, decoded.data[index]); index = index + 1; }
+    appendStringTerminator(buffer);
+    byteBufferFree(decoded);
 }
 
 fn appendPanicDeclaration(var buffer: ByteBuffer) {
@@ -552,9 +897,7 @@ fn appendType(
         byteBufferAppend(buffer, 114);
     }
     if (kind == 10) {
-        byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 114);
+        appendStringType(buffer);
     }
     if (kind == 17) {
         byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 108);
@@ -891,7 +1234,7 @@ fn typeAlignment(
     if (kind == 4) return 8;
     if (kind == 7) return 8;
     if (kind == 9) return 8;
-    if (kind == 10) return 8;
+    if (kind == 10) return 24;
     if (kind == 18) return 8;
     if (kind == 13) return 8;
     if (kind == 19) {
@@ -1307,6 +1650,26 @@ fn emitExpression(
     if (node.kind == 11) {
         if (node.typeKind == 16) {
             return IrValue(3, 0, 0, 0, 16, 0, 0);
+        }
+        if (node.typeKind == 10) {
+            var decoded = decodeStringLiteral(source, node);
+            var temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
+            appendStringInsertPointer(buffer);
+            appendDecimal(buffer, root); appendIndexZero(buffer);
+            temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
+            appendSpacedStringType(buffer);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
+            appendI64Prefix(buffer); appendDecimal(buffer, decoded.length);
+            appendIndexOne(buffer);
+            temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
+            appendSpacedStringType(buffer);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
+            appendStringCapacity(buffer);
+            byteBufferFree(decoded);
+            return IrValue(2, 0, 0, temporary, 10, 0, 0);
         }
         return IrValue(
             1, node.start, node.end, 0,
@@ -2263,6 +2626,21 @@ fn emitExpression(
         }
         }
         val isPrint = sourceNodeIsPrint(source, callee);
+        if (isPrint && values[0].typeKind == 10) {
+            val dataTemporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary); appendEquals(buffer); appendExtractValue(buffer);
+            appendSpacedStringType(buffer); appendIrValue(buffer, source, values[0]);
+            appendIndexZero(buffer);
+            val lengthTemporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary); appendEquals(buffer); appendExtractValue(buffer);
+            appendSpacedStringType(buffer); appendIrValue(buffer, source, values[0]);
+            appendExtractLengthAndPrint(buffer);
+            appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary);
+            appendI64Prefix(buffer); appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary);
+            appendCloseLine(buffer);
+            k_boot_free(values as unit*); k_boot_free(arguments as unit*);
+            return IrValue(3, 0, 0, 0, 1, 0, 0);
+        }
         var temporary: u64 = 0;
         if (isPrint) {
             byteBufferAppend(buffer, 32);
@@ -3708,6 +4086,13 @@ fn emitModule(
     appendModuleHeader(buffer);
     appendPrintDeclaration(buffer);
     appendPanicDeclaration(buffer);
+    var literalIndex: u64 = 0;
+    while (literalIndex < nodes.length) {
+        val literal = nodes.data[literalIndex];
+        if (literal.kind == 11 && literal.typeKind == 10) appendStringGlobal(buffer, source, literal, literalIndex);
+        literalIndex = literalIndex + 1;
+    }
+    appendNewline(buffer);
     val programRoot = nodes.length - 1;
     val program = nodes.data[programRoot];
     val roots =
