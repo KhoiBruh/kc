@@ -24,10 +24,8 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
 
 fn appendSource(
     var buffer: ByteBuffer, source: Source, start: u64, end: u64) {
-    var offset = start;
-    while (offset < end) {
+    for (offset in start..<end) {
         buffer.add(source.data[offset]);
-        offset++;
     }
 }
 
@@ -1048,11 +1046,9 @@ fn declarationRoots(nodes: AstList): u64* {
     val roots =
         k_boot_alloc((program.aux as u64) * sizeof(u64)) as u64*;
     var root = programRoot - 1;
-    var remaining = program.aux;
-    while (remaining > 0) {
-        roots[remaining as u64 - 1] = root;
+    for (index in program.aux>..0) {
+        roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return roots;
 }
@@ -1061,9 +1057,8 @@ fn structRootByName(
     source: Source, nodes: AstList, name: u64): u64 {
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
-    var index: u32 = 0;
     var found = nodes.length;
-    while (index < program.aux) {
+    for (index in 0..<program.aux) {
         val root = roots[index as u64];
         val node = nodes.data[root];
         if (node.kind == 43) {
@@ -1072,7 +1067,6 @@ fn structRootByName(
                 found = root;
             }
         }
-        index++;
     }
     k_boot_free(roots as unit*);
     return found;
@@ -1082,9 +1076,8 @@ fn functionRootByName(
     source: Source, nodes: AstList, name: u64): u64 {
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
-    var index: u32 = 0;
     var found = nodes.length;
-    while (index < program.aux) {
+    for (index in 0..<program.aux) {
         val root = roots[index as u64];
         val node = nodes.data[root];
         if (node.kind == 41) {
@@ -1093,7 +1086,6 @@ fn functionRootByName(
                 found = root;
             }
         }
-        index++;
     }
     k_boot_free(roots as unit*);
     return found;
@@ -1107,10 +1099,9 @@ fn emitterStructMethodCount(structure: AstNode) => structure.storage;
 
 fn emitterRootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
     var root = structureRoot - 1;
-    var remaining = emitterStructMethodCount(nodes.data[structureRoot]);
-    while (remaining > 0) {
+    val remaining = emitterStructMethodCount(nodes.data[structureRoot]);
+    for (method in 0..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
@@ -1119,10 +1110,9 @@ fn emitterStructTypeParameterRoot(
     source: Source, nodes: AstList, structureRoot: u64, position: u32): u64 {
     val structure = nodes.data[structureRoot];
     var root = emitterRootBeforeStructMethods(nodes, structureRoot);
-    var fields = emitterStructFieldCount(structure);
-    while (fields > 0) {
+    val fields = emitterStructFieldCount(structure);
+    for (field in 0..<fields) {
         root = nodes.data[root].subtreeStart - 1;
-        fields--;
     }
     var remaining = emitterStructTypeParameterCount(structure);
     while (remaining > position) {
@@ -1188,11 +1178,10 @@ fn emitterFieldRootAt(
     var roots =
         k_boot_alloc((emitterStructFieldCount(structure) as u64) * sizeof(u64)) as u64*;
     var root = emitterRootBeforeStructMethods(nodes, structureRoot);
-    var remaining = emitterStructFieldCount(structure);
-    while (remaining > 0) {
-        roots[remaining as u64 - 1] = root;
+    val remaining = emitterStructFieldCount(structure);
+    for (index in remaining>..0) {
+        roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     val result = roots[wanted as u64];
     k_boot_free(roots as unit*);
@@ -1699,21 +1688,17 @@ fn emitExpression(
         val elseRoots =
             k_boot_alloc((elseCount as u64) * sizeof(u64)) as u64*;
         var childRoot = nodes.data[elseValueRoot].subtreeStart - 1;
-        var remaining = elseCount;
-        while (remaining > 0) {
-            elseRoots[remaining as u64 - 1] = childRoot;
+        for (index in elseCount>..0) {
+            elseRoots[index as u64] = childRoot;
             childRoot = nodes.data[childRoot].subtreeStart - 1;
-            remaining--;
         }
         val thenValueRoot = childRoot;
         val thenRoots =
             k_boot_alloc((thenCount as u64) * sizeof(u64)) as u64*;
         childRoot = nodes.data[thenValueRoot].subtreeStart - 1;
-        remaining = thenCount;
-        while (remaining > 0) {
-            thenRoots[remaining as u64 - 1] = childRoot;
+        for (index in thenCount>..0) {
+            thenRoots[index as u64] = childRoot;
             childRoot = nodes.data[childRoot].subtreeStart - 1;
-            remaining--;
         }
         val condition = emitExpression(
             buffer, source, nodes, genericArguments, childRoot, counter);
@@ -1723,44 +1708,36 @@ fn emitExpression(
         appendConditionalBranch(
             buffer, source, condition, thenBlock, elseBlock);
         appendBlockLabel(buffer, counter, thenBlock);
-        var index: u32 = 0;
-        while (index < thenCount) {
+        for (index in 0..<thenCount) {
             val statement = nodes.data[thenRoots[index as u64]];
             if (statement.kind == 33) {
                 emitVariableAlloca(
                     buffer, genericArguments, nodes,
                     thenRoots[index as u64]);
             }
-            index++;
         }
-        index = 0;
-        while (index < thenCount) {
+        for (index in 0..<thenCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
                 thenRoots[index as u64], counter);
-            index++;
         }
         val thenValue = emitExpression(
             buffer, source, nodes, genericArguments, thenValueRoot, counter);
         val thenValueBlock = counter.currentBlock;
         appendBranch(buffer, mergeBlock);
         appendBlockLabel(buffer, counter, elseBlock);
-        index = 0;
-        while (index < elseCount) {
+        for (index in 0..<elseCount) {
             val statement = nodes.data[elseRoots[index as u64]];
             if (statement.kind == 33) {
                 emitVariableAlloca(
                     buffer, genericArguments, nodes,
                     elseRoots[index as u64]);
             }
-            index++;
         }
-        index = 0;
-        while (index < elseCount) {
+        for (index in 0..<elseCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
                 elseRoots[index as u64], counter);
-            index++;
         }
         val elseValue = emitExpression(
             buffer, source, nodes, genericArguments, elseValueRoot, counter);
@@ -1799,11 +1776,9 @@ fn emitExpression(
             k_boot_alloc((branchCount as u64) * sizeof(IrValue)) as IrValue*;
         val blocks = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
         var branchRoot = root - 1;
-        var remaining = branchCount;
-        while (remaining > 0) {
-            roots[remaining as u64 - 1] = branchRoot;
+        for (index in branchCount>..0) {
+            roots[index as u64] = branchRoot;
             branchRoot = nodes.data[branchRoot].subtreeStart - 1;
-            remaining--;
         }
         var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
         if (hasSubject == 1) {
@@ -1812,29 +1787,24 @@ fn emitExpression(
         }
         val mergeBlock = nextBlock(counter);
         var hasElse = false;
-        var index: u32 = 0;
-        while (index < branchCount) {
+        for (index in 0..<branchCount) {
             val branch = nodes.data[roots[index as u64]];
             val valueRoot = roots[index as u64] - 1;
             val statementCount = (branch.aux % 65536) / 2;
             val statementRoots =
                 k_boot_alloc((statementCount as u64) * sizeof(u64)) as u64*;
             var beforeValue = nodes.data[valueRoot].subtreeStart - 1;
-            var statementRemaining = statementCount;
-            while (statementRemaining > 0) {
-                statementRoots[statementRemaining as u64 - 1] = beforeValue;
+            for (statementIndex in statementCount>..0) {
+                statementRoots[statementIndex as u64] = beforeValue;
                 beforeValue = nodes.data[beforeValue].subtreeStart - 1;
-                statementRemaining--;
             }
-            var statementIndex: u32 = 0;
-            while (statementIndex < statementCount) {
+            for (statementIndex in 0..<statementCount) {
                 val statement = nodes.data[statementRoots[statementIndex as u64]];
                 if (statement.kind == 33) {
                     emitVariableAlloca(
                         buffer, genericArguments, nodes,
                         statementRoots[statementIndex as u64]);
                 }
-                statementIndex++;
             }
             val bodyBlock = nextBlock(counter);
             var nextBlockValue = mergeBlock;
@@ -1844,11 +1814,9 @@ fn emitExpression(
                 val patternRoots =
                     k_boot_alloc((patternCount as u64) * sizeof(u64)) as u64*;
                 var patternRoot = beforeValue;
-                var patternRemaining = patternCount;
-                while (patternRemaining > 0) {
-                    patternRoots[patternRemaining as u64 - 1] = patternRoot;
+                for (patternIndex in patternCount>..0) {
+                    patternRoots[patternIndex as u64] = patternRoot;
                     patternRoot = nodes.data[patternRoot].subtreeStart - 1;
-                    patternRemaining--;
                 }
                 var patternIndex: u32 = 0;
                 while (patternIndex < patternCount) {
@@ -1883,12 +1851,10 @@ fn emitExpression(
                 appendBranch(buffer, bodyBlock);
             }
             appendBlockLabel(buffer, counter, bodyBlock);
-            statementIndex = 0;
-            while (statementIndex < statementCount) {
+            for (statementIndex in 0..<statementCount) {
                 emitStatement(
                     buffer, source, nodes, genericArguments,
                     statementRoots[statementIndex as u64], counter);
-                statementIndex++;
             }
             values[index as u64] = emitExpression(
                 buffer, source, nodes, genericArguments, valueRoot, counter);
@@ -1898,7 +1864,6 @@ fn emitExpression(
                 appendBlockLabel(buffer, counter, nextBlockValue);
             }
             k_boot_free(statementRoots as unit*);
-            index++;
         }
         if (!hasElse) {
             appendUnreachable(buffer); 
@@ -1912,8 +1877,7 @@ fn emitExpression(
         buffer.add(105); buffer.add(32);
         appendNodeType(buffer, genericArguments, node);
         buffer.add(32);
-        index = 0;
-        while (index < branchCount) {
+        for (index in 0..<branchCount) {
             if (index > 0) {
                 buffer.add(44); buffer.add(32);
             }
@@ -1922,7 +1886,6 @@ fn emitExpression(
             buffer.add(44); buffer.add(32);
             appendBlockReference(buffer, blocks[index as u64]);
             buffer.add(32); buffer.add(93);
-            index++;
         }
         appendNewline(buffer);
         k_boot_free(blocks as unit*);
@@ -2971,11 +2934,9 @@ fn blockStatementRoots(nodes: AstList, blockRoot: u64): u64* {
     val roots =
         k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
     var root = blockRoot - 1;
-    var remaining = block.aux;
-    while (remaining > 0) {
-        roots[remaining as u64 - 1] = root;
+    for (index in block.aux>..0) {
+        roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return roots;
 }
@@ -2988,15 +2949,13 @@ fn emitBlock(
     root: u64,
     var counter: IrCounter): bool {
     val roots = blockStatementRoots(nodes, root);
-    var index: u32 = 0;
     var terminated = false;
-    while (index < nodes.data[root].aux) {
+    for (index in 0..<nodes.data[root].aux) {
         if (!terminated) {
             terminated = emitStatement(
                 buffer, source, nodes, genericArguments,
                 roots[index as u64], counter);
         }
-        index++;
     }
     k_boot_free(roots as unit*);
     return terminated;
@@ -4043,14 +4002,11 @@ fn emitSpecializedFunction(
     val savedArguments =
         k_boot_alloc(
             genericArguments.length * sizeof(TypeValue)) as TypeValue*;
-    var argumentIndex: u64 = 0;
-    while (argumentIndex < genericArguments.length) {
+    for (argumentIndex in 0..<genericArguments.length) {
         savedArguments[argumentIndex] =
             genericArguments.data[argumentIndex];
-        argumentIndex++;
     }
-    var offset: u64 = 0;
-    while (offset < count) {
+    for (offset in 0..<count) {
         saved[offset] = nodes.data[start + offset];
         var node = nodes.data[start + offset];
         if (node.typeKind == 14) {
@@ -4094,21 +4050,16 @@ fn emitSpecializedFunction(
             }
         }
         nodes.data[start + offset] = node;
-        offset++;
     }
     emitFunction(
         buffer, source, nodes, genericArguments,
         functionRoot, argumentStart, argumentCount);
-    offset = 0;
-    while (offset < count) {
+    for (offset in 0..<count) {
         nodes.data[start + offset] = saved[offset];
-        offset++;
     }
-    argumentIndex = 0;
-    while (argumentIndex < genericArguments.length) {
+    for (argumentIndex in 0..<genericArguments.length) {
         genericArguments.data[argumentIndex] =
             savedArguments[argumentIndex];
-        argumentIndex++;
     }
     k_boot_free(savedArguments as unit*);
     k_boot_free(saved as unit*);
@@ -4135,11 +4086,9 @@ fn firstStatementRoot(nodes: AstList, blockRoot: u64): u64 {
     var roots =
         k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
     var root = blockRoot - 1;
-    var remaining = block.aux;
-    while (remaining > 0) {
-        roots[remaining as u64 - 1] = root;
+    for (index in block.aux>..0) {
+        roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     val result = roots[0];
     k_boot_free(roots as unit*);
@@ -4196,8 +4145,7 @@ fn emitStruct(
     buffer.add(32);
     buffer.add(123);
     val fieldCount = structFieldCount(structure);
-    var index: u32 = 0;
-    while (index < fieldCount) {
+    for (index in 0..<fieldCount) {
         if (index > 0) {
             buffer.add(44);
         }
@@ -4205,7 +4153,6 @@ fn emitStruct(
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         appendNodeType(buffer, genericArguments, nodes.data[fieldRoot - 1]);
-        index++;
     }
     if (fieldCount > 0) buffer.add(32);
     buffer.add(125);
@@ -4234,10 +4181,8 @@ fn structSpecializationRequestListAppend(
             k_boot_alloc(
                 capacity * sizeof(StructSpecializationRequest))
                 as StructSpecializationRequest*;
-        var index: u64 = 0;
-        while (index < list.length) {
+        for (index in 0..<list.length) {
             data[index] = list.data[index];
-            index++;
         }
         k_boot_free(list.data as unit*);
         list.data = data;
@@ -4427,11 +4372,9 @@ fn emitModule(
     appendModuleHeader(buffer);
     appendPrintDeclaration(buffer);
     appendPanicDeclaration(buffer);
-    var literalIndex: u64 = 0;
-    while (literalIndex < nodes.length) {
+    for (literalIndex in 0..<nodes.length) {
         val literal = nodes.data[literalIndex];
         if (literal.kind == 11 && literal.typeKind == 10) appendStringGlobal(buffer, source, literal, literalIndex);
-        literalIndex++;
     }
     appendNewline(buffer);
     val programRoot = nodes.length - 1;
@@ -4439,21 +4382,17 @@ fn emitModule(
     val roots =
         k_boot_alloc((program.aux as u64) * sizeof(u64)) as u64*;
     var root = programRoot - 1;
-    var remaining = program.aux;
-    while (remaining > 0) {
-        roots[remaining as u64 - 1] = root;
+    for (index in program.aux>..0) {
+        roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
-    var index: u32 = 0;
-    while (index < program.aux) {
+    for (index in 0..<program.aux) {
         root = roots[index as u64];
         if (nodes.data[root].kind == 43) {
             if (structTypeParameterCount(nodes.data[root]) == 0) {
                 emitStruct(buffer, source, nodes, genericArguments, root);
             }
         }
-        index++;
     }
     
     var structRequests = structSpecializationRequestListNew();
@@ -4496,8 +4435,7 @@ fn emitModule(
     structSpecializationRequestListFree(structRequests);
     
     appendNewline(buffer);
-    index = 0;
-    while (index < program.aux) {
+    for (index in 0..<program.aux) {
         root = roots[index as u64];
         if (nodes.data[root].kind == 41) {
             if (functionTypeParameterCount(nodes.data[root]) == 0) {
@@ -4508,17 +4446,15 @@ fn emitModule(
         } else {
             if (nodes.data[root].kind == 43) {
                 var methodRoot = root - 1;
-                var methods = emitterStructMethodCount(nodes.data[root]);
-                while (methods > 0) {
+                val methods = emitterStructMethodCount(nodes.data[root]);
+                for (method in 0..<methods) {
                     emitFunction(
                         buffer, source, nodes, genericArguments,
                         methodRoot, 0, 0);
                     methodRoot = nodes.data[methodRoot].subtreeStart - 1;
-                    methods--;
                 }
             }
         }
-        index++;
     }
     var requests = specializationRequestListNew();
     var callIndex: u64 = 0;
