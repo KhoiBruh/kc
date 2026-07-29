@@ -310,6 +310,12 @@ private:
                 return arguments[type.typeParameterIndex];
             return {};
         }
+        if (type.kind == SemanticTypeKind::Struct) {
+            auto result = type;
+            for (auto& argument : result.typeArguments)
+                argument = substituteType(argument, arguments);
+            return result;
+        }
         if (!type.element) return type;
         auto element = substituteType(*type.element, arguments);
         if (type.kind == SemanticTypeKind::Nullable)

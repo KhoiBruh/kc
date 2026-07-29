@@ -11,31 +11,31 @@ fn main(): i32 {
     }
     bytes.free();
 
-    var tokens = tokenListNew();
-    tokens.add(Token(4, 10, 12));
-    tokens.add(Token(5, 12, 14));
-    tokens.add(Token(6, 14, 16));
+    var tokens = listNew<Token>(sizeof(Token));
+    listAdd<Token>(tokens, Token(4, 10, 12));
+    listAdd<Token>(tokens, Token(5, 12, 14));
+    listAdd<Token>(tokens, Token(6, 14, 16));
     if (tokens.data[2].kind != 6) {
         return 3;
     }
-    tokens.free();
+    listFree<Token>(tokens);
 
     val expression = k_boot_alloc(1);
-    var expressions = exprListNew();
-    expressions.add(expression);
+    var expressions = listNew<unit*>(sizeof(unit*));
+    listAdd<unit*>(expressions, expression);
     if (expressions.data[0] != expression) {
         return 4;
     }
-    expressions.free();
+    listFree<unit*>(expressions);
     k_boot_free(expression);
 
     val text = k_boot_alloc(4) as u8*;
-    var strings = stringListNew();
-    strings.add(StringRef(text, 4));
+    var strings = listNew<StringRef>(sizeof(StringRef));
+    listAdd<StringRef>(strings, StringRef(text, 4));
     if (strings.data[0].length != 4) {
         return 5;
     }
-    strings.free();
+    listFree<StringRef>(strings);
     k_boot_free(text as unit*);
 
     val symbolValue = k_boot_alloc(1);

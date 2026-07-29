@@ -1,12 +1,13 @@
 module kbootstrap.parser;
 
 import kbootstrap.token.Token;
+import kbootstrap.list.List;
 import kbootstrap.ast.AstNode;
 import kbootstrap.containers.ByteBuffer;
 
 struct ParseResult(nodes: AstList, ok: bool, errorStart: u64, expectedKind: u32)
 struct Parser(
-    tokens: TokenList, nodes: AstList, current: u64,
+    tokens: List<Token>, nodes: AstList, current: u64,
     ok: bool, expectedKind: u32)
 
 fn parserPeek(parser: Parser) => parser.tokens.data[parser.current];
@@ -1044,7 +1045,7 @@ fn parseConstant(var parser: Parser): u64 {
     return parserAdd(parser, 50, start, parserPrevious(parser).end, subtreeStart, hasType);
 }
 
-fn parse(tokens: TokenList): ParseResult {
+fn parse(tokens: List<Token>): ParseResult {
     var parser = Parser(tokens, astListNew(), 0, true, 0);
     val start = parserPeek(parser).start;
     var declarationCount: u32 = 0;

@@ -2,6 +2,8 @@ module kbootstrap.loader;
 
 import kbootstrap.source.Source;
 import kbootstrap.token.Token;
+import kbootstrap.list.List;
+import kbootstrap.list.listFree;
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.lexer.lex;
 
@@ -220,7 +222,7 @@ fn loaderCandidate(root: u8*, rootLength: u64, relative: ByteBuffer): ByteBuffer
 }
 
 fn loaderRelative(
-    source: Source, tokens: TokenList,
+    source: Source, tokens: List<Token>,
     first: u64, partCount: u64,
     wildcard: bool
 ): ByteBuffer {
@@ -252,7 +254,7 @@ k_boot_read_file(candidate.data, candidate.length, &data, &length);
 
 fn loaderResolveImport(
     var loader: ModuleLoader, currentPath: LoadedPath, source: Source,
-    tokens: TokenList, first: u64, partCount: u64, wildcard: bool,
+    tokens: List<Token>, first: u64, partCount: u64, wildcard: bool,
     start: u64, end: u64, depth: u64
 ): bool {
     loader.failureKind = 2;
@@ -324,7 +326,7 @@ fn loaderScanImports(
         var category: u32 = 4;
         if (lexed.errorKind == 1) category = 3;
         loaderReport(path, source, lexed.errorStart, category);
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         return false;
     }
     val tokens = lexed.tokens;
@@ -332,7 +334,7 @@ fn loaderScanImports(
     if (tokens.data[current].kind == 25) {
         while (tokens.data[current].kind != 58) {
             if (tokens.data[current].kind == 0) {
-                tokens.free();
+                listFree<Token>(tokens);
                 return false;
             }
             current++;
@@ -362,7 +364,7 @@ fn loaderScanImports(
         val end = tokens.data[current].end;
         if (tokens.data[current].kind != 58) {
             loader.failureKind = 2;
-            tokens.free();
+            listFree<Token>(tokens);
             return false;
         }
         current++;
@@ -372,12 +374,12 @@ fn loaderScanImports(
                 start, end, depth + 1
             )
         ) {
-            tokens.free();
+            listFree<Token>(tokens);
             return false;
         }
     }
 
-    tokens.free();
+    listFree<Token>(tokens);
 
     return true;
 }

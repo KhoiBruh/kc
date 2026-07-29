@@ -28,7 +28,7 @@ fn main(): i32 {
         print(lexed.errorStart as i32);
         print(":");
         print(lexed.errorStart as i32);
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         k_boot_free(sourceData as unit*);
         k_boot_free(path as unit*);
         return 2;
@@ -40,7 +40,7 @@ fn main(): i32 {
         print(":");
         print(parsed.errorStart as i32);
         parsed.nodes.free();
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         k_boot_free(sourceData as unit*);
         k_boot_free(path as unit*);
         return 2;
@@ -56,7 +56,7 @@ fn main(): i32 {
     }
 
     parsed.nodes.free();
-    lexed.tokens.free();
+    listFree<Token>(lexed.tokens);
     k_boot_free(sourceData as unit*);
     k_boot_free(path as unit*);
     if (checked.ok) { return 0; }

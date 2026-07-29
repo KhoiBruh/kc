@@ -132,7 +132,7 @@ fn compileToLl(
             source, sourceMap, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1
         );
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         return 2;
     }
     val parsed = parse(lexed.tokens);
@@ -142,7 +142,7 @@ fn compileToLl(
             parsed.errorStart, parsed.errorStart + 1
 		);
         parsed.nodes.free();
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         return 2;
     }
     var checked = analyze(source, parsed.nodes);
@@ -153,7 +153,7 @@ fn compileToLl(
         );
         checked.genericArguments.free();
         parsed.nodes.free();
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         return 2;
     }
     var resolvedArguments = checked.genericArguments;
@@ -176,7 +176,7 @@ fn compileToLl(
         output.free();
         checked.genericArguments.free();
         parsed.nodes.free();
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         return 1;
     }
     var verifyCommand = byteBufferNew();
@@ -192,7 +192,7 @@ fn compileToLl(
         output.free();
         checked.genericArguments.free();
         parsed.nodes.free();
-        lexed.tokens.free();
+        listFree<Token>(lexed.tokens);
         if (verified < 0) {
             compilerFailure(2);
             return 1;
@@ -205,7 +205,7 @@ fn compileToLl(
     output.free();
     checked.genericArguments.free();
     parsed.nodes.free();
-    lexed.tokens.free();
+    listFree<Token>(lexed.tokens);
     if (published) return 0;
     compilerFailure(1);
     return 1;
