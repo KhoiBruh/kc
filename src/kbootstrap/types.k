@@ -50,21 +50,13 @@ fn typeValueListNew(): TypeValueList {
         k_boot_alloc(8 * sizeof(TypeValue)) as TypeValue*, 0, 8);
 }
 
-fn invalidType(): TypeValue {
-    return TypeValue(0, 0, 0);
-}
+fn invalidType() => TypeValue(0, 0, 0);
 
-fn unitType(): TypeValue {
-    return TypeValue(1, 0, 0);
-}
+fn unitType() => TypeValue(1, 0, 0);
 
-fn boolType(): TypeValue {
-    return TypeValue(2, 0, 0);
-}
+fn boolType() => TypeValue(2, 0, 0);
 
-fn integerLiteralType(): TypeValue {
-    return TypeValue(11, 0, 0);
-}
+fn integerLiteralType() => TypeValue(11, 0, 0);
 
 fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
     if (source.kind == target.kind) return false;
