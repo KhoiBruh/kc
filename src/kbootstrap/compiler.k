@@ -451,17 +451,14 @@ fn printDiagnostic(
 ) {
     var buf = byteBufferNew();
     var sourceStart: u64 = 0;
-    var found = false;
     for (i in 0..<sourceMap.length) {
         val segment = sourceMap.data[i];
-        if (!found) {
-            val total = segment.sourceStart + segment.sourceLength;
-            if (start in segment.sourceStart..total) {
-				appendRaw(buf, segment.path, segment.pathLength);
-				buf.add(58);
-				sourceStart = segment.sourceStart;
-				found = true;
-            }
+        val total = segment.sourceStart + segment.sourceLength;
+        if (start in segment.sourceStart..total) {
+			appendRaw(buf, segment.path, segment.pathLength);
+			buf.add(58);
+			sourceStart = segment.sourceStart;
+            break;
         }
     }
     
