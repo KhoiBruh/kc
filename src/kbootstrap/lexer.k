@@ -284,28 +284,14 @@ fn punctuationKind(value: u8): u32 => when (value) {
 
 fn scanIdentifier(source: Source, start: u64): u64 {
     var offset = start;
-    var scanning = true;
-    while (scanning) {
-        if (offset >= source.length) scanning = false;
-        else {
-            if (isIdentifierContinue(source.data[offset])) offset++;
-            else scanning = false;
-        }
-    }
+    while ((offset < source.length) && isIdentifierContinue(source.data[offset])) offset++;
 
     return offset;
 }
 
 fn scanInteger(source: Source, start: u64): u64 {
     var offset = start;
-    var scanning = true;
-    while (scanning) {
-        if (offset >= source.length) scanning = false;
-        else {
-            if (isDigit(source.data[offset])) offset++;
-            else scanning = false;
-        }
-    }
+    while ((offset < source.length) && isDigit(source.data[offset])) offset++;
 
     return offset;
 }
@@ -394,18 +380,9 @@ fn lex(source: Source): LexResult {
                 value == 47 -> {
 					if (offset + 1 < source.length) {
 	                    if (source.data[offset + 1] == 47) {
-	                        offset = offset + 2;
-	                        var scanningComment = true;
-		                    while (scanningComment) {
-		                        when {
-		                            offset >= source.length -> scanningComment = false;
-		                            source.data[offset] == 10 -> {
-		                                offset++;
-		                                scanningComment = false;
-		                            }
-		                            else -> offset++;
-		                        }
-		                    }
+                        offset += 2;
+                        while ((offset < source.length) && source.data[offset] != 10) offset++;
+	                    if (offset < source.length) offset++;
 	                    } else {
 	                        val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
 	                        if (pairKind == 0) {
