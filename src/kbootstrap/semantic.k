@@ -28,9 +28,8 @@ fn sourceHash(source: Source, start: u64, end: u64): u64 {
     return value;
 }
 
-fn nodeHash(semantic: Semantic, node: AstNode): u64 {
-    return sourceHash(semantic.source, node.start, node.end);
-}
+fn nodeHash(semantic: Semantic, node: AstNode) =>
+    sourceHash(semantic.source, node.start, node.end);
 
 fn integerConstant(semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];

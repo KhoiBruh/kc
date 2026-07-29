@@ -9,17 +9,11 @@ struct Parser(
     tokens: TokenList, nodes: AstList, current: u64,
     ok: bool, expectedKind: u32)
 
-fn parserPeek(parser: Parser): Token {
-    return parser.tokens.data[parser.current];
-}
+fn parserPeek(parser: Parser) => parser.tokens.data[parser.current];
 
-fn parserPrevious(parser: Parser): Token {
-    return parser.tokens.data[parser.current - 1];
-}
+fn parserPrevious(parser: Parser) => parser.tokens.data[parser.current - 1];
 
-fn parserCheck(parser: Parser, kind: u32): bool {
-    return parserPeek(parser).kind == kind;
-}
+fn parserCheck(parser: Parser, kind: u32) => parserPeek(parser).kind == kind;
 
 fn parserMatch(var parser: Parser, kind: u32): bool {
     if (parserCheck(parser, kind)) {

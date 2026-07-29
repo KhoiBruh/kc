@@ -691,9 +691,7 @@ fn appendOperator(var buffer: ByteBuffer, kind: u32, typeKind: u32) {
     }
 }
 
-fn appendNewline(var buffer: ByteBuffer) {
-    buffer.add(10);
-}
+fn appendNewline(var buffer: ByteBuffer) => buffer.add(10);
 
 fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
     when (kind) {
@@ -1105,13 +1103,9 @@ fn functionRootByName(
     return found;
 }
 
-fn emitterStructTypeParameterCount(structure: AstNode): u32 {
-    return structure.aux / 65536;
-}
+fn emitterStructTypeParameterCount(structure: AstNode) => structure.aux / 65536;
 
-fn emitterStructFieldCount(structure: AstNode): u32 {
-    return structure.aux % 65536;
-}
+fn emitterStructFieldCount(structure: AstNode) => structure.aux % 65536;
 
 fn emitterStructMethodCount(structure: AstNode): u64 => structure.storage;
 
@@ -1229,9 +1223,8 @@ fn fieldIndexByName(
     return fieldCount;
 }
 
-fn alignUp(value: u64, alignment: u64): u64 {
-    return ((value + alignment - 1) / alignment) * alignment;
-}
+fn alignUp(value: u64, alignment: u64) =>
+    ((value + alignment - 1) / alignment) * alignment;
 
 fn typeAlignment(
     source: Source, nodes: AstList, genericArguments: TypeValueList,
@@ -1557,9 +1550,8 @@ fn appendComparison(
     }
 }
 
-fn expressionChildBefore(nodes: AstList, root: u64): u64 {
-    return nodes.data[root].subtreeStart - 1;
-}
+fn expressionChildBefore(nodes: AstList, root: u64) =>
+    nodes.data[root].subtreeStart - 1;
 
 fn emitAddress(
     var buffer: ByteBuffer,
@@ -4268,9 +4260,8 @@ fn structSpecializationRequestListAppend(
     list.length = list.length + 1;
 }
 
-fn structSpecializationRequestListFree(list: StructSpecializationRequestList) {
+fn structSpecializationRequestListFree(list: StructSpecializationRequestList) =>
     k_boot_free(list.data as unit*);
-}
 
 fn structSpecializationRequestExists(
     requests: StructSpecializationRequestList,
@@ -4384,9 +4375,8 @@ fn specializationRequestListAppend(
     list.length = list.length + 1;
 }
 
-fn specializationRequestListFree(list: SpecializationRequestList) {
+fn specializationRequestListFree(list: SpecializationRequestList) =>
     k_boot_free(list.data as unit*);
-}
 
 fn specializationArgumentsEqual(
     arguments: TypeValueList,
