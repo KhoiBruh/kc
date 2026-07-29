@@ -1010,24 +1010,18 @@ fn parseImport(var parser: Parser): u64 {
         parser.nodes.length, 0);
     var partCount: u32 = 1;
     var isWildcard: u32 = 0;
-    var importing = true;
-    while (importing) {
-        if (!parserMatch(parser, 59)) {
-            importing = false;
-        } else {
-            if (parserMatch(parser, 62)) {
-                isWildcard = 1;
-                partCount++;
-                importing = false;
-            } else {
-                if (!parserExpect(parser, 1)) return 0;
-                val name = parserPrevious(parser);
-                parserAdd(
-                    parser, 45, name.start, name.end,
-                    parser.nodes.length, 0);
-                partCount++;
-            }
+    while (parserMatch(parser, 59)) {
+        if (parserMatch(parser, 62)) {
+            isWildcard = 1;
+            partCount++;
+            break;
         }
+        if (!parserExpect(parser, 1)) return 0;
+        val name = parserPrevious(parser);
+        parserAdd(
+            parser, 45, name.start, name.end,
+            parser.nodes.length, 0);
+        partCount++;
     }
     if (!parserExpect(parser, 58)) return 0;
     return parserAdd(
