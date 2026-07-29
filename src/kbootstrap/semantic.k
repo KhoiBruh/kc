@@ -1423,7 +1423,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val object = expressionType(semantic, objectRoot);
         expressionType(semantic, indexRoot);
         if (object.kind == 19) {
-            return arrayElement(object);
+            return object.arrayElement();
         }
         if (object.kind == 13) {
             return TypeValue(object.pointee, object.name, 0);
@@ -1807,7 +1807,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 valueType = TypeValue(
                     valueType.pointee, valueType.name, 0);
             } else {
-                valueType = arrayElement(valueType);
+                valueType = valueType.arrayElement();
             }
         }
         if (valueType.kind == 11) {
@@ -1980,7 +1980,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             resolveWhenResultType(semantic, initializerRoot, valueType);
             resolveIfResultType(semantic, initializerRoot, valueType);
             if (initializer.kind == 19) {
-                if (arrayElement(initializer).kind == 0) {
+                if (initializer.arrayElement().kind == 0) {
                     var initializerNode = semantic.nodes.data[initializerRoot];
                     initializerNode.typeKind = valueType.kind;
                     initializerNode.typeName = valueType.name;
@@ -2219,7 +2219,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 var actual = expressionType(semantic, initializerRoot);
                 if (declaration.aux == 0) {
                     if (actual.kind == 19) {
-                        if (arrayElement(actual).kind == 0)
+                        if (actual.arrayElement().kind == 0)
                             semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
                     }
                 }
@@ -2235,14 +2235,14 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     if (expected.kind == 19 && typeNode.kind == 5 &&
                         typeNode.aux == 0 && actual.kind == 19) {
                         accepted = typeAccepts(
-                            arrayElement(expected), arrayElement(actual),
+                            expected.arrayElement(), actual.arrayElement(),
                             semantic.genericArguments);
                     }
                     if (!accepted)
                         semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
                     if (expected.kind == 19 && typeNode.kind == 5 &&
                         typeNode.aux == 0 && actual.kind == 19) {
-                        actual = arrayElement(expected).array(actual.arraySize());
+                        actual = expected.arrayElement().array(actual.arraySize());
                     } else actual = expected;
                 }
                 var typed = declaration;

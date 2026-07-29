@@ -7,6 +7,8 @@ struct TypeValue(kind: u32, name: u64, pointee: u32) {
 
 	fn array(val self, size: u64) => TypeValue(19, self.name, self.kind + (size as u32) * 256);
 
+	fn arrayElement(val self) => TypeValue(self.pointee % 256, self.name, 0);
+
 	fn arraySize(val self) => self.pointee / 256;
 
 	fn isFloat(val self) => self.kind in 17..18;
@@ -62,10 +64,6 @@ fn boolType(): TypeValue {
 
 fn integerLiteralType(): TypeValue {
     return TypeValue(11, 0, 0);
-}
-
-fn arrayElement(type: TypeValue): TypeValue {
-    return TypeValue(type.pointee % 256, type.name, 0);
 }
 
 fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
@@ -131,7 +129,7 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeVal
     if (expected.kind == 19) {
         if (actual.kind == 19) {
             if (expected.arraySize() == actual.arraySize()) {
-                if (arrayElement(actual).kind == 0) return true;
+                if (actual.arrayElement().kind == 0) return true;
             }
         }
     }
