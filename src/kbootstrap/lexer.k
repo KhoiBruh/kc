@@ -15,16 +15,12 @@ fn isWhitespace(value: u8) => when (value) {
     else -> false;
 };
 
-fn isDigit(value: u8) => when {
-    value < 48 -> false;
-    value > 57 -> false;
-    else -> true;
-};
+fn isDigit(value: u8) => value in 48..57;
 
 fn isIdentifierStart(value: u8) => when {
 	value == 95 -> true;
-	value >= 65 && value <= 90 -> true;
-	value >= 97 && value <= 122 -> true;
+	value in 65..90 -> true;
+	value in 97..122 -> true;
 	else -> false;
 };
 
@@ -254,6 +250,7 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
             }
         }
     }
+
     return 1;
 }
 
@@ -443,8 +440,10 @@ fn lex(source: Source): LexResult {
                 	var kind = punctuationKind(value);
                     if (value == 62) {
                         if (offset + 2 < source.length) {
-                            if (source.data[offset + 1] == 46 &&
-                                source.data[offset + 2] == 46) {
+                            if (
+                                source.data[offset + 1] == 46 &&
+                                source.data[offset + 2] == 46
+							) {
                                 kind = 93;
                                 offset = offset + 2;
                                 if (offset + 1 < source.length) {

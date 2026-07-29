@@ -130,7 +130,8 @@ fn compileToLl(
     if (!lexed.ok) {
         printDiagnostic(
             source, sourceMap, 99 + lexed.errorKind,
-            lexed.errorStart, lexed.errorStart + 1);
+            lexed.errorStart, lexed.errorStart + 1
+        );
         tokenListFree(lexed.tokens);
         return 2;
     }
@@ -138,7 +139,8 @@ fn compileToLl(
     if (!parsed.ok) {
         printDiagnostic(
             source, sourceMap, 1000 + parsed.expectedKind,
-            parsed.errorStart, parsed.errorStart + 1);
+            parsed.errorStart, parsed.errorStart + 1
+		);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         return 2;
@@ -146,15 +148,16 @@ fn compileToLl(
     var checked = analyze(source, parsed.nodes);
     if (!checked.ok) {
         printDiagnostic(
-            source, sourceMap, checked.category, checked.start, checked.end);
+            source, sourceMap, checked.category,
+            checked.start, checked.end
+        );
         typeValueListFree(checked.genericArguments);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         return 2;
     }
     var resolvedArguments = checked.genericArguments;
-    val output =
-        emitModule(source, parsed.nodes, resolvedArguments);
+    val output = emitModule(source, parsed.nodes, resolvedArguments);
     checked.genericArguments = resolvedArguments;
     var temporaryPath = byteBufferNew();
     appendRaw(temporaryPath, outputPath, outputPathLength);
@@ -190,7 +193,10 @@ fn compileToLl(
         typeValueListFree(checked.genericArguments);
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
-        if (verified < 0) { compilerFailure(2); return 1; }
+        if (verified < 0) {
+            compilerFailure(2);
+            return 1;
+        }
         return 2;
     }
     val published = k_boot_write_file(
@@ -454,13 +460,12 @@ fn printDiagnostic(
     for (i in 0..<sourceMap.length) {
         val segment = sourceMap.data[i];
         if (!found) {
-            if (start >= segment.sourceStart) {
-                if (start <= segment.sourceStart + segment.sourceLength) {
-                    appendRaw(buf, segment.path, segment.pathLength);
-                    byteBufferAppend(buf, 58);
-                    sourceStart = segment.sourceStart;
-                    found = true;
-                }
+            val total = segment.sourceStart + segment.sourceLength;
+            if (start in segment.sourceStart..total) {
+				appendRaw(buf, segment.path, segment.pathLength);
+				byteBufferAppend(buf, 58);
+				sourceStart = segment.sourceStart;
+				found = true;
             }
         }
     }
