@@ -45,7 +45,7 @@ fn tokenListGrow(var list: TokenList) {
 fn tokenListAppend(var list: TokenList, val value: Token) {
     if (list.length == list.capacity) tokenListGrow(list);
     list.data[list.length] = value;
-    list.length = list.length + 1;
+    list.length++;
 }
 
 fn tokenListFree(list: TokenList) => k_boot_free(list.data as unit*);
@@ -66,7 +66,7 @@ fn exprListGrow(var list: ExprList) {
 fn exprListAppend(var list: ExprList, val value: unit*) {
     if (list.length == list.capacity) exprListGrow(list);
     list.data[list.length] = value;
-    list.length = list.length + 1;
+    list.length++;
 }
 
 fn exprListFree(list: ExprList) => k_boot_free(list.data as unit*);
@@ -88,7 +88,7 @@ fn stringListGrow(var list: StringList) {
 fn stringListAppend(var list: StringList, val value: StringRef) {
     if (list.length == list.capacity) stringListGrow(list);
     list.data[list.length] = value;
-    list.length = list.length + 1;
+    list.length++;
 }
 
 fn stringListFree(list: StringList) => k_boot_free(list.data as unit*);
@@ -110,7 +110,7 @@ fn symbolTableGrow(var table: SymbolTable) {
 fn symbolTableAppend(var table: SymbolTable, val entry: SymbolEntry) {
     if (table.length == table.capacity) symbolTableGrow(table);
     table.data[table.length] = entry;
-    table.length = table.length + 1;
+    table.length++;
 }
 
 fn symbolTableFind(val table: SymbolTable, val key: u64): u64 {

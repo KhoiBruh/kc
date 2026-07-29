@@ -43,6 +43,7 @@ constexpr std::array keywords{
 
 constexpr std::array operators{
     Spelling{"..<", TokenKind::RangeExclusive},
+    Spelling{"++", TokenKind::PlusPlus}, Spelling{"--", TokenKind::MinusMinus},
     Spelling{"->", TokenKind::Arrow}, Spelling{"=>", TokenKind::FatArrow},
     Spelling{"..", TokenKind::Range}, Spelling{"+=", TokenKind::PlusEqual},
     Spelling{"-=", TokenKind::MinusEqual}, Spelling{"*=", TokenKind::StarEqual},

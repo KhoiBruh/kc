@@ -459,7 +459,10 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parser, 18, first.start, parserPrevious(parser).end,
                         subtreeStart, 0);
                 } else {
-                    if (token.kind == 73) {
+                    var postfix = token.kind == 73;
+                    if (token.kind == 91) postfix = true;
+                    if (token.kind == 92) postfix = true;
+                    if (postfix) {
                         parser.current = parser.current + 1;
                         root = parserAdd(
                             parser, 19, first.start, token.end,

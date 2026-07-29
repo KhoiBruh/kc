@@ -806,6 +806,74 @@ private:
         return value;
     }
 
+    llvm::Value* emitAssignedValue(
+        const AssignmentExpr& assignment, llvm::Value* pointer) {
+        auto* value = emitExpr(*assignment.value);
+        if (!value || assignment.op == TokenKind::Equal) return value;
+        const auto target = semantic().expressionTypes.find(assignment.target.get());
+        if (target == semantic().expressionTypes.end()) return nullptr;
+        auto* llvmType = lowerType(target->second, assignment.target->span);
+        if (!llvmType) return nullptr;
+        auto* current = builder_.CreateLoad(llvmType, pointer);
+        const bool floating = isFloat(target->second);
+        switch (assignment.op) {
+        case TokenKind::PlusEqual:
+            return floating ? builder_.CreateFAdd(current, value)
+                            : builder_.CreateAdd(current, value);
+        case TokenKind::MinusEqual:
+            return floating ? builder_.CreateFSub(current, value)
+                            : builder_.CreateSub(current, value);
+        case TokenKind::StarEqual:
+            return floating ? builder_.CreateFMul(current, value)
+                            : builder_.CreateMul(current, value);
+        case TokenKind::SlashEqual:
+            if (floating) return builder_.CreateFDiv(current, value);
+            return isSignedInteger(target->second)
+                ? builder_.CreateSDiv(current, value)
+                : builder_.CreateUDiv(current, value);
+        case TokenKind::PercentEqual:
+            if (floating) return builder_.CreateFRem(current, value);
+            return isSignedInteger(target->second)
+                ? builder_.CreateSRem(current, value)
+                : builder_.CreateURem(current, value);
+        default: return value;
+        }
+    }
+
+    llvm::Value* emitMutationPointer(const Expr& target) {
+        if (const auto* identifier = std::get_if<IdentifierExpr>(&target.node)) {
+            const auto found = locals_.find(spelling(source(), identifier->name));
+            return found == locals_.end() ? nullptr : found->second.address;
+        }
+        if (const auto* index = std::get_if<IndexExpr>(&target.node))
+            return emitIndexPointer(*index);
+        if (const auto* unary = std::get_if<UnaryExpr>(&target.node);
+            unary && unary->op == TokenKind::Star)
+            return emitExpr(*unary->operand);
+        if (const auto* member = std::get_if<MemberExpr>(&target.node)) {
+            const auto* object = std::get_if<IdentifierExpr>(&member->object->node);
+            if (!object) return nullptr;
+            const auto local = locals_.find(spelling(source(), object->name));
+            const auto objectType = semantic().expressionTypes.find(member->object.get());
+            if (local == locals_.end() || objectType == semantic().expressionTypes.end())
+                return nullptr;
+            const auto structure = semantic().structs.find(objectType->second.name);
+            if (structure == semantic().structs.end()) return nullptr;
+            const auto fieldName = spelling(source(), member->name);
+            const auto field = std::find_if(
+                structure->second.fields.begin(), structure->second.fields.end(),
+                [&](const StructFieldSymbol& candidate) {
+                    return candidate.name == fieldName;
+                });
+            auto* llvmStructure = lowerType(objectType->second, member->object->span);
+            if (field == structure->second.fields.end() || !llvmStructure) return nullptr;
+            return builder_.CreateStructGEP(
+                llvmStructure, local->second.address,
+                static_cast<unsigned>(field->index));
+        }
+        return nullptr;
+    }
+
     llvm::Value* emitExprRaw(const Expr& expression) {
         const auto typeFound = semantic().expressionTypes.find(&expression);
         if (typeFound == semantic().expressionTypes.end()) {
@@ -1199,7 +1267,7 @@ private:
                     std::get_if<UnaryExpr>(&assignment->target->node);
                 unary && unary->op == TokenKind::Star) {
                 auto* pointer = emitExpr(*unary->operand);
-                auto* value = emitExpr(*assignment->value);
+                auto* value = emitAssignedValue(*assignment, pointer);
                 if (!pointer || !value) return nullptr;
                 builder_.CreateStore(value, pointer);
                 return value;
@@ -1233,11 +1301,11 @@ private:
                         return candidate.name == fieldName;
                     });
                 if (field == structure->second.fields.end()) return nullptr;
-                auto* value = emitExpr(*assignment->value);
-                if (!value) return nullptr;
                 auto* pointer = builder_.CreateStructGEP(
                     llvmStructure, local->second.address,
                     static_cast<unsigned>(field->index));
+                auto* value = emitAssignedValue(*assignment, pointer);
+                if (!value) return nullptr;
                 builder_.CreateStore(value, pointer);
                 return value;
             }
@@ -1245,7 +1313,7 @@ private:
                     std::get_if<IndexExpr>(&assignment->target->node)) {
                 auto* pointer = emitIndexPointer(*index);
                 if (!pointer) return nullptr;
-                auto* value = emitExpr(*assignment->value);
+                auto* value = emitAssignedValue(*assignment, pointer);
                 if (!value) return nullptr;
                 builder_.CreateStore(value, pointer);
                 return value;
@@ -1262,7 +1330,7 @@ private:
                 diagnose("unknown local during LLVM codegen", target->name);
                 return nullptr;
             }
-            auto* value = emitExpr(*assignment->value);
+            auto* value = emitAssignedValue(*assignment, found->second.address);
             if (!value) return nullptr;
             builder_.CreateStore(value, found->second.address);
             return value;
@@ -1351,6 +1419,27 @@ private:
         }
         if (const auto* postfix =
                 std::get_if<PostfixExpr>(&expression.node)) {
+            if (postfix->op == TokenKind::PlusPlus ||
+                postfix->op == TokenKind::MinusMinus) {
+                auto* pointer = emitMutationPointer(*postfix->value);
+                auto* llvmType = lowerType(semanticType, expression.span);
+                if (!pointer || !llvmType) return nullptr;
+                auto* current = builder_.CreateLoad(llvmType, pointer);
+                llvm::Value* updated = nullptr;
+                if (isFloat(semanticType)) {
+                    auto* one = llvm::ConstantFP::get(llvmType, 1.0);
+                    updated = postfix->op == TokenKind::PlusPlus
+                        ? builder_.CreateFAdd(current, one)
+                        : builder_.CreateFSub(current, one);
+                } else {
+                    auto* one = llvm::ConstantInt::get(llvmType, 1);
+                    updated = postfix->op == TokenKind::PlusPlus
+                        ? builder_.CreateAdd(current, one)
+                        : builder_.CreateSub(current, one);
+                }
+                builder_.CreateStore(updated, pointer);
+                return updated;
+            }
             if (postfix->op == TokenKind::Bang) {
                 auto* nullable = emitExpr(*postfix->value);
                 if (!nullable) return nullptr;

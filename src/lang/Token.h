@@ -34,7 +34,8 @@ enum class TokenKind {
     EqualEqual, BangEqual, LessEqual, GreaterEqual,
     AndAnd, OrOr,
     Arrow, FatArrow, Range, RangeExclusive,
-    KwBreak, KwContinue
+    KwBreak, KwContinue,
+    PlusPlus, MinusMinus
 };
 
 struct Token {

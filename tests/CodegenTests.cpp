@@ -407,6 +407,33 @@ TEST(codegen_lowers_lossless_implicit_integer_widening) {
     EXPECT_TRUE(ir.find("icmp ult i64") != std::string::npos);
 }
 
+TEST(codegen_lowers_compound_numeric_assignments) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn update(var value: i32): i32 {"
+        "value += 5; value -= 2; value *= 3; value /= 2; value %= 4;"
+        "return value;"
+        "}",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("add i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("sub i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("mul i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("sdiv i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("srem i32") != std::string::npos);
+}
+
+TEST(codegen_lowers_postfix_increment_and_decrement) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn update(): i32 { var value = 41; value++; value--; value++; return value; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("add i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("sub i32") != std::string::npos);
+}
+
 TEST(codegen_lowers_string_literals_as_static_string_values) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

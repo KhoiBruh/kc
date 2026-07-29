@@ -726,7 +726,11 @@ private:
             }
             return true;
         }
-        analyzeExpr(*std::get<ExpressionStmt>(statement.node).expression);
+        const auto& expression = std::get<ExpressionStmt>(statement.node).expression;
+        const auto* previousMutationRoot = postfixMutationRoot_;
+        postfixMutationRoot_ = expression.get();
+        analyzeExpr(*expression);
+        postfixMutationRoot_ = previousMutationRoot;
         return false;
     }
 
@@ -984,7 +988,19 @@ private:
             }
         } else if (const auto* postfix = std::get_if<PostfixExpr>(&expression.node)) {
             auto value = analyzeExpr(*postfix->value);
-            if (postfix->op == TokenKind::Bang && value.kind == SemanticTypeKind::Nullable)
+            if (postfix->op == TokenKind::PlusPlus ||
+                postfix->op == TokenKind::MinusMinus) {
+                type = value;
+                if (postfixMutationRoot_ != &expression)
+                    diagnose("postfix increment and decrement are only valid as statements",
+                             expression.span);
+                if (!isNumeric(value))
+                    diagnose("postfix increment and decrement require a number",
+                             expression.span);
+                if (!isMutableTarget(*postfix->value))
+                    diagnose("postfix increment and decrement require a mutable target",
+                             postfix->value->span);
+            } else if (postfix->op == TokenKind::Bang && value.kind == SemanticTypeKind::Nullable)
                 type = *value.element;
             else {
                 diagnose(postfix->op == TokenKind::Question
@@ -1727,6 +1743,24 @@ private:
         return expected == actual || canImplicitlyWiden(actual, expected);
     }
 
+    bool isMutableTarget(const Expr& expression) {
+        if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
+            const auto* variable = findVariable(spelling(source_, identifier->name));
+            return variable && variable->mutableBinding;
+        }
+        if (const auto* member = std::get_if<MemberExpr>(&expression.node))
+            return isMutableTarget(*member->object);
+        if (const auto* index = std::get_if<IndexExpr>(&expression.node)) {
+            const auto type = result_.expressionTypes.find(index->object.get());
+            return (type != result_.expressionTypes.end() &&
+                    type->second.kind == SemanticTypeKind::Pointer) ||
+                isMutableTarget(*index->object);
+        }
+        if (const auto* unary = std::get_if<UnaryExpr>(&expression.node))
+            return unary->op == TokenKind::Star;
+        return false;
+    }
+
     VariableSymbol* findVariable(const std::string& name) {
         for (auto scope = scopes_.rbegin(); scope != scopes_.rend(); ++scope) {
             const auto found = scope->find(name);
@@ -1749,6 +1783,7 @@ private:
     std::unordered_map<std::string, TypeParameterSymbol> typeParameters_;
     SemanticType currentReturn_;
     std::size_t loopDepth_ = 0;
+    const Expr* postfixMutationRoot_ = nullptr;
     std::unordered_map<const FunctionDecl*, int> inferredReturnStates_;
 };
 

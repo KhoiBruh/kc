@@ -6,13 +6,11 @@ import kbootstrap.loader.LoadResult;
 extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
 
-fn appendRaw(
-    var buffer: ByteBuffer, data: u8*, length: u64) {
+fn appendRaw(var buffer: ByteBuffer, data: u8*, length: u64) {
     for (i in 0..<length) byteBufferAppend(buffer, data[i]);
 }
 
-fn appendQuoted(
-    var buffer: ByteBuffer, data: u8*, length: u64) {
+fn appendQuoted(var buffer: ByteBuffer, data: u8*, length: u64) {
     byteBufferAppend(buffer, 34);
     appendRaw(buffer, data, length);
     byteBufferAppend(buffer, 34);
@@ -227,13 +225,16 @@ fn linkLl(
     val result = k_boot_run(command.data, command.length);
     byteBufferFree(command);
     if (result == 0) return 0;
-    if (result < 0) { compilerFailure(3); return 1; }
+    if (result < 0) { 
+        compilerFailure(3); 
+        return 1; 
+    }
     return 2;
 }
 
 fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
     var line: u64 = 1;
-    for (i in sourceStart..<offset) if (source.data[i] == 10) line = line + 1;
+    for (i in sourceStart..<offset) if (source.data[i] == 10) line++;
     return line;
 }
 
@@ -243,7 +244,7 @@ fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     while (index > sourceStart) {
         index = index - 1;
         if (source.data[index] == 10) return col;
-        col = col + 1;
+        col++;
     }
     return col;
 }
@@ -260,7 +261,7 @@ fn stderrNumber(value: u64): ByteBuffer {
     var v = value;
     while (v > 0) {
         byteBufferAppend(buf, 48 + (v % 10) as u8);
-        v = v / 10;
+        v /= 10;
     }
     var i = start;
     var j = buf.length - 1;
@@ -268,8 +269,8 @@ fn stderrNumber(value: u64): ByteBuffer {
         val tmp = buf.data[i];
         buf.data[i] = buf.data[j];
         buf.data[j] = tmp;
-        i = i + 1;
-        j = j - 1;
+        i++;
+        j--;
     }
     return buf;
 }

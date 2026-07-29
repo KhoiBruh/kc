@@ -16,7 +16,8 @@ struct Semantic(
     scopeStart: u64,
     currentFunction: u64,
     currentStruct: u64,
-    loopDepth: u32
+    loopDepth: u32,
+    mutationRoot: u64
 )
 
 struct IntegerConstant(ok: bool, negative: bool, overflow: bool, magnitude: u64)
@@ -1345,6 +1346,21 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     }
     if (node.kind == 19) {
         val operand = expressionType(semantic, root - 1);
+        if (node.aux == 91 || node.aux == 92) {
+            if (semantic.mutationRoot != root) semanticFail(semantic, 4, node);
+            if (!isFloatType(operand) && !isIntegerType(operand))
+                semanticFail(semantic, 4, node);
+            val target = semantic.nodes.data[root - 1];
+            if (target.kind == 10) {
+                val local = localFind(semantic.locals, nodeHash(semantic, target));
+                if (local == semantic.locals.length) semanticFail(semantic, 2, target);
+                else {
+                    if (!semantic.locals.data[local].mutable)
+                        semanticFail(semantic, 7, target);
+                }
+            }
+            return operand;
+        }
         if (operand.kind != 15) {
             semanticFail(semantic, 4, node);
             return invalidType();
@@ -1945,7 +1961,10 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         return;
     }
     if (node.kind == 35) {
+        val previousMutationRoot = semantic.mutationRoot;
+        semantic.mutationRoot = root - 1;
         expressionType(semantic, root - 1);
+        semantic.mutationRoot = previousMutationRoot;
     }
 }
 
@@ -2167,7 +2186,7 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
         declarationListNew(),
         localListNew(), genericArguments,
         semanticSuccess(genericArguments), unitType(), 0,
-        nodes.length, nodes.length, 0
+        nodes.length, nodes.length, 0, nodes.length
     );
     val programRoot = nodes.length - 1;
     collectDeclarations(semantic, programRoot);

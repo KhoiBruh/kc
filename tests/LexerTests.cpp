@@ -74,14 +74,15 @@ TEST(lexer_skips_comments_and_recognizes_identifiers) {
 }
 
 TEST(lexer_prefers_longest_operator) {
-    k::Source source{"sample.k", "-> => .. ..< += == != <= >= && ||"};
+    k::Source source{"sample.k", "-> => .. ..< += ++ -- == != <= >= && ||"};
     const auto result = k::Lexer{source}.lexAll();
     EXPECT_EQ(
         kindsOf(result),
         (std::vector<k::TokenKind>{
             k::TokenKind::Arrow, k::TokenKind::FatArrow,
             k::TokenKind::Range, k::TokenKind::RangeExclusive,
-            k::TokenKind::PlusEqual, k::TokenKind::EqualEqual,
+            k::TokenKind::PlusEqual, k::TokenKind::PlusPlus,
+            k::TokenKind::MinusMinus, k::TokenKind::EqualEqual,
             k::TokenKind::BangEqual, k::TokenKind::LessEqual,
             k::TokenKind::GreaterEqual, k::TokenKind::AndAnd,
             k::TokenKind::OrOr, k::TokenKind::EndOfFile}));

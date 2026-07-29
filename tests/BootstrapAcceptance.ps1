@@ -78,7 +78,7 @@ if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
     "generics.k", "generics_multiple.k", "generic_nullable.k",
-    "generic_structs.k", "integer_casts.k", "implicit_integer_widening.k", "integer_cast_panic.k",
+    "generic_structs.k", "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "integer_cast_panic.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k",
@@ -125,6 +125,12 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "implicit_integer_widening.k" -and $stage1Exit -ne 42) {
         Write-Error "implicit integer widening fixture did not return 42"
+    }
+    if ($fixtureName -eq "compound_assignments.k" -and $stage1Exit -ne 42) {
+        Write-Error "compound assignment fixture did not return 42"
+    }
+    if ($fixtureName -eq "postfix_mutation.k" -and $stage1Exit -ne 42) {
+        Write-Error "postfix mutation fixture did not return 42"
     }
     if ($fixtureName -eq "for_control.k" -and $stage1Exit -ne 42) {
         Write-Error "for control fixture did not return 42"

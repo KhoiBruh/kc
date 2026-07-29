@@ -800,7 +800,8 @@ ExprPtr Parser::parseExpression(int minimumBindingPower) {
             left = makeExpr(span, MemberExpr{std::move(left), previous().span});
             continue;
         }
-        if (check(TokenKind::Bang) || check(TokenKind::Question)) {
+        if (check(TokenKind::Bang) || check(TokenKind::Question) ||
+            check(TokenKind::PlusPlus) || check(TokenKind::MinusMinus)) {
             if (100 < minimumBindingPower) break;
             const auto op = advance();
             const auto span = spanFrom(left->span, op.span);

@@ -37,6 +37,15 @@ unsigned, và đổi signedness cùng độ rộng vẫn cần `as` vì có th�
 giá trị. Quy tắc này áp dụng trong biểu thức số học và các ngữ cảnh có kiểu đích
 như khai báo, gán, đối số và `return`.
 
+Các phép gán số học rút gọn `+=`, `-=`, `*=`, `/=` và `%=` tương đương với
+đọc giá trị hiện tại, thực hiện phép toán rồi gán lại vào cùng đích. Chúng dùng
+cùng quy tắc kiểu và implicit widening như biểu thức số học thông thường.
+
+`++` và `--` chỉ có dạng hậu tố và chỉ được dùng như một statement trên l-value
+mutable kiểu số: `value++;`, `items[index]--;`. Chúng lần lượt tương đương với
+`+= 1` và `-= 1`. K v0.1 không có dạng tiền tố và không cho phép dùng giá trị
+của phép tăng/giảm bên trong một biểu thức khác.
+
 Literal số được suy luận theo kiểu đích. Khi không có ngữ cảnh kiểu, literal số nguyên mặc định là `i32` và literal số thực mặc định là `f64`:
 
 ```text

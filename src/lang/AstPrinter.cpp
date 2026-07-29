@@ -33,6 +33,8 @@ std::string_view operatorName(TokenKind kind) {
     case TokenKind::RangeExclusive: return "..<";
     case TokenKind::Bang: return "!";
     case TokenKind::Question: return "?";
+    case TokenKind::PlusPlus: return "++";
+    case TokenKind::MinusMinus: return "--";
     case TokenKind::Tilde: return "~";
     case TokenKind::Ampersand: return "&";
     default: return "?";

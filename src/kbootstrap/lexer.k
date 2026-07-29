@@ -383,6 +383,12 @@ fn scanString(source: Source, start: u64): u64 {
 }
 
 fn doublePunctuationKind(first: u8, second: u8): u32 {
+    if (first == 43) {
+        if (second == 43) return 91;
+    }
+    if (first == 45) {
+        if (second == 45) return 92;
+    }
     if (second == 61) {
         if (first == 43) return 74;
         if (first == 45) return 75;

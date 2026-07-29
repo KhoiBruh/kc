@@ -319,6 +319,21 @@ TEST(semantic_allows_lossless_implicit_integer_widening) {
     EXPECT_EQ(unsafe.semantic.diagnostics.size(), 2u);
 }
 
+TEST(semantic_validates_statement_only_postfix_mutation) {
+    SemanticFixture valid{
+        "struct Counter(value: i32) {}"
+        "fn update(var value: i32, var values: i32[1], var counter: Counter) {"
+        "value++; values[0]--; counter.value++;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "fn bad(val immutable: i32) {"
+        "immutable++; var value = 1; val copy = value++;"
+        "}"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
+}
+
 TEST(semantic_validates_float_casts) {
     SemanticFixture valid{
         "fn convert(val small: f32, val wide: f64, val integer: i32): f64 {"

@@ -337,6 +337,18 @@ TEST(parser_respects_expression_precedence_and_assignment_associativity) {
     EXPECT_TRUE(std::holds_alternative<k::AssignmentExpr>(outer.value->node));
 }
 
+TEST(parser_parses_postfix_increment_and_decrement) {
+    ParseFixture fixture{"fn update() { var value = 1; value++; value--; }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& statements = fixture.parsed.program.functions[0].body->statements;
+    const auto& increment = std::get<k::PostfixExpr>(
+        std::get<k::ExpressionStmt>(statements[1]->node).expression->node);
+    const auto& decrement = std::get<k::PostfixExpr>(
+        std::get<k::ExpressionStmt>(statements[2]->node).expression->node);
+    EXPECT_EQ(increment.op, k::TokenKind::PlusPlus);
+    EXPECT_EQ(decrement.op, k::TokenKind::MinusMinus);
+}
+
 TEST(parser_parses_payload_free_enum_without_trailing_comma) {
     ParseFixture valid{
         "enum Status { Ready, Running, Done }"

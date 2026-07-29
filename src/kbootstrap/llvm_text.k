@@ -2194,6 +2194,29 @@ fn emitExpression(
             buffer, source, genericArguments, right,
             targetNode.typeKind, targetNode.typeName,
             targetNode.typePointee, counter);
+        if (node.aux != 65) {
+            val loaded = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
+            appendLoad(buffer);
+            appendType(
+                buffer, genericArguments, targetNode.typeKind,
+                targetNode.typeName, targetNode.typePointee);
+            appendPointerValue(buffer, source, target); appendNewline(buffer);
+            val updated = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
+            appendOperator(buffer, node.aux - 14, targetNode.typeKind);
+            byteBufferAppend(buffer, 32);
+            appendType(
+                buffer, genericArguments, targetNode.typeKind,
+                targetNode.typeName, targetNode.typePointee);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, right);
+            appendNewline(buffer);
+            right = IrValue(
+                2, 0, 0, updated, targetNode.typeKind,
+                targetNode.typeName, targetNode.typePointee);
+        }
         appendStore(buffer);
         appendType(
             buffer, genericArguments, targetNode.typeKind,
@@ -2481,6 +2504,40 @@ fn emitExpression(
             node.typeKind, node.typeName, node.typePointee);
     }
     if (node.kind == 19) {
+        if (node.aux == 91 || node.aux == 92) {
+            val valueRoot = root - 1;
+            val address = emitAddress(
+                buffer, source, nodes, genericArguments, valueRoot, counter);
+            val loaded = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
+            appendLoad(buffer); appendNodeType(buffer, genericArguments, node);
+            appendPointerValue(buffer, source, address); appendNewline(buffer);
+            val updated = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
+            var operatorKind: u32 = 60;
+            if (node.aux == 92) operatorKind = 61;
+            appendOperator(buffer, operatorKind, node.typeKind);
+            byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, node);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+            if (isFloatType(TypeValue(node.typeKind, node.typeName, node.typePointee))) {
+                byteBufferAppend(buffer, 46);
+                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
+                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
+                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
+                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 43);
+                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
+            }
+            appendNewline(buffer);
+            appendStore(buffer); appendNodeType(buffer, genericArguments, node);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, updated); appendPointerValue(buffer, source, address);
+            appendNewline(buffer);
+            return IrValue(
+                2, 0, 0, updated,
+                node.typeKind, node.typeName, node.typePointee);
+        }
         val operand = emitExpression(
             buffer, source, nodes, genericArguments,
             root - 1, counter);
