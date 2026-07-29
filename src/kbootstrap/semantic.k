@@ -819,6 +819,46 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (node.kind == 13) {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
+        if (node.aux == 18) {
+            val range = semantic.nodes.data[rightRoot];
+            var validRange = range.kind == 13;
+            if (validRange) {
+                validRange = range.aux == 87 || range.aux == 88 ||
+                    range.aux == 93 || range.aux == 94;
+            }
+            if (!validRange) {
+                semanticFail(semantic, 4, node);
+                return boolType();
+            }
+            val upperRoot = rightRoot - 1;
+            val lowerRoot = semantic.nodes.data[upperRoot].subtreeStart - 1;
+            val subject = expressionType(semantic, leftRoot);
+            var lower = expressionType(semantic, lowerRoot);
+            var upper = expressionType(semantic, upperRoot);
+            if (lower.kind == 11) {
+                lower = subject;
+                var lowerNode = semantic.nodes.data[lowerRoot];
+                lowerNode.typeKind = subject.kind;
+                semantic.nodes.data[lowerRoot] = lowerNode;
+            }
+            if (upper.kind == 11) {
+                upper = subject;
+                var upperNode = semantic.nodes.data[upperRoot];
+                upperNode.typeKind = subject.kind;
+                semantic.nodes.data[upperRoot] = upperNode;
+            }
+            if (!isIntegerType(subject) && !isFloatType(subject))
+                semanticFail(semantic, 4, node);
+            if (!typeAccepts(subject, lower, semantic.genericArguments) ||
+                !typeAccepts(subject, upper, semantic.genericArguments))
+                semanticFail(semantic, 4, node);
+            var typedRange = range;
+            typedRange.typeKind = subject.kind;
+            typedRange.typeName = subject.name;
+            typedRange.typePointee = subject.pointee;
+            semantic.nodes.data[rightRoot] = typedRange;
+            return boolType();
+        }
         val left = expressionType(semantic, leftRoot);
         val right = expressionType(semantic, rightRoot);
         var logical = node.aux == 83;

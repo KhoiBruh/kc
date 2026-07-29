@@ -434,6 +434,20 @@ TEST(codegen_lowers_postfix_increment_and_decrement) {
     EXPECT_TRUE(ir.find("sub i32") != std::string::npos);
 }
 
+TEST(codegen_lowers_integer_range_membership) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn contains(value: u8): bool { return "
+        "value in 65..90 || value in 65>..<90 || "
+        "value in 65>..90 || value in 65..<90; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("icmp uge i8") != std::string::npos);
+    EXPECT_TRUE(ir.find("icmp ugt i8") != std::string::npos);
+    EXPECT_TRUE(ir.find("icmp ule i8") != std::string::npos);
+    EXPECT_TRUE(ir.find("icmp ult i8") != std::string::npos);
+}
+
 TEST(codegen_lowers_string_literals_as_static_string_values) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

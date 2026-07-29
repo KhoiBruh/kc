@@ -46,6 +46,12 @@ mutable kiểu số: `value++;`, `items[index]--;`. Chúng lần lượt tương
 `+= 1` và `-= 1`. K v0.1 không có dạng tiền tố và không cho phép dùng giá trị
 của phép tăng/giảm bên trong một biểu thức khác.
 
+Biểu thức membership `value in lower..upper` kiểm tra một giá trị nằm trong
+range và trả về `bool`. `..` gồm hai đầu, `>..<` loại hai đầu, `>..` loại đầu
+trái, còn `..<` loại đầu phải. Ví dụ `value in 65..<90` tương đương
+`value >= 65 && value < 90`; biểu thức này dùng trực tiếp trong `if` và
+subjectless `when`.
+
 Literal số được suy luận theo kiểu đích. Khi không có ngữ cảnh kiểu, literal số nguyên mặc định là `i32` và literal số thực mặc định là `f64`:
 
 ```text

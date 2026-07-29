@@ -441,6 +441,21 @@ fn lex(source: Source): LexResult {
                 }
                 else -> {
                 	var kind = punctuationKind(value);
+                    if (value == 62) {
+                        if (offset + 2 < source.length) {
+                            if (source.data[offset + 1] == 46 &&
+                                source.data[offset + 2] == 46) {
+                                kind = 93;
+                                offset = offset + 2;
+                                if (offset + 1 < source.length) {
+                                    if (source.data[offset + 1] == 60) {
+                                        kind = 94;
+                                        offset++;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 	if (value == 46) {
                 		if (offset + 2 < source.length) {
                 			if (source.data[offset + 1] == 46) {
@@ -451,7 +466,7 @@ fn lex(source: Source): LexResult {
                 			}
                 		}
                 	}
-                	if (kind != 88) {
+                    if (kind != 88 && kind != 93 && kind != 94) {
                 		if (offset + 1 < source.length) {
                 		    val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
                 		    if (pairKind != 0) {

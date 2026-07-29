@@ -874,6 +874,42 @@ private:
         return nullptr;
     }
 
+    llvm::Value* emitRangeMembership(const BinaryExpr& membership) {
+        const auto* range = std::get_if<BinaryExpr>(&membership.right->node);
+        if (!range) return nullptr;
+        auto* subject = emitExpr(*membership.left);
+        auto* lower = emitExpr(*range->left);
+        auto* upper = emitExpr(*range->right);
+        if (!subject || !lower || !upper) return nullptr;
+        const auto found = semantic().expressionTypes.find(membership.right.get());
+        if (found == semantic().expressionTypes.end()) return nullptr;
+        const bool lowerExclusive =
+            range->op == TokenKind::RangeExclusiveStart ||
+            range->op == TokenKind::RangeExclusiveBoth;
+        const bool upperExclusive =
+            range->op == TokenKind::RangeExclusive ||
+            range->op == TokenKind::RangeExclusiveBoth;
+        llvm::Value* above = nullptr;
+        llvm::Value* below = nullptr;
+        if (isFloat(found->second)) {
+            above = lowerExclusive ? builder_.CreateFCmpOGT(subject, lower)
+                                   : builder_.CreateFCmpOGE(subject, lower);
+            below = upperExclusive ? builder_.CreateFCmpOLT(subject, upper)
+                                   : builder_.CreateFCmpOLE(subject, upper);
+        } else if (isSignedInteger(found->second)) {
+            above = lowerExclusive ? builder_.CreateICmpSGT(subject, lower)
+                                   : builder_.CreateICmpSGE(subject, lower);
+            below = upperExclusive ? builder_.CreateICmpSLT(subject, upper)
+                                   : builder_.CreateICmpSLE(subject, upper);
+        } else {
+            above = lowerExclusive ? builder_.CreateICmpUGT(subject, lower)
+                                   : builder_.CreateICmpUGE(subject, lower);
+            below = upperExclusive ? builder_.CreateICmpULT(subject, upper)
+                                   : builder_.CreateICmpULE(subject, upper);
+        }
+        return builder_.CreateAnd(above, below);
+    }
+
     llvm::Value* emitExprRaw(const Expr& expression) {
         const auto typeFound = semantic().expressionTypes.find(&expression);
         if (typeFound == semantic().expressionTypes.end()) {
@@ -1336,6 +1372,8 @@ private:
             return value;
         }
         if (const auto* binary = std::get_if<BinaryExpr>(&expression.node)) {
+            if (binary->op == TokenKind::KwIn)
+                return emitRangeMembership(*binary);
             auto* left = emitExpr(*binary->left);
             if (!left) return nullptr;
             if (binary->op == TokenKind::AndAnd ||

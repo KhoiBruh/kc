@@ -41,6 +41,10 @@ std::optional<std::pair<int, int>> infixBindingPower(TokenKind kind) {
         return std::pair{50, 51};
     if (kind == TokenKind::Range || kind == TokenKind::RangeExclusive)
         return std::pair{60, 61};
+    if (kind == TokenKind::RangeExclusiveStart ||
+        kind == TokenKind::RangeExclusiveBoth)
+        return std::pair{60, 61};
+    if (kind == TokenKind::KwIn) return std::pair{50, 51};
     if (kind == TokenKind::Plus || kind == TokenKind::Minus)
         return std::pair{70, 71};
     if (kind == TokenKind::Star || kind == TokenKind::Slash ||

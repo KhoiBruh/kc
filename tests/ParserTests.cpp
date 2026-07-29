@@ -349,6 +349,22 @@ TEST(parser_parses_postfix_increment_and_decrement) {
     EXPECT_EQ(decrement.op, k::TokenKind::MinusMinus);
 }
 
+TEST(parser_parses_integer_range_membership) {
+    ParseFixture fixture{
+        "fn contains(value: i32): bool {"
+        "return value in 65..90 && value in 65>..<90;"
+        "}"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& returned = std::get<k::ReturnStmt>(
+        fixture.parsed.program.functions[0].body->statements[0]->node);
+    const auto& logical = std::get<k::BinaryExpr>(returned.value->node);
+    EXPECT_EQ(std::get<k::BinaryExpr>(logical.left->node).op, k::TokenKind::KwIn);
+    EXPECT_EQ(
+        std::get<k::BinaryExpr>(
+            std::get<k::BinaryExpr>(logical.right->node).right->node).op,
+        k::TokenKind::RangeExclusiveBoth);
+}
+
 TEST(parser_parses_payload_free_enum_without_trailing_comma) {
     ParseFixture valid{
         "enum Status { Ready, Running, Done }"

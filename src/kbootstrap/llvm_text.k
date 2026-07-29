@@ -2082,6 +2082,51 @@ fn emitExpression(
     if (node.kind == 13) {
         val rightRoot = root - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
+        if (node.aux == 18) {
+            val range = nodes.data[rightRoot];
+            val upperRoot = rightRoot - 1;
+            val lowerRoot = expressionChildBefore(nodes, upperRoot);
+            val subject = emitExpression(
+                buffer, source, nodes, genericArguments, leftRoot, counter);
+            val lower = emitExpression(
+                buffer, source, nodes, genericArguments, lowerRoot, counter);
+            val upper = emitExpression(
+                buffer, source, nodes, genericArguments, upperRoot, counter);
+            var lowerOperator: u32 = 82;
+            if (range.aux == 93 || range.aux == 94) lowerOperator = 67;
+            var upperOperator: u32 = 81;
+            if (range.aux == 88 || range.aux == 94) upperOperator = 66;
+            val lowerCheck = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, lowerCheck); appendEquals(buffer);
+            appendComparison(buffer, lowerOperator, subject.typeKind);
+            byteBufferAppend(buffer, 32);
+            appendType(
+                buffer, genericArguments,
+                subject.typeKind, subject.typeName, subject.typePointee);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            appendIrValue(buffer, source, lower); appendNewline(buffer);
+            val upperCheck = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, upperCheck); appendEquals(buffer);
+            appendComparison(buffer, upperOperator, subject.typeKind);
+            byteBufferAppend(buffer, 32);
+            appendType(
+                buffer, genericArguments,
+                subject.typeKind, subject.typeName, subject.typePointee);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            appendIrValue(buffer, source, upper); appendNewline(buffer);
+            val result = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, result); appendEquals(buffer);
+            byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
+            byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, lowerCheck); byteBufferAppend(buffer, 44);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, upperCheck); appendNewline(buffer);
+            return IrValue(2, 0, 0, result, 2, 0, 0);
+        }
         var left = emitExpression(
             buffer, source, nodes, genericArguments,
             leftRoot, counter);

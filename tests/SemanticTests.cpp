@@ -334,6 +334,18 @@ TEST(semantic_validates_statement_only_postfix_mutation) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
 }
 
+TEST(semantic_validates_integer_range_membership) {
+    SemanticFixture valid{
+        "fn contains(value: u8): bool { return "
+        "value in 65..90 || value in 65>..<90 || "
+        "value in 65>..90 || value in 65..<90; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "fn bad(value: i32): bool { return value in true..false; }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
+}
+
 TEST(semantic_validates_float_casts) {
     SemanticFixture valid{
         "fn convert(val small: f32, val wide: f64, val integer: i32): f64 {"

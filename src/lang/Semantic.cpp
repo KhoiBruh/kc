@@ -842,6 +842,9 @@ private:
         } else if (const auto* index = std::get_if<IndexExpr>(&expression.node)) {
             type = analyzeIndex(*index);
         } else if (const auto* binary = std::get_if<BinaryExpr>(&expression.node)) {
+            if (binary->op == TokenKind::KwIn) {
+                type = analyzeRangeMembership(*binary, expression.span);
+            } else {
             auto left = analyzeExpr(*binary->left);
             auto right = analyzeExpr(
                 *binary->right,
@@ -914,6 +917,7 @@ private:
                     result_.implicitConversions[binary->left.get()] = type;
                 if (canImplicitlyWiden(right, type))
                     result_.implicitConversions[binary->right.get()] = type;
+            }
             }
         } else if (const auto* assignment = std::get_if<AssignmentExpr>(&expression.node)) {
             type = analyzeAssignment(*assignment, expression.span);
@@ -1433,6 +1437,40 @@ private:
             }
         }
         return objectType.element ? *objectType.element : SemanticType{};
+    }
+
+    bool isMembershipRange(TokenKind kind) const {
+        return kind == TokenKind::Range ||
+            kind == TokenKind::RangeExclusive ||
+            kind == TokenKind::RangeExclusiveStart ||
+            kind == TokenKind::RangeExclusiveBoth;
+    }
+
+    SemanticType analyzeRangeMembership(
+        const BinaryExpr& membership, SourceSpan span) {
+        auto subject = analyzeExpr(*membership.left);
+        const auto* range = std::get_if<BinaryExpr>(&membership.right->node);
+        if (!range || !isMembershipRange(range->op)) {
+            analyzeExpr(*membership.right);
+            diagnose("'in' requires a numeric range", span);
+            return {SemanticTypeKind::Bool};
+        }
+        auto lower = analyzeExpr(*range->left, subject);
+        auto upper = analyzeExpr(*range->right, subject);
+        if (!isNumeric(subject) || !isNumeric(lower) || !isNumeric(upper)) {
+            diagnose("range membership requires numbers", span);
+            return {SemanticTypeKind::Bool};
+        }
+        auto operandType = promote(subject, lower, span);
+        operandType = promote(operandType, upper, span);
+        if (canImplicitlyWiden(subject, operandType))
+            result_.implicitConversions[membership.left.get()] = operandType;
+        if (canImplicitlyWiden(lower, operandType))
+            result_.implicitConversions[range->left.get()] = operandType;
+        if (canImplicitlyWiden(upper, operandType))
+            result_.implicitConversions[range->right.get()] = operandType;
+        result_.expressionTypes[membership.right.get()] = operandType;
+        return {SemanticTypeKind::Bool};
     }
 
     SemanticType analyzeAssignment(const AssignmentExpr& assignment, SourceSpan span) {
