@@ -522,8 +522,7 @@ fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, roo
     appendPrivateStringPrefix(buffer);
     appendDecimal(buffer, decoded.length + 1);
     appendStringArrayPrefix(buffer);
-    var index: u64 = 0;
-    while (index < decoded.length) { appendEscapedByte(buffer, decoded.data[index]); index++; }
+    for (index in 0..<decoded.length) appendEscapedByte(buffer, decoded.data[index]);
     appendStringTerminator(buffer);
     decoded.free();
 }
@@ -1904,16 +1903,13 @@ fn emitExpression(
         val roots =
             k_boot_alloc((node.aux as u64) * sizeof(u64)) as u64*;
         var childRoot = root - 1;
-        var remaining = node.aux;
-        while (remaining > 0) {
-            roots[remaining as u64 - 1] = childRoot;
+        for (index in node.aux>..0) {
+            roots[index as u64] = childRoot;
             childRoot = nodes.data[childRoot].subtreeStart - 1;
-            remaining--;
         }
         var aggregate = IrValue(
             3, 0, 0, 0, node.typeKind, node.typeName, node.typePointee);
-        var index: u32 = 0;
-        while (index < node.aux) {
+        for (index in 0..<node.aux) {
             val element = emitExpression(
                 buffer, source, nodes, genericArguments,
                 roots[index as u64], counter);
@@ -1939,7 +1935,6 @@ fn emitExpression(
             aggregate = IrValue(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
-            index++;
         }
         k_boot_free(roots as unit*);
         return aggregate;
@@ -3750,8 +3745,7 @@ fn emitVariableAlloca(
 fn emitBlockAllocas(
     var buffer: ByteBuffer, genericArguments: TypeValueList, nodes: AstList, blockRoot: u64) {
     val roots = blockStatementRoots(nodes, blockRoot);
-    var index: u32 = 0;
-    while (index < nodes.data[blockRoot].aux) {
+    for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
         val statement = nodes.data[root];
         if (statement.kind == 33) {
@@ -3812,15 +3806,12 @@ fn emitBlockAllocas(
         if (statement.kind == 39) {
             val branchCount = statement.aux % 65536;
             var branchRoot = root - 1;
-            var remaining = branchCount;
-            while (remaining > 0) {
+            for (branchIndex in 0..<branchCount) {
                 emitBlockAllocas(
                     buffer, genericArguments, nodes, branchRoot - 1);
                 branchRoot = nodes.data[branchRoot].subtreeStart - 1;
-                remaining--;
             }
         }
-        index++;
     }
     k_boot_free(roots as unit*);
 }
@@ -3878,17 +3869,17 @@ fn emitFunction(
             specializationArgumentStart, specializationCount);
     }
     buffer.add(40);
-    var parameterIndex: u32 = 1;
-    while (parameterIndex <= parameterCount) {
-        if (parameterIndex > 1) {
+    for (parameterIndex in 0..<parameterCount) {
+        val parameterPosition = parameterIndex + 1;
+        if (parameterIndex > 0) {
             buffer.add(44);
             buffer.add(32);
         }
         val parameter = nodes.data[
-            parameterRoot(nodes, functionRoot, parameterIndex)];
+            parameterRoot(nodes, functionRoot, parameterPosition)];
         val parameterName = nodes.data[parameter.subtreeStart];
         val parameterType = nodes.data[
-            parameterRoot(nodes, functionRoot, parameterIndex) - 1];
+            parameterRoot(nodes, functionRoot, parameterPosition) - 1];
         if (parameter.aux == 2) {
             appendType(buffer, genericArguments, 9, 0, parameterType.typeKind);
         } else {
@@ -3910,7 +3901,6 @@ fn emitFunction(
             appendSource(
                 buffer, source, parameterName.start, parameterName.end);
         }
-        parameterIndex++;
     }
     buffer.add(41);
     if (functionIsExtern(function)) {
@@ -3926,14 +3916,14 @@ fn emitFunction(
     var counter = IrCounter(
         0, 0, 18446744073709551615,
         18446744073709551615, 18446744073709551615);
-    parameterIndex = 1;
-    while (parameterIndex <= parameterCount) {
+    for (parameterIndex in 0..<parameterCount) {
+        val parameterPosition = parameterIndex + 1;
         val parameter = nodes.data[
-            parameterRoot(nodes, functionRoot, parameterIndex)];
+            parameterRoot(nodes, functionRoot, parameterPosition)];
         val parameterName = nodes.data[parameter.subtreeStart];
         if (parameter.aux != 2) {
         val parameterType = nodes.data[
-            parameterRoot(nodes, functionRoot, parameterIndex) - 1];
+            parameterRoot(nodes, functionRoot, parameterPosition) - 1];
         appendValuePrefix(buffer);
         appendLocalPrefix(buffer);
         appendDecimal(buffer, parameterName.start);
@@ -3956,7 +3946,6 @@ fn emitFunction(
         appendDecimal(buffer, parameterName.start);
         appendNewline(buffer);
         }
-        parameterIndex++;
     }
 
     val blockRoot = functionRoot - 1;
@@ -4189,7 +4178,7 @@ fn structSpecializationRequestListAppend(
         list.capacity = capacity;
     }
     list.data[list.length] = value;
-    list.length = list.length + 1;
+    list.length++;
 }
 
 fn structSpecializationRequestListFree(list: StructSpecializationRequestList) =>
@@ -4201,8 +4190,7 @@ fn structSpecializationRequestExists(
     structureRoot: u64,
     argumentStart: u64,
     argumentCount: u32): bool {
-    var index: u64 = 0;
-    while (index < requests.length) {
+    for (index in 0..<requests.length) {
         val request = requests.data[index];
         if (request.structureRoot == structureRoot) {
             if (specializationArgumentsEqual(
@@ -4212,19 +4200,16 @@ fn structSpecializationRequestExists(
                 return true;
             }
         }
-        index++;
     }
     return false;
 }
 
 fn structArgumentsAreConcrete(
     arguments: TypeValueList, start: u64, count: u32): bool {
-    var index: u32 = 0;
-    while (index < count) {
+    for (index in 0..<count) {
         if (arguments.data[start + index as u64].kind == 14) {
             return false;
         }
-        index++;
     }
     return true;
 }
@@ -4248,8 +4233,7 @@ fn emitSpecializedStruct(
     buffer.add(32);
     buffer.add(123);
     val fieldCount = structFieldCount(structure);
-    var index: u32 = 0;
-    while (index < fieldCount) {
+    for (index in 0..<fieldCount) {
         if (index > 0) {
             buffer.add(44);
         }
@@ -4264,7 +4248,6 @@ fn emitSpecializedStruct(
         appendType(
             buffer, genericArguments,
             fieldType.kind, fieldType.name, fieldType.pointee);
-        index++;
     }
     if (fieldCount > 0) buffer.add(32);
     buffer.add(125);
@@ -4293,17 +4276,15 @@ fn specializationRequestListAppend(
             k_boot_alloc(
                 capacity * sizeof(SpecializationRequest))
                 as SpecializationRequest*;
-        var index: u64 = 0;
-        while (index < list.length) {
+        for (index in 0..<list.length) {
             data[index] = list.data[index];
-            index++;
         }
         k_boot_free(list.data as unit*);
         list.data = data;
         list.capacity = capacity;
     }
     list.data[list.length] = value;
-    list.length = list.length + 1;
+    list.length++;
 }
 
 fn specializationRequestListFree(list: SpecializationRequestList) =>
@@ -4314,8 +4295,7 @@ fn specializationArgumentsEqual(
     leftStart: u64, leftCount: u32,
     rightStart: u64, rightCount: u32): bool {
     if (leftCount != rightCount) return false;
-    var index: u32 = 0;
-    while (index < leftCount) {
+    for (index in 0..<leftCount) {
         if (
             !typeEquals(
                 arguments.data[leftStart + index as u64],
@@ -4324,7 +4304,6 @@ fn specializationArgumentsEqual(
         ) {
             return false;
         }
-        index++;
     }
     return true;
 }
@@ -4335,8 +4314,7 @@ fn specializationRequestExists(
     functionRoot: u64,
     argumentStart: u64,
     argumentCount: u32): bool {
-    var index: u64 = 0;
-    while (index < requests.length) {
+    for (index in 0..<requests.length) {
         val request = requests.data[index];
         if (request.functionRoot == functionRoot) {
             if (specializationArgumentsEqual(
@@ -4346,7 +4324,6 @@ fn specializationRequestExists(
                 return true;
             }
         }
-        index++;
     }
     return false;
 }
@@ -4354,13 +4331,11 @@ fn specializationRequestExists(
 fn callArgumentsAreConcrete(
     call: AstNode, arguments: TypeValueList): bool {
     if (call.genericArgumentCount == 0) return false;
-    var index: u32 = 0;
-    while (index < call.genericArgumentCount) {
+    for (index in 0..<call.genericArgumentCount) {
         if (arguments.data[
                 call.genericArgumentStart + index as u64].kind == 14) {
             return false;
         }
-        index++;
     }
     return true;
 }
