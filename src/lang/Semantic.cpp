@@ -341,9 +341,6 @@ private:
             return nullableType(resolve(*value->inner));
         if (const auto* value = std::get_if<PointerType>(&syntax.node)) {
             auto pointee = resolve(*value->pointee);
-            if (pointee.kind == SemanticTypeKind::TypeParameter)
-                diagnose("generic parameter may only be used as T or T?",
-                         syntax.span);
             return pointerType(std::move(pointee));
         }
         if (const auto* value = std::get_if<SliceType>(&syntax.node)) {

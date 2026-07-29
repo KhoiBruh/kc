@@ -1529,7 +1529,7 @@ fn emitAddress(
     var buffer: ByteBuffer,
     source: Source,
     nodes: AstList,
-    genericArguments: TypeValueList,
+    var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): IrValue {
     val node = nodes.data[root];
@@ -1644,7 +1644,7 @@ fn emitExpression(
     var buffer: ByteBuffer,
     source: Source,
     nodes: AstList,
-    genericArguments: TypeValueList,
+    var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): IrValue {
     val node = nodes.data[root];
@@ -2923,7 +2923,7 @@ fn emitBlock(
     var buffer: ByteBuffer,
     source: Source,
     nodes: AstList,
-    genericArguments: TypeValueList,
+    var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): bool {
     val roots = blockStatementRoots(nodes, root);
@@ -2941,7 +2941,7 @@ fn emitBlock(
 
 fn emitCollectionFor(
     var buffer: ByteBuffer, source: Source, nodes: AstList,
-    genericArguments: TypeValueList, root: u64,
+    var genericArguments: TypeValueList, root: u64,
     var counter: IrCounter): bool {
     val statement = nodes.data[root];
     val bodyRoot = root - 1;
@@ -3067,7 +3067,7 @@ fn emitCollectionFor(
 
 fn emitWhen(
     var buffer: ByteBuffer, source: Source, nodes: AstList,
-    genericArguments: TypeValueList, root: u64,
+    var genericArguments: TypeValueList, root: u64,
     var counter: IrCounter): bool {
     val statement = nodes.data[root];
     val branchCount = statement.aux % 65536;
@@ -3165,7 +3165,7 @@ fn emitStatement(
     var buffer: ByteBuffer,
     source: Source,
     nodes: AstList,
-    genericArguments: TypeValueList,
+    var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): bool {
     val statement = nodes.data[root];
@@ -3670,14 +3670,52 @@ fn emitterTypeParameterPosition(
 
 fn substituteEmitterType(
     source: Source, nodes: AstList, functionRoot: u64,
-    pattern: TypeValue, arguments: TypeValueList,
+    pattern: TypeValue, var arguments: TypeValueList,
     argumentStart: u64, count: u32): TypeValue {
+    if (pattern.kind == 8) {
+        val start = pattern.pointee % 65536;
+        val argumentCount = pattern.pointee / 65536;
+        if (argumentCount == 0) return pattern;
+        val substituted =
+            k_boot_alloc((argumentCount as u64) * sizeof(TypeValue)) as TypeValue*;
+        for (index in 0..<argumentCount) {
+            val argument =
+                arguments.data[start as u64 + index as u64];
+            substituted[index as u64] = substituteEmitterType(
+                source, nodes, functionRoot,
+                argument, arguments, argumentStart, count);
+        }
+        val newStart = arguments.length;
+        for (index in 0..<argumentCount) {
+            var resolved = arguments;
+            resolved.add(substituted[index as u64]);
+            arguments = resolved;
+        }
+        k_boot_free(substituted as unit*);
+        return TypeValue(
+            8, pattern.name,
+            newStart as u32 + argumentCount * 65536);
+    }
     if (pattern.kind == 15) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
             TypeValue(pattern.pointee, pattern.name, 0),
             arguments, argumentStart, count);
         return TypeValue(15, inner.name, inner.kind);
+    }
+    if (pattern.kind == 9) {
+        val inner = substituteEmitterType(
+            source, nodes, functionRoot,
+            TypeValue(pattern.pointee, pattern.name, 0),
+            arguments, argumentStart, count);
+        return TypeValue(9, inner.name, inner.kind);
+    }
+    if (pattern.kind == 13) {
+        val inner = substituteEmitterType(
+            source, nodes, functionRoot,
+            TypeValue(pattern.pointee, pattern.name, 0),
+            arguments, argumentStart, count);
+        return TypeValue(13, inner.name, inner.kind);
     }
     if (pattern.kind != 14) return pattern;
     val position = emitterTypeParameterPosition(
@@ -3791,7 +3829,7 @@ fn emitFunction(
     var buffer: ByteBuffer,
     source: Source,
     nodes: AstList,
-    genericArguments: TypeValueList,
+    var genericArguments: TypeValueList,
     functionRoot: u64,
     specializationArgumentStart: u64,
     specializationCount: u32): bool {
@@ -3959,17 +3997,12 @@ fn emitSpecializedFunction(
     val count = functionRoot - start + 1;
     val saved =
         k_boot_alloc(count * sizeof(AstNode)) as AstNode*;
-    val savedArguments =
-        k_boot_alloc(
-            genericArguments.length * sizeof(TypeValue)) as TypeValue*;
-    for (argumentIndex in 0..<genericArguments.length) {
-        savedArguments[argumentIndex] =
-            genericArguments.data[argumentIndex];
-    }
     for (offset in 0..<count) {
         saved[offset] = nodes.data[start + offset];
         var node = nodes.data[start + offset];
-        if (node.typeKind == 14) {
+        if (node.typeKind == 14 || node.typeKind == 8 ||
+                node.typeKind == 9 || node.typeKind == 13 ||
+                node.typeKind == 15) {
             val concrete = substituteEmitterType(
                 source, nodes, functionRoot,
                 TypeValue(
@@ -3979,32 +4012,27 @@ fn emitSpecializedFunction(
             node.typeName = concrete.name;
             node.typePointee = concrete.pointee;
         }
-        if (node.typeKind == 15) {
-            if (node.typePointee == 14) {
-                val concrete = substituteEmitterType(
-                    source, nodes, functionRoot,
-                    TypeValue(
-                        node.typeKind, node.typeName, node.typePointee),
-                    genericArguments, argumentStart, argumentCount);
-                node.typeKind = concrete.kind;
-                node.typeName = concrete.name;
-                node.typePointee = concrete.pointee;
-            }
-        }
         if (node.kind == 16) {
-            for (genericIndex in 0..<node.genericArgumentCount) {
-                val listIndex =
-                    node.genericArgumentStart +
-                    genericIndex as u64;
-                val pattern =
-                    genericArguments.data[listIndex];
-                if (pattern.kind == 14) {
-                    genericArguments.data[listIndex] =
-                        substituteEmitterType(
-                            source, nodes, functionRoot,
-                            pattern, genericArguments,
-                            argumentStart, argumentCount);
+            val genericCount = node.genericArgumentCount;
+            if (genericCount > 0) {
+                val substituted =
+                    k_boot_alloc((genericCount as u64) * sizeof(TypeValue)) as TypeValue*;
+                for (genericIndex in 0..<genericCount) {
+                    val pattern = genericArguments.data[
+                        node.genericArgumentStart + genericIndex as u64];
+                    substituted[genericIndex as u64] = substituteEmitterType(
+                        source, nodes, functionRoot,
+                        pattern, genericArguments,
+                        argumentStart, argumentCount);
                 }
+                val concreteStart = genericArguments.length;
+                for (genericIndex in 0..<genericCount) {
+                    var resolved = genericArguments;
+                    resolved.add(substituted[genericIndex as u64]);
+                    genericArguments = resolved;
+                }
+                k_boot_free(substituted as unit*);
+                node.genericArgumentStart = concreteStart;
             }
         }
         nodes.data[start + offset] = node;
@@ -4015,11 +4043,6 @@ fn emitSpecializedFunction(
     for (offset in 0..<count) {
         nodes.data[start + offset] = saved[offset];
     }
-    for (argumentIndex in 0..<genericArguments.length) {
-        genericArguments.data[argumentIndex] =
-            savedArguments[argumentIndex];
-    }
-    k_boot_free(savedArguments as unit*);
     k_boot_free(saved as unit*);
 }
 
@@ -4444,31 +4467,38 @@ fn emitModule(
                         sourceHash(
                             source, callee.start, callee.end));
                 if (nestedFunctionRoot != nodes.length) {
-                    val concreteStart = genericArguments.length;
-                    for (nestedArgument in
-                            0..<nestedCall.genericArgumentCount) {
+                    val nestedCount = nestedCall.genericArgumentCount;
+                    val substituted =
+                        k_boot_alloc((nestedCount as u64) * sizeof(TypeValue)) as TypeValue*;
+                    for (nestedArgument in 0..<nestedCount) {
                         val pattern = genericArguments.data[
                             nestedCall.genericArgumentStart +
                             nestedArgument as u64];
-                        val concrete = substituteEmitterType(
+                        substituted[nestedArgument as u64] = substituteEmitterType(
                             source, nodes, request.functionRoot,
                             pattern, genericArguments,
                             request.argumentStart,
                             request.argumentCount);
-                        genericArguments.add(concrete);
                     }
+                    val concreteStart = genericArguments.length;
+                    for (nestedArgument in 0..<nestedCount) {
+                        var resolved = genericArguments;
+                        resolved.add(substituted[nestedArgument as u64]);
+                        genericArguments = resolved;
+                    }
+                    k_boot_free(substituted as unit*);
                     if (
                         !specializationRequestExists(
                             requests, genericArguments,
                             nestedFunctionRoot, concreteStart,
-                            nestedCall.genericArgumentCount
+                            nestedCount
                         )
                     ) {
                         specializationRequestListAppend(
                             requests,
                             SpecializationRequest(
                                 nestedFunctionRoot, concreteStart,
-                                nestedCall.genericArgumentCount));
+                                nestedCount));
                     }
                 }
             }

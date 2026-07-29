@@ -78,13 +78,15 @@ if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
     "generics.k", "generics_multiple.k", "generic_nullable.k",
-    "generic_structs.k", "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
+    "generic_structs.k", "generic_list.k", "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
     "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k"
 )
+Push-Location $moduleRoot
+try {
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName
     $stage1Ll = Join-Path $stage1 "$fixtureName.ll"
@@ -125,6 +127,9 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "implicit_integer_widening.k" -and $stage1Exit -ne 42) {
         Write-Error "implicit integer widening fixture did not return 42"
+    }
+    if ($fixtureName -eq "generic_list.k" -and $stage1Exit -ne 42) {
+        Write-Error "generic list fixture did not return 42"
     }
     if ($fixtureName -eq "struct_methods.k" -and $stage1Exit -ne 42) {
         Write-Error "struct method fixture did not return 42"
@@ -192,6 +197,9 @@ foreach ($fixtureName in $validFixtures) {
     if ($LASTEXITCODE -ne 0) { Write-Error "kc3 IR failed verification" }
     & $Opt -passes=verify -disable-output $stage4Ll
     if ($LASTEXITCODE -ne 0) { Write-Error "kc4 IR failed verification" }
+}
+} finally {
+    Pop-Location
 }
 
 $moduleRoot = Join-Path $InvalidFixtureDirectory "modules"

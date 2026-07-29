@@ -1,5 +1,6 @@
 source.k
 token.k
+list.k
 containers.k
 lexer.k
 ast.k

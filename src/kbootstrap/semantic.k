@@ -420,7 +420,7 @@ fn fieldRootAt(nodes: AstList, structureRoot: u64, wanted: u32): u64 {
 }
 
 fn substituteStructType(
-    semantic: Semantic, structureRoot: u64,
+    var semantic: Semantic, structureRoot: u64,
     type: TypeValue, arguments: TypeValueList,
     argumentStart: u64, count: u32
 ): TypeValue {
@@ -534,8 +534,24 @@ fn typeParameterPosition(
 }
 
 fn substituteGenericType(
-    semantic: Semantic, functionRoot: u64,
+    var semantic: Semantic, functionRoot: u64,
     type: TypeValue, arguments: TypeValue*, count: u32): TypeValue {
+    if (type.kind == 8) {
+        val start = type.pointee % 65536;
+        val argumentCount = type.pointee / 65536;
+        if (argumentCount == 0) return type;
+        val newStart = semantic.genericArguments.length;
+
+        for (i in 0..<argumentCount) {
+            val argument = semantic.genericArguments.data[start as u64 + i as u64];
+            val substituted = substituteGenericType(
+                semantic, functionRoot, argument, arguments, count);
+            var resolved = semantic.genericArguments;
+            resolved.add(substituted);
+            semantic.genericArguments = resolved;
+        }
+        return TypeValue(8, type.name, newStart as u32 + argumentCount * 65536);
+    }
     if (type.kind == 15) {
         val inner = substituteGenericType(
             semantic, functionRoot,

@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 
 $combined = "$Output.combined.k"
 $modules = @(
-    "source.k", "token.k", "containers.k", "lexer.k", "ast.k", "parser.k",
+    "source.k", "token.k", "list.k", "containers.k", "lexer.k", "ast.k", "parser.k",
     "types.k", "diagnostic.k", "semantic.k"
 )
 $source = ($modules | ForEach-Object {

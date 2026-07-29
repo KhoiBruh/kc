@@ -12,6 +12,9 @@ param(
     [string]$Token,
 
     [Parameter(Mandatory)]
+    [string]$List,
+
+    [Parameter(Mandatory)]
     [string]$Containers,
 
     [Parameter(Mandatory)]
@@ -30,7 +33,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $combined = "$Output.combined.k"
-$parts = @($SourceModule, $Token, $Containers, $Lexer, $Main)
+$parts = @($SourceModule, $Token, $List, $Containers, $Lexer, $Main)
 $source = ($parts | ForEach-Object { [System.IO.File]::ReadAllText($_) }) -join "`n"
 [System.IO.File]::WriteAllText($combined, $source)
 

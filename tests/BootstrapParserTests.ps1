@@ -30,6 +30,7 @@ $combined = "$Output.combined.k"
 $modules = @(
     "source.k",
     "token.k",
+    "list.k",
     "containers.k",
     "lexer.k",
     "ast.k",
