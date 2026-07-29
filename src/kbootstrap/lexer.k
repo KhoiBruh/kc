@@ -10,41 +10,31 @@ extern fn k_boot_read_file(path: u8*, pathLength: u64, data: u8**, length: u64*)
 
 struct LexResult(tokens: TokenList, ok: bool, errorStart: u64, errorKind: u32)
 
-fn isWhitespace(value: u8): bool {
-    if (value == 32) return true;
-    if (value == 9) return true;
-    if (value == 10) return true;
-    if (value == 13) return true;
-    return false;
-}
+fn isWhitespace(value: u8) => when (value) {
+    9, 10, 13, 32 -> true;
+    else -> false;
+};
 
-fn isDigit(value: u8): bool {
-    if (value < 48) return false;
-    if (value > 57) return false;
-    return true;
-}
+fn isDigit(value: u8) => when {
+    value < 48 -> false;
+    value > 57 -> false;
+    else -> true;
+};
 
-fn isIdentifierStart(value: u8): bool {
-    if (value == 95) return true;
-    if (value >= 65) {
-        if (value <= 90) return true;
-    }
-    if (value >= 97) {
-        if (value <= 122) return true;
-    }
-    return false;
-}
+fn isIdentifierStart(value: u8) => when {
+	value == 95 -> true;
+	value >= 65 && value <= 90 -> true;
+	value >= 97 && value <= 122 -> true;
+	else -> false;
+};
 
-fn isIdentifierContinue(value: u8): bool {
-    if (isIdentifierStart(value)) return true;
-    return isDigit(value);
-}
+fn isIdentifierContinue(value: u8) => if (isIdentifierStart(value)) true else isDigit(value);
 
-fn matches2(source: Source, start: u64, a: u8, b: u8): bool {
-    if (source.data[start] != a) return false;
-    if (source.data[start + 1] != b) return false;
-    return true;
-}
+fn matches2(source: Source, start: u64, a: u8, b: u8) => when {
+    source.data[start] != a -> false;
+    source.data[start + 1] != b -> false;
+    else -> true;
+};
 
 fn keywordKind(source: Source, start: u64, end: u64): u32 {
     val length = end - start;
@@ -267,50 +257,45 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
     return 1;
 }
 
-fn punctuationKind(value: u8): u32 {
-    return when (value) {
-        40 -> 50;
-        41 -> 51;
-        123 -> 52;
-        125 -> 53;
-        91 -> 54;
-        93 -> 55;
-        44 -> 56;
-        58 -> 57;
-        59 -> 58;
-        46 -> 59;
-        43 -> 60;
-        45 -> 61;
-        42 -> 62;
-        47 -> 63;
-        37 -> 64;
-        61 -> 65;
-        60 -> 66;
-        62 -> 67;
-        38 -> 68;
-        124 -> 69;
-        94 -> 70;
-        126 -> 71;
-        63 -> 72;
-        33 -> 73;
-        else -> 0;
-    };
-}
+fn punctuationKind(value: u8): u32 => when (value) {
+    40 -> 50;
+    41 -> 51;
+    123 -> 52;
+    125 -> 53;
+    91 -> 54;
+    93 -> 55;
+    44 -> 56;
+    58 -> 57;
+    59 -> 58;
+    46 -> 59;
+    43 -> 60;
+    45 -> 61;
+    42 -> 62;
+    47 -> 63;
+    37 -> 64;
+    61 -> 65;
+    60 -> 66;
+    62 -> 67;
+    38 -> 68;
+    124 -> 69;
+    94 -> 70;
+    126 -> 71;
+    63 -> 72;
+    33 -> 73;
+    else -> 0;
+};
 
 fn scanIdentifier(source: Source, start: u64): u64 {
     var offset = start;
     var scanning = true;
     while (scanning) {
-        if (offset >= source.length) {
-            scanning = false;
-        } else {
-            if (isIdentifierContinue(source.data[offset])) {
-                offset = offset + 1;
-            } else {
-                scanning = false;
-            }
+        if (offset >= source.length) scanning = false;
+        else {
+            if (isIdentifierContinue(source.data[offset])) offset++;
+            else scanning = false;
         }
     }
+
     return offset;
 }
 
@@ -318,16 +303,13 @@ fn scanInteger(source: Source, start: u64): u64 {
     var offset = start;
     var scanning = true;
     while (scanning) {
-        if (offset >= source.length) {
-            scanning = false;
-        } else {
-            if (isDigit(source.data[offset])) {
-                offset = offset + 1;
-            } else {
-                scanning = false;
-            }
+        if (offset >= source.length) scanning = false;
+        else {
+            if (isDigit(source.data[offset])) offset++;
+            else scanning = false;
         }
     }
+
     return offset;
 }
 
@@ -336,6 +318,7 @@ struct NumberScan(end: u64, kind: u32)
 fn scanNumber(source: Source, start: u64): NumberScan {
     var offset = scanInteger(source, start);
     var kind: u32 = 2;
+
     if (offset < source.length) {
         if (source.data[offset] == 46) {
             if (offset + 1 < source.length) {
@@ -346,49 +329,43 @@ fn scanNumber(source: Source, start: u64): NumberScan {
             }
         }
     }
+
     if (offset < source.length) {
         var exponentMarker = source.data[offset] == 101;
         if (source.data[offset] == 69) exponentMarker = true;
         if (exponentMarker) {
             kind = 3;
-            offset = offset + 1;
+            offset++;
             if (offset < source.length) {
                 var exponentSign = source.data[offset] == 43;
                 if (source.data[offset] == 45) exponentSign = true;
-                if (exponentSign) offset = offset + 1;
+                if (exponentSign) offset++;
             }
+
             offset = scanInteger(source, offset);
         }
     }
+
     return NumberScan(offset, kind);
 }
 
 fn scanString(source: Source, start: u64): u64 {
-    var offset = start;
     var escaped = false;
-    while (offset < source.length) {
-        val value = source.data[offset];
-        if (escaped) {
-            escaped = false;
-        } else {
-            if (value == 92) {
-                escaped = true;
-            } else {
-                if (value == 34) return offset + 1;
-            }
+    for (i in start..<source.length) {
+        val value = source.data[i];
+        if (escaped) escaped = false;
+        else {
+            if (value == 92) escaped = true;
+            else if (value == 34) return i + 1;
         }
-        offset = offset + 1;
     }
+
     return start;
 }
 
 fn doublePunctuationKind(first: u8, second: u8): u32 {
-    if (first == 43) {
-        if (second == 43) return 91;
-    }
-    if (first == 45) {
-        if (second == 45) return 92;
-    }
+    if (first == 43 && second == 43) return 91;
+    if (first == 45 && second == 45) return 92;
     if (second == 61) {
         if (first == 43) return 74;
         if (first == 45) return 75;
@@ -400,21 +377,11 @@ fn doublePunctuationKind(first: u8, second: u8): u32 {
         if (first == 60) return 81;
         if (first == 62) return 82;
     }
-    if (first == 38) {
-        if (second == 38) return 83;
-    }
-    if (first == 124) {
-        if (second == 124) return 84;
-    }
-    if (first == 45) {
-        if (second == 62) return 85;
-    }
-    if (first == 61) {
-        if (second == 62) return 86;
-    }
-    if (first == 46) {
-        if (second == 46) return 87;
-    }
+    if (first == 38 && second == 38) return 83;
+    if (first == 124 && second == 124) return 84;
+    if (first == 45 && second == 62) return 85;
+    if (first == 61 && second == 62) return 86;
+    if (first == 46 && second == 46) return 87;
     return 0;
 }
 
@@ -423,93 +390,84 @@ fn lex(source: Source): LexResult {
     var offset: u64 = 0;
     while (offset < source.length) {
         val value = source.data[offset];
-        if (isWhitespace(value)) {
-            offset = offset + 1;
-        } else {
+        if (isWhitespace(value)) offset++;
+        else {
             val start = offset;
-            if (value == 47) {
-                if (offset + 1 < source.length) {
-                    if (source.data[offset + 1] == 47) {
-                        offset = offset + 2;
-                        var scanningComment = true;
-                        while (scanningComment) {
-                            if (offset >= source.length) {
-                                scanningComment = false;
-                            } else {
-                            if (source.data[offset] == 10) {
-                                offset = offset + 1;
-                                scanningComment = false;
-                            } else {
-                                offset = offset + 1;
-                            }
-                            }
-                        }
+            when {
+                value == 47 -> {
+					if (offset + 1 < source.length) {
+	                    if (source.data[offset + 1] == 47) {
+	                        offset = offset + 2;
+	                        var scanningComment = true;
+		                    while (scanningComment) {
+		                        when {
+		                            offset >= source.length -> scanningComment = false;
+		                            source.data[offset] == 10 -> {
+		                                offset++;
+		                                scanningComment = false;
+		                            }
+		                            else -> offset++;
+		                        }
+		                    }
+	                    } else {
+	                        val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
+	                        if (pairKind == 0) {
+	                            offset++;
+	                            tokenListAppend(tokens, Token(63, start, offset));
+	                        } else {
+	                            offset = offset + 2;
+	                            tokenListAppend(tokens, Token(pairKind, start, offset));
+	                        }
+	                    }
                     } else {
-                        val pairKind =
-                            doublePunctuationKind(value, source.data[offset + 1]);
-                        if (pairKind == 0) {
-                            offset = offset + 1;
-                            tokenListAppend(tokens, Token(63, start, offset));
-                        } else {
-                            offset = offset + 2;
-                            tokenListAppend(tokens, Token(pairKind, start, offset));
-                        }
+                        offset++;
+                        tokenListAppend(tokens, Token(63, start, offset));
                     }
-                } else {
-                    offset = offset + 1;
-                    tokenListAppend(tokens, Token(63, start, offset));
                 }
-            } else {
-            if (value == 34) {
-                val end = scanString(source, offset + 1);
-                if (end == offset + 1) {
-                    return LexResult(tokens, false, start, 1);
+                value == 34 -> {
+                    val end = scanString(source, offset + 1);
+                    if (end == offset + 1) return LexResult(tokens, false, start, 1);
+                    offset = end;
+                    tokenListAppend(tokens, Token(5, start, offset));
                 }
-                offset = end;
-                tokenListAppend(tokens, Token(5, start, offset));
-            } else {
-            if (isIdentifierStart(value)) {
-                offset = scanIdentifier(source, offset + 1);
-                tokenListAppend(
-                    tokens, Token(keywordKind(source, start, offset), start, offset));
-            } else {
-                if (isDigit(value)) {
-                    val number = scanNumber(source, offset + 1);
-                    offset = number.end;
-                    tokenListAppend(tokens, Token(number.kind, start, offset));
-                } else {
-                    var kind = punctuationKind(value);
-                    if (value == 46) {
-                        if (offset + 2 < source.length) {
-                            if (source.data[offset + 1] == 46) {
-                                if (source.data[offset + 2] == 60) {
-                                    kind = 88;
-                                    offset = offset + 2;
+                isIdentifierStart(value) -> {
+                    offset = scanIdentifier(source, offset + 1);
+                    tokenListAppend(tokens, Token(keywordKind(source, start, offset), start, offset));
+                }
+                isDigit(value) -> {
+                	val number = scanNumber(source, offset + 1);
+                	offset = number.end;
+                	tokenListAppend(tokens, Token(number.kind, start, offset));
+                }
+                else -> {
+                	var kind = punctuationKind(value);
+                	if (value == 46) {
+                		if (offset + 2 < source.length) {
+                			if (source.data[offset + 1] == 46) {
+                				if (source.data[offset + 2] == 60) {
+                					kind = 88;
+                					offset = offset + 2;
                                 }
-                            }
-                        }
-                    }
-                    if (kind != 88) {
-                    if (offset + 1 < source.length) {
-                        val pairKind =
-                            doublePunctuationKind(value, source.data[offset + 1]);
-                        if (pairKind != 0) {
-                            kind = pairKind;
-                            offset = offset + 1;
-                        }
-                    }
-                    }
-                    if (kind == 0) {
-                        return LexResult(tokens, false, start, 2);
-                    }
-                    offset = offset + 1;
-                    tokenListAppend(tokens, Token(kind, start, offset));
+                			}
+                		}
+                	}
+                	if (kind != 88) {
+                		if (offset + 1 < source.length) {
+                		    val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
+                		    if (pairKind != 0) {
+                		        kind = pairKind;
+                		        offset++;
+                		    }
+                	    }
+                	}
+                	if (kind == 0) return LexResult(tokens, false, start, 2);
+                	offset++;
+                	tokenListAppend(tokens, Token(kind, start, offset));
                 }
-            }
-            }
             }
         }
     }
+
     tokenListAppend(tokens, Token(0, source.length, source.length));
     return LexResult(tokens, true, 0, 0);
 }

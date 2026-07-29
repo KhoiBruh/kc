@@ -242,7 +242,7 @@ fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     var col: u64 = 1;
     var index = offset;
     while (index > sourceStart) {
-        index = index - 1;
+        index--;
         if (source.data[index] == 10) return col;
         col++;
     }
@@ -450,10 +450,9 @@ fn printDiagnostic(
 ) {
     var buf = byteBufferNew();
     var sourceStart: u64 = 0;
-    var segmentIndex: u64 = 0;
     var found = false;
-    while (segmentIndex < sourceMap.length) {
-        val segment = sourceMap.data[segmentIndex];
+    for (i in 0..<sourceMap.length) {
+        val segment = sourceMap.data[i];
         if (!found) {
             if (start >= segment.sourceStart) {
                 if (start <= segment.sourceStart + segment.sourceLength) {
@@ -464,8 +463,8 @@ fn printDiagnostic(
                 }
             }
         }
-        segmentIndex = segmentIndex + 1;
     }
+    
     val lineNum = stderrNumber(findLine(source, sourceStart, start));
     appendRaw(buf, lineNum.data, lineNum.length);
     byteBufferFree(lineNum);
