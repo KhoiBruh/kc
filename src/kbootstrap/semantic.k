@@ -416,7 +416,7 @@ fn rootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
     return root;
 }
 
-fn methodHash(owner: u64, name: u64): u64 => owner * 33 + name;
+fn methodHash(owner: u64, name: u64) => owner * 33 + name;
 
 fn structTypeParameterRoot(semantic: Semantic, structureRoot: u64, position: u32): u64 {
     val structure = semantic.nodes.data[structureRoot];

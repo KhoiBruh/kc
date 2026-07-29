@@ -1107,7 +1107,7 @@ fn emitterStructTypeParameterCount(structure: AstNode) => structure.aux / 65536;
 
 fn emitterStructFieldCount(structure: AstNode) => structure.aux % 65536;
 
-fn emitterStructMethodCount(structure: AstNode): u64 => structure.storage;
+fn emitterStructMethodCount(structure: AstNode) => structure.storage;
 
 fn emitterRootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
     var root = structureRoot - 1;
@@ -4230,13 +4230,12 @@ struct StructSpecializationRequest(
 struct StructSpecializationRequestList(
     data: StructSpecializationRequest*, length: u64, capacity: u64)
 
-fn structSpecializationRequestListNew(): StructSpecializationRequestList {
-    return StructSpecializationRequestList(
+fn structSpecializationRequestListNew() =>
+    StructSpecializationRequestList(
         k_boot_alloc(
             8 * sizeof(StructSpecializationRequest))
             as StructSpecializationRequest*,
         0, 8);
-}
 
 fn structSpecializationRequestListAppend(
     var list: StructSpecializationRequestList,
@@ -4345,13 +4344,12 @@ struct SpecializationRequest(
 struct SpecializationRequestList(
     data: SpecializationRequest*, length: u64, capacity: u64)
 
-fn specializationRequestListNew(): SpecializationRequestList {
-    return SpecializationRequestList(
+fn specializationRequestListNew() =>
+    SpecializationRequestList(
         k_boot_alloc(
             8 * sizeof(SpecializationRequest))
             as SpecializationRequest*,
         0, 8);
-}
 
 fn specializationRequestListAppend(
     var list: SpecializationRequestList,
