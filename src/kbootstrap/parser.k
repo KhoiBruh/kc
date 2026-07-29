@@ -17,7 +17,7 @@ fn parserCheck(parser: Parser, kind: u32) => parserPeek(parser).kind == kind;
 
 fn parserMatch(var parser: Parser, kind: u32): bool {
     if (parserCheck(parser, kind)) {
-        parser.current = parser.current + 1;
+        parser.current++;
         return true;
     }
     return false;
@@ -69,7 +69,7 @@ fn parseType(var parser: Parser): u64 {
         return 0;
     }
     val typeToken = first;
-    parser.current = parser.current + 1;
+    parser.current++;
     var typeArgumentCount: u32 = 0;
     if (parserMatch(parser, 66)) {
         var typeArguments = true;
@@ -212,18 +212,18 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
     val first = parserPeek(parser);
     var root: u64 = 0;
     if (first.kind == 1) {
-        parser.current = parser.current + 1;
+        parser.current++;
         root = parserAdd(
             parser, 10, first.start, first.end, subtreeStart, 0);
     } else {
         if (isLiteralKind(first.kind)) {
-            parser.current = parser.current + 1;
+            parser.current++;
             root = parserAdd(
                 parser, 11, first.start, first.end, subtreeStart, first.kind);
         } else {
             val prefixPower = prefixBindingPower(first.kind);
             if (prefixPower != 0) {
-                parser.current = parser.current + 1;
+                parser.current++;
                 val operand = parseExpression(parser, prefixPower);
                 if (!parser.ok) return 0;
                 root = parserAdd(
@@ -378,7 +378,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
         val token = parserPeek(parser);
         if (token.kind == 66) {
             if (parserGenericCallAhead(parser)) {
-                parser.current = parser.current + 1;
+                parser.current++;
                 var typeArgumentCount: u32 = 0;
                 var typeArguments = true;
                 while (typeArguments) {
@@ -411,7 +411,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 if (leftPower < minimumPower) {
                     parsing = false;
                 } else {
-                    parser.current = parser.current + 1;
+                    parser.current++;
                     val right = parseExpression(
                         parser, rightBindingPower(token.kind));
                     if (!parser.ok) return 0;
@@ -423,7 +423,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
             }
         } else {
         if (token.kind == 50) {
-            parser.current = parser.current + 1;
+            parser.current++;
             var argumentCount: u32 = 0;
             if (!parserCheck(parser, 51)) {
                 var arguments = true;
@@ -439,14 +439,14 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 subtreeStart, argumentCount);
         } else {
             if (token.kind == 59) {
-                parser.current = parser.current + 1;
+                parser.current++;
                 val name = parserPeek(parser);
                 if (!parserExpect(parser, 1)) return 0;
                 root = parserAdd(
                     parser, 17, name.start, name.end, subtreeStart, 0);
             } else {
                 if (token.kind == 54) {
-                    parser.current = parser.current + 1;
+                    parser.current++;
                     parseExpression(parser, 0);
                     if (!parserExpect(parser, 55)) return 0;
                     root = parserAdd(
@@ -457,7 +457,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     if (token.kind == 91) postfix = true;
                     if (token.kind == 92) postfix = true;
                     if (postfix) {
-                        parser.current = parser.current + 1;
+                        parser.current++;
                         root = parserAdd(
                             parser, 19, first.start, token.end,
                             subtreeStart, token.kind);
@@ -466,7 +466,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             if (85 < minimumPower) {
                                 parsing = false;
                             } else {
-                                parser.current = parser.current + 1;
+                                parser.current++;
                                 parseType(parser);
                                 root = parserAdd(
                                     parser, 15, first.start,
@@ -481,7 +481,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                 if (leftPower < minimumPower) {
                                     parsing = false;
                                 } else {
-                                    parser.current = parser.current + 1;
+                                    parser.current++;
                                     val leftKind =
                                         parser.nodes.data[root].kind;
                                     if (isAssignmentKind(token.kind)) {
@@ -549,7 +549,7 @@ fn parseBlock(var parser: Parser): u64 {
     var count: u32 = 0;
     while (parser.ok) {
         if (parserCheck(parser, 53)) {
-            parser.current = parser.current + 1;
+            parser.current++;
             return parserAdd(parser, 30, 0, 0, subtreeStart, count);
         }
         if (parserCheck(parser, 0)) {
@@ -584,7 +584,7 @@ fn parseStatement(var parser: Parser): u64 {
         var hasElse = false;
         while (parser.ok) {
             if (parserCheck(parser, 53)) {
-                parser.current = parser.current + 1;
+                parser.current++;
                 return parserAdd(
                     parser, 39, first.start, parserPrevious(parser).end,
                     subtreeStart, branchCount + hasSubject * 65536);
@@ -682,7 +682,7 @@ fn parseStatement(var parser: Parser): u64 {
     var isVariable = first.kind == 6;
     if (first.kind == 7) isVariable = true;
     if (isVariable) {
-        parser.current = parser.current + 1;
+        parser.current++;
         if (!parserExpect(parser, 1)) return 0;
         val variableName = parserPrevious(parser);
         parserAdd(
@@ -795,7 +795,7 @@ fn parseFunction(
                         parser, 1, ownerStart, ownerEnd,
                         parser.nodes.length, 1);
                 } else {
-                    parser.current = parser.current + 1;
+                    parser.current++;
                     typeNode = parseType(parser);
                 }
             } else {
@@ -862,7 +862,7 @@ fn parseFunction(
 fn parseStruct(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
-    parser.current = parser.current + 1;
+    parser.current++;
     if (!parserExpect(parser, 1)) return 0;
     val structName = parserPrevious(parser);
     parserAdd(
@@ -942,7 +942,7 @@ fn parseStruct(var parser: Parser): u64 {
 fn parseEnum(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
-    parser.current = parser.current + 1;
+    parser.current++;
     if (parserExpect(parser, 1) == false) return 0;
     val name = parserPrevious(parser);
     parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
@@ -978,7 +978,7 @@ fn parseEnum(var parser: Parser): u64 {
 fn parseModule(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
-    parser.current = parser.current + 1;
+    parser.current++;
     if (!parserExpect(parser, 1)) return 0;
     val firstName = parserPrevious(parser);
     parserAdd(
@@ -1002,7 +1002,7 @@ fn parseModule(var parser: Parser): u64 {
 fn parseImport(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
-    parser.current = parser.current + 1;
+    parser.current++;
     if (!parserExpect(parser, 1)) return 0;
     val firstName = parserPrevious(parser);
     parserAdd(
@@ -1038,7 +1038,7 @@ fn parseImport(var parser: Parser): u64 {
 fn parseConstant(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
     val start = parserPeek(parser).start;
-    parser.current = parser.current + 1;
+    parser.current++;
     if (!parserExpect(parser, 1)) return 0;
     val name = parserPrevious(parser);
     parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);

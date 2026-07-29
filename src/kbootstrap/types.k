@@ -95,7 +95,7 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList
             if (!typeEquals(leftArg, rightArg, genericArguments)) {
                 return false;
             }
-            index = index + 1;
+            index++;
         }
         return true;
     }

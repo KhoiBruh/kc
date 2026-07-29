@@ -14,10 +14,7 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
             remaining /= 10;
             length++;
         }
-        while (length > 0) {
-            length--;
-            buffer.add(digits[length]);
-        }
+        for (index in length>..0) buffer.add(digits[index]);
     }
     k_boot_free(digits as unit*);
 }
@@ -1817,8 +1814,7 @@ fn emitExpression(
                     patternRoots[patternIndex as u64] = patternRoot;
                     patternRoot = nodes.data[patternRoot].subtreeStart - 1;
                 }
-                var patternIndex: u32 = 0;
-                while (patternIndex < patternCount) {
+                for (patternIndex in 0..<patternCount) {
                     var condition = emitExpression(
                         buffer, source, nodes, genericArguments,
                         patternRoots[patternIndex as u64], counter);
@@ -1836,11 +1832,11 @@ fn emitExpression(
                         condition = IrValue(2, 0, 0, compared, 2, 0, 0);
                     }
                     var missBlock = nextBlockValue;
-                    if (patternIndex + 1 < patternCount) missBlock = nextBlock(counter);
+                    val hasNextPattern = patternIndex + 1 < patternCount;
+                    if (hasNextPattern) missBlock = nextBlock(counter);
                     appendConditionalBranch(
                         buffer, source, condition, bodyBlock, missBlock);
-                    patternIndex++;
-                    if (patternIndex < patternCount) {
+                    if (hasNextPattern) {
                         appendBlockLabel(buffer, counter, missBlock);
                     }
                 }
@@ -3109,8 +3105,7 @@ fn emitWhen(
                 patternRoots[patternIndex as u64] = patternRoot;
                 patternRoot = nodes.data[patternRoot].subtreeStart - 1;
             }
-            var patternIndex: u32 = 0;
-            while (patternIndex < patternCount) {
+            for (patternIndex in 0..<patternCount) {
                 var condition = emitExpression(
                     buffer, source, nodes, genericArguments,
                     patternRoots[patternIndex as u64], counter);
@@ -3128,11 +3123,11 @@ fn emitWhen(
                     condition = IrValue(2, 0, 0, compared, 2, 0, 0);
                 }
                 var missBlock = nextBlockValue;
-                if (patternIndex + 1 < patternCount) missBlock = nextBlock(counter);
+                val hasNextPattern = patternIndex + 1 < patternCount;
+                if (hasNextPattern) missBlock = nextBlock(counter);
                 appendConditionalBranch(
                     buffer, source, condition, bodyBlock, missBlock);
-                patternIndex++;
-                if (patternIndex < patternCount) {
+                if (hasNextPattern) {
                     appendBlockLabel(buffer, counter, missBlock);
                 }
             }

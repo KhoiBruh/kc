@@ -1652,9 +1652,9 @@ fn checkStatement(var semantic: Semantic, root: u64) {
     }
     if (node.kind == 32) {
         val bodyRoot = root - 1;
-        semantic.loopDepth = semantic.loopDepth + 1;
+        semantic.loopDepth++;
         checkBlock(semantic, bodyRoot);
-        semantic.loopDepth = semantic.loopDepth - 1;
+        semantic.loopDepth--;
         val conditionRoot =
             semantic.nodes.data[bodyRoot].subtreeStart - 1;
         if (expressionType(semantic, conditionRoot).kind != 2) {
@@ -1729,9 +1729,9 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                     TypeValue(7, 0, 0), false, indexNode.start));
         }
         semantic.locals = locals;
-        semantic.loopDepth = semantic.loopDepth + 1;
+        semantic.loopDepth++;
         checkBlock(semantic, bodyRoot);
-        semantic.loopDepth = semantic.loopDepth - 1;
+        semantic.loopDepth--;
         var restored = semantic.locals;
         restored.length = savedLocals;
         semantic.locals = restored;
