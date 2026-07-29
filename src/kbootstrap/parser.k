@@ -522,9 +522,8 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
 }
 
 fn parserGenericCallAhead(parser: Parser): bool {
-    var cursor = parser.current + 1;
     var depth: u32 = 1;
-    while (cursor < parser.tokens.length) {
+    for (cursor in parser.current + 1..<parser.tokens.length) {
         val kind = parser.tokens.data[cursor].kind;
         if (kind == 66) {
             depth++;
@@ -539,7 +538,6 @@ fn parserGenericCallAhead(parser: Parser): bool {
                 }
             }
         }
-        cursor++;
     }
     return false;
 }
@@ -718,8 +716,7 @@ fn parseStatement(var parser: Parser): u64 {
 }
 
 fn arrowIfHasElseAhead(parser: Parser): bool {
-    var cursor = parser.current;
-    while (cursor < parser.tokens.length) {
+    for (cursor in parser.current..<parser.tokens.length) {
         val kind = parser.tokens.data[cursor].kind;
         if (kind == 16) return true;
         var declaration = kind == 0;
@@ -729,7 +726,6 @@ fn arrowIfHasElseAhead(parser: Parser): bool {
         if (kind == 11) declaration = true;
         if (kind == 24) declaration = true;
         if (declaration) return false;
-        cursor++;
     }
     return false;
 }
