@@ -105,6 +105,9 @@ public:
                 current_ = &module;
                 for (const auto& function : current_->program->functions)
                     emitFunction(function);
+                for (const auto& structure : current_->program->structs)
+                    for (const auto& method : structure.methods)
+                        emitFunction(method);
             }
             std::size_t next = 0;
             while (next < pendingSpecializations_.size()) {
@@ -255,10 +258,26 @@ private:
 
     void declareFunctions() {
         for (const auto& function : current_->program->functions) {
-            if (!function.typeParameters.empty()) continue;
-            const auto name = spelling(source(), function.name);
+            declareFunction(function);
+        }
+        for (const auto& structure : current_->program->structs) {
+            for (const auto& method : structure.methods)
+                declareFunction(method);
+        }
+    }
+
+    std::string functionName(
+        const FunctionDecl& function, const Source& owner) const {
+        if (!function.ownerStruct) return spelling(owner, function.name);
+        return spelling(owner, *function.ownerStruct) + "." +
+            spelling(owner, function.name);
+    }
+
+    void declareFunction(const FunctionDecl& function) {
+            if (!function.typeParameters.empty()) return;
+            const auto name = functionName(function, source());
             const auto symbol = current_->semantic->functions.find(name);
-            if (symbol == current_->semantic->functions.end()) continue;
+            if (symbol == current_->semantic->functions.end()) return;
             std::vector<llvm::Type*> parameters;
             for (std::size_t i = 0; i < symbol->second.parameterTypes.size(); ++i) {
                 auto* type = lowerType(
@@ -273,7 +292,7 @@ private:
             }
             auto* returnType =
                 lowerType(symbol->second.returnType, function.returnType->span, true);
-            if (!returnType || parameters.size() != function.parameters.size()) continue;
+            if (!returnType || parameters.size() != function.parameters.size()) return;
             auto* llvmFunction = llvm::Function::Create(
                 llvm::FunctionType::get(returnType, parameters, false),
                 llvm::Function::ExternalLinkage,
@@ -281,7 +300,6 @@ private:
                 *result_.module);
             functions_.emplace(&function, llvmFunction);
             functionsByName_.emplace(name, llvmFunction);
-        }
     }
 
     SemanticType substituteType(
@@ -321,6 +339,9 @@ private:
             for (const auto& candidate : module.program->functions) {
                 if (&candidate == &declaration) return &module;
             }
+            for (const auto& structure : module.program->structs)
+                for (const auto& method : structure.methods)
+                    if (&method == &declaration) return &module;
         }
         return nullptr;
     }
@@ -350,7 +371,7 @@ private:
         const auto* owner = ownerModule(declaration);
         if (!owner) return nullptr;
         const auto found = owner->semantic->functions.find(
-            spelling(*owner->source, declaration.name));
+            functionName(declaration, *owner->source));
         if (found != owner->semantic->functions.end() &&
             found->second.declaration == &declaration)
             return &found->second;
@@ -432,7 +453,7 @@ private:
             argument.setName(name);
             if (parameter.mode == ParameterMode::MutableBorrow) {
                 const auto symbol = current_->semantic->functions.find(
-                    spelling(owner, declaration.name));
+                    functionName(declaration, owner));
                 auto* valueType = lowerType(
                     symbol->second.parameterTypes[parameterIndex],
                     parameter.type->span);
@@ -1123,6 +1144,36 @@ private:
             return nullptr;
         }
         if (const auto* call = std::get_if<CallExpr>(&expression.node)) {
+            if (const auto* member =
+                    std::get_if<MemberExpr>(&call->callee->node)) {
+                const auto resolved = semantic().resolvedCalls.find(call);
+                if (resolved == semantic().resolvedCalls.end() ||
+                    !resolved->second.declaration)
+                    return nullptr;
+                const auto target = functions_.find(resolved->second.declaration);
+                if (target == functions_.end()) return nullptr;
+                const auto& declaration = *resolved->second.declaration;
+                std::vector<llvm::Value*> arguments;
+                llvm::Value* receiver = declaration.parameters.front().mode ==
+                        ParameterMode::MutableBorrow
+                    ? emitMutationPointer(*member->object)
+                    : emitExpr(*member->object);
+                if (!receiver) return nullptr;
+                arguments.push_back(receiver);
+                for (std::size_t i = 0; i < call->arguments.size(); ++i) {
+                    llvm::Value* value = nullptr;
+                    const auto parameterIndex = i + 1;
+                    if (parameterIndex < declaration.parameters.size() &&
+                        declaration.parameters[parameterIndex].mode ==
+                            ParameterMode::MutableBorrow)
+                        value = emitMutationPointer(*call->arguments[i]);
+                    else
+                        value = emitExpr(*call->arguments[i]);
+                    if (!value) return nullptr;
+                    arguments.push_back(value);
+                }
+                return builder_.CreateCall(target->second, arguments);
+            }
             const auto* callee = std::get_if<IdentifierExpr>(&call->callee->node);
             if (callee && spelling(source(), callee->name) == "print" &&
                 call->arguments.size() == 1) {

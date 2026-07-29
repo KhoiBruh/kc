@@ -271,18 +271,28 @@ std::optional<StructDecl> Parser::parseStruct() {
     if (!expect(TokenKind::RightParen, "expected ')' after struct fields"))
         return std::nullopt;
     auto end = previous().span;
+    std::vector<FunctionDecl> methods;
     if (match(TokenKind::LeftBrace)) {
-        if (!expect(TokenKind::RightBrace,
-                    "bootstrap structs do not support body declarations"))
+        while (!check(TokenKind::RightBrace) && !atEnd()) {
+            if (!check(TokenKind::KwFn)) {
+                report(peek().span, "expected method declaration in struct body");
+                return std::nullopt;
+            }
+            auto method = parseFunction(false, name);
+            if (!method) return std::nullopt;
+            methods.push_back(std::move(*method));
+        }
+        if (!expect(TokenKind::RightBrace, "expected '}' after struct body"))
             return std::nullopt;
         end = previous().span;
     }
     return StructDecl{
-        name, std::move(typeParameters), std::move(fields),
+        name, std::move(typeParameters), std::move(fields), std::move(methods),
         spanFrom(start, end)};
 }
 
-std::optional<FunctionDecl> Parser::parseFunction(bool isExtern) {
+std::optional<FunctionDecl> Parser::parseFunction(
+    bool isExtern, std::optional<SourceSpan> ownerStruct) {
     const auto start = isExtern ? previous().span : peek().span;
     if (!expect(TokenKind::KwFn, "expected 'fn' in function declaration"))
         return std::nullopt;
@@ -319,7 +329,7 @@ std::optional<FunctionDecl> Parser::parseFunction(bool isExtern) {
     std::vector<Parameter> parameters;
     if (!check(TokenKind::RightParen)) {
         do {
-            auto parameter = parseParameter();
+            auto parameter = parseParameter(ownerStruct, parameters.empty());
             if (!parameter) return std::nullopt;
             parameters.push_back(std::move(*parameter));
         } while (match(TokenKind::Comma));
@@ -372,7 +382,7 @@ std::optional<FunctionDecl> Parser::parseFunction(bool isExtern) {
     return FunctionDecl{name, std::move(typeParameters),
                         std::move(parameters), std::move(returnType),
                         std::move(body), spanFrom(start, bodySpan), isExtern,
-                        isExpressionBody, infersReturnType};
+                        isExpressionBody, infersReturnType, ownerStruct};
 }
 
 bool Parser::arrowIfHasElseAhead() const noexcept {
@@ -387,7 +397,8 @@ bool Parser::arrowIfHasElseAhead() const noexcept {
     return false;
 }
 
-std::optional<Parameter> Parser::parseParameter() {
+std::optional<Parameter> Parser::parseParameter(
+    std::optional<SourceSpan> ownerStruct, bool first) {
     const auto start = peek().span;
     auto mode = ParameterMode::Owned;
     if (match(TokenKind::KwVal)) mode = ParameterMode::ImmutableBorrow;
@@ -395,6 +406,11 @@ std::optional<Parameter> Parser::parseParameter() {
 
     if (!expect(TokenKind::Identifier, "expected parameter name")) return std::nullopt;
     const auto name = previous().span;
+    if (ownerStruct && first &&
+        source_.text().substr(name.start, name.end - name.start) == "self") {
+        auto type = makeType(*ownerStruct, NamedType{{*ownerStruct}, {}});
+        return Parameter{mode, name, std::move(type), spanFrom(start, name)};
+    }
     if (!expect(TokenKind::Colon, "expected ':' after parameter name"))
         return std::nullopt;
     auto type = parseType();

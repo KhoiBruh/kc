@@ -741,7 +741,10 @@ fn arrowIfHasElseAhead(parser: Parser): bool {
     return false;
 }
 
-fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
+fn parseFunction(
+    var parser: Parser, isExtern: bool, start: u64,
+    ownerStart: u64, ownerEnd: u64
+): u64 {
     val subtreeStart = parser.nodes.length;
     if (!parserExpect(parser, 10)) return 0;
     if (!parserExpect(parser, 1)) return 0;
@@ -796,8 +799,20 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
             parserAdd(
                 parser, 45, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
-            if (!parserExpect(parser, 57)) return 0;
-            val typeNode = parseType(parser);
+            var typeNode: u64 = 0;
+            if (ownerEnd != ownerStart && parameterCount == 0) {
+                if (!parserCheck(parser, 57)) {
+                    typeNode = parserAdd(
+                        parser, 1, ownerStart, ownerEnd,
+                        parser.nodes.length, 1);
+                } else {
+                    parser.current = parser.current + 1;
+                    typeNode = parseType(parser);
+                }
+            } else {
+                if (!parserExpect(parser, 57)) return 0;
+                typeNode = parseType(parser);
+            }
             parserAdd(
                 parser, 40, parameterStart, parser.nodes.data[typeNode].end,
                 parameterSubtree, mode);
@@ -848,6 +863,9 @@ fn parseFunction(var parser: Parser, isExtern: bool, start: u64): u64 {
     val root = parserAdd(parser, 41, start, end, subtreeStart, aux);
     var function = parser.nodes.data[root];
     function.storage = (expressionBody + infersReturn * 2) as u64;
+    if (ownerEnd > ownerStart) {
+        function.conversionKind = 1;
+    }
     parser.nodes.data[root] = function;
     return root;
 }
@@ -913,12 +931,23 @@ fn parseStruct(var parser: Parser): u64 {
         }
     }
     if (!parserExpect(parser, 51)) return 0;
+    var methodCount: u32 = 0;
     if (parserMatch(parser, 52)) {
+        while (!parserCheck(parser, 53)) {
+            if (!parserCheck(parser, 10)) return 0;
+            parseFunction(parser, false, parserPeek(parser).start,
+                structName.start, structName.end);
+            methodCount = methodCount + 1;
+        }
         if (!parserExpect(parser, 53)) return 0;
     }
-    return parserAdd(
+    val root = parserAdd(
         parser, 43, start, parserPrevious(parser).end,
         subtreeStart, fieldCount + typeParameterCount * 65536);
+    var structure = parser.nodes.data[root];
+    structure.storage = methodCount as u64;
+    parser.nodes.data[root] = structure;
+    return root;
 }
 
 fn parseEnum(var parser: Parser): u64 {
@@ -1068,7 +1097,7 @@ fn parse(tokens: TokenList): ParseResult {
                     var isExtern = false;
                     val declarationStart = parserPeek(parser).start;
                     if (parserMatch(parser, 9)) isExtern = true;
-                    parseFunction(parser, isExtern, declarationStart);
+                    parseFunction(parser, isExtern, declarationStart, 0, 0);
                 }
                 }
                 }

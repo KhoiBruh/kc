@@ -1113,10 +1113,22 @@ fn emitterStructFieldCount(structure: AstNode): u32 {
     return structure.aux % 65536;
 }
 
+fn emitterStructMethodCount(structure: AstNode): u64 => structure.storage;
+
+fn emitterRootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
+    var root = structureRoot - 1;
+    var remaining = emitterStructMethodCount(nodes.data[structureRoot]);
+    while (remaining > 0) {
+        root = nodes.data[root].subtreeStart - 1;
+        remaining = remaining - 1;
+    }
+    return root;
+}
+
 fn emitterStructTypeParameterRoot(
     source: Source, nodes: AstList, structureRoot: u64, position: u32): u64 {
     val structure = nodes.data[structureRoot];
-    var root = structureRoot - 1;
+    var root = emitterRootBeforeStructMethods(nodes, structureRoot);
     var fields = emitterStructFieldCount(structure);
     while (fields > 0) {
         root = nodes.data[root].subtreeStart - 1;
@@ -1187,7 +1199,7 @@ fn emitterFieldRootAt(
     val structure = nodes.data[structureRoot];
     var roots =
         k_boot_alloc((emitterStructFieldCount(structure) as u64) * sizeof(u64)) as u64*;
-    var root = structureRoot - 1;
+    var root = emitterRootBeforeStructMethods(nodes, structureRoot);
     var remaining = emitterStructFieldCount(structure);
     while (remaining > 0) {
         roots[remaining as u64 - 1] = root;
@@ -2715,11 +2727,11 @@ fn emitExpression(
             node.typeKind, node.typeName, node.typePointee);
     }
     if (node.kind == 16) {
-        val argumentCount = node.aux % 65536;
+        var argumentCount = node.aux % 65536;
         val explicitTypeCount = node.aux / 65536;
         val arguments =
             k_boot_alloc(
-                (argumentCount as u64) * sizeof(u64)) as u64*;
+                ((argumentCount + 1) as u64) * sizeof(u64)) as u64*;
         var cursor = root - 1;
         var remaining = argumentCount;
         while (remaining > 0) {
@@ -2733,10 +2745,20 @@ fn emitExpression(
             remaining = remaining - 1;
         }
         val callee = nodes.data[cursor];
+        val isMethod = callee.kind == 17;
+        if (isMethod) {
+            remaining = argumentCount;
+            while (remaining > 0) {
+                arguments[remaining as u64] = arguments[remaining as u64 - 1];
+                remaining = remaining - 1;
+            }
+            arguments[0] = cursor - 1;
+            argumentCount = argumentCount + 1;
+        }
         val calleeHash =
             sourceHash(source, callee.start, callee.end);
-        val functionRoot =
-            functionRootByName(source, nodes, calleeHash);
+        var functionRoot = functionRootByName(source, nodes, calleeHash);
+        if (isMethod) functionRoot = node.storage;
         val values =
             k_boot_alloc(
                 (argumentCount as u64) * sizeof(IrValue)) as IrValue*;
@@ -2888,8 +2910,14 @@ fn emitExpression(
             appendCall(buffer);
             appendNodeType(buffer, genericArguments, node);
             appendFunctionOpen(buffer);
-            appendSource(
-                buffer, source, callee.start, callee.end);
+            if (isMethod) {
+                val ownerType = nodes.data[arguments[0]].typeName;
+                val ownerRoot = structRootByName(source, nodes, ownerType);
+                val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
+                appendSource(buffer, source, ownerName.start, ownerName.end);
+                byteBufferAppend(buffer, 46);
+            }
+            appendSource(buffer, source, callee.start, callee.end);
             if (functionRoot != nodes.length) {
                 if (functionTypeParameterCount(
                         nodes.data[functionRoot]) > 0) {
@@ -3897,6 +3925,14 @@ fn emitFunction(
             inferred.kind, inferred.name, inferred.pointee);
     } else appendNodeType(buffer, genericArguments, returnType);
     appendFunctionOpen(buffer);
+    if (function.conversionKind == 1) {
+        val receiverType = nodes.data[
+            parameterRoot(nodes, functionRoot, 1) - 1];
+        val ownerRoot = structRootByName(source, nodes, receiverType.typeName);
+        val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
+        appendSource(buffer, source, ownerName.start, ownerName.end);
+        byteBufferAppend(buffer, 46);
+    }
     appendSource(buffer, source, name.start, name.end);
     if (specializationCount > 0) {
         appendSpecializationSuffix(
@@ -4493,6 +4529,18 @@ fn emitModule(
                 emitFunction(
                     buffer, source, nodes, genericArguments,
                     root, 0, 0);
+            }
+        } else {
+            if (nodes.data[root].kind == 43) {
+                var methodRoot = root - 1;
+                var methods = emitterStructMethodCount(nodes.data[root]);
+                while (methods > 0) {
+                    emitFunction(
+                        buffer, source, nodes, genericArguments,
+                        methodRoot, 0, 0);
+                    methodRoot = nodes.data[methodRoot].subtreeStart - 1;
+                    methods = methods - 1;
+                }
             }
         }
         index = index + 1;

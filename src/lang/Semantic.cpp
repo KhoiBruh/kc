@@ -6,6 +6,7 @@
 #include <limits>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace k {
@@ -123,7 +124,12 @@ public:
         for (const auto& enumeration : program_.enums) declareEnum(enumeration);
         for (const auto& structure : program_.structs) declareStruct(structure);
         for (const auto& structure : program_.structs) defineStruct(structure);
+        for (const auto& structure : program_.structs)
+            for (const auto& method : structure.methods) collect(method);
         for (const auto& function : program_.functions) collect(function);
+        for (const auto& structure : program_.structs)
+            for (const auto& method : structure.methods)
+                if (method.infersReturnType) inferFunctionReturn(method);
         for (const auto& function : program_.functions)
             if (function.infersReturnType) inferFunctionReturn(function);
         for (const auto& constant : program_.constants) {
@@ -162,6 +168,14 @@ public:
                          constant.initializer->span);
             result_.constants.emplace(name, ConstantSymbol{&constant, type});
         }
+        for (const auto& structure : program_.structs) {
+            for (const auto& method : structure.methods) {
+                const auto found = result_.functions.find(functionName(method));
+                if (!method.infersReturnType && found != result_.functions.end() &&
+                    found->second.declaration == &method)
+                    analyzeFunction(method, found->second);
+            }
+        }
         for (const auto& function : program_.functions) {
             const auto found = result_.functions.find(spelling(source_, function.name));
             if (!function.infersReturnType && found != result_.functions.end() &&
@@ -189,7 +203,7 @@ public:
 
 private:
     SemanticType inferFunctionReturn(const FunctionDecl& function) {
-        const auto name = spelling(source_, function.name);
+        const auto name = functionName(function);
         auto symbol = result_.functions.find(name);
         if (symbol == result_.functions.end()) return {};
         const auto state = inferredReturnStates_[&function];
@@ -417,11 +431,32 @@ private:
             found->second.fields.push_back(
                 {fieldName, resolve(*field.type), i});
         }
+        if (!structure.typeParameters.empty() && !structure.methods.empty())
+            diagnose("generic structs do not support methods yet", structure.name);
+        std::unordered_set<std::string> methodNames;
+        for (const auto& method : structure.methods) {
+            const auto methodName = spelling(source_, method.name);
+            if (!methodNames.insert(methodName).second)
+                diagnose("duplicate method '" + methodName + "'", method.name);
+            if (!method.typeParameters.empty())
+                diagnose("generic methods are not supported yet", method.name);
+            if (method.parameters.empty() ||
+                spelling(source_, method.parameters.front().name) != "self" ||
+                method.parameters.front().mode == ParameterMode::Owned)
+                diagnose("method must begin with 'val self' or 'var self'",
+                         method.name);
+        }
         typeParameters_.clear();
     }
 
+    std::string functionName(const FunctionDecl& function) const {
+        if (!function.ownerStruct) return spelling(source_, function.name);
+        return spelling(source_, *function.ownerStruct) + "." +
+            spelling(source_, function.name);
+    }
+
     void collect(const FunctionDecl& function) {
-        const auto name = spelling(source_, function.name);
+        const auto name = functionName(function);
         if (result_.functions.contains(name) || result_.constants.contains(name)) {
             if (extraFunctions_.contains(name)) {
                 extraFunctions_.erase(name);
@@ -1162,6 +1197,8 @@ private:
     }
 
     SemanticType analyzeCall(const CallExpr& call) {
+        if (const auto* member = std::get_if<MemberExpr>(&call.callee->node))
+            return analyzeMethodCall(call, *member);
         const auto* identifier = std::get_if<IdentifierExpr>(&call.callee->node);
         if (!identifier) {
             analyzeExpr(*call.callee);
@@ -1368,6 +1405,51 @@ private:
         }
         result_.expressionTypes[call.callee.get()] = function->second.returnType;
         return function->second.returnType;
+    }
+
+    SemanticType analyzeMethodCall(
+        const CallExpr& call, const MemberExpr& member) {
+        const auto receiverType = analyzeExpr(*member.object);
+        if (receiverType.kind != SemanticTypeKind::Struct) {
+            diagnose("method receiver must be a struct", member.object->span);
+            for (const auto& argument : call.arguments) analyzeExpr(*argument);
+            return {};
+        }
+        const auto name = receiverType.name + "." + spelling(source_, member.name);
+        const auto found = result_.functions.find(name);
+        if (found == result_.functions.end() ||
+            !found->second.declaration->ownerStruct) {
+            diagnose("unknown method '" + spelling(source_, member.name) + "'",
+                     member.name);
+            for (const auto& argument : call.arguments) analyzeExpr(*argument);
+            return {};
+        }
+        const auto& symbol = found->second;
+        if (!call.typeArguments.empty())
+            diagnose("methods do not accept type arguments yet", member.name);
+        if (call.arguments.size() + 1 != symbol.parameterTypes.size())
+            diagnose("method argument count does not match", member.name);
+        if (!symbol.parameterTypes.empty() &&
+            !compatible(symbol.parameterTypes.front(), receiverType))
+            diagnose("method receiver has the wrong type", member.object->span);
+        if (!symbol.declaration->parameters.empty() &&
+            symbol.declaration->parameters.front().mode ==
+                ParameterMode::MutableBorrow &&
+            !isMutableTarget(*member.object))
+            diagnose("var self requires a mutable receiver", member.object->span);
+        for (std::size_t i = 0; i < call.arguments.size(); ++i) {
+            const auto expected = i + 1 < symbol.parameterTypes.size()
+                ? std::optional<SemanticType>{symbol.parameterTypes[i + 1]}
+                : std::nullopt;
+            const auto actual = analyzeExpr(*call.arguments[i], expected);
+            if (expected && !compatible(*expected, actual))
+                diagnose("method argument type does not match parameter type",
+                         call.arguments[i]->span);
+        }
+        result_.resolvedCalls[&call] = ResolvedCall{
+            symbol.declaration, {}, symbol.parameterTypes, symbol.returnType};
+        result_.expressionTypes[call.callee.get()] = symbol.returnType;
+        return symbol.returnType;
     }
 
     SemanticType analyzeMember(const MemberExpr& member) {

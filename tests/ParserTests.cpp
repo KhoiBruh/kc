@@ -337,6 +337,20 @@ TEST(parser_respects_expression_precedence_and_assignment_associativity) {
     EXPECT_TRUE(std::holds_alternative<k::AssignmentExpr>(outer.value->node));
 }
 
+TEST(parser_parses_struct_methods_with_explicit_receivers) {
+    ParseFixture fixture{
+        "struct Counter(value: i32) {"
+        "fn read(val self): i32 => self.value;"
+        "fn increment(var self) { self.value++; }"
+        "}"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    EXPECT_EQ(fixture.parsed.program.structs.size(), 1u);
+    const auto& methods = fixture.parsed.program.structs[0].methods;
+    EXPECT_EQ(methods.size(), 2u);
+    EXPECT_EQ(methods[0].parameters[0].mode, k::ParameterMode::ImmutableBorrow);
+    EXPECT_EQ(methods[1].parameters[0].mode, k::ParameterMode::MutableBorrow);
+}
+
 TEST(parser_parses_postfix_increment_and_decrement) {
     ParseFixture fixture{"fn update() { var value = 1; value++; value--; }"};
     EXPECT_TRUE(fixture.parsed.diagnostics.empty());

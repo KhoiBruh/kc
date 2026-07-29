@@ -334,6 +334,24 @@ TEST(semantic_validates_statement_only_postfix_mutation) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
 }
 
+TEST(semantic_resolves_struct_methods_and_receiver_mutability) {
+    SemanticFixture valid{
+        "struct Counter(value: i32) {"
+        "fn read(val self): i32 => self.value;"
+        "fn increment(var self) { self.value++; }"
+        "}"
+        "fn use(): i32 { var counter = Counter(41); counter.increment(); "
+        "return counter.read(); }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture immutable{
+        "struct Counter(value: i32) { fn increment(var self) { self.value++; } }"
+        "fn bad(val counter: Counter) { counter.increment(); }"};
+    EXPECT_EQ(immutable.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(immutable.semantic.diagnostics[0].message,
+              "var self requires a mutable receiver");
+}
+
 TEST(semantic_validates_integer_range_membership) {
     SemanticFixture valid{
         "fn contains(value: u8): bool { return "

@@ -83,7 +83,7 @@ $validFixtures = @(
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
     "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
-    "constants.k", "expression_functions.k"
+    "constants.k", "expression_functions.k", "struct_methods.k"
 )
 foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName
@@ -125,6 +125,9 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "implicit_integer_widening.k" -and $stage1Exit -ne 42) {
         Write-Error "implicit integer widening fixture did not return 42"
+    }
+    if ($fixtureName -eq "struct_methods.k" -and $stage1Exit -ne 42) {
+        Write-Error "struct method fixture did not return 42"
     }
     if ($fixtureName -eq "compound_assignments.k" -and $stage1Exit -ne 42) {
         Write-Error "compound assignment fixture did not return 42"

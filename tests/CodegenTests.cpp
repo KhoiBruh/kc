@@ -434,6 +434,22 @@ TEST(codegen_lowers_postfix_increment_and_decrement) {
     EXPECT_TRUE(ir.find("sub i32") != std::string::npos);
 }
 
+TEST(codegen_lowers_struct_methods_with_explicit_receivers) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Counter(value: i32) {"
+        "fn read(val self): i32 => self.value;"
+        "fn increment(var self) { self.value++; }"
+        "}"
+        "fn main(): i32 { var counter = Counter(41); counter.increment(); "
+        "return counter.read(); }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("Counter.increment") != std::string::npos);
+    EXPECT_TRUE(ir.find("Counter.read") != std::string::npos);
+    EXPECT_TRUE(ir.find("call void") != std::string::npos);
+}
+
 TEST(codegen_lowers_integer_range_membership) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

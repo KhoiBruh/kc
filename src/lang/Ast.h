@@ -148,10 +148,24 @@ struct TypeParameter {
     SourceSpan span;
 };
 
+struct FunctionDecl {
+    SourceSpan name;
+    std::vector<TypeParameter> typeParameters;
+    std::vector<Parameter> parameters;
+    TypePtr returnType;
+    std::unique_ptr<BlockStmt> body;
+    SourceSpan span;
+    bool isExtern = false;
+    bool isExpressionBody = false;
+    bool infersReturnType = false;
+    std::optional<SourceSpan> ownerStruct;
+};
+
 struct StructDecl {
     SourceSpan name;
     std::vector<TypeParameter> typeParameters;
     std::vector<StructField> fields;
+    std::vector<FunctionDecl> methods;
     SourceSpan span;
 };
 
@@ -167,18 +181,6 @@ struct ConstantDecl {
     TypePtr declaredType;
     ExprPtr initializer;
     SourceSpan span;
-};
-
-struct FunctionDecl {
-    SourceSpan name;
-    std::vector<TypeParameter> typeParameters;
-    std::vector<Parameter> parameters;
-    TypePtr returnType;
-    std::unique_ptr<BlockStmt> body;
-    SourceSpan span;
-    bool isExtern = false;
-    bool isExpressionBody = false;
-    bool infersReturnType = false;
 };
 
 struct ModuleDecl {

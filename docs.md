@@ -347,7 +347,10 @@ val c = b.copy()   // Tạo một deep copy độc lập; b vẫn hợp lệ
 
 ## 4. Hướng đối tượng giả thủ tục (Procedural OOP)
 
-Mọi cấu trúc dữ liệu đều là `struct`. Các hàm viết bên trong `struct` thực chất là các hàm thủ tục nhận tham số `self`. Receiver `val self` mượn object chỉ đọc, `var self` mượn object để sửa, còn `self` không có modifier sẽ nhận ownership.
+Mọi cấu trúc dữ liệu đều là `struct`. Method viết bên trong `struct` phải nhận
+receiver đầu tiên là `val self` để chỉ đọc hoặc `var self` để sửa object. Kiểu
+của `self` được suy ra từ struct nên không viết lại. Receiver nhận ownership,
+static method, overload và generic method chưa thuộc v0.1.
 
 ### Cú pháp cơ bản & RAII
 
@@ -363,8 +366,21 @@ Dạng có body vẫn hợp lệ:
 struct Player(name: string, playtime: u32) {}
 ```
 
-Hai dạng khai báo cùng layout field. Block body được dành cho constructor,
-destructor và method khi các tính năng đó được triển khai.
+Hai dạng khai báo cùng layout field. Body hiện hỗ trợ method với receiver tường
+minh:
+
+```text
+struct Counter(value: i32) {
+    fn read(val self): i32 => self.value;
+    fn increment(var self) { self.value++; }
+}
+
+var counter = Counter(0);
+counter.increment();
+val value = counter.read();
+```
+
+Method của generic struct, constructor và destructor chưa được hỗ trợ.
 
 ```text
 struct Player(

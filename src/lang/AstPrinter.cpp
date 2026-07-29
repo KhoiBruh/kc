@@ -101,6 +101,8 @@ private:
             line(depth + 1, "Field " + text(field.name));
             printType(*field.type, depth + 2);
         }
+        for (const auto& method : structure.methods)
+            printFunction(method, depth + 1);
     }
 
     void printFunction(const FunctionDecl& function, std::size_t depth) {

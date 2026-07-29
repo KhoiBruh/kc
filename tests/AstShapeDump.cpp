@@ -57,10 +57,18 @@ public:
                 type(*field.type);
                 add(42, field.span, fieldSubtree);
             }
+            for (const auto& method : structure.methods) dumpFunction(method);
             add(43, structure.span, subtree,
                 static_cast<unsigned>(structure.fields.size()));
         }
-        for (const auto& function : value.functions) {
+        for (const auto& function : value.functions) dumpFunction(function);
+        add(44, value.span, 0,
+            static_cast<unsigned>(value.enums.size() + value.structs.size() +
+                                  value.functions.size()));
+    }
+
+private:
+    void dumpFunction(const k::FunctionDecl& function) {
             const auto subtree = index_;
             add(45, function.name, index_);
             for (const auto& parameter : function.typeParameters) {
@@ -86,13 +94,7 @@ public:
             aux += static_cast<unsigned>(
                 function.typeParameters.size() * 131072);
             add(41, function.span, subtree, aux);
-        }
-        add(44, value.span, 0,
-            static_cast<unsigned>(value.enums.size() + value.structs.size() +
-                                  value.functions.size()));
     }
-
-private:
     void add(unsigned kind, k::SourceSpan span, std::size_t subtree,
              unsigned aux = 0) {
         node(kind, span, subtree, aux);
