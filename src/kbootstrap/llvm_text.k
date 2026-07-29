@@ -12,10 +12,10 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
         while (remaining > 0) {
             digits[length] = (remaining % 10) as u8 + 48;
             remaining = remaining / 10;
-            length = length + 1;
+            length++;
         }
         while (length > 0) {
-            length = length - 1;
+            length--;
             buffer.add(digits[length]);
         }
     }
@@ -27,7 +27,7 @@ fn appendSource(
     var offset = start;
     while (offset < end) {
         buffer.add(source.data[offset]);
-        offset = offset + 1;
+        offset++;
     }
 }
 
@@ -492,8 +492,8 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
     var offset = node.start + 1;
     while (offset + 1 < node.end) {
         var value = source.data[offset];
-        if (value != 92) { result.add(value); offset = offset + 1; continue; }
-        offset = offset + 1;
+        if (value != 92) { result.add(value); offset++; continue; }
+        offset++;
         value = source.data[offset];
         if (value == 110) result.add(10);
         else if (value == 114) result.add(13);
@@ -508,11 +508,11 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
                 if (digit >= 65) numeric = (digit - 55) as u32;
                 if (digit >= 97) numeric = (digit - 87) as u32;
                 codepoint = codepoint * 16 + numeric;
-                offset = offset + 1;
+                offset++;
             }
             appendUtf8(result, codepoint);
         } else result.add(value);
-        offset = offset + 1;
+        offset++;
     }
     return result;
 }
@@ -525,7 +525,7 @@ fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, roo
     appendDecimal(buffer, decoded.length + 1);
     appendStringArrayPrefix(buffer);
     var index: u64 = 0;
-    while (index < decoded.length) { appendEscapedByte(buffer, decoded.data[index]); index = index + 1; }
+    while (index < decoded.length) { appendEscapedByte(buffer, decoded.data[index]); index++; }
     appendStringTerminator(buffer);
     decoded.free();
 }
@@ -1052,7 +1052,7 @@ fn declarationRoots(nodes: AstList): u64* {
     while (remaining > 0) {
         roots[remaining as u64 - 1] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     return roots;
 }
@@ -1072,7 +1072,7 @@ fn structRootByName(
                 found = root;
             }
         }
-        index = index + 1;
+        index++;
     }
     k_boot_free(roots as unit*);
     return found;
@@ -1093,7 +1093,7 @@ fn functionRootByName(
                 found = root;
             }
         }
-        index = index + 1;
+        index++;
     }
     k_boot_free(roots as unit*);
     return found;
@@ -1110,7 +1110,7 @@ fn emitterRootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
     var remaining = emitterStructMethodCount(nodes.data[structureRoot]);
     while (remaining > 0) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     return root;
 }
@@ -1122,12 +1122,12 @@ fn emitterStructTypeParameterRoot(
     var fields = emitterStructFieldCount(structure);
     while (fields > 0) {
         root = nodes.data[root].subtreeStart - 1;
-        fields = fields - 1;
+        fields--;
     }
     var remaining = emitterStructTypeParameterCount(structure);
     while (remaining > position) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     return root;
 }
@@ -1192,7 +1192,7 @@ fn emitterFieldRootAt(
     while (remaining > 0) {
         roots[remaining as u64 - 1] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     val result = roots[wanted as u64];
     k_boot_free(roots as unit*);
@@ -1370,7 +1370,7 @@ fn appendPointerValue(
 
 fn nextTemporary(var counter: IrCounter): u64 {
     val value = counter.value;
-    counter.value = value + 1;
+    counter.value++;
     return value;
 }
 
@@ -1703,7 +1703,7 @@ fn emitExpression(
         while (remaining > 0) {
             elseRoots[remaining as u64 - 1] = childRoot;
             childRoot = nodes.data[childRoot].subtreeStart - 1;
-            remaining = remaining - 1;
+            remaining--;
         }
         val thenValueRoot = childRoot;
         val thenRoots =
@@ -1713,7 +1713,7 @@ fn emitExpression(
         while (remaining > 0) {
             thenRoots[remaining as u64 - 1] = childRoot;
             childRoot = nodes.data[childRoot].subtreeStart - 1;
-            remaining = remaining - 1;
+            remaining--;
         }
         val condition = emitExpression(
             buffer, source, nodes, genericArguments, childRoot, counter);
@@ -1731,14 +1731,14 @@ fn emitExpression(
                     buffer, genericArguments, nodes,
                     thenRoots[index as u64]);
             }
-            index = index + 1;
+            index++;
         }
         index = 0;
         while (index < thenCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
                 thenRoots[index as u64], counter);
-            index = index + 1;
+            index++;
         }
         val thenValue = emitExpression(
             buffer, source, nodes, genericArguments, thenValueRoot, counter);
@@ -1753,14 +1753,14 @@ fn emitExpression(
                     buffer, genericArguments, nodes,
                     elseRoots[index as u64]);
             }
-            index = index + 1;
+            index++;
         }
         index = 0;
         while (index < elseCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
                 elseRoots[index as u64], counter);
-            index = index + 1;
+            index++;
         }
         val elseValue = emitExpression(
             buffer, source, nodes, genericArguments, elseValueRoot, counter);
@@ -1803,7 +1803,7 @@ fn emitExpression(
         while (remaining > 0) {
             roots[remaining as u64 - 1] = branchRoot;
             branchRoot = nodes.data[branchRoot].subtreeStart - 1;
-            remaining = remaining - 1;
+            remaining--;
         }
         var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
         if (hasSubject == 1) {
@@ -1824,7 +1824,7 @@ fn emitExpression(
             while (statementRemaining > 0) {
                 statementRoots[statementRemaining as u64 - 1] = beforeValue;
                 beforeValue = nodes.data[beforeValue].subtreeStart - 1;
-                statementRemaining = statementRemaining - 1;
+                statementRemaining--;
             }
             var statementIndex: u32 = 0;
             while (statementIndex < statementCount) {
@@ -1834,7 +1834,7 @@ fn emitExpression(
                         buffer, genericArguments, nodes,
                         statementRoots[statementIndex as u64]);
                 }
-                statementIndex = statementIndex + 1;
+                statementIndex++;
             }
             val bodyBlock = nextBlock(counter);
             var nextBlockValue = mergeBlock;
@@ -1848,7 +1848,7 @@ fn emitExpression(
                 while (patternRemaining > 0) {
                     patternRoots[patternRemaining as u64 - 1] = patternRoot;
                     patternRoot = nodes.data[patternRoot].subtreeStart - 1;
-                    patternRemaining = patternRemaining - 1;
+                    patternRemaining--;
                 }
                 var patternIndex: u32 = 0;
                 while (patternIndex < patternCount) {
@@ -1872,7 +1872,7 @@ fn emitExpression(
                     if (patternIndex + 1 < patternCount) missBlock = nextBlock(counter);
                     appendConditionalBranch(
                         buffer, source, condition, bodyBlock, missBlock);
-                    patternIndex = patternIndex + 1;
+                    patternIndex++;
                     if (patternIndex < patternCount) {
                         appendBlockLabel(buffer, counter, missBlock);
                     }
@@ -1888,7 +1888,7 @@ fn emitExpression(
                 emitStatement(
                     buffer, source, nodes, genericArguments,
                     statementRoots[statementIndex as u64], counter);
-                statementIndex = statementIndex + 1;
+                statementIndex++;
             }
             values[index as u64] = emitExpression(
                 buffer, source, nodes, genericArguments, valueRoot, counter);
@@ -1898,7 +1898,7 @@ fn emitExpression(
                 appendBlockLabel(buffer, counter, nextBlockValue);
             }
             k_boot_free(statementRoots as unit*);
-            index = index + 1;
+            index++;
         }
         if (!hasElse) {
             appendUnreachable(buffer); 
@@ -1922,7 +1922,7 @@ fn emitExpression(
             buffer.add(44); buffer.add(32);
             appendBlockReference(buffer, blocks[index as u64]);
             buffer.add(32); buffer.add(93);
-            index = index + 1;
+            index++;
         }
         appendNewline(buffer);
         k_boot_free(blocks as unit*);
@@ -1945,7 +1945,7 @@ fn emitExpression(
         while (remaining > 0) {
             roots[remaining as u64 - 1] = childRoot;
             childRoot = nodes.data[childRoot].subtreeStart - 1;
-            remaining = remaining - 1;
+            remaining--;
         }
         var aggregate = IrValue(
             3, 0, 0, 0, node.typeKind, node.typeName, node.typePointee);
@@ -1976,7 +1976,7 @@ fn emitExpression(
             aggregate = IrValue(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
-            index = index + 1;
+            index++;
         }
         k_boot_free(roots as unit*);
         return aggregate;
@@ -2716,12 +2716,12 @@ fn emitExpression(
         while (remaining > 0) {
             arguments[remaining as u64 - 1] = cursor;
             cursor = expressionChildBefore(nodes, cursor);
-            remaining = remaining - 1;
+            remaining--;
         }
         remaining = explicitTypeCount;
         while (remaining > 0) {
             cursor = expressionChildBefore(nodes, cursor);
-            remaining = remaining - 1;
+            remaining--;
         }
         val callee = nodes.data[cursor];
         val isMethod = callee.kind == 17;
@@ -2729,10 +2729,10 @@ fn emitExpression(
             remaining = argumentCount;
             while (remaining > 0) {
                 arguments[remaining as u64] = arguments[remaining as u64 - 1];
-                remaining = remaining - 1;
+                remaining--;
             }
             arguments[0] = cursor - 1;
-            argumentCount = argumentCount + 1;
+            argumentCount++;
         }
         val calleeHash =
             sourceHash(source, callee.start, callee.end);
@@ -2777,7 +2777,7 @@ fn emitExpression(
                         counter);
                 }
             }
-            index = index + 1;
+            index++;
         }
         if (node.typeKind == 8) {
         if (functionRoot == nodes.length) {
@@ -2825,7 +2825,7 @@ fn emitExpression(
                 buffer.add(32);
                 appendDecimal(buffer, index as u64);
                 appendNewline(buffer);
-                index = index + 1;
+                index++;
             }
             k_boot_free(values as unit*);
             k_boot_free(arguments as unit*);
@@ -2949,7 +2949,7 @@ fn emitExpression(
             }
             buffer.add(32);
             appendIrValue(buffer, source, values[index as u64]);
-            index = index + 1;
+            index++;
         }
         buffer.add(41);
         appendNewline(buffer);
@@ -2975,7 +2975,7 @@ fn blockStatementRoots(nodes: AstList, blockRoot: u64): u64* {
     while (remaining > 0) {
         roots[remaining as u64 - 1] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     return roots;
 }
@@ -2996,7 +2996,7 @@ fn emitBlock(
                 buffer, source, nodes, genericArguments,
                 roots[index as u64], counter);
         }
-        index = index + 1;
+        index++;
     }
     k_boot_free(roots as unit*);
     return terminated;
@@ -3142,7 +3142,7 @@ fn emitWhen(
     while (remaining > 0) {
         roots[remaining as u64 - 1] = branchRoot;
         branchRoot = nodes.data[branchRoot].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
     if (hasSubject == 1) {
@@ -3170,7 +3170,7 @@ fn emitWhen(
             while (patternRemaining > 0) {
                 patternRoots[patternRemaining as u64 - 1] = patternRoot;
                 patternRoot = nodes.data[patternRoot].subtreeStart - 1;
-                patternRemaining = patternRemaining - 1;
+                patternRemaining--;
             }
             var patternIndex: u32 = 0;
             while (patternIndex < patternCount) {
@@ -3194,7 +3194,7 @@ fn emitWhen(
                 if (patternIndex + 1 < patternCount) missBlock = nextBlock(counter);
                 appendConditionalBranch(
                     buffer, source, condition, bodyBlock, missBlock);
-                patternIndex = patternIndex + 1;
+                patternIndex++;
                 if (patternIndex < patternCount) {
                     appendBlockLabel(buffer, counter, missBlock);
                 }
@@ -3217,7 +3217,7 @@ fn emitWhen(
             if (!terminated) appendBranch(buffer, mergeBlock);
             if (!terminated) allTerminate = false;
         }
-        index = index + 1;
+        index++;
     }
     k_boot_free(roots as unit*);
     if (hasElse) {
@@ -3694,7 +3694,7 @@ fn parameterRoot(
     var remaining = functionParameterCount(function);
     while (remaining >= position) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     return root;
 }
@@ -3713,13 +3713,13 @@ fn emitterTypeParameterRoot(
         functionParameterCount(nodes.data[functionRoot]);
     while (parameters > 0) {
         root = nodes.data[root].subtreeStart - 1;
-        parameters = parameters - 1;
+        parameters--;
     }
     var remaining =
         functionTypeParameterCount(nodes.data[functionRoot]);
     while (remaining >= position) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     return root;
 }
@@ -3738,7 +3738,7 @@ fn emitterTypeParameterPosition(
         if (sourceHash(source, nameNode.start, nameNode.end) == name) {
             return position - 1;
         }
-        position = position + 1;
+        position++;
     }
     return count;
 }
@@ -3858,10 +3858,10 @@ fn emitBlockAllocas(
                 emitBlockAllocas(
                     buffer, genericArguments, nodes, branchRoot - 1);
                 branchRoot = nodes.data[branchRoot].subtreeStart - 1;
-                remaining = remaining - 1;
+                remaining--;
             }
         }
-        index = index + 1;
+        index++;
     }
     k_boot_free(roots as unit*);
 }
@@ -3951,7 +3951,7 @@ fn emitFunction(
             appendSource(
                 buffer, source, parameterName.start, parameterName.end);
         }
-        parameterIndex = parameterIndex + 1;
+        parameterIndex++;
     }
     buffer.add(41);
     if (functionIsExtern(function)) {
@@ -3997,7 +3997,7 @@ fn emitFunction(
         appendDecimal(buffer, parameterName.start);
         appendNewline(buffer);
         }
-        parameterIndex = parameterIndex + 1;
+        parameterIndex++;
     }
 
     val blockRoot = functionRoot - 1;
@@ -4047,7 +4047,7 @@ fn emitSpecializedFunction(
     while (argumentIndex < genericArguments.length) {
         savedArguments[argumentIndex] =
             genericArguments.data[argumentIndex];
-        argumentIndex = argumentIndex + 1;
+        argumentIndex++;
     }
     var offset: u64 = 0;
     while (offset < count) {
@@ -4090,11 +4090,11 @@ fn emitSpecializedFunction(
                             pattern, genericArguments,
                             argumentStart, argumentCount);
                 }
-                genericIndex = genericIndex + 1;
+                genericIndex++;
             }
         }
         nodes.data[start + offset] = node;
-        offset = offset + 1;
+        offset++;
     }
     emitFunction(
         buffer, source, nodes, genericArguments,
@@ -4102,13 +4102,13 @@ fn emitSpecializedFunction(
     offset = 0;
     while (offset < count) {
         nodes.data[start + offset] = saved[offset];
-        offset = offset + 1;
+        offset++;
     }
     argumentIndex = 0;
     while (argumentIndex < genericArguments.length) {
         genericArguments.data[argumentIndex] =
             savedArguments[argumentIndex];
-        argumentIndex = argumentIndex + 1;
+        argumentIndex++;
     }
     k_boot_free(savedArguments as unit*);
     k_boot_free(saved as unit*);
@@ -4120,12 +4120,12 @@ fn callCalleeRoot(nodes: AstList, callRoot: u64): u64 {
     var remaining = call.aux % 65536;
     while (remaining > 0) {
         cursor = expressionChildBefore(nodes, cursor);
-        remaining = remaining - 1;
+        remaining--;
     }
     remaining = call.aux / 65536;
     while (remaining > 0) {
         cursor = expressionChildBefore(nodes, cursor);
-        remaining = remaining - 1;
+        remaining--;
     }
     return cursor;
 }
@@ -4139,7 +4139,7 @@ fn firstStatementRoot(nodes: AstList, blockRoot: u64): u64 {
     while (remaining > 0) {
         roots[remaining as u64 - 1] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     val result = roots[0];
     k_boot_free(roots as unit*);
@@ -4205,7 +4205,7 @@ fn emitStruct(
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         appendNodeType(buffer, genericArguments, nodes.data[fieldRoot - 1]);
-        index = index + 1;
+        index++;
     }
     if (fieldCount > 0) buffer.add(32);
     buffer.add(125);
@@ -4237,7 +4237,7 @@ fn structSpecializationRequestListAppend(
         var index: u64 = 0;
         while (index < list.length) {
             data[index] = list.data[index];
-            index = index + 1;
+            index++;
         }
         k_boot_free(list.data as unit*);
         list.data = data;
@@ -4267,7 +4267,7 @@ fn structSpecializationRequestExists(
                 return true;
             }
         }
-        index = index + 1;
+        index++;
     }
     return false;
 }
@@ -4279,7 +4279,7 @@ fn structArgumentsAreConcrete(
         if (arguments.data[start + index as u64].kind == 14) {
             return false;
         }
-        index = index + 1;
+        index++;
     }
     return true;
 }
@@ -4319,7 +4319,7 @@ fn emitSpecializedStruct(
         appendType(
             buffer, genericArguments,
             fieldType.kind, fieldType.name, fieldType.pointee);
-        index = index + 1;
+        index++;
     }
     if (fieldCount > 0) buffer.add(32);
     buffer.add(125);
@@ -4351,7 +4351,7 @@ fn specializationRequestListAppend(
         var index: u64 = 0;
         while (index < list.length) {
             data[index] = list.data[index];
-            index = index + 1;
+            index++;
         }
         k_boot_free(list.data as unit*);
         list.data = data;
@@ -4379,7 +4379,7 @@ fn specializationArgumentsEqual(
         ) {
             return false;
         }
-        index = index + 1;
+        index++;
     }
     return true;
 }
@@ -4401,7 +4401,7 @@ fn specializationRequestExists(
                 return true;
             }
         }
-        index = index + 1;
+        index++;
     }
     return false;
 }
@@ -4415,7 +4415,7 @@ fn callArgumentsAreConcrete(
                 call.genericArgumentStart + index as u64].kind == 14) {
             return false;
         }
-        index = index + 1;
+        index++;
     }
     return true;
 }
@@ -4431,7 +4431,7 @@ fn emitModule(
     while (literalIndex < nodes.length) {
         val literal = nodes.data[literalIndex];
         if (literal.kind == 11 && literal.typeKind == 10) appendStringGlobal(buffer, source, literal, literalIndex);
-        literalIndex = literalIndex + 1;
+        literalIndex++;
     }
     appendNewline(buffer);
     val programRoot = nodes.length - 1;
@@ -4443,7 +4443,7 @@ fn emitModule(
     while (remaining > 0) {
         roots[remaining as u64 - 1] = root;
         root = nodes.data[root].subtreeStart - 1;
-        remaining = remaining - 1;
+        remaining--;
     }
     var index: u32 = 0;
     while (index < program.aux) {
@@ -4453,7 +4453,7 @@ fn emitModule(
                 emitStruct(buffer, source, nodes, genericArguments, root);
             }
         }
-        index = index + 1;
+        index++;
     }
     
     var structRequests = structSpecializationRequestListNew();
@@ -4482,7 +4482,7 @@ fn emitModule(
                 }
             }
         }
-        nodeIndex = nodeIndex + 1;
+        nodeIndex++;
     }
     
     var structReqIndex: u64 = 0;
@@ -4491,7 +4491,7 @@ fn emitModule(
         emitSpecializedStruct(
             buffer, source, nodes, genericArguments,
             request.structureRoot, request.argumentStart, request.argumentCount);
-        structReqIndex = structReqIndex + 1;
+        structReqIndex++;
     }
     structSpecializationRequestListFree(structRequests);
     
@@ -4514,11 +4514,11 @@ fn emitModule(
                         buffer, source, nodes, genericArguments,
                         methodRoot, 0, 0);
                     methodRoot = nodes.data[methodRoot].subtreeStart - 1;
-                    methods = methods - 1;
+                    methods--;
                 }
             }
         }
-        index = index + 1;
+        index++;
     }
     var requests = specializationRequestListNew();
     var callIndex: u64 = 0;
@@ -4552,7 +4552,7 @@ fn emitModule(
                 }
             }
         }
-        callIndex = callIndex + 1;
+        callIndex++;
     }
     var requestIndex: u64 = 0;
     while (requestIndex < requests.length) {
@@ -4586,7 +4586,7 @@ fn emitModule(
                             request.argumentStart,
                             request.argumentCount);
                         genericArguments.add(concrete);
-                        nestedArgument = nestedArgument + 1;
+                        nestedArgument++;
                     }
                     if (
                         !specializationRequestExists(
@@ -4604,9 +4604,9 @@ fn emitModule(
                 }
             }
             }
-            nestedIndex = nestedIndex + 1;
+            nestedIndex++;
         }
-        requestIndex = requestIndex + 1;
+        requestIndex++;
     }
     requestIndex = 0;
     while (requestIndex < requests.length) {
@@ -4615,7 +4615,7 @@ fn emitModule(
             buffer, source, nodes, genericArguments,
             request.functionRoot, request.argumentStart,
             request.argumentCount);
-        requestIndex = requestIndex + 1;
+        requestIndex++;
     }
     specializationRequestListFree(requests);
     k_boot_free(roots as unit*);

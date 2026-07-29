@@ -76,7 +76,7 @@ fn parseType(var parser: Parser): u64 {
         var typeArguments = true;
         while (typeArguments) {
             parseType(parser);
-            typeArgumentCount = typeArgumentCount + 1;
+            typeArgumentCount++;
             if (!parserMatch(parser, 56)) {
                 typeArguments = false;
             }
@@ -186,7 +186,7 @@ fn parseValueExpressionBranch(var parser: Parser): u32 {
             if (next == 90) statementStart = true;
             if (statementStart) {
                 parseStatement(parser);
-                statementCount = statementCount + 1;
+                statementCount++;
             } else {
                 val valueStart = parser.nodes.length;
                 val valueFirst = parserPeek(parser);
@@ -195,7 +195,7 @@ fn parseValueExpressionBranch(var parser: Parser): u32 {
                     parserAdd(
                         parser, 35, valueFirst.start,
                         parserPrevious(parser).end, valueStart, 0);
-                    statementCount = statementCount + 1;
+                    statementCount++;
                 } else {
                     foundTail = true;
                 }
@@ -271,7 +271,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             var patterns = true;
                             while (patterns) {
                                 parseExpression(parser, 0);
-                                patternCount = patternCount + 1;
+                                patternCount++;
                                 if (hasSubject == 0) patterns = false;
                                 else if (!parserMatch(parser, 56)) patterns = false;
                             }
@@ -297,7 +297,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                 if (next == 90) statementStart = true;
                                 if (statementStart) {
                                     parseStatement(parser);
-                                    statementCount = statementCount + 1;
+                                    statementCount++;
                                 } else {
                                     val valueStart = parser.nodes.length;
                                     val valueFirst = parserPeek(parser);
@@ -307,7 +307,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                             parser, 35, valueFirst.start,
                                             parserPrevious(parser).end,
                                             valueStart, 0);
-                                        statementCount = statementCount + 1;
+                                        statementCount++;
                                     } else {
                                         foundTail = true;
                                     }
@@ -322,7 +322,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             parser, 24, first.start, parserPrevious(parser).end,
                             branchStart,
                             isElse + statementCount * 2 + patternCount * 65536);
-                        branchCount = branchCount + 1;
+                        branchCount++;
                     }
                     if (!parserExpect(parser, 53)) return 0;
                     root = parserAdd(
@@ -335,7 +335,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         var elements = true;
                         while (elements) {
                             parseExpression(parser, 0);
-                            count = count + 1;
+                            count++;
                             if (!parserMatch(parser, 56)) {
                                 elements = false;
                             }
@@ -384,7 +384,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 var typeArguments = true;
                 while (typeArguments) {
                     parseType(parser);
-                    typeArgumentCount = typeArgumentCount + 1;
+                    typeArgumentCount++;
                     if (!parserMatch(parser, 56)) {
                         typeArguments = false;
                     }
@@ -396,7 +396,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     var arguments = true;
                     while (arguments) {
                         parseExpression(parser, 0);
-                        argumentCount = argumentCount + 1;
+                        argumentCount++;
                         if (!parserMatch(parser, 56)) {
                             arguments = false;
                         }
@@ -430,7 +430,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 var arguments = true;
                 while (arguments) {
                     parseExpression(parser, 0);
-                    argumentCount = argumentCount + 1;
+                    argumentCount++;
                     if (!parserMatch(parser, 56)) arguments = false;
                 }
             }
@@ -528,10 +528,10 @@ fn parserGenericCallAhead(parser: Parser): bool {
     while (cursor < parser.tokens.length) {
         val kind = parser.tokens.data[cursor].kind;
         if (kind == 66) {
-            depth = depth + 1;
+            depth++;
         } else {
             if (kind == 67) {
-                depth = depth - 1;
+                depth--;
                 if (depth == 0) {
                     if (cursor + 1 >= parser.tokens.length) {
                         return false;
@@ -540,7 +540,7 @@ fn parserGenericCallAhead(parser: Parser): bool {
                 }
             }
         }
-        cursor = cursor + 1;
+        cursor++;
     }
     return false;
 }
@@ -559,7 +559,7 @@ fn parseBlock(var parser: Parser): u64 {
             parser.ok = false;
         } else {
             parseStatement(parser);
-            count = count + 1;
+            count++;
         }
     }
     return 0;
@@ -610,7 +610,7 @@ fn parseStatement(var parser: Parser): u64 {
                 var patterns = true;
                 while (patterns) {
                     parseExpression(parser, 0);
-                    patternCount = patternCount + 1;
+                    patternCount++;
                     if (hasSubject == 0) patterns = false;
                     else if (!parserMatch(parser, 56)) patterns = false;
                 }
@@ -620,7 +620,7 @@ fn parseStatement(var parser: Parser): u64 {
             parserAdd(
                 parser, 40, first.start, parserPrevious(parser).end,
                 branchStart, isElse + patternCount * 65536);
-            branchCount = branchCount + 1;
+            branchCount++;
         }
         return 0;
     }
@@ -730,7 +730,7 @@ fn arrowIfHasElseAhead(parser: Parser): bool {
         if (kind == 11) declaration = true;
         if (kind == 24) declaration = true;
         if (declaration) return false;
-        cursor = cursor + 1;
+        cursor++;
     }
     return false;
 }
@@ -769,7 +769,7 @@ fn parseFunction(
             parserAdd(
                 parser, 46, parameterStart, parserPrevious(parser).end,
                 parameterSubtree, hasConstraint);
-            typeParameterCount = typeParameterCount + 1;
+            typeParameterCount++;
             if (!parserMatch(parser, 56)) {
                 typeParameters = false;
             }
@@ -810,7 +810,7 @@ fn parseFunction(
             parserAdd(
                 parser, 40, parameterStart, parser.nodes.data[typeNode].end,
                 parameterSubtree, mode);
-            parameterCount = parameterCount + 1;
+            parameterCount++;
             if (!parserMatch(parser, 56)) parameters = false;
         }
     }
@@ -896,7 +896,7 @@ fn parseStruct(var parser: Parser): u64 {
             parserAdd(
                 parser, 46, parameterStart, parserPrevious(parser).end,
                 parameterSubtree, hasConstraint);
-            typeParameterCount = typeParameterCount + 1;
+            typeParameterCount++;
             if (!parserMatch(parser, 56)) {
                 typeParameters = false;
             }
@@ -920,7 +920,7 @@ fn parseStruct(var parser: Parser): u64 {
             parserAdd(
                 parser, 42, fieldStart, parser.nodes.data[typeNode].end,
                 fieldSubtree, 0);
-            fieldCount = fieldCount + 1;
+            fieldCount++;
             if (!parserMatch(parser, 56)) fields = false;
         }
     }
@@ -931,7 +931,7 @@ fn parseStruct(var parser: Parser): u64 {
             if (!parserCheck(parser, 10)) return 0;
             parseFunction(parser, false, parserPeek(parser).start,
                 structName.start, structName.end);
-            methodCount = methodCount + 1;
+            methodCount++;
         }
         if (!parserExpect(parser, 53)) return 0;
     }
@@ -964,7 +964,7 @@ fn parseEnum(var parser: Parser): u64 {
         parserAdd(
             parser, 45, variant.start, variant.end,
             parser.nodes.length, 0);
-        count = count + 1;
+        count++;
         if (parserMatch(parser, 56)) {
             if (parserCheck(parser, 53)) {
                 parser.ok = false;
@@ -996,7 +996,7 @@ fn parseModule(var parser: Parser): u64 {
         parserAdd(
             parser, 45, name.start, name.end,
             parser.nodes.length, 0);
-        partCount = partCount + 1;
+        partCount++;
     }
     if (!parserExpect(parser, 58)) return 0;
     return parserAdd(
@@ -1022,7 +1022,7 @@ fn parseImport(var parser: Parser): u64 {
         } else {
             if (parserMatch(parser, 62)) {
                 isWildcard = 1;
-                partCount = partCount + 1;
+                partCount++;
                 importing = false;
             } else {
                 if (!parserExpect(parser, 1)) return 0;
@@ -1030,7 +1030,7 @@ fn parseImport(var parser: Parser): u64 {
                 parserAdd(
                     parser, 45, name.start, name.end,
                     parser.nodes.length, 0);
-                partCount = partCount + 1;
+                partCount++;
             }
         }
     }
@@ -1061,11 +1061,11 @@ fn parse(tokens: TokenList): ParseResult {
     var declarationCount: u32 = 0;
     if (parserCheck(parser, 25)) {
         parseModule(parser);
-        declarationCount = declarationCount + 1;
+        declarationCount++;
     }
     while (parserCheck(parser, 26)) {
         parseImport(parser);
-        declarationCount = declarationCount + 1;
+        declarationCount++;
     }
     while (parser.ok) {
         if (parserCheck(parser, 0)) {
@@ -1097,7 +1097,7 @@ fn parse(tokens: TokenList): ParseResult {
                 }
             }
         }
-        declarationCount = declarationCount + 1;
+        declarationCount++;
     }
     return ParseResult(
         parser.nodes, false, parserPeek(parser).start, parser.expectedKind);
