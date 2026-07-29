@@ -3,7 +3,9 @@ module kbootstrap.loader;
 import kbootstrap.source.Source;
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
+import kbootstrap.list.listAdd;
 import kbootstrap.list.listFree;
+import kbootstrap.list.listNew;
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.lexer.lex;
 
@@ -11,68 +13,20 @@ extern fn k_boot_current_directory(data: u8**, dataLength: u64*): bool;
 extern fn k_boot_canonical_path(path: u8*, pathLength: u64, data: u8**, dataLength: u64*): bool;
 
 struct LoadedPath(data: u8*, length: u64)
-struct LoadedPathList(data: LoadedPath*, length: u64, capacity: u64)
 struct LoadedModule(path: LoadedPath, data: u8*, length: u64)
-struct LoadedModuleList(data: LoadedModule*, length: u64, capacity: u64)
 struct SourceMapSegment(path: u8*, pathLength: u64, sourceStart: u64, sourceLength: u64)
-struct SourceMap(data: SourceMapSegment*, length: u64, capacity: u64)
-struct LoadResult(source: Source, sourceMap: SourceMap, ok: bool, failureKind: i32)
+struct LoadResult(source: Source, sourceMap: List<SourceMapSegment>, ok: bool, failureKind: i32)
 struct ModuleLoader(
-    modules: LoadedModuleList,
-    visited: LoadedPathList,
+    modules: List<LoadedModule>,
+    visited: List<LoadedPath>,
     workingDirectory: LoadedPath,
     entryDirectory: ByteBuffer,
     failureKind: i32
 )
 
-fn loadedModuleListNew() => LoadedModuleList(k_boot_alloc(2 * sizeof(LoadedModule)) as LoadedModule*, 0, 2);
-
-fn loadedModuleListAppend(var list: LoadedModuleList, loadedModule: LoadedModule) {
-    if (list.length == list.capacity) {
-        val capacity = list.capacity * 2;
-        val data = k_boot_alloc(capacity * sizeof(LoadedModule)) as LoadedModule*;
-        for (i in 0..<list.length) data[i] = list.data[i];
-        k_boot_free(list.data as unit*);
-        list.data = data;
-        list.capacity = capacity;
-    }
-    list.data[list.length] = loadedModule;
-    list.length++;
-}
-
-fn loadedPathListNew() => LoadedPathList(k_boot_alloc(2 * sizeof(LoadedPath)) as LoadedPath*, 0, 2);
-
-fn loadedPathListAppend(var list: LoadedPathList, path: LoadedPath) {
-    if (list.length == list.capacity) {
-        val capacity = list.capacity * 2;
-        val data = k_boot_alloc(capacity * sizeof(LoadedPath)) as LoadedPath*;
-        for (i in 0..<list.length) data[i] = list.data[i];
-        k_boot_free(list.data as unit*);
-        list.data = data;
-        list.capacity = capacity;
-    }
-    list.data[list.length] = path;
-    list.length++;
-}
-
-fn sourceMapNew() => SourceMap(k_boot_alloc(2 * sizeof(SourceMapSegment)) as SourceMapSegment*, 0, 2);
-
-fn sourceMapAppend(var sourceMap: SourceMap, segment: SourceMapSegment) {
-    if (sourceMap.length == sourceMap.capacity) {
-        val capacity = sourceMap.capacity * 2;
-        val data = k_boot_alloc(capacity * sizeof(SourceMapSegment)) as SourceMapSegment*;
-        for (i in 0..<sourceMap.length) data[i] = sourceMap.data[i];
-        k_boot_free(sourceMap.data as unit*);
-        sourceMap.data = data;
-        sourceMap.capacity = capacity;
-    }
-    sourceMap.data[sourceMap.length] = segment;
-    sourceMap.length++;
-}
-
-fn sourceMapFree(sourceMap: SourceMap) {
+fn sourceMapFree(sourceMap: List<SourceMapSegment>) {
     for (i in 0..<sourceMap.length) k_boot_free(sourceMap.data[i].path as unit*);
-    k_boot_free(sourceMap.data as unit*);
+    listFree<SourceMapSegment>(sourceMap);
 }
 
 fn loaderBytesEqual(a: u8*, aLength: u64, b: u8*, bLength: u64): bool {
@@ -410,7 +364,7 @@ fn loaderLoadModule(
         return true;
     }
     var visited = loader.visited;
-    loadedPathListAppend(visited, canonical);
+    listAdd<LoadedPath>(visited, canonical);
     loader.visited = visited;
     var data = suppliedData;
     var length = suppliedLength;
@@ -431,7 +385,7 @@ fn loaderLoadModule(
         return false;
     }
     var modules = loader.modules;
-    loadedModuleListAppend(modules, LoadedModule(canonical, data, length));
+    listAdd<LoadedModule>(modules, LoadedModule(canonical, data, length));
     loader.modules = modules;
     return true;
 }
@@ -442,12 +396,12 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     var workingLength: u64 = 0;
     if (!k_boot_current_directory(&workingData, &workingLength)) {
         k_boot_free(workingData as unit*);
-        return LoadResult(Source(workingData, 0), sourceMapNew(), false, 1);
+        return LoadResult(Source(workingData, 0), listNew<SourceMapSegment>(sizeof(SourceMapSegment)), false, 1);
     }
     k_boot_free(workingPlaceholder);
     val entryDirectory = loaderDirectory(entryPath, entryPathLength);
     var loader = ModuleLoader(
-        loadedModuleListNew(), loadedPathListNew(),
+        listNew<LoadedModule>(sizeof(LoadedModule)), listNew<LoadedPath>(sizeof(LoadedPath)),
         LoadedPath(workingData, workingLength), entryDirectory, 1
     );
     val loaded = loaderLoadModule(
@@ -455,12 +409,12 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
         workingData, 0, false
     );
     var combined = byteBufferNew();
-    var sourceMap = sourceMapNew();
+    var sourceMap = listNew<SourceMapSegment>(sizeof(SourceMapSegment));
 
     if (loaded) {
         for (i in 0..<loader.modules.length) {
             val loadedModule = loader.modules.data[i];
-            sourceMapAppend(
+            listAdd<SourceMapSegment>(
                 sourceMap,
                 SourceMapSegment(
 	                loadedModule.path.data, loadedModule.path.length,
@@ -474,15 +428,15 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     }
     else for (i in 0..<loader.visited.length) k_boot_free(loader.visited.data[i].data as unit*);
 
-    k_boot_free(loader.modules.data as unit*);
-    k_boot_free(loader.visited.data as unit*);
+    listFree<LoadedModule>(loader.modules);
+    listFree<LoadedPath>(loader.visited);
     k_boot_free(loader.workingDirectory.data as unit*);
     loader.entryDirectory.free();
 
     if (!loaded) {
         combined.free();
         sourceMapFree(sourceMap);
-        return LoadResult(Source(workingData, 0), sourceMapNew(), false, loader.failureKind);
+        return LoadResult(Source(workingData, 0), listNew<SourceMapSegment>(sizeof(SourceMapSegment)), false, loader.failureKind);
     }
 
     return LoadResult(Source(combined.data, combined.length), sourceMap, true, 0);

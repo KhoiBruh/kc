@@ -2,6 +2,7 @@ module kbootstrap.compiler;
 
 import kbootstrap.*;
 import kbootstrap.loader.LoadResult;
+import kbootstrap.loader.SourceMapSegment;
 
 extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
@@ -119,7 +120,7 @@ fn compilerFailure(kind: u32) {
 fn compileToLl(
     sourceData: u8*,
     sourceLength: u64,
-    sourceMap: SourceMap,
+    sourceMap: List<SourceMapSegment>,
     outputPath: u8*,
     outputPathLength: u64,
     optPath: u8*,
@@ -446,7 +447,7 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
 }
 
 fn printDiagnostic(
-    source: Source, sourceMap: SourceMap,
+    source: Source, sourceMap: List<SourceMapSegment>,
     category: u32, start: u64, end: u64
 ) {
     var buf = byteBufferNew();
