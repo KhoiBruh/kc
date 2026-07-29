@@ -1036,7 +1036,7 @@ fn appendSpecializationSuffix(
     }
 }
 
-fn declarationRoots(nodes: AstList): u64* {
+fn declarationRoots(nodes: List<AstNode>): u64* {
     val programRoot = nodes.length - 1;
     val program = nodes.data[programRoot];
     val roots =
@@ -1050,7 +1050,7 @@ fn declarationRoots(nodes: AstList): u64* {
 }
 
 fn structRootByName(
-    source: Source, nodes: AstList, name: u64): u64 {
+    source: Source, nodes: List<AstNode>, name: u64): u64 {
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
     var found = nodes.length;
@@ -1069,7 +1069,7 @@ fn structRootByName(
 }
 
 fn functionRootByName(
-    source: Source, nodes: AstList, name: u64): u64 {
+    source: Source, nodes: List<AstNode>, name: u64): u64 {
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
     var found = nodes.length;
@@ -1093,7 +1093,7 @@ fn emitterStructFieldCount(structure: AstNode) => structure.aux % 65536;
 
 fn emitterStructMethodCount(structure: AstNode) => structure.storage;
 
-fn emitterRootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
+fn emitterRootBeforeStructMethods(nodes: List<AstNode>, structureRoot: u64): u64 {
     var root = structureRoot - 1;
     val remaining = emitterStructMethodCount(nodes.data[structureRoot]);
     for (method in 0..<remaining) {
@@ -1103,7 +1103,7 @@ fn emitterRootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
 }
 
 fn emitterStructTypeParameterRoot(
-    source: Source, nodes: AstList, structureRoot: u64, position: u32): u64 {
+    source: Source, nodes: List<AstNode>, structureRoot: u64, position: u32): u64 {
     val structure = nodes.data[structureRoot];
     var root = emitterRootBeforeStructMethods(nodes, structureRoot);
     val fields = emitterStructFieldCount(structure);
@@ -1118,7 +1118,7 @@ fn emitterStructTypeParameterRoot(
 }
 
 fn emitterStructTypeParameterPosition(
-    source: Source, nodes: AstList, structureRoot: u64, name: u64): u32 {
+    source: Source, nodes: List<AstNode>, structureRoot: u64, name: u64): u32 {
     val count = emitterStructTypeParameterCount(
         nodes.data[structureRoot]);
     for (position in 0..<count) {
@@ -1134,7 +1134,7 @@ fn emitterStructTypeParameterPosition(
 }
 
 fn substituteStructEmitterType(
-    source: Source, nodes: AstList, structureRoot: u64,
+    source: Source, nodes: List<AstNode>, structureRoot: u64,
     pattern: TypeValue, arguments: TypeValueList,
     argumentStart: u64, count: u32): TypeValue {
     if (pattern.kind == 14) {
@@ -1168,7 +1168,7 @@ fn substituteStructEmitterType(
 }
 
 fn emitterFieldRootAt(
-    nodes: AstList, structureRoot: u64, wanted: u32): u64 {
+    nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
     val structure = nodes.data[structureRoot];
     var roots =
         k_boot_alloc((emitterStructFieldCount(structure) as u64) * sizeof(u64)) as u64*;
@@ -1184,7 +1184,7 @@ fn emitterFieldRootAt(
 }
 
 fn fieldIndexByName(
-    source: Source, nodes: AstList, structureRoot: u64,
+    source: Source, nodes: List<AstNode>, structureRoot: u64,
     nameNode: AstNode): u32 {
     val wanted = sourceHash(source, nameNode.start, nameNode.end);
     val structure = nodes.data[structureRoot];
@@ -1203,7 +1203,7 @@ fn alignUp(value: u64, alignment: u64) =>
     ((value + alignment - 1) / alignment) * alignment;
 
 fn typeAlignment(
-    source: Source, nodes: AstList, genericArguments: TypeValueList,
+    source: Source, nodes: List<AstNode>, genericArguments: TypeValueList,
     kind: u32, name: u64, pointee: u32): u64 {
     if (kind == 2) return 1;
     if (kind == 5) return 1;
@@ -1252,7 +1252,7 @@ fn typeAlignment(
 }
 
 fn typeSize(
-    source: Source, nodes: AstList, genericArguments: TypeValueList,
+    source: Source, nodes: List<AstNode>, genericArguments: TypeValueList,
     kind: u32, name: u64, pointee: u32): u64 {
     if (kind == 1) return 0;
     if (kind == 2) return 1;
@@ -1522,13 +1522,13 @@ fn appendComparison(
     }
 }
 
-fn expressionChildBefore(nodes: AstList, root: u64) =>
+fn expressionChildBefore(nodes: List<AstNode>, root: u64) =>
     nodes.data[root].subtreeStart - 1;
 
 fn emitAddress(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): IrValue {
@@ -1643,7 +1643,7 @@ fn appendFloatRangeComparison(
 fn emitExpression(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): IrValue {
@@ -2907,7 +2907,7 @@ fn emitExpression(
     return IrValue(0, 0, 0, 0, 0, 0, 0);
 }
 
-fn blockStatementRoots(nodes: AstList, blockRoot: u64): u64* {
+fn blockStatementRoots(nodes: List<AstNode>, blockRoot: u64): u64* {
     val block = nodes.data[blockRoot];
     val roots =
         k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
@@ -2922,7 +2922,7 @@ fn blockStatementRoots(nodes: AstList, blockRoot: u64): u64* {
 fn emitBlock(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): bool {
@@ -2940,7 +2940,7 @@ fn emitBlock(
 }
 
 fn emitCollectionFor(
-    var buffer: ByteBuffer, source: Source, nodes: AstList,
+    var buffer: ByteBuffer, source: Source, nodes: List<AstNode>,
     var genericArguments: TypeValueList, root: u64,
     var counter: IrCounter): bool {
     val statement = nodes.data[root];
@@ -3066,7 +3066,7 @@ fn emitCollectionFor(
 }
 
 fn emitWhen(
-    var buffer: ByteBuffer, source: Source, nodes: AstList,
+    var buffer: ByteBuffer, source: Source, nodes: List<AstNode>,
     var genericArguments: TypeValueList, root: u64,
     var counter: IrCounter): bool {
     val statement = nodes.data[root];
@@ -3164,7 +3164,7 @@ fn emitWhen(
 fn emitStatement(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     var genericArguments: TypeValueList,
     root: u64,
     var counter: IrCounter): bool {
@@ -3615,7 +3615,7 @@ fn emitStatement(
 }
 
 fn parameterRoot(
-    nodes: AstList, functionRoot: u64, position: u32): u64 {
+    nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
     val function = nodes.data[functionRoot];
     var root = functionRoot - 1;
     if (!functionIsExtern(function)) {
@@ -3628,7 +3628,7 @@ fn parameterRoot(
     return root;
 }
 
-fn returnTypeRoot(nodes: AstList, functionRoot: u64): u64 {
+fn returnTypeRoot(nodes: List<AstNode>, functionRoot: u64): u64 {
     if (functionIsExtern(nodes.data[functionRoot])) {
         return functionRoot - 1;
     }
@@ -3636,7 +3636,7 @@ fn returnTypeRoot(nodes: AstList, functionRoot: u64): u64 {
 }
 
 fn emitterTypeParameterRoot(
-    nodes: AstList, functionRoot: u64, position: u32): u64 {
+    nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
     var root = returnTypeRoot(nodes, functionRoot);
     val parameters =
         functionParameterCount(nodes.data[functionRoot]);
@@ -3652,7 +3652,7 @@ fn emitterTypeParameterRoot(
 }
 
 fn emitterTypeParameterPosition(
-    source: Source, nodes: AstList,
+    source: Source, nodes: List<AstNode>,
     functionRoot: u64, name: u64): u32 {
     val count =
         functionTypeParameterCount(nodes.data[functionRoot]);
@@ -3669,7 +3669,7 @@ fn emitterTypeParameterPosition(
 }
 
 fn substituteEmitterType(
-    source: Source, nodes: AstList, functionRoot: u64,
+    source: Source, nodes: List<AstNode>, functionRoot: u64,
     pattern: TypeValue, var arguments: TypeValueList,
     argumentStart: u64, count: u32): TypeValue {
     if (pattern.kind == 8) {
@@ -3725,7 +3725,7 @@ fn substituteEmitterType(
 }
 
 fn emitVariableAlloca(
-    var buffer: ByteBuffer, genericArguments: TypeValueList, nodes: AstList, root: u64) {
+    var buffer: ByteBuffer, genericArguments: TypeValueList, nodes: List<AstNode>, root: u64) {
     val statement = nodes.data[root];
     val initializerRoot = root - 1;
     val initializer = nodes.data[initializerRoot];
@@ -3752,7 +3752,7 @@ fn emitVariableAlloca(
 }
 
 fn emitBlockAllocas(
-    var buffer: ByteBuffer, genericArguments: TypeValueList, nodes: AstList, blockRoot: u64) {
+    var buffer: ByteBuffer, genericArguments: TypeValueList, nodes: List<AstNode>, blockRoot: u64) {
     val roots = blockStatementRoots(nodes, blockRoot);
     for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
@@ -3828,7 +3828,7 @@ fn emitBlockAllocas(
 fn emitFunction(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     var genericArguments: TypeValueList,
     functionRoot: u64,
     specializationArgumentStart: u64,
@@ -3988,7 +3988,7 @@ fn emitFunction(
 
 fn emitSpecializedFunction(
     var buffer: ByteBuffer, source: Source,
-    var nodes: AstList,
+    var nodes: List<AstNode>,
     var genericArguments: TypeValueList,
     functionRoot: u64,
     argumentStart: u64,
@@ -4046,7 +4046,7 @@ fn emitSpecializedFunction(
     k_boot_free(saved as unit*);
 }
 
-fn callCalleeRoot(nodes: AstList, callRoot: u64): u64 {
+fn callCalleeRoot(nodes: List<AstNode>, callRoot: u64): u64 {
     val call = nodes.data[callRoot];
     var cursor = callRoot - 1;
     val argumentCount = call.aux % 65536;
@@ -4060,7 +4060,7 @@ fn callCalleeRoot(nodes: AstList, callRoot: u64): u64 {
     return cursor;
 }
 
-fn firstStatementRoot(nodes: AstList, blockRoot: u64): u64 {
+fn firstStatementRoot(nodes: List<AstNode>, blockRoot: u64): u64 {
     val block = nodes.data[blockRoot];
     var roots =
         k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
@@ -4077,7 +4077,7 @@ fn firstStatementRoot(nodes: AstList, blockRoot: u64): u64 {
 fn emitSimpleFunction(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     functionRoot: u64): bool {
     val function = nodes.data[functionRoot];
     if (functionParameterCount(function) != 0) return false;
@@ -4109,7 +4109,7 @@ fn emitSimpleFunction(
 
 fn emitStruct(
     var buffer: ByteBuffer, source: Source,
-    nodes: AstList, genericArguments: TypeValueList, structureRoot: u64) {
+    nodes: List<AstNode>, genericArguments: TypeValueList, structureRoot: u64) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
     buffer.add(37);
@@ -4206,7 +4206,7 @@ fn structArgumentsAreConcrete(
 
 fn emitSpecializedStruct(
     var buffer: ByteBuffer, source: Source,
-    nodes: AstList, genericArguments: TypeValueList,
+    nodes: List<AstNode>, genericArguments: TypeValueList,
     structureRoot: u64, argumentStart: u64, argumentCount: u32) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
@@ -4331,7 +4331,7 @@ fn callArgumentsAreConcrete(
 }
 
 fn emitModule(
-    source: Source, nodes: AstList,
+    source: Source, nodes: List<AstNode>,
     var genericArguments: TypeValueList): ByteBuffer {
     var buffer = byteBufferNew();
     appendModuleHeader(buffer);

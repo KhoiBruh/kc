@@ -141,7 +141,7 @@ fn compileToLl(
             source, sourceMap, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1
 		);
-        parsed.nodes.free();
+        listFree<AstNode>(parsed.nodes);
         listFree<Token>(lexed.tokens);
         return 2;
     }
@@ -152,7 +152,7 @@ fn compileToLl(
             checked.start, checked.end
         );
         checked.genericArguments.free();
-        parsed.nodes.free();
+        listFree<AstNode>(parsed.nodes);
         listFree<Token>(lexed.tokens);
         return 2;
     }
@@ -175,7 +175,7 @@ fn compileToLl(
         temporaryPath.free();
         output.free();
         checked.genericArguments.free();
-        parsed.nodes.free();
+        listFree<AstNode>(parsed.nodes);
         listFree<Token>(lexed.tokens);
         return 1;
     }
@@ -191,7 +191,7 @@ fn compileToLl(
         temporaryPath.free();
         output.free();
         checked.genericArguments.free();
-        parsed.nodes.free();
+        listFree<AstNode>(parsed.nodes);
         listFree<Token>(lexed.tokens);
         if (verified < 0) {
             compilerFailure(2);
@@ -204,7 +204,7 @@ fn compileToLl(
     temporaryPath.free();
     output.free();
     checked.genericArguments.free();
-    parsed.nodes.free();
+    listFree<AstNode>(parsed.nodes);
     listFree<Token>(lexed.tokens);
     if (published) return 0;
     compilerFailure(1);

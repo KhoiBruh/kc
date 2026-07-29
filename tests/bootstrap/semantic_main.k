@@ -39,7 +39,7 @@ fn main(): i32 {
         print(parsed.errorStart as i32);
         print(":");
         print(parsed.errorStart as i32);
-        parsed.nodes.free();
+        listFree<AstNode>(parsed.nodes);
         listFree<Token>(lexed.tokens);
         k_boot_free(sourceData as unit*);
         k_boot_free(path as unit*);
@@ -55,7 +55,7 @@ fn main(): i32 {
         print(checked.end as i32);
     }
 
-    parsed.nodes.free();
+    listFree<AstNode>(parsed.nodes);
     listFree<Token>(lexed.tokens);
     k_boot_free(sourceData as unit*);
     k_boot_free(path as unit*);

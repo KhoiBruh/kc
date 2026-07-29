@@ -4,7 +4,7 @@ import kbootstrap.*;
 
 struct Semantic(
     source: Source,
-    nodes: AstList,
+    nodes: List<AstNode>,
     structs: DeclarationList,
     enums: DeclarationList,
     functions: DeclarationList,
@@ -368,7 +368,7 @@ fn structFieldCount(structure: AstNode) => structure.aux % 65536;
 
 fn structMethodCount(structure: AstNode) => structure.storage;
 
-fn rootBeforeStructMethods(nodes: AstList, structureRoot: u64): u64 {
+fn rootBeforeStructMethods(nodes: List<AstNode>, structureRoot: u64): u64 {
     var root = structureRoot - 1;
     val remaining = structMethodCount(nodes.data[structureRoot]);
     for (method in 0..<remaining) {
@@ -405,7 +405,7 @@ fn structTypeParameterPosition(semantic: Semantic, structureRoot: u64, name: u64
     return count;
 }
 
-fn fieldRootAt(nodes: AstList, structureRoot: u64, wanted: u32): u64 {
+fn fieldRootAt(nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
     val structure = nodes.data[structureRoot];
     var roots = k_boot_alloc((structFieldCount(structure) as u64) * sizeof(u64)) as u64*;
     var root = rootBeforeStructMethods(nodes, structureRoot);
@@ -2168,7 +2168,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
     k_boot_free(roots as unit*);
 }
 
-fn analyze(source: Source, nodes: AstList): SemanticResult {
+fn analyze(source: Source, nodes: List<AstNode>): SemanticResult {
     val genericArguments = typeValueListNew();
     var semantic = Semantic(
         source, nodes, declarationListNew(), declarationListNew(), declarationListNew(),

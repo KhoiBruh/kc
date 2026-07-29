@@ -2,12 +2,14 @@ module kbootstrap.parser;
 
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
+import kbootstrap.list.listAdd;
+import kbootstrap.list.listNew;
 import kbootstrap.ast.AstNode;
 import kbootstrap.containers.ByteBuffer;
 
-struct ParseResult(nodes: AstList, ok: bool, errorStart: u64, expectedKind: u32)
+struct ParseResult(nodes: List<AstNode>, ok: bool, errorStart: u64, expectedKind: u32)
 struct Parser(
-    tokens: List<Token>, nodes: AstList, current: u64,
+    tokens: List<Token>, nodes: List<AstNode>, current: u64,
     ok: bool, expectedKind: u32)
 
 fn parserPeek(parser: Parser) => parser.tokens.data[parser.current];
@@ -39,7 +41,7 @@ fn parserAdd(
     subtreeStart: u64,
     aux: u32): u64 {
     var nodes = parser.nodes;
-    val index = nodes.add(
+    val index = listAdd<AstNode>(nodes,
         AstNode(
             kind, start, end, subtreeStart, aux,
             0, 0, 0, 0, 0, 0, 0));
@@ -1046,7 +1048,7 @@ fn parseConstant(var parser: Parser): u64 {
 }
 
 fn parse(tokens: List<Token>): ParseResult {
-    var parser = Parser(tokens, astListNew(), 0, true, 0);
+    var parser = Parser(tokens, listNew<AstNode>(sizeof(AstNode)), 0, true, 0);
     val start = parserPeek(parser).start;
     var declarationCount: u32 = 0;
     if (parserCheck(parser, 25)) {
