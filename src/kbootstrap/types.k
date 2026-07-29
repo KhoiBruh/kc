@@ -116,63 +116,21 @@ fn primitiveType(tokenKind: u32) => when (tokenKind) {
 };
 
 struct LocalInfo(name: u64, valueType: TypeValue, mutable: bool, storage: u64)
-struct LocalList(data: LocalInfo*, length: u64, capacity: u64) {
-    fn grow(var self) {
-        val capacity = self.capacity * 2;
-        val data = k_boot_alloc(capacity * sizeof(LocalInfo)) as LocalInfo*;
-        for (i in 0..<self.length) data[i] = self.data[i];
-        k_boot_free(self.data as unit*);
-        self.data = data;
-        self.capacity = capacity;
-    }
-
-    fn add(var self, value: LocalInfo) {
-        if (self.length == self.capacity) self.grow();
-        self.data[self.length] = value;
-        self.length++;
-    }
-
-    fn find(val self, name: u64): u64 {
-        for (index in self.length>..0)
-            if (self.data[index].name == name) return index;
-        return self.length;
-    }
-
-    fn findFrom(val self, name: u64, start: u64): u64 {
-        for (index in self.length>..start)
-            if (self.data[index].name == name) return index;
-        return self.length;
-    }
-
-    fn free(val self) => k_boot_free(self.data as unit*);
+fn localFind(locals: List<LocalInfo>, name: u64): u64 {
+    for (index in locals.length>..0)
+        if (locals.data[index].name == name) return index;
+    return locals.length;
 }
 
-fn localListNew() => LocalList(k_boot_alloc(8 * sizeof(LocalInfo)) as LocalInfo*, 0, 8);
+fn localFindFrom(locals: List<LocalInfo>, name: u64, start: u64): u64 {
+    for (index in locals.length>..start)
+        if (locals.data[index].name == name) return index;
+    return locals.length;
+}
 
 struct DeclarationInfo(name: u64, node: u64)
-struct DeclarationList(data: DeclarationInfo*, length: u64, capacity: u64) {
-    fn grow(var self) {
-        val capacity = self.capacity * 2;
-        val data = k_boot_alloc(capacity * sizeof(DeclarationInfo)) as DeclarationInfo*;
-        for (i in 0..<self.length) data[i] = self.data[i];
-        k_boot_free(self.data as unit*);
-        self.data = data;
-        self.capacity = capacity;
-    }
-
-    fn add(var self, value: DeclarationInfo) {
-        if (self.length == self.capacity) self.grow();
-        self.data[self.length] = value;
-        self.length++;
-    }
-
-    fn find(val self, name: u64): u64 {
-        for (index in 0..<self.length)
-            if (self.data[index].name == name) return index;
-        return self.length;
-    }
-
-    fn free(val self) => k_boot_free(self.data as unit*);
+fn declarationFind(declarations: List<DeclarationInfo>, name: u64): u64 {
+    for (index in 0..<declarations.length)
+        if (declarations.data[index].name == name) return index;
+    return declarations.length;
 }
-
-fn declarationListNew() => DeclarationList(k_boot_alloc(8 * sizeof(DeclarationInfo)) as DeclarationInfo*, 0, 8);
