@@ -45,10 +45,8 @@ struct TokenList(data: Token*, length: u64, capacity: u64) {
     fn free(val self) => k_boot_free(self.data as unit*);
 }
 
-fn tokenListNew(): TokenList {
-    val bytes = 2 * sizeof(Token);
-    return TokenList(k_boot_alloc(bytes) as Token*, 0, 2);
-}
+fn tokenListNew() =>
+    TokenList(k_boot_alloc(2 * sizeof(Token)) as Token*, 0, 2);
 
 struct ExprList(data: unit**, length: u64, capacity: u64) {
     fn grow(var self) {

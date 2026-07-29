@@ -38,17 +38,15 @@ struct TypeValueList(data: TypeValue*, length: u64, capacity: u64) {
 
         val index = self.length;
         self.data[index] = value;
-        self.length = index + 1;
+        self.length++;
         return index;
     }
 
     fn free(var self) => k_boot_free(self.data as unit*);
 }
 
-fn typeValueListNew(): TypeValueList {
-    return TypeValueList(
-        k_boot_alloc(8 * sizeof(TypeValue)) as TypeValue*, 0, 8);
-}
+fn typeValueListNew() => TypeValueList(
+    k_boot_alloc(8 * sizeof(TypeValue)) as TypeValue*, 0, 8);
 
 fn invalidType() => TypeValue(0, 0, 0);
 
