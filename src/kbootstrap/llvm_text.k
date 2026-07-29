@@ -4610,8 +4610,7 @@ fn emitModule(
                             pattern, genericArguments,
                             request.argumentStart,
                             request.argumentCount);
-                        typeValueListAppend(
-                            genericArguments, concrete);
+                        genericArguments.add(concrete);
                         nestedArgument = nestedArgument + 1;
                     }
                     if (

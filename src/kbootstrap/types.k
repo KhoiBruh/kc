@@ -5,36 +5,30 @@ import kbootstrap.ast.AstNode;
 
 struct TypeValue(kind: u32, name: u64, pointee: u32)
 
-struct TypeValueList(
-    data: TypeValue*, length: u64, capacity: u64)
+struct TypeValueList(data: TypeValue*, length: u64, capacity: u64) {
+
+	fn add(var self, value: TypeValue): u64 {
+        if (self.length == self.capacity) {
+            val capacity = self.capacity * 2;
+            val data = k_boot_alloc(capacity * sizeof(TypeValue)) as TypeValue*;
+            for (i in 0..<self.length) data[i] = self.data[i];
+            k_boot_free(self.data as unit*);
+            self.data = data;
+            self.capacity = capacity;
+        }
+
+        val index = self.length;
+        self.data[index] = value;
+        self.length = index + 1;
+        return index;
+    }
+
+    fn free(var self) => k_boot_free(self.data as unit*);
+}
 
 fn typeValueListNew(): TypeValueList {
     return TypeValueList(
         k_boot_alloc(8 * sizeof(TypeValue)) as TypeValue*, 0, 8);
-}
-
-fn typeValueListAppend(var list: TypeValueList, value: TypeValue): u64 {
-    if (list.length == list.capacity) {
-        val capacity = list.capacity * 2;
-        val data =
-            k_boot_alloc(capacity * sizeof(TypeValue)) as TypeValue*;
-        var index: u64 = 0;
-        while (index < list.length) {
-            data[index] = list.data[index];
-            index = index + 1;
-        }
-        k_boot_free(list.data as unit*);
-        list.data = data;
-        list.capacity = capacity;
-    }
-    val index = list.length;
-    list.data[index] = value;
-    list.length = index + 1;
-    return index;
-}
-
-fn typeValueListFree(list: TypeValueList) {
-    k_boot_free(list.data as unit*);
 }
 
 fn invalidType(): TypeValue {

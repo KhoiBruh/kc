@@ -486,7 +486,7 @@ fn substituteStructType(
             val substituted = substituteStructType(
                 semantic, structureRoot, arg, arguments, argumentStart, count);
             var resolved = semantic.genericArguments;
-            typeValueListAppend(resolved, substituted);
+            resolved.add(substituted);
             semantic.genericArguments = resolved;
         }
         return TypeValue(8, type.name, newStart as u32 + argCount * 65536);
@@ -688,7 +688,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
             index = 0;
             while (index < typeArgumentCount) {
                 var resolved = semantic.genericArguments;
-                typeValueListAppend(resolved, typeArguments[index as u64]);
+                resolved.add(typeArguments[index as u64]);
                 semantic.genericArguments = resolved;
                 index = index + 1;
             }
@@ -1185,8 +1185,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 var typeIndex: u32 = 0;
                 while (typeIndex < typeCount) {
                     var resolved = semantic.genericArguments;
-                    typeValueListAppend(
-                        resolved, typeArguments[typeIndex as u64]);
+                    resolved.add(typeArguments[typeIndex as u64]);
                     semantic.genericArguments = resolved;
                     typeIndex = typeIndex + 1;
                 }
@@ -1335,8 +1334,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             var typeIndex: u32 = 0;
             while (typeIndex < typeCount) {
                 var resolved = semantic.genericArguments;
-                typeValueListAppend(
-                    resolved, typeArguments[typeIndex as u64]);
+                resolved.add(typeArguments[typeIndex as u64]);
                 semantic.genericArguments = resolved;
                 typeIndex = typeIndex + 1;
             }

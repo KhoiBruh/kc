@@ -151,7 +151,7 @@ fn compileToLl(
             source, sourceMap, checked.category,
             checked.start, checked.end
         );
-        typeValueListFree(checked.genericArguments);
+        checked.genericArguments.free();
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         return 2;
@@ -174,7 +174,7 @@ fn compileToLl(
         compilerFailure(1);
         byteBufferFree(temporaryPath);
         byteBufferFree(output);
-        typeValueListFree(checked.genericArguments);
+        checked.genericArguments.free();
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         return 1;
@@ -190,7 +190,7 @@ fn compileToLl(
     if (verified != 0) {
         byteBufferFree(temporaryPath);
         byteBufferFree(output);
-        typeValueListFree(checked.genericArguments);
+        checked.genericArguments.free();
         astListFree(parsed.nodes);
         tokenListFree(lexed.tokens);
         if (verified < 0) {
@@ -203,7 +203,7 @@ fn compileToLl(
         outputPath, outputPathLength, output.data, output.length);
     byteBufferFree(temporaryPath);
     byteBufferFree(output);
-    typeValueListFree(checked.genericArguments);
+    checked.genericArguments.free();
     astListFree(parsed.nodes);
     tokenListFree(lexed.tokens);
     if (published) return 0;
