@@ -193,22 +193,16 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
 }
 
 fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
-    var cursor = length;
     var end: u64 = 0;
-    var searching = true;
-    while (cursor > 0) {
-        if (searching) {
-            cursor--;
-            val value = path[cursor];
-            if (value == 47) {
-                end = cursor;
-                searching = false;
-            } else if (value == 92) {
-				end = cursor;
-				searching = false;
-            }
+    for (cursor in length>..0) {
+        val value = path[cursor];
+        if (value == 47) {
+            end = cursor;
+            break;
+        } else if (value == 92) {
+			end = cursor;
+			break;
         }
-        else cursor = 0;
     }
 
     var result = byteBufferNew();

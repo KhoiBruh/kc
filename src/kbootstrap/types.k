@@ -88,14 +88,12 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList
         if (leftCount == 0) return true;
         val leftStart = left.pointee % 65536;
         val rightStart = right.pointee % 65536;
-        var index: u32 = 0;
-        while (index < leftCount) {
+        for (index in 0..<leftCount) {
             val leftArg = genericArguments.data[leftStart as u64 + index as u64];
             val rightArg = genericArguments.data[rightStart as u64 + index as u64];
             if (!typeEquals(leftArg, rightArg, genericArguments)) {
                 return false;
             }
-            index++;
         }
         return true;
     }

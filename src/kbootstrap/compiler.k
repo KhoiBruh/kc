@@ -246,9 +246,7 @@ fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
 
 fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     var col: u64 = 1;
-    var index = offset;
-    while (index > sourceStart) {
-        index--;
+    for (index in offset>..sourceStart) {
         if (source.data[index] == 10) return col;
         col++;
     }
@@ -263,20 +261,17 @@ fn stderrNumber(value: u64): ByteBuffer {
         buf.add(48);
         return buf;
     }
-    val start = buf.length;
     var v = value;
     while (v > 0) {
         buf.add(48 + (v % 10) as u8);
         v /= 10;
     }
-    var i = start;
-    var j = buf.length - 1;
-    while (i < j) {
+    val half = buf.length / 2;
+    for (i in 0..<half) {
+        val j = buf.length - i - 1;
         val tmp = buf.data[i];
         buf.data[i] = buf.data[j];
         buf.data[j] = tmp;
-        i++;
-        j--;
     }
     return buf;
 }
