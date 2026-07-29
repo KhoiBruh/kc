@@ -2,6 +2,7 @@ module kbootstrap.types;
 
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.ast.AstNode;
+import kbootstrap.list.List;
 
 struct TypeValue(kind: u32, name: u64, pointee: u32) {
 
@@ -23,30 +24,6 @@ struct TypeValue(kind: u32, name: u64, pointee: u32) {
 		else -> 32;
 	};
 }
-
-struct TypeValueList(data: TypeValue*, length: u64, capacity: u64) {
-
-	fn add(var self, value: TypeValue): u64 {
-        if (self.length == self.capacity) {
-            val capacity = self.capacity * 2;
-            val data = k_boot_alloc(capacity * sizeof(TypeValue)) as TypeValue*;
-            for (i in 0..<self.length) data[i] = self.data[i];
-            k_boot_free(self.data as unit*);
-            self.data = data;
-            self.capacity = capacity;
-        }
-
-        val index = self.length;
-        self.data[index] = value;
-        self.length++;
-        return index;
-    }
-
-    fn free(var self) => k_boot_free(self.data as unit*);
-}
-
-fn typeValueListNew() => TypeValueList(
-    k_boot_alloc(8 * sizeof(TypeValue)) as TypeValue*, 0, 8);
 
 fn invalidType() => TypeValue(0, 0, 0);
 
@@ -76,7 +53,7 @@ fn integerImplicitlyWidens(source: TypeValue, target: TypeValue): bool {
     return true;
 }
 
-fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList): bool {
+fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: List<TypeValue>): bool {
     if (left.kind != right.kind) return false;
     if (left.name != right.name) return false;
     if (left.kind == 8) {
@@ -98,7 +75,7 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList
     return left.pointee == right.pointee;
 }
 
-fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeValueList): bool {
+fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: List<TypeValue>): bool {
     if (typeEquals(expected, actual, genericArguments)) return true;
     if (integerImplicitlyWidens(actual, expected)) return true;
     if (expected.kind == 15) {

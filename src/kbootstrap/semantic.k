@@ -10,7 +10,7 @@ struct Semantic(
     functions: DeclarationList,
     constants: DeclarationList,
     locals: LocalList,
-    genericArguments: TypeValueList,
+    genericArguments: List<TypeValue>,
     result: SemanticResult,
     returnType: TypeValue,
     scopeStart: u64,
@@ -421,7 +421,7 @@ fn fieldRootAt(nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
 
 fn substituteStructType(
     var semantic: Semantic, structureRoot: u64,
-    type: TypeValue, arguments: TypeValueList,
+    type: TypeValue, arguments: List<TypeValue>,
     argumentStart: u64, count: u32
 ): TypeValue {
     if (type.kind == 14) {
@@ -441,7 +441,7 @@ fn substituteStructType(
             val substituted = substituteStructType(
                 semantic, structureRoot, arg, arguments, argumentStart, count);
             var resolved = semantic.genericArguments;
-            resolved.add(substituted);
+            listAdd<TypeValue>(resolved, substituted);
             semantic.genericArguments = resolved;
         }
         return TypeValue(8, type.name, newStart as u32 + argCount * 65536);
@@ -547,7 +547,7 @@ fn substituteGenericType(
             val substituted = substituteGenericType(
                 semantic, functionRoot, argument, arguments, count);
             var resolved = semantic.genericArguments;
-            resolved.add(substituted);
+            listAdd<TypeValue>(resolved, substituted);
             semantic.genericArguments = resolved;
         }
         return TypeValue(8, type.name, newStart as u32 + argumentCount * 65536);
@@ -649,7 +649,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
             }
             for (index in 0..<typeArgumentCount) {
                 var resolved = semantic.genericArguments;
-                resolved.add(typeArguments[index as u64]);
+                listAdd<TypeValue>(resolved, typeArguments[index as u64]);
                 semantic.genericArguments = resolved;
             }
             k_boot_free(typeArguments as unit*);
@@ -1090,7 +1090,9 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
                 val expected = substituteStructType(
                     semantic, structureRoot, pattern,
-                    TypeValueList(typeArguments, typeCount as u64, typeCount as u64),
+                    List<TypeValue>(
+                        typeArguments, typeCount as u64, typeCount as u64,
+                        sizeof(TypeValue)),
                     0, typeCount);
                 if (!typeAccepts(expected, actual, semantic.genericArguments)) {
                     semanticFail(
@@ -1127,7 +1129,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 callNode.genericArgumentCount = typeCount;
                 for (typeIndex in 0..<typeCount) {
                     var resolved = semantic.genericArguments;
-                    resolved.add(typeArguments[typeIndex as u64]);
+                    listAdd<TypeValue>(resolved, typeArguments[typeIndex as u64]);
                     semantic.genericArguments = resolved;
                 }
                 semantic.nodes.data[root] = callNode;
@@ -1266,7 +1268,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             callNode.genericArgumentCount = typeCount;
             for (typeIndex in 0..<typeCount) {
                 var resolved = semantic.genericArguments;
-                resolved.add(typeArguments[typeIndex as u64]);
+                listAdd<TypeValue>(resolved, typeArguments[typeIndex as u64]);
                 semantic.genericArguments = resolved;
             }
             semantic.nodes.data[root] = callNode;
@@ -2169,7 +2171,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
 }
 
 fn analyze(source: Source, nodes: List<AstNode>): SemanticResult {
-    val genericArguments = typeValueListNew();
+    val genericArguments = listNew<TypeValue>(sizeof(TypeValue));
     var semantic = Semantic(
         source, nodes, declarationListNew(), declarationListNew(), declarationListNew(),
         declarationListNew(),

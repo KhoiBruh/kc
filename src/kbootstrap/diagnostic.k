@@ -2,15 +2,16 @@ module kbootstrap.diagnostic;
 
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.types.TypeValue;
+import kbootstrap.list.List;
 
 struct SemanticResult(
     ok: bool, category: u32, start: u64, end: u64,
-    genericArguments: TypeValueList
+    genericArguments: List<TypeValue>
 )
 
-fn semanticSuccess(genericArguments: TypeValueList) => SemanticResult(true, 0, 0, 0, genericArguments);
+fn semanticSuccess(genericArguments: List<TypeValue>) => SemanticResult(true, 0, 0, 0, genericArguments);
 
 fn semanticError(
     category: u32, node: AstNode,
-    genericArguments: TypeValueList
+    genericArguments: List<TypeValue>
 ) => SemanticResult(false, category, node.start, node.end, genericArguments);
