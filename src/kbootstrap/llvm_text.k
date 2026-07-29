@@ -4141,41 +4141,8 @@ fn emitStruct(
 struct StructSpecializationRequest(
     structureRoot: u64, argumentStart: u64, argumentCount: u32)
 
-struct StructSpecializationRequestList(
-    data: StructSpecializationRequest*, length: u64, capacity: u64)
-
-fn structSpecializationRequestListNew() =>
-    StructSpecializationRequestList(
-        k_boot_alloc(
-            8 * sizeof(StructSpecializationRequest))
-            as StructSpecializationRequest*,
-        0, 8);
-
-fn structSpecializationRequestListAppend(
-    var list: StructSpecializationRequestList,
-    value: StructSpecializationRequest) {
-    if (list.length == list.capacity) {
-        val capacity = list.capacity * 2;
-        val data =
-            k_boot_alloc(
-                capacity * sizeof(StructSpecializationRequest))
-                as StructSpecializationRequest*;
-        for (index in 0..<list.length) {
-            data[index] = list.data[index];
-        }
-        k_boot_free(list.data as unit*);
-        list.data = data;
-        list.capacity = capacity;
-    }
-    list.data[list.length] = value;
-    list.length++;
-}
-
-fn structSpecializationRequestListFree(list: StructSpecializationRequestList) =>
-    k_boot_free(list.data as unit*);
-
 fn structSpecializationRequestExists(
-    requests: StructSpecializationRequestList,
+    requests: List<StructSpecializationRequest>,
     arguments: List<TypeValue>,
     structureRoot: u64,
     argumentStart: u64,
@@ -4247,39 +4214,6 @@ fn emitSpecializedStruct(
 struct SpecializationRequest(
     functionRoot: u64, argumentStart: u64, argumentCount: u32)
 
-struct SpecializationRequestList(
-    data: SpecializationRequest*, length: u64, capacity: u64)
-
-fn specializationRequestListNew() =>
-    SpecializationRequestList(
-        k_boot_alloc(
-            8 * sizeof(SpecializationRequest))
-            as SpecializationRequest*,
-        0, 8);
-
-fn specializationRequestListAppend(
-    var list: SpecializationRequestList,
-    value: SpecializationRequest) {
-    if (list.length == list.capacity) {
-        val capacity = list.capacity * 2;
-        val data =
-            k_boot_alloc(
-                capacity * sizeof(SpecializationRequest))
-                as SpecializationRequest*;
-        for (index in 0..<list.length) {
-            data[index] = list.data[index];
-        }
-        k_boot_free(list.data as unit*);
-        list.data = data;
-        list.capacity = capacity;
-    }
-    list.data[list.length] = value;
-    list.length++;
-}
-
-fn specializationRequestListFree(list: SpecializationRequestList) =>
-    k_boot_free(list.data as unit*);
-
 fn specializationArgumentsEqual(
     arguments: List<TypeValue>,
     leftStart: u64, leftCount: u32,
@@ -4299,7 +4233,7 @@ fn specializationArgumentsEqual(
 }
 
 fn specializationRequestExists(
-    requests: SpecializationRequestList,
+    requests: List<SpecializationRequest>,
     arguments: List<TypeValue>,
     functionRoot: u64,
     argumentStart: u64,
@@ -4360,7 +4294,7 @@ fn emitModule(
         }
     }
     
-    var structRequests = structSpecializationRequestListNew();
+    var structRequests = listNew<StructSpecializationRequest>(sizeof(StructSpecializationRequest));
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
         if (node.typeKind == 8) {
@@ -4376,7 +4310,7 @@ fn emitModule(
                                 structureRoot, start as u64, count
                             )
                         ) {
-                            structSpecializationRequestListAppend(
+                            listAdd<StructSpecializationRequest>(
                                 structRequests,
                                 StructSpecializationRequest(
                                     structureRoot, start as u64, count));
@@ -4393,7 +4327,7 @@ fn emitModule(
             buffer, source, nodes, genericArguments,
             request.structureRoot, request.argumentStart, request.argumentCount);
     }
-    structSpecializationRequestListFree(structRequests);
+    listFree<StructSpecializationRequest>(structRequests);
     
     appendNewline(buffer);
     for (index in 0..<program.aux) {
@@ -4417,7 +4351,7 @@ fn emitModule(
             }
         }
     }
-    var requests = specializationRequestListNew();
+    var requests = listNew<SpecializationRequest>(sizeof(SpecializationRequest));
     for (callIndex in 0..<nodes.length) {
         val call = nodes.data[callIndex];
         if (call.kind == 16) {
@@ -4438,7 +4372,7 @@ fn emitModule(
                             call.genericArgumentCount
                         )
                     ) {
-                        specializationRequestListAppend(
+                        listAdd<SpecializationRequest>(
                             requests,
                             SpecializationRequest(
                                 functionRoot,
@@ -4494,7 +4428,7 @@ fn emitModule(
                             nestedCount
                         )
                     ) {
-                        specializationRequestListAppend(
+                        listAdd<SpecializationRequest>(
                             requests,
                             SpecializationRequest(
                                 nestedFunctionRoot, concreteStart,
@@ -4513,7 +4447,7 @@ fn emitModule(
             request.functionRoot, request.argumentStart,
             request.argumentCount);
     }
-    specializationRequestListFree(requests);
+    listFree<SpecializationRequest>(requests);
     k_boot_free(roots as unit*);
     return buffer;
 }
