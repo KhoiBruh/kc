@@ -5,26 +5,26 @@ extern fn k_boot_free(pointer: unit*);
 extern fn k_boot_live_allocations(): u64;
 extern fn k_boot_stderr(data: u8*, length: u64);
 
-struct ByteBuffer(data: u8*, length: u64, capacity: u64)
+struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
+    fn grow(var self) {
+        val capacity = self.capacity * 2;
+        val data = k_boot_alloc(capacity) as u8*;
+        for (i in 0..<self.length) data[i] = self.data[i];
+        k_boot_free(self.data as unit*);
+        self.data = data;
+        self.capacity = capacity;
+    }
+
+    fn add(var self, value: u8) {
+        if (self.length == self.capacity) self.grow();
+        self.data[self.length] = value;
+        self.length++;
+    }
+
+    fn free(val self) => k_boot_free(self.data as unit*);
+}
 
 fn byteBufferNew() => ByteBuffer(k_boot_alloc(2) as u8*, 0, 2);
-
-fn byteBufferGrow(var buffer: ByteBuffer) {
-    val newCapacity = buffer.capacity * 2;
-    val newData = k_boot_alloc(newCapacity) as u8*;
-    for (i in 0..<buffer.length) newData[i] = buffer.data[i];
-    k_boot_free(buffer.data as unit*);
-    buffer.data = newData;
-    buffer.capacity = newCapacity;
-}
-
-fn byteBufferAppend(var buffer: ByteBuffer, val value: u8) {
-    if (buffer.length == buffer.capacity) byteBufferGrow(buffer);
-    buffer.data[buffer.length] = value;
-    buffer.length = buffer.length + 1;
-}
-
-fn byteBufferFree(buffer: ByteBuffer) => k_boot_free(buffer.data as unit*);
 
 struct TokenList(data: Token*, length: u64, capacity: u64)
 

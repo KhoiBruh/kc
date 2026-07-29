@@ -88,19 +88,19 @@ fn loaderWasVisited(loader: ModuleLoader, path: LoadedPath): bool {
 }
 
 fn loaderAppend(var buffer: ByteBuffer, data: u8*, length: u64) {
-    for (i in 0..<length) byteBufferAppend(buffer, data[i]);
+    for (i in 0..<length) buffer.add(data[i]);
 }
 
 fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
     var digits = byteBufferNew();
     var current = value;
-    if (current == 0) byteBufferAppend(digits, 48);
+    if (current == 0) digits.add(48);
     while (current > 0) {
-        byteBufferAppend(digits, 48 + (current % 10) as u8);
+        digits.add(48 + (current % 10) as u8);
         current /= 10;
     }
-    for (i in digits.length>..0) byteBufferAppend(buffer, digits.data[i]);
-    byteBufferFree(digits);
+    for (i in digits.length>..0) buffer.add(digits.data[i]);
+    digits.free();
 }
 
 fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
@@ -115,81 +115,81 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
     }
     var message = byteBufferNew();
     loaderAppend(message, path.data, path.length);
-    byteBufferAppend(message, 58); loaderAppendNumber(message, line);
-    byteBufferAppend(message, 58); loaderAppendNumber(message, column);
-    byteBufferAppend(message, 58); byteBufferAppend(message, 32);
-    byteBufferAppend(message, 101); byteBufferAppend(message, 114);
-    byteBufferAppend(message, 114); byteBufferAppend(message, 111);
-    byteBufferAppend(message, 114); byteBufferAppend(message, 58);
-    byteBufferAppend(message, 32);
+    message.add(58); loaderAppendNumber(message, line);
+    message.add(58); loaderAppendNumber(message, column);
+    message.add(58); message.add(32);
+    message.add(101); message.add(114);
+    message.add(114); message.add(111);
+    message.add(114); message.add(58);
+    message.add(32);
 
     when (category) {
         1 -> {
-            byteBufferAppend(message, 99); byteBufferAppend(message, 97);
-            byteBufferAppend(message, 110); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 111); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 114);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 115);
-            byteBufferAppend(message, 111); byteBufferAppend(message, 108);
-            byteBufferAppend(message, 118); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 105);
-            byteBufferAppend(message, 109); byteBufferAppend(message, 112);
-            byteBufferAppend(message, 111); byteBufferAppend(message, 114);
-            byteBufferAppend(message, 116);
+            message.add(99); message.add(97);
+            message.add(110); message.add(110);
+            message.add(111); message.add(116);
+            message.add(32); message.add(114);
+            message.add(101); message.add(115);
+            message.add(111); message.add(108);
+            message.add(118); message.add(101);
+            message.add(32); message.add(105);
+            message.add(109); message.add(112);
+            message.add(111); message.add(114);
+            message.add(116);
         }
         2 -> {
-            byteBufferAppend(message, 109); byteBufferAppend(message, 111);
-            byteBufferAppend(message, 100); byteBufferAppend(message, 117);
-            byteBufferAppend(message, 108); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 105);
-            byteBufferAppend(message, 109); byteBufferAppend(message, 112);
-            byteBufferAppend(message, 111); byteBufferAppend(message, 114);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 100); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 112); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 104); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 120);
-            byteBufferAppend(message, 99); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 100);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 100);
+            message.add(109); message.add(111);
+            message.add(100); message.add(117);
+            message.add(108); message.add(101);
+            message.add(32); message.add(105);
+            message.add(109); message.add(112);
+            message.add(111); message.add(114);
+            message.add(116); message.add(32);
+            message.add(100); message.add(101);
+            message.add(112); message.add(116);
+            message.add(104); message.add(32);
+            message.add(101); message.add(120);
+            message.add(99); message.add(101);
+            message.add(101); message.add(100);
+            message.add(101); message.add(100);
         }
         3 -> {
-            byteBufferAppend(message, 117); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 114); byteBufferAppend(message, 109);
-            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 97); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 100);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 115);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 114);
-            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 103);
+            message.add(117); message.add(110);
+            message.add(116); message.add(101);
+            message.add(114); message.add(109);
+            message.add(105); message.add(110);
+            message.add(97); message.add(116);
+            message.add(101); message.add(100);
+            message.add(32); message.add(115);
+            message.add(116); message.add(114);
+            message.add(105); message.add(110);
+            message.add(103);
         }
         4 -> {
-            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 118); byteBufferAppend(message, 97);
-            byteBufferAppend(message, 108); byteBufferAppend(message, 105);
-            byteBufferAppend(message, 100); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 99); byteBufferAppend(message, 104);
-            byteBufferAppend(message, 97); byteBufferAppend(message, 114);
-            byteBufferAppend(message, 97); byteBufferAppend(message, 99);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 114);
+            message.add(105); message.add(110);
+            message.add(118); message.add(97);
+            message.add(108); message.add(105);
+            message.add(100); message.add(32);
+            message.add(99); message.add(104);
+            message.add(97); message.add(114);
+            message.add(97); message.add(99);
+            message.add(116); message.add(101);
+            message.add(114);
         }
         else -> {
-            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 118); byteBufferAppend(message, 97);
-            byteBufferAppend(message, 108); byteBufferAppend(message, 105);
-            byteBufferAppend(message, 100); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 115); byteBufferAppend(message, 111);
-            byteBufferAppend(message, 117); byteBufferAppend(message, 114);
-            byteBufferAppend(message, 99); byteBufferAppend(message, 101);
+            message.add(105); message.add(110);
+            message.add(118); message.add(97);
+            message.add(108); message.add(105);
+            message.add(100); message.add(32);
+            message.add(115); message.add(111);
+            message.add(117); message.add(114);
+            message.add(99); message.add(101);
         }
     }
     
-    byteBufferAppend(message, 10);
+    message.add(10);
     k_boot_stderr(message.data, message.length);
-    byteBufferFree(message);
+    message.free();
 }
 
 fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
@@ -220,7 +220,7 @@ fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
 fn loaderCandidate(root: u8*, rootLength: u64, relative: ByteBuffer): ByteBuffer {
     var result = byteBufferNew();
     loaderAppend(result, root, rootLength);
-    if (rootLength > 0) byteBufferAppend(result, 47);
+    if (rootLength > 0) result.add(47);
     loaderAppend(result, relative.data, relative.length);
     return result;
 }
@@ -235,19 +235,19 @@ fn loaderRelative(
     if (!wildcard) count--;
 
     for (i in 0..<count) {
-        if (i > 0) byteBufferAppend(result, 47);
+        if (i > 0) result.add(47);
         val token = tokens.data[first + i * 2];
-        for (j in token.start..<token.end) byteBufferAppend(result, source.data[j]);
+        for (j in token.start..<token.end) result.add(source.data[j]);
     }
 
     if (wildcard) {
-        byteBufferAppend(result, 47);
-        byteBufferAppend(result, 109); byteBufferAppend(result, 111);
-        byteBufferAppend(result, 100); byteBufferAppend(result, 46);
-        byteBufferAppend(result, 107);
+        result.add(47);
+        result.add(109); result.add(111);
+        result.add(100); result.add(46);
+        result.add(107);
     } else {
-        byteBufferAppend(result, 46);
-        byteBufferAppend(result, 107);
+        result.add(46);
+        result.add(107);
     }
 
     return result;
@@ -304,17 +304,17 @@ fn loaderResolveImport(
                 loader, candidate.data, candidate.length, depth,
                 data, length, true
             );
-            byteBufferFree(candidate);
-            byteBufferFree(currentDirectory);
-            byteBufferFree(relative);
+            candidate.free();
+            currentDirectory.free();
+            relative.free();
             return loaded;
         }
         k_boot_free(placeholder);
-        byteBufferFree(candidate);
+        candidate.free();
     }
 
-    byteBufferFree(currentDirectory);
-    byteBufferFree(relative);
+    currentDirectory.free();
+    relative.free();
     loaderReport(currentPath, source, start, 1);
 
     return false;
@@ -477,7 +477,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
                 )
             );
             loaderAppend(combined, loadedModule.data, loadedModule.length);
-            byteBufferAppend(combined, 10);
+            combined.add(10);
             k_boot_free(loadedModule.data as unit*);
         }
     }
@@ -486,10 +486,10 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     k_boot_free(loader.modules.data as unit*);
     k_boot_free(loader.visited.data as unit*);
     k_boot_free(loader.workingDirectory.data as unit*);
-    byteBufferFree(loader.entryDirectory);
+    loader.entryDirectory.free();
 
     if (!loaded) {
-        byteBufferFree(combined);
+        combined.free();
         sourceMapFree(sourceMap);
         return LoadResult(Source(workingData, 0), sourceMapNew(), false, loader.failureKind);
     }

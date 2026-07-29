@@ -7,7 +7,7 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
     var remaining = value;
     var length: u64 = 0;
     if (remaining == 0) {
-        byteBufferAppend(buffer, 48);
+        buffer.add(48);
     } else {
         while (remaining > 0) {
             digits[length] = (remaining % 10) as u8 + 48;
@@ -16,7 +16,7 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
         }
         while (length > 0) {
             length = length - 1;
-            byteBufferAppend(buffer, digits[length]);
+            buffer.add(digits[length]);
         }
     }
     k_boot_free(digits as unit*);
@@ -26,429 +26,429 @@ fn appendSource(
     var buffer: ByteBuffer, source: Source, start: u64, end: u64) {
     var offset = start;
     while (offset < end) {
-        byteBufferAppend(buffer, source.data[offset]);
+        buffer.add(source.data[offset]);
         offset = offset + 1;
     }
 }
 
 fn appendDefine(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 102);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
+    buffer.add(100);
+    buffer.add(101);
+    buffer.add(102);
+    buffer.add(105);
+    buffer.add(110);
+    buffer.add(101);
+    buffer.add(32);
 }
 
 fn appendI32(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 51);
-    byteBufferAppend(buffer, 50);
+    buffer.add(105);
+    buffer.add(51);
+    buffer.add(50);
 }
 
 fn appendFunctionOpen(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 64);
+    buffer.add(32);
+    buffer.add(64);
 }
 
 fn appendEmptyParameters(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 40);
-    byteBufferAppend(buffer, 41);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 123);
-    byteBufferAppend(buffer, 10);
+    buffer.add(40);
+    buffer.add(41);
+    buffer.add(32);
+    buffer.add(123);
+    buffer.add(10);
 }
 
 fn appendEntry(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 121);
-    byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 10);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 32);
+    buffer.add(101);
+    buffer.add(110);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(121);
+    buffer.add(58);
+    buffer.add(10);
+    buffer.add(32);
+    buffer.add(32);
 }
 
 fn appendReturnI32(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 32);
+    buffer.add(114);
+    buffer.add(101);
+    buffer.add(116);
+    buffer.add(32);
     appendI32(buffer);
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
 }
 
 fn appendFunctionClose(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 10);
-    byteBufferAppend(buffer, 125);
-    byteBufferAppend(buffer, 10);
+    buffer.add(10);
+    buffer.add(125);
+    buffer.add(10);
 }
 
 fn appendValuePrefix(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 37);
+    buffer.add(32);
+    buffer.add(32);
+    buffer.add(37);
 }
 
 fn appendEquals(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 61);
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
+    buffer.add(61);
+    buffer.add(32);
 }
 
 fn appendLoad(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 32);
+    buffer.add(108);
+    buffer.add(111);
+    buffer.add(97);
+    buffer.add(100);
+    buffer.add(32);
 }
 
 fn appendStore(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
+    buffer.add(32);
+    buffer.add(115);
+    buffer.add(116);
+    buffer.add(111);
+    buffer.add(114);
+    buffer.add(101);
+    buffer.add(32);
 }
 
 fn appendPtr(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 37);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(32);
+    buffer.add(37);
 }
 
 fn appendAlloca(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 32);
+    buffer.add(97);
+    buffer.add(108);
+    buffer.add(108);
+    buffer.add(111);
+    buffer.add(99);
+    buffer.add(97);
+    buffer.add(32);
 }
 
 fn appendCall(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 32);
+    buffer.add(99);
+    buffer.add(97);
+    buffer.add(108);
+    buffer.add(108);
+    buffer.add(32);
 }
 
 fn appendPrintDeclaration(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 64);
-    byteBufferAppend(buffer, 107);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 51);
-    byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 40);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 51);
-    byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 41);
-    byteBufferAppend(buffer, 10);
-    byteBufferAppend(buffer, 10);
+    buffer.add(100);
+    buffer.add(101);
+    buffer.add(99);
+    buffer.add(108);
+    buffer.add(97);
+    buffer.add(114);
+    buffer.add(101);
+    buffer.add(32);
+    buffer.add(118);
+    buffer.add(111);
+    buffer.add(105);
+    buffer.add(100);
+    buffer.add(32);
+    buffer.add(64);
+    buffer.add(107);
+    buffer.add(95);
+    buffer.add(115);
+    buffer.add(116);
+    buffer.add(100);
+    buffer.add(95);
+    buffer.add(112);
+    buffer.add(114);
+    buffer.add(105);
+    buffer.add(110);
+    buffer.add(116);
+    buffer.add(95);
+    buffer.add(105);
+    buffer.add(51);
+    buffer.add(50);
+    buffer.add(40);
+    buffer.add(105);
+    buffer.add(51);
+    buffer.add(50);
+    buffer.add(41);
+    buffer.add(10);
+    buffer.add(10);
     appendPrintBytesDeclaration(buffer);
 }
 fn appendPrintBytesDeclaration(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 64);
-    byteBufferAppend(buffer, 107);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 121);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 40);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 41);
-    byteBufferAppend(buffer, 10);
-    byteBufferAppend(buffer, 10);
+    buffer.add(100);
+    buffer.add(101);
+    buffer.add(99);
+    buffer.add(108);
+    buffer.add(97);
+    buffer.add(114);
+    buffer.add(101);
+    buffer.add(32);
+    buffer.add(118);
+    buffer.add(111);
+    buffer.add(105);
+    buffer.add(100);
+    buffer.add(32);
+    buffer.add(64);
+    buffer.add(107);
+    buffer.add(95);
+    buffer.add(115);
+    buffer.add(116);
+    buffer.add(100);
+    buffer.add(95);
+    buffer.add(112);
+    buffer.add(114);
+    buffer.add(105);
+    buffer.add(110);
+    buffer.add(116);
+    buffer.add(95);
+    buffer.add(98);
+    buffer.add(121);
+    buffer.add(116);
+    buffer.add(101);
+    buffer.add(115);
+    buffer.add(40);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(41);
+    buffer.add(10);
+    buffer.add(10);
 }
 
 fn appendPrivateStringPrefix(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 61);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 109);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 91);
+    buffer.add(32);
+    buffer.add(61);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(114);
+    buffer.add(105);
+    buffer.add(118);
+    buffer.add(97);
+    buffer.add(116);
+    buffer.add(101);
+    buffer.add(32);
+    buffer.add(117);
+    buffer.add(110);
+    buffer.add(110);
+    buffer.add(97);
+    buffer.add(109);
+    buffer.add(101);
+    buffer.add(100);
+    buffer.add(95);
+    buffer.add(97);
+    buffer.add(100);
+    buffer.add(100);
+    buffer.add(114);
+    buffer.add(32);
+    buffer.add(99);
+    buffer.add(111);
+    buffer.add(110);
+    buffer.add(115);
+    buffer.add(116);
+    buffer.add(97);
+    buffer.add(110);
+    buffer.add(116);
+    buffer.add(32);
+    buffer.add(91);
 }
 
 fn appendStringArrayPrefix(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 120);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 56);
-    byteBufferAppend(buffer, 93);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 34);
+    buffer.add(32);
+    buffer.add(120);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(56);
+    buffer.add(93);
+    buffer.add(32);
+    buffer.add(99);
+    buffer.add(34);
 }
 
 fn appendStringTerminator(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 92);
-    byteBufferAppend(buffer, 48);
-    byteBufferAppend(buffer, 48);
-    byteBufferAppend(buffer, 34);
-    byteBufferAppend(buffer, 10);
+    buffer.add(92);
+    buffer.add(48);
+    buffer.add(48);
+    buffer.add(34);
+    buffer.add(10);
 }
 
 fn appendStringType(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 123);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 125);
+    buffer.add(123);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(32);
+    buffer.add(125);
 }
 
 fn appendStringInsertPointer(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 123);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 125);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 102);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 64);
-    byteBufferAppend(buffer, 46);
-    byteBufferAppend(buffer, 107);
-    byteBufferAppend(buffer, 115);
+    buffer.add(32);
+    buffer.add(123);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(32);
+    buffer.add(125);
+    buffer.add(32);
+    buffer.add(117);
+    buffer.add(110);
+    buffer.add(100);
+    buffer.add(101);
+    buffer.add(102);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(32);
+    buffer.add(64);
+    buffer.add(46);
+    buffer.add(107);
+    buffer.add(115);
 }
 
 fn appendIndexZero(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 48);
-    byteBufferAppend(buffer, 10);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(48);
+    buffer.add(10);
 }
 
 fn appendSpacedStringType(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 123);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 125);
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
+    buffer.add(123);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(32);
+    buffer.add(125);
+    buffer.add(32);
 }
 
 fn appendI64Prefix(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 32);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(32);
 }
 
 fn appendIndexOne(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 49);
-    byteBufferAppend(buffer, 10);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(49);
+    buffer.add(10);
 }
 
 fn appendStringCapacity(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 48);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 10);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
+    buffer.add(32);
+    buffer.add(48);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(50);
+    buffer.add(10);
 }
 
 fn appendExtractLengthAndPrint(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 49);
-    byteBufferAppend(buffer, 10);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 64);
-    byteBufferAppend(buffer, 107);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 121);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 40);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(49);
+    buffer.add(10);
+    buffer.add(32);
+    buffer.add(32);
+    buffer.add(99);
+    buffer.add(97);
+    buffer.add(108);
+    buffer.add(108);
+    buffer.add(32);
+    buffer.add(118);
+    buffer.add(111);
+    buffer.add(105);
+    buffer.add(100);
+    buffer.add(32);
+    buffer.add(64);
+    buffer.add(107);
+    buffer.add(95);
+    buffer.add(115);
+    buffer.add(116);
+    buffer.add(100);
+    buffer.add(95);
+    buffer.add(112);
+    buffer.add(114);
+    buffer.add(105);
+    buffer.add(110);
+    buffer.add(116);
+    buffer.add(95);
+    buffer.add(98);
+    buffer.add(121);
+    buffer.add(116);
+    buffer.add(101);
+    buffer.add(115);
+    buffer.add(40);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(32);
 }
 
 fn appendCloseLine(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 41);
-    byteBufferAppend(buffer, 10);
+    buffer.add(41);
+    buffer.add(10);
 }
 
 
@@ -460,31 +460,31 @@ fn hexDigit(value: u8): u8 {
 
 fn appendEscapedByte(var buffer: ByteBuffer, value: u8) {
     if (value >= 32 && value <= 126 && value != 34 && value != 92) {
-        byteBufferAppend(buffer, value);
+        buffer.add(value);
         return;
     }
-    byteBufferAppend(buffer, 92);
-    byteBufferAppend(buffer, hexDigit(value / 16));
-    byteBufferAppend(buffer, hexDigit(value % 16));
+    buffer.add(92);
+    buffer.add(hexDigit(value / 16));
+    buffer.add(hexDigit(value % 16));
 }
 
 fn appendUtf8(var buffer: ByteBuffer, codepoint: u32) {
-    if (codepoint <= 127) { byteBufferAppend(buffer, codepoint as u8); return; }
+    if (codepoint <= 127) { buffer.add(codepoint as u8); return; }
     if (codepoint <= 2047) {
-        byteBufferAppend(buffer, (192 + codepoint / 64) as u8);
-        byteBufferAppend(buffer, (128 + codepoint % 64) as u8);
+        buffer.add((192 + codepoint / 64) as u8);
+        buffer.add((128 + codepoint % 64) as u8);
         return;
     }
     if (codepoint <= 65535) {
-        byteBufferAppend(buffer, (224 + codepoint / 4096) as u8);
-        byteBufferAppend(buffer, (128 + (codepoint / 64) % 64) as u8);
-        byteBufferAppend(buffer, (128 + codepoint % 64) as u8);
+        buffer.add((224 + codepoint / 4096) as u8);
+        buffer.add((128 + (codepoint / 64) % 64) as u8);
+        buffer.add((128 + codepoint % 64) as u8);
         return;
     }
-    byteBufferAppend(buffer, (240 + codepoint / 262144) as u8);
-    byteBufferAppend(buffer, (128 + (codepoint / 4096) % 64) as u8);
-    byteBufferAppend(buffer, (128 + (codepoint / 64) % 64) as u8);
-    byteBufferAppend(buffer, (128 + codepoint % 64) as u8);
+    buffer.add((240 + codepoint / 262144) as u8);
+    buffer.add((128 + (codepoint / 4096) % 64) as u8);
+    buffer.add((128 + (codepoint / 64) % 64) as u8);
+    buffer.add((128 + codepoint % 64) as u8);
 }
 
 fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
@@ -492,13 +492,13 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
     var offset = node.start + 1;
     while (offset + 1 < node.end) {
         var value = source.data[offset];
-        if (value != 92) { byteBufferAppend(result, value); offset = offset + 1; continue; }
+        if (value != 92) { result.add(value); offset = offset + 1; continue; }
         offset = offset + 1;
         value = source.data[offset];
-        if (value == 110) byteBufferAppend(result, 10);
-        else if (value == 114) byteBufferAppend(result, 13);
-        else if (value == 116) byteBufferAppend(result, 9);
-        else if (value == 48) byteBufferAppend(result, 0);
+        if (value == 110) result.add(10);
+        else if (value == 114) result.add(13);
+        else if (value == 116) result.add(9);
+        else if (value == 48) result.add(0);
         else if (value == 117) {
             offset = offset + 2;
             var codepoint: u32 = 0;
@@ -511,7 +511,7 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
                 offset = offset + 1;
             }
             appendUtf8(result, codepoint);
-        } else byteBufferAppend(result, value);
+        } else result.add(value);
         offset = offset + 1;
     }
     return result;
@@ -519,112 +519,112 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
 
 fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, root: u64) {
     var decoded = decodeStringLiteral(source, node);
-    byteBufferAppend(buffer, 64); byteBufferAppend(buffer, 46); byteBufferAppend(buffer, 107);
-    byteBufferAppend(buffer, 115); appendDecimal(buffer, root);
+    buffer.add(64); buffer.add(46); buffer.add(107);
+    buffer.add(115); appendDecimal(buffer, root);
     appendPrivateStringPrefix(buffer);
     appendDecimal(buffer, decoded.length + 1);
     appendStringArrayPrefix(buffer);
     var index: u64 = 0;
     while (index < decoded.length) { appendEscapedByte(buffer, decoded.data[index]); index = index + 1; }
     appendStringTerminator(buffer);
-    byteBufferFree(decoded);
+    decoded.free();
 }
 
 fn appendPanicDeclaration(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 118); byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 64);
-    byteBufferAppend(buffer, 107); byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 95); byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 40); byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 41);
-    byteBufferAppend(buffer, 10); byteBufferAppend(buffer, 10);
+    buffer.add(100); buffer.add(101);
+    buffer.add(99); buffer.add(108);
+    buffer.add(97); buffer.add(114);
+    buffer.add(101); buffer.add(32);
+    buffer.add(118); buffer.add(111);
+    buffer.add(105); buffer.add(100);
+    buffer.add(32); buffer.add(64);
+    buffer.add(107); buffer.add(95);
+    buffer.add(98); buffer.add(111);
+    buffer.add(111); buffer.add(116);
+    buffer.add(95); buffer.add(112);
+    buffer.add(97); buffer.add(110);
+    buffer.add(105); buffer.add(99);
+    buffer.add(40); buffer.add(112);
+    buffer.add(116); buffer.add(114);
+    buffer.add(44); buffer.add(32);
+    buffer.add(105); buffer.add(54);
+    buffer.add(52); buffer.add(41);
+    buffer.add(10); buffer.add(10);
 }
 
 fn appendModuleHeader(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 103);
-    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 121);
-    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 61); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 34); byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 45); byteBufferAppend(buffer, 109);
-    byteBufferAppend(buffer, 58); byteBufferAppend(buffer, 119);
-    byteBufferAppend(buffer, 45); byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 50); byteBufferAppend(buffer, 55);
-    byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 51); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 58); byteBufferAppend(buffer, 51);
-    byteBufferAppend(buffer, 50); byteBufferAppend(buffer, 45);
-    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 55); byteBufferAppend(buffer, 49);
-    byteBufferAppend(buffer, 58); byteBufferAppend(buffer, 51);
-    byteBufferAppend(buffer, 50); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 51); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 45); byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 50); byteBufferAppend(buffer, 55);
-    byteBufferAppend(buffer, 50); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 54); byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 58); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 45);
-    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 54); byteBufferAppend(buffer, 52);
-    byteBufferAppend(buffer, 45); byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 56); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 56); byteBufferAppend(buffer, 45);
-    byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 56);
-    byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 56); byteBufferAppend(buffer, 45);
-    byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 56);
-    byteBufferAppend(buffer, 58); byteBufferAppend(buffer, 49);
-    byteBufferAppend(buffer, 54); byteBufferAppend(buffer, 58);
-    byteBufferAppend(buffer, 51); byteBufferAppend(buffer, 50);
-    byteBufferAppend(buffer, 58); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 45);
-    byteBufferAppend(buffer, 83); byteBufferAppend(buffer, 49);
-    byteBufferAppend(buffer, 50); byteBufferAppend(buffer, 56);
-    byteBufferAppend(buffer, 34); byteBufferAppend(buffer, 10);
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 103);
-    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 61); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 34); byteBufferAppend(buffer, 120);
-    byteBufferAppend(buffer, 56); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 95); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 45);
-    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 45); byteBufferAppend(buffer, 119);
-    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 119); byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 45); byteBufferAppend(buffer, 109);
-    byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 34);
-    byteBufferAppend(buffer, 10); byteBufferAppend(buffer, 10);
+    buffer.add(116); buffer.add(97);
+    buffer.add(114); buffer.add(103);
+    buffer.add(101); buffer.add(116);
+    buffer.add(32); buffer.add(100);
+    buffer.add(97); buffer.add(116);
+    buffer.add(97); buffer.add(108);
+    buffer.add(97); buffer.add(121);
+    buffer.add(111); buffer.add(117);
+    buffer.add(116); buffer.add(32);
+    buffer.add(61); buffer.add(32);
+    buffer.add(34); buffer.add(101);
+    buffer.add(45); buffer.add(109);
+    buffer.add(58); buffer.add(119);
+    buffer.add(45); buffer.add(112);
+    buffer.add(50); buffer.add(55);
+    buffer.add(48); buffer.add(58);
+    buffer.add(51); buffer.add(50);
+    buffer.add(58); buffer.add(51);
+    buffer.add(50); buffer.add(45);
+    buffer.add(112); buffer.add(50);
+    buffer.add(55); buffer.add(49);
+    buffer.add(58); buffer.add(51);
+    buffer.add(50); buffer.add(58);
+    buffer.add(51); buffer.add(50);
+    buffer.add(45); buffer.add(112);
+    buffer.add(50); buffer.add(55);
+    buffer.add(50); buffer.add(58);
+    buffer.add(54); buffer.add(52);
+    buffer.add(58); buffer.add(54);
+    buffer.add(52); buffer.add(45);
+    buffer.add(105); buffer.add(54);
+    buffer.add(52); buffer.add(58);
+    buffer.add(54); buffer.add(52);
+    buffer.add(45); buffer.add(105);
+    buffer.add(49); buffer.add(50);
+    buffer.add(56); buffer.add(58);
+    buffer.add(49); buffer.add(50);
+    buffer.add(56); buffer.add(45);
+    buffer.add(102); buffer.add(56);
+    buffer.add(48); buffer.add(58);
+    buffer.add(49); buffer.add(50);
+    buffer.add(56); buffer.add(45);
+    buffer.add(110); buffer.add(56);
+    buffer.add(58); buffer.add(49);
+    buffer.add(54); buffer.add(58);
+    buffer.add(51); buffer.add(50);
+    buffer.add(58); buffer.add(54);
+    buffer.add(52); buffer.add(45);
+    buffer.add(83); buffer.add(49);
+    buffer.add(50); buffer.add(56);
+    buffer.add(34); buffer.add(10);
+    buffer.add(116); buffer.add(97);
+    buffer.add(114); buffer.add(103);
+    buffer.add(101); buffer.add(116);
+    buffer.add(32); buffer.add(116);
+    buffer.add(114); buffer.add(105);
+    buffer.add(112); buffer.add(108);
+    buffer.add(101); buffer.add(32);
+    buffer.add(61); buffer.add(32);
+    buffer.add(34); buffer.add(120);
+    buffer.add(56); buffer.add(54);
+    buffer.add(95); buffer.add(54);
+    buffer.add(52); buffer.add(45);
+    buffer.add(112); buffer.add(99);
+    buffer.add(45); buffer.add(119);
+    buffer.add(105); buffer.add(110);
+    buffer.add(100); buffer.add(111);
+    buffer.add(119); buffer.add(115);
+    buffer.add(45); buffer.add(109);
+    buffer.add(115); buffer.add(118);
+    buffer.add(99); buffer.add(34);
+    buffer.add(10); buffer.add(10);
 }
 
 fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
@@ -639,104 +639,104 @@ fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
 fn appendOperator(var buffer: ByteBuffer, kind: u32, typeKind: u32) {
     var floating = typeKind == 17;
     if (typeKind == 18) floating = true;
-    if (floating) byteBufferAppend(buffer, 102);
+    if (floating) buffer.add(102);
     if (kind == 60) {
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 100);
-        byteBufferAppend(buffer, 100);
+        buffer.add(97);
+        buffer.add(100);
+        buffer.add(100);
     }
     if (kind == 61) {
-        byteBufferAppend(buffer, 115);
-        byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 98);
+        buffer.add(115);
+        buffer.add(117);
+        buffer.add(98);
     }
     if (kind == 62) {
-        byteBufferAppend(buffer, 109);
-        byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 108);
+        buffer.add(109);
+        buffer.add(117);
+        buffer.add(108);
     }
     if (kind == 63) {
         if (floating) {
-            byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 118); return;
+            buffer.add(100); buffer.add(105);
+            buffer.add(118); return;
         }
         var unsigned = typeKind == 5;
         if (typeKind == 6) unsigned = true;
         if (typeKind == 7) unsigned = true;
         if (unsigned) {
-            byteBufferAppend(buffer, 117);
+            buffer.add(117);
         } else {
-            byteBufferAppend(buffer, 115);
+            buffer.add(115);
         }
-        byteBufferAppend(buffer, 100);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 118);
+        buffer.add(100);
+        buffer.add(105);
+        buffer.add(118);
     }
     if (kind == 64) {
         if (floating) {
-            byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
-            byteBufferAppend(buffer, 109); return;
+            buffer.add(114); buffer.add(101);
+            buffer.add(109); return;
         }
         var unsigned = typeKind == 5;
         if (typeKind == 6) unsigned = true;
         if (typeKind == 7) unsigned = true;
         if (unsigned) {
-            byteBufferAppend(buffer, 117);
+            buffer.add(117);
         } else {
-            byteBufferAppend(buffer, 115);
+            buffer.add(115);
         }
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 109);
+        buffer.add(114);
+        buffer.add(101);
+        buffer.add(109);
     }
 }
 
 fn appendNewline(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 10);
+    buffer.add(10);
 }
 
 fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
     when (kind) {
-        1 -> byteBufferAppend(buffer, 115);
-        2 -> byteBufferAppend(buffer, 122);
+        1 -> buffer.add(115);
+        2 -> buffer.add(122);
         else -> {
-            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
-            byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 99);
+            buffer.add(116); buffer.add(114);
+            buffer.add(117); buffer.add(110);
+            buffer.add(99);
             return;
         }
     }
-    byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
-    byteBufferAppend(buffer, 116);
+    buffer.add(101); buffer.add(120);
+    buffer.add(116);
 }
 
 fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
     if (kind == 1) {
-        byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 120);
-        byteBufferAppend(buffer, 116); return;
+        buffer.add(102); buffer.add(112);
+        buffer.add(101); buffer.add(120);
+        buffer.add(116); return;
     }
     if (kind == 2) {
-        byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 99); return;
+        buffer.add(102); buffer.add(112);
+        buffer.add(116); buffer.add(114);
+        buffer.add(117); buffer.add(110);
+        buffer.add(99); return;
     }
-    if (kind == 3) byteBufferAppend(buffer, 115);
-    if (kind == 4) byteBufferAppend(buffer, 117);
+    if (kind == 3) buffer.add(115);
+    if (kind == 4) buffer.add(117);
     var integerToFloat = kind == 3;
     if (kind == 4) integerToFloat = true;
     if (integerToFloat) {
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 102);
-        byteBufferAppend(buffer, 112); return;
+        buffer.add(105); buffer.add(116);
+        buffer.add(111); buffer.add(102);
+        buffer.add(112); return;
     }
-    byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 111);
+    buffer.add(102); buffer.add(112);
+    buffer.add(116); buffer.add(111);
     if (kind == 5) {
-        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 105);
+        buffer.add(115); buffer.add(105);
     } else {
-        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 105);
+        buffer.add(117); buffer.add(105);
     }
 }
 
@@ -744,10 +744,10 @@ fn appendFloatIntegerConstant(
     var buffer: ByteBuffer, negative: bool, magnitude: u64,
     appendSix: bool
 ) {
-    if (negative) byteBufferAppend(buffer, 45);
+    if (negative) buffer.add(45);
     appendDecimal(buffer, magnitude);
-    if (appendSix) byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 46); byteBufferAppend(buffer, 48);
+    if (appendSix) buffer.add(54);
+    buffer.add(46); buffer.add(48);
 }
 
 fn appendFloatCastBound(
@@ -791,35 +791,35 @@ fn appendFloatCastBound(
 }
 
 fn appendCastPanic(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 64); byteBufferAppend(buffer, 107);
-    byteBufferAppend(buffer, 95); byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 40);
-    byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 110); byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 41);
+    buffer.add(32); buffer.add(32);
+    buffer.add(99); buffer.add(97);
+    buffer.add(108); buffer.add(108);
+    buffer.add(32); buffer.add(118);
+    buffer.add(111); buffer.add(105);
+    buffer.add(100); buffer.add(32);
+    buffer.add(64); buffer.add(107);
+    buffer.add(95); buffer.add(98);
+    buffer.add(111); buffer.add(111);
+    buffer.add(116); buffer.add(95);
+    buffer.add(112); buffer.add(97);
+    buffer.add(110); buffer.add(105);
+    buffer.add(99); buffer.add(40);
+    buffer.add(112); buffer.add(116);
+    buffer.add(114); buffer.add(32);
+    buffer.add(110); buffer.add(117);
+    buffer.add(108); buffer.add(108);
+    buffer.add(44); buffer.add(32);
+    buffer.add(105); buffer.add(54);
+    buffer.add(52); buffer.add(32);
+    buffer.add(48); buffer.add(41);
     appendNewline(buffer);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 104); byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 101); appendNewline(buffer);
+    buffer.add(32); buffer.add(32);
+    buffer.add(117); buffer.add(110);
+    buffer.add(114); buffer.add(101);
+    buffer.add(97); buffer.add(99);
+    buffer.add(104); buffer.add(97);
+    buffer.add(98); buffer.add(108);
+    buffer.add(101); appendNewline(buffer);
 }
 
 struct IrValue(
@@ -835,18 +835,18 @@ struct IrCounter(
 fn appendStructSpecializationSuffix(
     var buffer: ByteBuffer, arguments: TypeValueList,
     start: u64, count: u32) {
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 115);
+    buffer.add(95);
+    buffer.add(95);
+    buffer.add(115);
     appendDecimal(buffer, count as u64);
     var index: u32 = 0;
     while (index < count) {
         val type = arguments.data[start + index as u64];
-        byteBufferAppend(buffer, 95);
+        buffer.add(95);
         appendDecimal(buffer, type.kind as u64);
-        byteBufferAppend(buffer, 95);
+        buffer.add(95);
         appendDecimal(buffer, type.name);
-        byteBufferAppend(buffer, 95);
+        buffer.add(95);
         appendDecimal(buffer, type.pointee as u64);
         index = index + 1;
     }
@@ -856,34 +856,34 @@ fn appendType(
     var buffer: ByteBuffer, genericArguments: TypeValueList,
     kind: u32, name: u64, pointee: u32) {
     if (kind == 1) {
-        byteBufferAppend(buffer, 118);
-        byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 100);
+        buffer.add(118);
+        buffer.add(111);
+        buffer.add(105);
+        buffer.add(100);
     }
     if (kind == 2) {
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 49);
+        buffer.add(105);
+        buffer.add(49);
     }
     if (kind == 3) appendI32(buffer);
     if (kind == 4) {
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 54);
-        byteBufferAppend(buffer, 52);
+        buffer.add(105);
+        buffer.add(54);
+        buffer.add(52);
     }
     if (kind == 5) {
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 56);
+        buffer.add(105);
+        buffer.add(56);
     }
     if (kind == 6) appendI32(buffer);
     if (kind == 7) {
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 54);
-        byteBufferAppend(buffer, 52);
+        buffer.add(105);
+        buffer.add(54);
+        buffer.add(52);
     }
     if (kind == 8) {
-        byteBufferAppend(buffer, 37);
-        byteBufferAppend(buffer, 115);
+        buffer.add(37);
+        buffer.add(115);
         appendDecimal(buffer, name);
         val start = pointee % 65536;
         val count = pointee / 65536;
@@ -892,57 +892,57 @@ fn appendType(
         }
     }
     if (kind == 9) {
-        byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 114);
+        buffer.add(112);
+        buffer.add(116);
+        buffer.add(114);
     }
     if (kind == 10) {
         appendStringType(buffer);
     }
     if (kind == 17) {
-        byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 116);
+        buffer.add(102); buffer.add(108);
+        buffer.add(111); buffer.add(97);
+        buffer.add(116);
     }
     if (kind == 18) {
-        byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 98);
-        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
+        buffer.add(100); buffer.add(111);
+        buffer.add(117); buffer.add(98);
+        buffer.add(108); buffer.add(101);
     }
     if (kind == 11) appendI32(buffer);
     if (kind == 20) appendI32(buffer);
     if (kind == 13) {
-        byteBufferAppend(buffer, 123);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 54);
-        byteBufferAppend(buffer, 52);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 125);
+        buffer.add(123);
+        buffer.add(32);
+        buffer.add(112);
+        buffer.add(116);
+        buffer.add(114);
+        buffer.add(44);
+        buffer.add(32);
+        buffer.add(105);
+        buffer.add(54);
+        buffer.add(52);
+        buffer.add(32);
+        buffer.add(125);
     }
     if (kind == 15) {
-        byteBufferAppend(buffer, 123);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 49);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
+        buffer.add(123);
+        buffer.add(32);
+        buffer.add(105);
+        buffer.add(49);
+        buffer.add(44);
+        buffer.add(32);
         appendType(buffer, genericArguments, pointee, name, 0);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 125);
+        buffer.add(32);
+        buffer.add(125);
     }
     if (kind == 19) {
-        byteBufferAppend(buffer, 91);
+        buffer.add(91);
         appendDecimal(buffer, (pointee / 256) as u64);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 120);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32); buffer.add(120);
+        buffer.add(32);
         appendType(buffer, genericArguments, pointee % 256, name, 0);
-        byteBufferAppend(buffer, 93);
+        buffer.add(93);
     }
 }
 
@@ -952,97 +952,97 @@ fn appendNodeType(var buffer: ByteBuffer, genericArguments: TypeValueList, node:
 }
 
 fn appendLocalPrefix(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 111);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 46);
+    buffer.add(108);
+    buffer.add(111);
+    buffer.add(99);
+    buffer.add(97);
+    buffer.add(108);
+    buffer.add(46);
 }
 
 fn appendI64(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 54);
-    byteBufferAppend(buffer, 52);
+    buffer.add(105);
+    buffer.add(54);
+    buffer.add(52);
 }
 
 fn appendGetElementPtr(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 103);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 109);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
+    buffer.add(103);
+    buffer.add(101);
+    buffer.add(116);
+    buffer.add(101);
+    buffer.add(108);
+    buffer.add(101);
+    buffer.add(109);
+    buffer.add(101);
+    buffer.add(110);
+    buffer.add(116);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
 }
 
 fn appendInsertValue(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 115);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 101);
+    buffer.add(105);
+    buffer.add(110);
+    buffer.add(115);
+    buffer.add(101);
+    buffer.add(114);
+    buffer.add(116);
+    buffer.add(118);
+    buffer.add(97);
+    buffer.add(108);
+    buffer.add(117);
+    buffer.add(101);
 }
 
 fn appendExtractValue(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 120);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 118);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 101);
+    buffer.add(101);
+    buffer.add(120);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(97);
+    buffer.add(99);
+    buffer.add(116);
+    buffer.add(118);
+    buffer.add(97);
+    buffer.add(108);
+    buffer.add(117);
+    buffer.add(101);
 }
 
 fn appendUndef(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 117);
-    byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 100);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 102);
+    buffer.add(117);
+    buffer.add(110);
+    buffer.add(100);
+    buffer.add(101);
+    buffer.add(102);
 }
 
 fn appendUnreachable(var buffer: ByteBuffer) {
-    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-    byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 104); byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 101);
+    buffer.add(117); buffer.add(110);
+    buffer.add(114); buffer.add(101);
+    buffer.add(97); buffer.add(99);
+    buffer.add(104); buffer.add(97);
+    buffer.add(98); buffer.add(108);
+    buffer.add(101);
 }
 
 fn appendSpecializationSuffix(
     var buffer: ByteBuffer, arguments: TypeValueList,
     start: u64, count: u32) {
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 95);
-    byteBufferAppend(buffer, 103);
+    buffer.add(95);
+    buffer.add(95);
+    buffer.add(103);
     appendDecimal(buffer, count as u64);
     var index: u32 = 0;
     while (index < count) {
         val type = arguments.data[start + index as u64];
-        byteBufferAppend(buffer, 95);
+        buffer.add(95);
         appendDecimal(buffer, type.kind as u64);
-        byteBufferAppend(buffer, 95);
+        buffer.add(95);
         appendDecimal(buffer, type.name);
-        byteBufferAppend(buffer, 95);
+        buffer.add(95);
         appendDecimal(buffer, type.pointee as u64);
         index = index + 1;
     }
@@ -1346,7 +1346,7 @@ fn appendIrValue(
         appendSource(buffer, source, value.start, value.end);
     } else {
         if (value.kind == 4) {
-            byteBufferAppend(buffer, 37);
+            buffer.add(37);
             appendLocalPrefix(buffer);
             appendDecimal(buffer, value.temporary);
             return;
@@ -1356,31 +1356,31 @@ fn appendIrValue(
             return;
         }
         if (value.kind == 5) {
-            byteBufferAppend(buffer, 122); byteBufferAppend(buffer, 101);
-            byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 111);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 97);
-            byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 122); byteBufferAppend(buffer, 101);
-            byteBufferAppend(buffer, 114);
+            buffer.add(122); buffer.add(101);
+            buffer.add(114); buffer.add(111);
+            buffer.add(105); buffer.add(110);
+            buffer.add(105); buffer.add(116);
+            buffer.add(105); buffer.add(97);
+            buffer.add(108); buffer.add(105);
+            buffer.add(122); buffer.add(101);
+            buffer.add(114);
             return;
         }
-        byteBufferAppend(buffer, 37);
+        buffer.add(37);
         appendDecimal(buffer, value.temporary);
     }
 }
 
 fn appendPointerValue(
     var buffer: ByteBuffer, source: Source, value: IrValue) {
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(112);
+    buffer.add(116);
+    buffer.add(114);
+    buffer.add(32);
     if (value.kind == 1) {
-        byteBufferAppend(buffer, 37);
+        buffer.add(37);
         appendSource(buffer, source, value.start, value.end);
     } else {
         appendIrValue(buffer, source, value);
@@ -1405,13 +1405,13 @@ fn emitImplicitIntegerWiden(
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     var opcode: u32 = 2;
     if (sourceType.isSigned()) opcode = 1;
-    appendCastOpcode(buffer, opcode); byteBufferAppend(buffer, 32);
+    appendCastOpcode(buffer, opcode); buffer.add(32);
     appendType(
         buffer, genericArguments,
         value.typeKind, value.typeName, value.typePointee);
-    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 32);
+    buffer.add(32); appendIrValue(buffer, source, value);
+    buffer.add(32); buffer.add(116);
+    buffer.add(111); buffer.add(32);
     appendType(buffer, genericArguments, targetKind, targetName, targetPointee);
     appendNewline(buffer);
     return IrValue(
@@ -1425,42 +1425,42 @@ fn nextBlock(var counter: IrCounter): u64 {
 }
 
 fn appendBlockName(var buffer: ByteBuffer, block: u64) {
-    byteBufferAppend(buffer, 98);
+    buffer.add(98);
     appendDecimal(buffer, block);
 }
 
 fn appendBlockLabel(
     var buffer: ByteBuffer, var counter: IrCounter, block: u64) {
     appendBlockName(buffer, block);
-    byteBufferAppend(buffer, 58);
+    buffer.add(58);
     appendNewline(buffer);
     counter.currentBlock = block;
 }
 
 fn appendBlockReference(var buffer: ByteBuffer, block: u64) {
-    byteBufferAppend(buffer, 37);
+    buffer.add(37);
     if (block == 18446744073709551615) {
-        byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 121);
+        buffer.add(101); buffer.add(110);
+        buffer.add(116); buffer.add(114);
+        buffer.add(121);
     } else {
         appendBlockName(buffer, block);
     }
 }
 
 fn appendBranch(var buffer: ByteBuffer, block: u64) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 37);
+    buffer.add(32);
+    buffer.add(32);
+    buffer.add(98);
+    buffer.add(114);
+    buffer.add(32);
+    buffer.add(108);
+    buffer.add(97);
+    buffer.add(98);
+    buffer.add(101);
+    buffer.add(108);
+    buffer.add(32);
+    buffer.add(37);
     appendBlockName(buffer, block);
     appendNewline(buffer);
 }
@@ -1468,52 +1468,52 @@ fn appendBranch(var buffer: ByteBuffer, block: u64) {
 fn appendConditionalBranch(
     var buffer: ByteBuffer, source: Source, condition: IrValue,
     trueBlock: u64, falseBlock: u64) {
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 114);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 49);
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
+    buffer.add(32);
+    buffer.add(98);
+    buffer.add(114);
+    buffer.add(32);
+    buffer.add(105);
+    buffer.add(49);
+    buffer.add(32);
     appendIrValue(buffer, source, condition);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 37);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(108);
+    buffer.add(97);
+    buffer.add(98);
+    buffer.add(101);
+    buffer.add(108);
+    buffer.add(32);
+    buffer.add(37);
     appendBlockName(buffer, trueBlock);
-    byteBufferAppend(buffer, 44);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 97);
-    byteBufferAppend(buffer, 98);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 108);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 37);
+    buffer.add(44);
+    buffer.add(32);
+    buffer.add(108);
+    buffer.add(97);
+    buffer.add(98);
+    buffer.add(101);
+    buffer.add(108);
+    buffer.add(32);
+    buffer.add(37);
     appendBlockName(buffer, falseBlock);
     appendNewline(buffer);
 }
 
 fn appendComparison(
     var buffer: ByteBuffer, kind: u32, typeKind: u32) {
-    byteBufferAppend(buffer, 105);
-    byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 109);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 32);
+    buffer.add(105);
+    buffer.add(99);
+    buffer.add(109);
+    buffer.add(112);
+    buffer.add(32);
     if (kind == 79) {
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 113);
+        buffer.add(101);
+        buffer.add(113);
     }
     if (kind == 80) {
-        byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 101);
+        buffer.add(110);
+        buffer.add(101);
     }
     var unsigned = typeKind == 5;
     if (typeKind == 6) unsigned = true;
@@ -1521,39 +1521,39 @@ fn appendComparison(
     if (typeKind == 20) unsigned = true;
     if (kind == 66) {
         if (unsigned) {
-            byteBufferAppend(buffer, 117);
+            buffer.add(117);
         } else {
-            byteBufferAppend(buffer, 115);
+            buffer.add(115);
         }
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 116);
+        buffer.add(108);
+        buffer.add(116);
     }
     if (kind == 81) {
         if (unsigned) {
-            byteBufferAppend(buffer, 117);
+            buffer.add(117);
         } else {
-            byteBufferAppend(buffer, 115);
+            buffer.add(115);
         }
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 101);
+        buffer.add(108);
+        buffer.add(101);
     }
     if (kind == 67) {
         if (unsigned) {
-            byteBufferAppend(buffer, 117);
+            buffer.add(117);
         } else {
-            byteBufferAppend(buffer, 115);
+            buffer.add(115);
         }
-        byteBufferAppend(buffer, 103);
-        byteBufferAppend(buffer, 116);
+        buffer.add(103);
+        buffer.add(116);
     }
     if (kind == 82) {
         if (unsigned) {
-            byteBufferAppend(buffer, 117);
+            buffer.add(117);
         } else {
-            byteBufferAppend(buffer, 115);
+            buffer.add(115);
         }
-        byteBufferAppend(buffer, 103);
-        byteBufferAppend(buffer, 101);
+        buffer.add(103);
+        buffer.add(101);
     }
 }
 
@@ -1596,18 +1596,18 @@ fn emitAddress(
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
         appendGetElementPtr(buffer);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendType(buffer, genericArguments, 8, objectNode.typeName, objectNode.typePointee);
         appendPointerValue(buffer, source, objectAddress);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
+        buffer.add(44);
+        buffer.add(32);
         appendI32(buffer);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 48);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
+        buffer.add(48);
+        buffer.add(44);
+        buffer.add(32);
         appendI32(buffer);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendDecimal(buffer, fieldIndex as u64);
         appendNewline(buffer);
         return IrValue(
@@ -1628,14 +1628,14 @@ fn emitAddress(
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
         appendGetElementPtr(buffer);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendNodeType(buffer, genericArguments, node);
         appendPointerValue(buffer, source, object);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
+        buffer.add(44);
+        buffer.add(32);
         appendType(
             buffer, genericArguments, index.typeKind, index.typeName, index.typePointee);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, index);
         appendNewline(buffer);
         return IrValue(
@@ -1651,26 +1651,26 @@ fn appendFloatRangeComparison(
     targetKind: u32, temporary: u64, lower: bool) {
     appendValuePrefix(buffer); appendDecimal(buffer, temporary);
     appendEquals(buffer);
-    byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 99);
-    byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 111);
+    buffer.add(102); buffer.add(99);
+    buffer.add(109); buffer.add(112);
+    buffer.add(32); buffer.add(111);
     if (lower) {
         var inclusive = targetKind == 4;
         if (targetKind == 3) {
             if (value.typeKind == 17) inclusive = true;
         }
-        byteBufferAppend(buffer, 103);
-        if (inclusive) byteBufferAppend(buffer, 101);
-        else byteBufferAppend(buffer, 116);
+        buffer.add(103);
+        if (inclusive) buffer.add(101);
+        else buffer.add(116);
     } else {
-        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 116);
+        buffer.add(108); buffer.add(116);
     }
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
     appendType(
         buffer, genericArguments,
         value.typeKind, value.typeName, value.typePointee);
-    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
-    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+    buffer.add(32); appendIrValue(buffer, source, value);
+    buffer.add(44); buffer.add(32);
     appendFloatCastBound(
         buffer, value.typeKind, targetKind, lower);
     appendNewline(buffer);
@@ -1705,7 +1705,7 @@ fn emitExpression(
             appendSpacedStringType(buffer);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
             appendStringCapacity(buffer);
-            byteBufferFree(decoded);
+            decoded.free();
             return IrValue(2, 0, 0, temporary, 10, 0, 0);
         }
         return IrValue(
@@ -1790,20 +1790,20 @@ fn emitExpression(
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
         appendEquals(buffer);
-        byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 104);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
+        buffer.add(112); buffer.add(104);
+        buffer.add(105); buffer.add(32);
         appendNodeType(buffer, genericArguments, node);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 91);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, thenValue);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(32); buffer.add(91);
+        buffer.add(32); appendIrValue(buffer, source, thenValue);
+        buffer.add(44); buffer.add(32);
         appendBlockReference(buffer, thenValueBlock);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 91); byteBufferAppend(buffer, 32);
+        buffer.add(32); buffer.add(93);
+        buffer.add(44); buffer.add(32);
+        buffer.add(91); buffer.add(32);
         appendIrValue(buffer, source, elseValue);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(44); buffer.add(32);
         appendBlockReference(buffer, elseValueBlock);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+        buffer.add(32); buffer.add(93);
         appendNewline(buffer);
         k_boot_free(thenRoots as unit*);
         k_boot_free(elseRoots as unit*);
@@ -1879,12 +1879,12 @@ fn emitExpression(
                         val compared = nextTemporary(counter);
                         appendValuePrefix(buffer); appendDecimal(buffer, compared);
                         appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                        byteBufferAppend(buffer, 32);
+                        buffer.add(32);
                         appendType(
                             buffer, genericArguments,
                             subject.typeKind, subject.typeName, subject.typePointee);
-                        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
-                        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                        buffer.add(32); appendIrValue(buffer, source, subject);
+                        buffer.add(44); buffer.add(32);
                         appendIrValue(buffer, source, condition); appendNewline(buffer);
                         condition = IrValue(2, 0, 0, compared, 2, 0, 0);
                     }
@@ -1928,20 +1928,20 @@ fn emitExpression(
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
         appendEquals(buffer);
-        byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 104);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
+        buffer.add(112); buffer.add(104);
+        buffer.add(105); buffer.add(32);
         appendNodeType(buffer, genericArguments, node);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         index = 0;
         while (index < branchCount) {
             if (index > 0) {
-                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                buffer.add(44); buffer.add(32);
             }
-            byteBufferAppend(buffer, 91); byteBufferAppend(buffer, 32);
+            buffer.add(91); buffer.add(32);
             appendIrValue(buffer, source, values[index as u64]);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(44); buffer.add(32);
             appendBlockReference(buffer, blocks[index as u64]);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+            buffer.add(32); buffer.add(93);
             index = index + 1;
         }
         appendNewline(buffer);
@@ -1978,20 +1978,20 @@ fn emitExpression(
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer); appendInsertValue(buffer);
             appendNodeType(buffer, genericArguments, node);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             if (index == 0) {
-                byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 110);
-                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 101);
-                byteBufferAppend(buffer, 102);
+                buffer.add(117); buffer.add(110);
+                buffer.add(100); buffer.add(101);
+                buffer.add(102);
             } else {
                 appendIrValue(buffer, source, aggregate);
             }
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(44); buffer.add(32);
             appendType(
                 buffer, genericArguments,
                 node.typePointee % 256, node.typeName, 0);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, element);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(32); appendIrValue(buffer, source, element);
+            buffer.add(44); buffer.add(32);
             appendDecimal(buffer, index as u64); appendNewline(buffer);
             aggregate = IrValue(
                 2, 0, 0, temporary,
@@ -2030,17 +2030,17 @@ fn emitExpression(
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
             if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
-                byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 110);
-                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 103);
-                byteBufferAppend(buffer, 32);
+                buffer.add(102); buffer.add(110);
+                buffer.add(101); buffer.add(103);
+                buffer.add(32);
                 appendNodeType(buffer, genericArguments, node);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
             } else {
-                byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 117);
-                byteBufferAppend(buffer, 98); byteBufferAppend(buffer, 32);
+                buffer.add(115); buffer.add(117);
+                buffer.add(98); buffer.add(32);
                 appendNodeType(buffer, genericArguments, node);
-                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 48);
-                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                buffer.add(32); buffer.add(48);
+                buffer.add(44); buffer.add(32);
             }
             appendIrValue(buffer, source, operand);
             appendNewline(buffer);
@@ -2053,12 +2053,12 @@ fn emitExpression(
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            byteBufferAppend(buffer, 120); byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 32);
+            buffer.add(120); buffer.add(111); buffer.add(114); buffer.add(32);
             appendNodeType(buffer, genericArguments, node);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendIrValue(buffer, source, operand);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 116); byteBufferAppend(buffer, 114); byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 101);
+            buffer.add(44); buffer.add(32);
+            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
             appendNewline(buffer);
             return IrValue(
                 2, 0, 0, temporary,
@@ -2110,31 +2110,31 @@ fn emitExpression(
             val lowerCheck = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, lowerCheck); appendEquals(buffer);
             appendComparison(buffer, lowerOperator, subject.typeKind);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendType(
                 buffer, genericArguments,
                 subject.typeKind, subject.typeName, subject.typePointee);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(32); appendIrValue(buffer, source, subject);
+            buffer.add(44); buffer.add(32);
             appendIrValue(buffer, source, lower); appendNewline(buffer);
             val upperCheck = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, upperCheck); appendEquals(buffer);
             appendComparison(buffer, upperOperator, subject.typeKind);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendType(
                 buffer, genericArguments,
                 subject.typeKind, subject.typeName, subject.typePointee);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(32); appendIrValue(buffer, source, subject);
+            buffer.add(44); buffer.add(32);
             appendIrValue(buffer, source, upper); appendNewline(buffer);
             val result = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, result); appendEquals(buffer);
-            byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-            appendDecimal(buffer, lowerCheck); byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            buffer.add(97); buffer.add(110);
+            buffer.add(100); buffer.add(32);
+            buffer.add(105); buffer.add(49);
+            buffer.add(32); buffer.add(37);
+            appendDecimal(buffer, lowerCheck); buffer.add(44);
+            buffer.add(32); buffer.add(37);
             appendDecimal(buffer, upperCheck); appendNewline(buffer);
             return IrValue(2, 0, 0, result, 2, 0, 0);
         }
@@ -2164,21 +2164,21 @@ fn emitExpression(
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            byteBufferAppend(buffer, 112); byteBufferAppend(buffer, 104);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 91);
-            if (node.aux == 83) byteBufferAppend(buffer, 48);
-            else byteBufferAppend(buffer, 49);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(112); buffer.add(104);
+            buffer.add(105); buffer.add(32);
+            buffer.add(105); buffer.add(49);
+            buffer.add(32); buffer.add(91);
+            if (node.aux == 83) buffer.add(48);
+            else buffer.add(49);
+            buffer.add(44); buffer.add(32);
             appendBlockReference(buffer, leftBlock);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 91);
+            buffer.add(32); buffer.add(93);
+            buffer.add(44); buffer.add(32);
+            buffer.add(91);
             appendIrValue(buffer, source, right);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(44); buffer.add(32);
             appendBlockReference(buffer, rightBlock);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 93);
+            buffer.add(32); buffer.add(93);
             appendNewline(buffer);
             return IrValue(2, 0, 0, temporary, 2, 0, 0);
         }
@@ -2219,17 +2219,17 @@ fn emitExpression(
         appendEquals(buffer);
         if (comparison) appendComparison(buffer, node.aux, left.typeKind);
         else appendOperator(buffer, node.aux, node.typeKind);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         if (comparison) {
             appendType(
                 buffer, genericArguments, left.typeKind, left.typeName, left.typePointee);
         } else {
             appendNodeType(buffer, genericArguments, node);
         }
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, left);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
+        buffer.add(44);
+        buffer.add(32);
         appendIrValue(buffer, source, right);
         appendNewline(buffer);
         return IrValue(
@@ -2261,13 +2261,13 @@ fn emitExpression(
             val updated = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
             appendOperator(buffer, node.aux - 14, targetNode.typeKind);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendType(
                 buffer, genericArguments, targetNode.typeKind,
                 targetNode.typeName, targetNode.typePointee);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-            appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, right);
+            buffer.add(32); buffer.add(37);
+            appendDecimal(buffer, loaded); buffer.add(44);
+            buffer.add(32); appendIrValue(buffer, source, right);
             appendNewline(buffer);
             right = IrValue(
                 2, 0, 0, updated, targetNode.typeKind,
@@ -2277,7 +2277,7 @@ fn emitExpression(
         appendType(
             buffer, genericArguments, targetNode.typeKind,
             targetNode.typeName, targetNode.typePointee);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, right);
         appendPointerValue(buffer, source, target);
         appendNewline(buffer);
@@ -2307,12 +2307,12 @@ fn emitExpression(
                     targetType.kind, upper, false);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
-                byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
-                byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
-                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
-                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-                appendDecimal(buffer, lower); byteBufferAppend(buffer, 44);
-                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+                buffer.add(97); buffer.add(110);
+                buffer.add(100); buffer.add(32);
+                buffer.add(105); buffer.add(49);
+                buffer.add(32); buffer.add(37);
+                appendDecimal(buffer, lower); buffer.add(44);
+                buffer.add(32); buffer.add(37);
                 appendDecimal(buffer, upper); appendNewline(buffer);
                 val validBlock = nextBlock(counter);
                 val panicBlock = nextBlock(counter);
@@ -2339,13 +2339,13 @@ fn emitExpression(
                 }
             }
             appendFloatCastOpcode(buffer, opcode);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendType(
                 buffer, genericArguments,
                 value.typeKind, value.typeName, value.typePointee);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 32);
+            buffer.add(32); appendIrValue(buffer, source, value);
+            buffer.add(32); buffer.add(116);
+            buffer.add(111); buffer.add(32);
             appendNodeType(buffer, genericArguments, node);
             appendNewline(buffer);
             return IrValue(
@@ -2368,16 +2368,16 @@ fn emitExpression(
                 if (sourceType.isSigned()) opcode = 1;
             }
             appendCastOpcode(buffer, opcode);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendType(
                 buffer, genericArguments, value.typeKind,
                 value.typeName, value.typePointee);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendIrValue(buffer, source, value);
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 111);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
+            buffer.add(116);
+            buffer.add(111);
+            buffer.add(32);
             appendNodeType(buffer, genericArguments, node);
             appendNewline(buffer);
             converted = IrValue(
@@ -2394,52 +2394,52 @@ fn emitExpression(
                 var reverseOpcode: u32 = 2;
                 if (targetType.isSigned()) reverseOpcode = 1;
                 appendCastOpcode(buffer, reverseOpcode);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 appendNodeType(buffer, genericArguments, node);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 appendIrValue(buffer, source, converted);
-                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
-                byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 32);
+                buffer.add(32); buffer.add(116);
+                buffer.add(111); buffer.add(32);
                 appendType(
                     buffer, genericArguments, value.typeKind,
                     value.typeName, value.typePointee);
                 appendNewline(buffer);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
-                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
-                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
-                byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 101);
-                byteBufferAppend(buffer, 113); byteBufferAppend(buffer, 32);
+                buffer.add(105); buffer.add(99);
+                buffer.add(109); buffer.add(112);
+                buffer.add(32); buffer.add(101);
+                buffer.add(113); buffer.add(32);
                 appendType(
                     buffer, genericArguments, value.typeKind,
                     value.typeName, value.typePointee);
-                byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
-                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-                byteBufferAppend(buffer, 37); appendDecimal(buffer, roundTrip);
+                buffer.add(32); appendIrValue(buffer, source, value);
+                buffer.add(44); buffer.add(32);
+                buffer.add(37); appendDecimal(buffer, roundTrip);
                 appendNewline(buffer);
             } else {
                 check = nextTemporary(counter);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
-                byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
-                byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
-                byteBufferAppend(buffer, 32);
+                buffer.add(105); buffer.add(99);
+                buffer.add(109); buffer.add(112);
+                buffer.add(32);
                 var sourceSigned = sourceType.isSigned();
                 if (sourceSigned) {
-                    byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 103);
-                    byteBufferAppend(buffer, 101);
+                    buffer.add(115); buffer.add(103);
+                    buffer.add(101);
                 } else {
-                    byteBufferAppend(buffer, 117); byteBufferAppend(buffer, 108);
-                    byteBufferAppend(buffer, 101);
+                    buffer.add(117); buffer.add(108);
+                    buffer.add(101);
                 }
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 appendType(
                     buffer, genericArguments, value.typeKind,
                     value.typeName, value.typePointee);
-                byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
-                byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                buffer.add(32); appendIrValue(buffer, source, value);
+                buffer.add(44); buffer.add(32);
                 if (sourceSigned) {
-                    byteBufferAppend(buffer, 48);
+                    buffer.add(48);
                 } else {
                     if (sourceWidth == 32) appendDecimal(buffer, 2147483647);
                     else appendDecimal(buffer, 9223372036854775807);
@@ -2487,12 +2487,12 @@ fn emitExpression(
             appendDecimal(buffer, extracted);
             appendEquals(buffer);
             appendExtractValue(buffer);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendType(buffer, genericArguments, 8, objectNode.typeName, objectNode.typePointee);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendIrValue(buffer, source, object);
-            byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32);
+            buffer.add(44);
+            buffer.add(32);
             appendDecimal(buffer, fieldIndex as u64);
             appendNewline(buffer);
             return IrValue(
@@ -2535,8 +2535,8 @@ fn emitExpression(
             appendType(
                 buffer, genericArguments,
                 object.typeKind, object.typeName, object.typePointee);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, object);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            buffer.add(32); appendIrValue(buffer, source, object);
+            buffer.add(44); buffer.add(32);
             appendSource(
                 buffer, source,
                 nodes.data[indexRoot].start, nodes.data[indexRoot].end);
@@ -2573,21 +2573,21 @@ fn emitExpression(
             var operatorKind: u32 = 60;
             if (node.aux == 92) operatorKind = 61;
             appendOperator(buffer, operatorKind, node.typeKind);
-            byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, node);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-            appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+            buffer.add(32); appendNodeType(buffer, genericArguments, node);
+            buffer.add(32); buffer.add(37);
+            appendDecimal(buffer, loaded); buffer.add(44);
+            buffer.add(32); buffer.add(49);
             if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
-                byteBufferAppend(buffer, 46);
-                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
-                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
-                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
-                byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 43);
-                byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
+                buffer.add(46);
+                buffer.add(48); buffer.add(48);
+                buffer.add(48); buffer.add(48);
+                buffer.add(48); buffer.add(48);
+                buffer.add(101); buffer.add(43);
+                buffer.add(48); buffer.add(48);
             }
             appendNewline(buffer);
             appendStore(buffer); appendNodeType(buffer, genericArguments, node);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            buffer.add(32); buffer.add(37);
             appendDecimal(buffer, updated); appendPointerValue(buffer, source, address);
             appendNewline(buffer);
             return IrValue(
@@ -2601,26 +2601,26 @@ fn emitExpression(
         appendValuePrefix(buffer);
         appendDecimal(buffer, hasValue);
         appendEquals(buffer);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 120);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 118);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 32);
+        buffer.add(101);
+        buffer.add(120);
+        buffer.add(116);
+        buffer.add(114);
+        buffer.add(97);
+        buffer.add(99);
+        buffer.add(116);
+        buffer.add(118);
+        buffer.add(97);
+        buffer.add(108);
+        buffer.add(117);
+        buffer.add(101);
+        buffer.add(32);
         appendType(
             buffer, genericArguments, operand.typeKind, operand.typeName, operand.typePointee);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, operand);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 48);
+        buffer.add(44);
+        buffer.add(32);
+        buffer.add(48);
         appendNewline(buffer);
         val validBlock = nextBlock(counter);
         val panicBlock = nextBlock(counter);
@@ -2629,88 +2629,88 @@ fn emitExpression(
             IrValue(2, 0, 0, hasValue, 2, 0, 0),
             validBlock, panicBlock);
         appendBlockLabel(buffer, counter, panicBlock);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 118);
-        byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 100);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 64);
-        byteBufferAppend(buffer, 107);
-        byteBufferAppend(buffer, 95);
-        byteBufferAppend(buffer, 98);
-        byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 111);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 95);
-        byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 40);
-        byteBufferAppend(buffer, 112);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 54);
-        byteBufferAppend(buffer, 52);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 48);
-        byteBufferAppend(buffer, 41);
+        buffer.add(32);
+        buffer.add(32);
+        buffer.add(99);
+        buffer.add(97);
+        buffer.add(108);
+        buffer.add(108);
+        buffer.add(32);
+        buffer.add(118);
+        buffer.add(111);
+        buffer.add(105);
+        buffer.add(100);
+        buffer.add(32);
+        buffer.add(64);
+        buffer.add(107);
+        buffer.add(95);
+        buffer.add(98);
+        buffer.add(111);
+        buffer.add(111);
+        buffer.add(116);
+        buffer.add(95);
+        buffer.add(112);
+        buffer.add(97);
+        buffer.add(110);
+        buffer.add(105);
+        buffer.add(99);
+        buffer.add(40);
+        buffer.add(112);
+        buffer.add(116);
+        buffer.add(114);
+        buffer.add(32);
+        buffer.add(110);
+        buffer.add(117);
+        buffer.add(108);
+        buffer.add(108);
+        buffer.add(44);
+        buffer.add(32);
+        buffer.add(105);
+        buffer.add(54);
+        buffer.add(52);
+        buffer.add(32);
+        buffer.add(48);
+        buffer.add(41);
         appendNewline(buffer);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 110);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 104);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 98);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 101);
+        buffer.add(32);
+        buffer.add(32);
+        buffer.add(117);
+        buffer.add(110);
+        buffer.add(114);
+        buffer.add(101);
+        buffer.add(97);
+        buffer.add(99);
+        buffer.add(104);
+        buffer.add(97);
+        buffer.add(98);
+        buffer.add(108);
+        buffer.add(101);
         appendNewline(buffer);
         appendBlockLabel(buffer, counter, validBlock);
         val value = nextTemporary(counter);
         appendValuePrefix(buffer);
         appendDecimal(buffer, value);
         appendEquals(buffer);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 120);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 118);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 117);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 32);
+        buffer.add(101);
+        buffer.add(120);
+        buffer.add(116);
+        buffer.add(114);
+        buffer.add(97);
+        buffer.add(99);
+        buffer.add(116);
+        buffer.add(118);
+        buffer.add(97);
+        buffer.add(108);
+        buffer.add(117);
+        buffer.add(101);
+        buffer.add(32);
         appendType(
             buffer, genericArguments, operand.typeKind, operand.typeName, operand.typePointee);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, operand);
-        byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 49);
+        buffer.add(44);
+        buffer.add(32);
+        buffer.add(49);
         appendNewline(buffer);
         return IrValue(
             2, 0, 0, value,
@@ -2814,17 +2814,17 @@ fn emitExpression(
                 appendDecimal(buffer, aggregateTemporary);
                 appendEquals(buffer);
                 appendInsertValue(buffer);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 appendNodeType(buffer, genericArguments, node);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 if (index == 0) {
                     appendUndef(buffer);
                 } else {
-                    byteBufferAppend(buffer, 37);
+                    buffer.add(37);
                     appendDecimal(buffer, aggregateTemporary - 1);
                 }
-                byteBufferAppend(buffer, 44);
-                byteBufferAppend(buffer, 32);
+                buffer.add(44);
+                buffer.add(32);
                 
                 val fieldRoot = fieldRootAt(nodes, structureRoot, index);
                 val fieldTypeNode = nodes.data[fieldRoot - 1];
@@ -2838,11 +2838,11 @@ fn emitExpression(
                     buffer, genericArguments,
                     fieldType.kind, fieldType.name, fieldType.pointee);
                 
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 appendIrValue(
                     buffer, source, values[index as u64]);
-                byteBufferAppend(buffer, 44);
-                byteBufferAppend(buffer, 32);
+                buffer.add(44);
+                buffer.add(32);
                 appendDecimal(buffer, index as u64);
                 appendNewline(buffer);
                 index = index + 1;
@@ -2872,30 +2872,30 @@ fn emitExpression(
         }
         var temporary: u64 = 0;
         if (isPrint) {
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
+            buffer.add(32);
             appendCall(buffer);
-            byteBufferAppend(buffer, 118);
-            byteBufferAppend(buffer, 111);
-            byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 100);
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 64);
-            byteBufferAppend(buffer, 107);
-            byteBufferAppend(buffer, 95);
-            byteBufferAppend(buffer, 115);
-            byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 100);
-            byteBufferAppend(buffer, 95);
-            byteBufferAppend(buffer, 112);
-            byteBufferAppend(buffer, 114);
-            byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 95);
-            byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 51);
-            byteBufferAppend(buffer, 50);
+            buffer.add(118);
+            buffer.add(111);
+            buffer.add(105);
+            buffer.add(100);
+            buffer.add(32);
+            buffer.add(64);
+            buffer.add(107);
+            buffer.add(95);
+            buffer.add(115);
+            buffer.add(116);
+            buffer.add(100);
+            buffer.add(95);
+            buffer.add(112);
+            buffer.add(114);
+            buffer.add(105);
+            buffer.add(110);
+            buffer.add(116);
+            buffer.add(95);
+            buffer.add(105);
+            buffer.add(51);
+            buffer.add(50);
         } else {
             if (node.typeKind != 1) {
                 temporary = nextTemporary(counter);
@@ -2903,8 +2903,8 @@ fn emitExpression(
                 appendDecimal(buffer, temporary);
                 appendEquals(buffer);
             } else {
-                byteBufferAppend(buffer, 32);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
+                buffer.add(32);
             }
             appendCall(buffer);
             appendNodeType(buffer, genericArguments, node);
@@ -2914,7 +2914,7 @@ fn emitExpression(
                 val ownerRoot = structRootByName(source, nodes, ownerType);
                 val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
                 appendSource(buffer, source, ownerName.start, ownerName.end);
-                byteBufferAppend(buffer, 46);
+                buffer.add(46);
             }
             appendSource(buffer, source, callee.start, callee.end);
             if (functionRoot != nodes.length) {
@@ -2927,12 +2927,12 @@ fn emitExpression(
                 }
             }
         }
-        byteBufferAppend(buffer, 40);
+        buffer.add(40);
         index = 0;
         while (index < argumentCount) {
             if (index > 0) {
-                byteBufferAppend(buffer, 44);
-                byteBufferAppend(buffer, 32);
+                buffer.add(44);
+                buffer.add(32);
             }
             if (functionRoot != nodes.length) {
                 val callParameter = nodes.data[
@@ -2967,11 +2967,11 @@ fn emitExpression(
                     values[index as u64].typeName,
                     values[index as u64].typePointee);
             }
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
             appendIrValue(buffer, source, values[index as u64]);
             index = index + 1;
         }
-        byteBufferAppend(buffer, 41);
+        buffer.add(41);
         appendNewline(buffer);
         k_boot_free(values as unit*);
         k_boot_free(arguments as unit*);
@@ -3045,14 +3045,14 @@ fn emitCollectionFor(
         elementKind = collectionNode.typePointee % 256;
         val pointer = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
-        appendGetElementPtr(buffer); byteBufferAppend(buffer, 32);
+        appendGetElementPtr(buffer); buffer.add(32);
         appendNodeType(buffer, genericArguments, collectionNode);
         appendPtr(buffer); appendLocalPrefix(buffer);
         appendDecimal(buffer, nodes.data[collectionRoot].storage);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-        appendI32(buffer); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 48);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-        appendI32(buffer); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 48);
+        buffer.add(44); buffer.add(32);
+        appendI32(buffer); buffer.add(32); buffer.add(48);
+        buffer.add(44); buffer.add(32);
+        appendI32(buffer); buffer.add(32); buffer.add(48);
         appendNewline(buffer);
         data = IrValue(2, 0, 0, pointer, 9, elementName, elementKind);
         length = IrValue(
@@ -3063,21 +3063,21 @@ fn emitCollectionFor(
         appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
         appendNodeType(buffer, genericArguments, collectionNode);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, collectionValue);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 48);
+        buffer.add(32); appendIrValue(buffer, source, collectionValue);
+        buffer.add(44); buffer.add(32); buffer.add(48);
         appendNewline(buffer);
         data = IrValue(2, 0, 0, dataTemporary, 9, elementName, elementKind);
         val lengthTemporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
         appendNodeType(buffer, genericArguments, collectionNode);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, collectionValue);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+        buffer.add(32); appendIrValue(buffer, source, collectionValue);
+        buffer.add(44); buffer.add(32); buffer.add(49);
         appendNewline(buffer);
         length = IrValue(2, 0, 0, lengthTemporary, 7, 0, 0);
     }
-    appendStore(buffer); appendI64(buffer); byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 48); appendPtr(buffer); appendLocalPrefix(buffer);
+    appendStore(buffer); appendI64(buffer); buffer.add(32);
+    buffer.add(48); appendPtr(buffer); appendLocalPrefix(buffer);
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
     val conditionBlock = nextBlock(counter);
     val bodyBlock = nextBlock(counter);
@@ -3091,10 +3091,10 @@ fn emitCollectionFor(
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
     val compared = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
-    appendComparison(buffer, 66, 7); byteBufferAppend(buffer, 32);
-    appendI64(buffer); byteBufferAppend(buffer, 32);
+    appendComparison(buffer, 66, 7); buffer.add(32);
+    appendI64(buffer); buffer.add(32);
     appendIrValue(buffer, source, IrValue(2, 0, 0, index, 7, 0, 0));
-    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+    buffer.add(44); buffer.add(32);
     appendIrValue(buffer, source, length); appendNewline(buffer);
     appendConditionalBranch(
         buffer, source, IrValue(2, 0, 0, compared, 2, 0, 0),
@@ -3102,11 +3102,11 @@ fn emitCollectionFor(
     appendBlockLabel(buffer, counter, bodyBlock);
     val elementPointer = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, elementPointer); appendEquals(buffer);
-    appendGetElementPtr(buffer); byteBufferAppend(buffer, 32);
+    appendGetElementPtr(buffer); buffer.add(32);
     appendType(buffer, genericArguments, elementKind, elementName, 0);
     appendPointerValue(buffer, source, data);
-    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32); appendI64(buffer);
-    byteBufferAppend(buffer, 32);
+    buffer.add(44); buffer.add(32); appendI64(buffer);
+    buffer.add(32);
     appendIrValue(buffer, source, IrValue(2, 0, 0, index, 7, 0, 0));
     appendNewline(buffer);
     val element = nextTemporary(counter);
@@ -3117,7 +3117,7 @@ fn emitCollectionFor(
         IrValue(2, 0, 0, elementPointer, 9, elementName, elementKind));
     appendNewline(buffer);
     appendStore(buffer); appendType(buffer, genericArguments, elementKind, elementName, 0);
-    byteBufferAppend(buffer, 32);
+    buffer.add(32);
     appendIrValue(buffer, source, IrValue(2, 0, 0, element, elementKind, elementName, 0));
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, valueName.start);
     appendNewline(buffer);
@@ -3135,12 +3135,12 @@ fn emitCollectionFor(
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
     val advanced = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
-    appendOperator(buffer, 60, 7); byteBufferAppend(buffer, 32); appendI64(buffer);
-    byteBufferAppend(buffer, 32);
+    appendOperator(buffer, 60, 7); buffer.add(32); appendI64(buffer);
+    buffer.add(32);
     appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, 7, 0, 0));
-    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+    buffer.add(44); buffer.add(32); buffer.add(49);
     appendNewline(buffer);
-    appendStore(buffer); appendI64(buffer); byteBufferAppend(buffer, 32);
+    appendStore(buffer); appendI64(buffer); buffer.add(32);
     appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, 7, 0, 0));
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, indexStorage);
     appendNewline(buffer); appendBranch(buffer, conditionBlock);
@@ -3201,12 +3201,12 @@ fn emitWhen(
                     val compared = nextTemporary(counter);
                     appendValuePrefix(buffer); appendDecimal(buffer, compared);
                     appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                    byteBufferAppend(buffer, 32);
+                    buffer.add(32);
                     appendType(
                         buffer, genericArguments,
                         subject.typeKind, subject.typeName, subject.typePointee);
-                    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, subject);
-                    byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+                    buffer.add(32); appendIrValue(buffer, source, subject);
+                    buffer.add(44); buffer.add(32);
                     appendIrValue(buffer, source, condition); appendNewline(buffer);
                     condition = IrValue(2, 0, 0, compared, 2, 0, 0);
                 }
@@ -3290,48 +3290,48 @@ fn emitStatement(
             buffer, source, nodes, genericArguments, rightRoot, counter);
         val ascending = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, ascending); appendEquals(buffer);
-        appendComparison(buffer, 81, start.typeKind); byteBufferAppend(buffer, 32);
+        appendComparison(buffer, 81, start.typeKind); buffer.add(32);
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(32); appendIrValue(buffer, source, start);
+        buffer.add(44); buffer.add(32);
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val different = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, different); appendEquals(buffer);
-        appendComparison(buffer, 80, start.typeKind); byteBufferAppend(buffer, 32);
+        appendComparison(buffer, 80, start.typeKind); buffer.add(32);
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(32); appendIrValue(buffer, source, start);
+        buffer.add(44); buffer.add(32);
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val step = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, step); appendEquals(buffer);
-        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 37); appendDecimal(buffer, ascending);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(115); buffer.add(101);
+        buffer.add(108); buffer.add(101);
+        buffer.add(99); buffer.add(116);
+        buffer.add(32); buffer.add(105);
+        buffer.add(49); buffer.add(32);
+        buffer.add(37); appendDecimal(buffer, ascending);
+        buffer.add(44); buffer.add(32);
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(32); buffer.add(49);
+        buffer.add(44); buffer.add(32);
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 45);
-        byteBufferAppend(buffer, 49); appendNewline(buffer);
+        buffer.add(32); buffer.add(45);
+        buffer.add(49); appendNewline(buffer);
         var initial = start;
         if (collectionNode.aux == 93 || collectionNode.aux == 94) {
             val shifted = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, shifted); appendEquals(buffer);
-            appendOperator(buffer, 60, start.typeKind); byteBufferAppend(buffer, 32);
+            appendOperator(buffer, 60, start.typeKind); buffer.add(32);
             appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
-            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 37); appendDecimal(buffer, step); appendNewline(buffer);
+            buffer.add(32); appendIrValue(buffer, source, start);
+            buffer.add(44); buffer.add(32);
+            buffer.add(37); appendDecimal(buffer, step); appendNewline(buffer);
             initial = IrValue(
                 2, 0, 0, shifted, start.typeKind, start.typeName, start.typePointee);
         }
         val name = nodes.data[statement.subtreeStart];
         appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, initial);
+        buffer.add(32); appendIrValue(buffer, source, initial);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
         val conditionBlock = nextBlock(counter);
@@ -3351,10 +3351,10 @@ fn emitStatement(
         if (collectionNode.aux == 88 || collectionNode.aux == 94)
             ascendingOperator = 66;
         appendComparison(buffer, ascendingOperator, start.typeKind);
-        byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        buffer.add(32);
         appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(44); buffer.add(32);
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val descendingCompared = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, descendingCompared); appendEquals(buffer);
@@ -3362,37 +3362,37 @@ fn emitStatement(
         if (collectionNode.aux == 88 || collectionNode.aux == 94)
             descendingOperator = 67;
         appendComparison(buffer, descendingOperator, start.typeKind);
-        byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        buffer.add(32);
         appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        buffer.add(44); buffer.add(32);
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val compared = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
-        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 116);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 37); appendDecimal(buffer, ascending);
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-        appendDecimal(buffer, ascendingCompared); byteBufferAppend(buffer, 44);
-        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
-        byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 37); appendDecimal(buffer, descendingCompared);
+        buffer.add(115); buffer.add(101);
+        buffer.add(108); buffer.add(101);
+        buffer.add(99); buffer.add(116);
+        buffer.add(32); buffer.add(105);
+        buffer.add(49); buffer.add(32);
+        buffer.add(37); appendDecimal(buffer, ascending);
+        buffer.add(44); buffer.add(32);
+        buffer.add(105); buffer.add(49);
+        buffer.add(32); buffer.add(37);
+        appendDecimal(buffer, ascendingCompared); buffer.add(44);
+        buffer.add(32); buffer.add(105);
+        buffer.add(49); buffer.add(32);
+        buffer.add(37); appendDecimal(buffer, descendingCompared);
         appendNewline(buffer);
         var conditionValue = IrValue(2, 0, 0, compared, 2, 0, 0);
         if (collectionNode.aux != 87) {
             val nonempty = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, nonempty); appendEquals(buffer);
-            byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
-            byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-            appendDecimal(buffer, compared); byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            buffer.add(97); buffer.add(110);
+            buffer.add(100); buffer.add(32);
+            buffer.add(105); buffer.add(49);
+            buffer.add(32); buffer.add(37);
+            appendDecimal(buffer, compared); buffer.add(44);
+            buffer.add(32); buffer.add(37);
             appendDecimal(buffer, different); appendNewline(buffer);
             conditionValue = IrValue(2, 0, 0, nonempty, 2, 0, 0);
         }
@@ -3417,11 +3417,11 @@ fn emitStatement(
         if (collectionNode.aux == 87 || collectionNode.aux == 93) {
             val terminal = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, terminal); appendEquals(buffer);
-            appendComparison(buffer, 79, start.typeKind); byteBufferAppend(buffer, 32);
+            appendComparison(buffer, 79, start.typeKind); buffer.add(32);
             appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
-            appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, finish);
+            buffer.add(32); buffer.add(37);
+            appendDecimal(buffer, loaded); buffer.add(44);
+            buffer.add(32); appendIrValue(buffer, source, finish);
             appendNewline(buffer);
             val advanceBlock = nextBlock(counter);
             appendConditionalBranch(
@@ -3431,14 +3431,14 @@ fn emitStatement(
         }
         val advanced = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
-        appendOperator(buffer, 60, start.typeKind); byteBufferAppend(buffer, 32);
-        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); byteBufferAppend(buffer, 32);
+        appendOperator(buffer, 60, start.typeKind); buffer.add(32);
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); buffer.add(32);
         appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, start.typeKind, start.typeName, start.typePointee));
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 37); appendDecimal(buffer, step);
+        buffer.add(44); buffer.add(32);
+        buffer.add(37); appendDecimal(buffer, step);
         appendNewline(buffer);
         appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, start.typeKind, start.typeName, start.typePointee));
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer); appendBranch(buffer, conditionBlock);
@@ -3473,7 +3473,7 @@ fn emitStatement(
         appendStore(buffer);
         appendType(
             buffer, genericArguments, storageKind, storageName, storagePointee);
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         appendIrValue(buffer, source, initializer);
         appendPtr(buffer);
         appendLocalPrefix(buffer);
@@ -3482,17 +3482,17 @@ fn emitStatement(
         return false;
     } else {
         if (statement.kind == 34) {
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 32);
+            buffer.add(32);
+            buffer.add(32);
             if (statement.aux == 0) {
-                byteBufferAppend(buffer, 114);
-                byteBufferAppend(buffer, 101);
-                byteBufferAppend(buffer, 116);
-                byteBufferAppend(buffer, 32);
-                byteBufferAppend(buffer, 118);
-                byteBufferAppend(buffer, 111);
-                byteBufferAppend(buffer, 105);
-                byteBufferAppend(buffer, 100);
+                buffer.add(114);
+                buffer.add(101);
+                buffer.add(116);
+                buffer.add(32);
+                buffer.add(118);
+                buffer.add(111);
+                buffer.add(105);
+                buffer.add(100);
             } else {
                 val value = emitExpression(
                     buffer, source, nodes, genericArguments,
@@ -3506,47 +3506,47 @@ fn emitStatement(
                     appendValuePrefix(buffer);
                     appendDecimal(buffer, tagged);
                     appendEquals(buffer);
-                    byteBufferAppend(buffer, 105);
-                    byteBufferAppend(buffer, 110);
-                    byteBufferAppend(buffer, 115);
-                    byteBufferAppend(buffer, 101);
-                    byteBufferAppend(buffer, 114);
-                    byteBufferAppend(buffer, 116);
-                    byteBufferAppend(buffer, 118);
-                    byteBufferAppend(buffer, 97);
-                    byteBufferAppend(buffer, 108);
-                    byteBufferAppend(buffer, 117);
-                    byteBufferAppend(buffer, 101);
-                    byteBufferAppend(buffer, 32);
+                    buffer.add(105);
+                    buffer.add(110);
+                    buffer.add(115);
+                    buffer.add(101);
+                    buffer.add(114);
+                    buffer.add(116);
+                    buffer.add(118);
+                    buffer.add(97);
+                    buffer.add(108);
+                    buffer.add(117);
+                    buffer.add(101);
+                    buffer.add(32);
                     appendType(
                         buffer, genericArguments, statement.typeKind,
                         statement.typeName, statement.typePointee);
-                    byteBufferAppend(buffer, 32);
-                    byteBufferAppend(buffer, 117);
-                    byteBufferAppend(buffer, 110);
-                    byteBufferAppend(buffer, 100);
-                    byteBufferAppend(buffer, 101);
-                    byteBufferAppend(buffer, 102);
-                    byteBufferAppend(buffer, 44);
-                    byteBufferAppend(buffer, 32);
-                    byteBufferAppend(buffer, 105);
-                    byteBufferAppend(buffer, 49);
-                    byteBufferAppend(buffer, 32);
+                    buffer.add(32);
+                    buffer.add(117);
+                    buffer.add(110);
+                    buffer.add(100);
+                    buffer.add(101);
+                    buffer.add(102);
+                    buffer.add(44);
+                    buffer.add(32);
+                    buffer.add(105);
+                    buffer.add(49);
+                    buffer.add(32);
                     if (statement.conversionKind == 1) {
-                        byteBufferAppend(buffer, 116);
-                        byteBufferAppend(buffer, 114);
-                        byteBufferAppend(buffer, 117);
-                        byteBufferAppend(buffer, 101);
+                        buffer.add(116);
+                        buffer.add(114);
+                        buffer.add(117);
+                        buffer.add(101);
                     } else {
-                        byteBufferAppend(buffer, 102);
-                        byteBufferAppend(buffer, 97);
-                        byteBufferAppend(buffer, 108);
-                        byteBufferAppend(buffer, 115);
-                        byteBufferAppend(buffer, 101);
+                        buffer.add(102);
+                        buffer.add(97);
+                        buffer.add(108);
+                        buffer.add(115);
+                        buffer.add(101);
                     }
-                    byteBufferAppend(buffer, 44);
-                    byteBufferAppend(buffer, 32);
-                    byteBufferAppend(buffer, 48);
+                    buffer.add(44);
+                    buffer.add(32);
+                    buffer.add(48);
                     appendNewline(buffer);
                     returned = IrValue(
                         2, 0, 0, tagged,
@@ -3557,32 +3557,32 @@ fn emitStatement(
                         appendValuePrefix(buffer);
                         appendDecimal(buffer, withPayload);
                         appendEquals(buffer);
-                        byteBufferAppend(buffer, 105);
-                        byteBufferAppend(buffer, 110);
-                        byteBufferAppend(buffer, 115);
-                        byteBufferAppend(buffer, 101);
-                        byteBufferAppend(buffer, 114);
-                        byteBufferAppend(buffer, 116);
-                        byteBufferAppend(buffer, 118);
-                        byteBufferAppend(buffer, 97);
-                        byteBufferAppend(buffer, 108);
-                        byteBufferAppend(buffer, 117);
-                        byteBufferAppend(buffer, 101);
-                        byteBufferAppend(buffer, 32);
+                        buffer.add(105);
+                        buffer.add(110);
+                        buffer.add(115);
+                        buffer.add(101);
+                        buffer.add(114);
+                        buffer.add(116);
+                        buffer.add(118);
+                        buffer.add(97);
+                        buffer.add(108);
+                        buffer.add(117);
+                        buffer.add(101);
+                        buffer.add(32);
                         appendType(
                             buffer, genericArguments, statement.typeKind,
                             statement.typeName, statement.typePointee);
-                        byteBufferAppend(buffer, 32);
+                        buffer.add(32);
                         appendIrValue(buffer, source, returned);
-                        byteBufferAppend(buffer, 44);
-                        byteBufferAppend(buffer, 32);
+                        buffer.add(44);
+                        buffer.add(32);
                         appendType(
                             buffer, genericArguments, statement.typePointee,
                             statement.typeName, 0);
-                        byteBufferAppend(buffer, 32);
+                        buffer.add(32);
                         appendIrValue(buffer, source, value);
-                        byteBufferAppend(buffer, 44);
-                        byteBufferAppend(buffer, 32);
+                        buffer.add(44);
+                        buffer.add(32);
                         appendDecimal(buffer, 1);
                         appendNewline(buffer);
                         returned = IrValue(
@@ -3591,14 +3591,14 @@ fn emitStatement(
                             statement.typeName, statement.typePointee);
                     }
                 }
-                byteBufferAppend(buffer, 114);
-                byteBufferAppend(buffer, 101);
-                byteBufferAppend(buffer, 116);
-                byteBufferAppend(buffer, 32);
+                buffer.add(114);
+                buffer.add(101);
+                buffer.add(116);
+                buffer.add(32);
                 appendType(
                     buffer, genericArguments, returned.typeKind,
                     returned.typeName, returned.typePointee);
-                byteBufferAppend(buffer, 32);
+                buffer.add(32);
                 appendIrValue(buffer, source, returned);
             }
             appendNewline(buffer);
@@ -3899,14 +3899,14 @@ fn emitFunction(
     val returnType = nodes.data[returnTypeRoot(nodes, functionRoot)];
     val parameterCount = functionParameterCount(function);
     if (functionIsExtern(function)) {
-        byteBufferAppend(buffer, 100);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 99);
-        byteBufferAppend(buffer, 108);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 101);
-        byteBufferAppend(buffer, 32);
+        buffer.add(100);
+        buffer.add(101);
+        buffer.add(99);
+        buffer.add(108);
+        buffer.add(97);
+        buffer.add(114);
+        buffer.add(101);
+        buffer.add(32);
     } else {
         appendDefine(buffer);
     }
@@ -3930,7 +3930,7 @@ fn emitFunction(
         val ownerRoot = structRootByName(source, nodes, receiverType.typeName);
         val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
         appendSource(buffer, source, ownerName.start, ownerName.end);
-        byteBufferAppend(buffer, 46);
+        buffer.add(46);
     }
     appendSource(buffer, source, name.start, name.end);
     if (specializationCount > 0) {
@@ -3938,12 +3938,12 @@ fn emitFunction(
             buffer, genericArguments,
             specializationArgumentStart, specializationCount);
     }
-    byteBufferAppend(buffer, 40);
+    buffer.add(40);
     var parameterIndex: u32 = 1;
     while (parameterIndex <= parameterCount) {
         if (parameterIndex > 1) {
-            byteBufferAppend(buffer, 44);
-            byteBufferAppend(buffer, 32);
+            buffer.add(44);
+            buffer.add(32);
         }
         val parameter = nodes.data[
             parameterRoot(nodes, functionRoot, parameterIndex)];
@@ -3955,13 +3955,13 @@ fn emitFunction(
         } else {
             appendNodeType(buffer, genericArguments, parameterType);
         }
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 37);
+        buffer.add(32);
+        buffer.add(37);
         if (parameter.aux != 2) {
-            byteBufferAppend(buffer, 97);
-            byteBufferAppend(buffer, 114);
-            byteBufferAppend(buffer, 103);
-            byteBufferAppend(buffer, 46);
+            buffer.add(97);
+            buffer.add(114);
+            buffer.add(103);
+            buffer.add(46);
         } else {
             appendLocalPrefix(buffer);
         }
@@ -3973,13 +3973,13 @@ fn emitFunction(
         }
         parameterIndex = parameterIndex + 1;
     }
-    byteBufferAppend(buffer, 41);
+    buffer.add(41);
     if (functionIsExtern(function)) {
         appendNewline(buffer);
         return true;
     }
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 123);
+    buffer.add(32);
+    buffer.add(123);
     appendNewline(buffer);
     appendEntry(buffer);
     appendNewline(buffer);
@@ -4004,12 +4004,12 @@ fn emitFunction(
         appendNewline(buffer);
         appendStore(buffer);
         appendNodeType(buffer, genericArguments, parameterType);
-        byteBufferAppend(buffer, 32);
-        byteBufferAppend(buffer, 37);
-        byteBufferAppend(buffer, 97);
-        byteBufferAppend(buffer, 114);
-        byteBufferAppend(buffer, 103);
-        byteBufferAppend(buffer, 46);
+        buffer.add(32);
+        buffer.add(37);
+        buffer.add(97);
+        buffer.add(114);
+        buffer.add(103);
+        buffer.add(46);
         appendSource(
             buffer, source, parameterName.start, parameterName.end);
         appendPtr(buffer);
@@ -4032,16 +4032,16 @@ fn emitFunction(
         if (functionInfersReturn(function) && function.typeKind == 1)
             returnsUnit = true;
         if (returnsUnit) {
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 114);
-            byteBufferAppend(buffer, 101);
-            byteBufferAppend(buffer, 116);
-            byteBufferAppend(buffer, 32);
-            byteBufferAppend(buffer, 118);
-            byteBufferAppend(buffer, 111);
-            byteBufferAppend(buffer, 105);
-            byteBufferAppend(buffer, 100);
+            buffer.add(32);
+            buffer.add(32);
+            buffer.add(114);
+            buffer.add(101);
+            buffer.add(116);
+            buffer.add(32);
+            buffer.add(118);
+            buffer.add(111);
+            buffer.add(105);
+            buffer.add(100);
             appendNewline(buffer);
         }
     }
@@ -4204,31 +4204,31 @@ fn emitStruct(
     nodes: AstList, genericArguments: TypeValueList, structureRoot: u64) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
-    byteBufferAppend(buffer, 37);
-    byteBufferAppend(buffer, 115);
+    buffer.add(37);
+    buffer.add(115);
     appendDecimal(
         buffer, sourceHash(source, name.start, name.end));
     appendEquals(buffer);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 121);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 123);
+    buffer.add(116);
+    buffer.add(121);
+    buffer.add(112);
+    buffer.add(101);
+    buffer.add(32);
+    buffer.add(123);
     val fieldCount = structFieldCount(structure);
     var index: u32 = 0;
     while (index < fieldCount) {
         if (index > 0) {
-            byteBufferAppend(buffer, 44);
+            buffer.add(44);
         }
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         appendNodeType(buffer, genericArguments, nodes.data[fieldRoot - 1]);
         index = index + 1;
     }
-    if (fieldCount > 0) byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 125);
+    if (fieldCount > 0) buffer.add(32);
+    buffer.add(125);
     appendNewline(buffer);
 }
 
@@ -4312,25 +4312,25 @@ fn emitSpecializedStruct(
     structureRoot: u64, argumentStart: u64, argumentCount: u32) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
-    byteBufferAppend(buffer, 37);
-    byteBufferAppend(buffer, 115);
+    buffer.add(37);
+    buffer.add(115);
     appendDecimal(
         buffer, sourceHash(source, name.start, name.end));
     appendStructSpecializationSuffix(buffer, genericArguments, argumentStart, argumentCount);
     appendEquals(buffer);
-    byteBufferAppend(buffer, 116);
-    byteBufferAppend(buffer, 121);
-    byteBufferAppend(buffer, 112);
-    byteBufferAppend(buffer, 101);
-    byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 123);
+    buffer.add(116);
+    buffer.add(121);
+    buffer.add(112);
+    buffer.add(101);
+    buffer.add(32);
+    buffer.add(123);
     val fieldCount = structFieldCount(structure);
     var index: u32 = 0;
     while (index < fieldCount) {
         if (index > 0) {
-            byteBufferAppend(buffer, 44);
+            buffer.add(44);
         }
-        byteBufferAppend(buffer, 32);
+        buffer.add(32);
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         val fieldTypeNode = nodes.data[fieldRoot - 1];
@@ -4343,8 +4343,8 @@ fn emitSpecializedStruct(
             fieldType.kind, fieldType.name, fieldType.pointee);
         index = index + 1;
     }
-    if (fieldCount > 0) byteBufferAppend(buffer, 32);
-    byteBufferAppend(buffer, 125);
+    if (fieldCount > 0) buffer.add(32);
+    buffer.add(125);
     appendNewline(buffer);
 }
 

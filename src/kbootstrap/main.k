@@ -8,80 +8,80 @@ struct Argument(data: u8*, length: u64, ok: bool)
 
 fn mainError(kind: u32) {
     var message = byteBufferNew();
-    byteBufferAppend(message, 101); byteBufferAppend(message, 114);
-    byteBufferAppend(message, 114); byteBufferAppend(message, 111);
-    byteBufferAppend(message, 114); byteBufferAppend(message, 58);
-    byteBufferAppend(message, 32);
+    message.add(101); message.add(114);
+    message.add(114); message.add(111);
+    message.add(114); message.add(58);
+    message.add(32);
     
     if (kind == 1) {
-        byteBufferAppend(message, 101); byteBufferAppend(message, 120);
-        byteBufferAppend(message, 112); byteBufferAppend(message, 101);
-        byteBufferAppend(message, 99); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 100);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 55);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 114); byteBufferAppend(message, 103);
-        byteBufferAppend(message, 117); byteBufferAppend(message, 109);
-        byteBufferAppend(message, 101); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 116); byteBufferAppend(message, 115);
+        message.add(101); message.add(120);
+        message.add(112); message.add(101);
+        message.add(99); message.add(116);
+        message.add(101); message.add(100);
+        message.add(32); message.add(55);
+        message.add(32); message.add(97);
+        message.add(114); message.add(103);
+        message.add(117); message.add(109);
+        message.add(101); message.add(110);
+        message.add(116); message.add(115);
     } else {
-        byteBufferAppend(message, 99); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 110); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 111); byteBufferAppend(message, 116);
-        byteBufferAppend(message, 32); byteBufferAppend(message, 108);
-        byteBufferAppend(message, 111); byteBufferAppend(message, 97);
-        byteBufferAppend(message, 100); byteBufferAppend(message, 32);
-        byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-        byteBufferAppend(message, 112); byteBufferAppend(message, 117);
-        byteBufferAppend(message, 116);
+        message.add(99); message.add(97);
+        message.add(110); message.add(110);
+        message.add(111); message.add(116);
+        message.add(32); message.add(108);
+        message.add(111); message.add(97);
+        message.add(100); message.add(32);
+        message.add(105); message.add(110);
+        message.add(112); message.add(117);
+        message.add(116);
     }
 
-    byteBufferAppend(message, 10);
+    message.add(10);
     k_boot_stderr(message.data, message.length);
-    byteBufferFree(message);
+    message.free();
 }
 
 fn mainPathError(kind: u32) {
     var message = byteBufferNew();
-    byteBufferAppend(message, 101); byteBufferAppend(message, 114);
-    byteBufferAppend(message, 114); byteBufferAppend(message, 111);
-    byteBufferAppend(message, 114); byteBufferAppend(message, 58);
-    byteBufferAppend(message, 32);
+    message.add(101); message.add(114);
+    message.add(114); message.add(111);
+    message.add(114); message.add(58);
+    message.add(32);
     when (kind) {
         1 -> {
-            byteBufferAppend(message, 105); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 112); byteBufferAppend(message, 117);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 109); byteBufferAppend(message, 117);
-            byteBufferAppend(message, 115); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 117);
-            byteBufferAppend(message, 115); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 46);
-            byteBufferAppend(message, 107); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 120);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 101);
-            byteBufferAppend(message, 110); byteBufferAppend(message, 115);
-            byteBufferAppend(message, 105); byteBufferAppend(message, 111);
-            byteBufferAppend(message, 110);
+            message.add(105); message.add(110);
+            message.add(112); message.add(117);
+            message.add(116); message.add(32);
+            message.add(109); message.add(117);
+            message.add(115); message.add(116);
+            message.add(32); message.add(117);
+            message.add(115); message.add(101);
+            message.add(32); message.add(46);
+            message.add(107); message.add(32);
+            message.add(101); message.add(120);
+            message.add(116); message.add(101);
+            message.add(110); message.add(115);
+            message.add(105); message.add(111);
+            message.add(110);
         }
         else -> {
-            byteBufferAppend(message, 112); byteBufferAppend(message, 97);
-            byteBufferAppend(message, 116); byteBufferAppend(message, 104);
-            byteBufferAppend(message, 115); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 109); byteBufferAppend(message, 117);
-            byteBufferAppend(message, 115); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 110);
-            byteBufferAppend(message, 111); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 32); byteBufferAppend(message, 98);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 32);
-            byteBufferAppend(message, 101); byteBufferAppend(message, 109);
-            byteBufferAppend(message, 112); byteBufferAppend(message, 116);
-            byteBufferAppend(message, 121);
+            message.add(112); message.add(97);
+            message.add(116); message.add(104);
+            message.add(115); message.add(32);
+            message.add(109); message.add(117);
+            message.add(115); message.add(116);
+            message.add(32); message.add(110);
+            message.add(111); message.add(116);
+            message.add(32); message.add(98);
+            message.add(101); message.add(32);
+            message.add(101); message.add(109);
+            message.add(112); message.add(116);
+            message.add(121);
         }
     }
-    byteBufferAppend(message, 10);
+    message.add(10);
     k_boot_stderr(message.data, message.length);
-    byteBufferFree(message);
+    message.free();
 }
 
 fn hasKExtension(argument: Argument): bool {

@@ -1,15 +1,15 @@
 fn main(): i32 {
     var bytes = byteBufferNew();
-    byteBufferAppend(bytes, 7);
-    byteBufferAppend(bytes, 8);
-    byteBufferAppend(bytes, 9);
+    bytes.add(7);
+    bytes.add(8);
+    bytes.add(9);
     if (bytes.length != 3) {
         return 1;
     }
     if (bytes.data[2] != 9) {
         return 2;
     }
-    byteBufferFree(bytes);
+    bytes.free();
 
     var tokens = tokenListNew();
     tokenListAppend(tokens, Token(4, 10, 12));
