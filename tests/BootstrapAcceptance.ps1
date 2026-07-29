@@ -81,7 +81,7 @@ $validFixtures = @(
     "generic_structs.k", "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
-    "short_circuit.k", "loop_control.k", "for_control.k",
+    "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
     "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
     "constants.k", "expression_functions.k"
 )
@@ -137,6 +137,9 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "for_control.k" -and $stage1Exit -ne 42) {
         Write-Error "for control fixture did not return 42"
+    }
+    if ($fixtureName -eq "descending_for.k" -and $stage1Exit -ne 42) {
+        Write-Error "descending for fixture did not return 42"
     }
     if ($fixtureName -eq "collection_for.k" -and $stage1Exit -ne 42) {
         Write-Error "collection for fixture did not return 42"

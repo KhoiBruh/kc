@@ -99,11 +99,7 @@ fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
         byteBufferAppend(digits, 48 + (current % 10) as u8);
         current /= 10;
     }
-    var index = digits.length;
-    while (index > 0) {
-        index--;
-        byteBufferAppend(buffer, digits.data[index]);
-    }
+    for (i in digits.length>..0) byteBufferAppend(buffer, digits.data[i]);
     byteBufferFree(digits);
 }
 

@@ -674,7 +674,9 @@ private:
     void emitFor(const ForStmt& statement) {
         if (const auto* range = std::get_if<BinaryExpr>(&statement.collection->node);
             range && (range->op == TokenKind::Range ||
-                      range->op == TokenKind::RangeExclusive)) {
+                      range->op == TokenKind::RangeExclusive ||
+                      range->op == TokenKind::RangeExclusiveStart ||
+                      range->op == TokenKind::RangeExclusiveBoth)) {
             emitRangeFor(statement, *range);
             return;
         }
@@ -752,7 +754,24 @@ private:
         auto* function = builder_.GetInsertBlock()->getParent();
         const auto name = spelling(source(), statement.valueName);
         auto* valueSlot = createEntryAlloca(*function, start->getType(), name);
-        builder_.CreateStore(start, valueSlot);
+        const auto rangeType = semantic().expressionTypes.find(statement.collection.get());
+        const bool signedRange = rangeType == semantic().expressionTypes.end() ||
+            isSignedInteger(rangeType->second);
+        auto* ascending = signedRange ? builder_.CreateICmpSLE(start, end)
+                                      : builder_.CreateICmpULE(start, end);
+        auto* different = builder_.CreateICmpNE(start, end);
+        auto* one = llvm::ConstantInt::get(start->getType(), 1);
+        auto* negativeOne = llvm::ConstantInt::getSigned(start->getType(), -1);
+        auto* step = builder_.CreateSelect(ascending, one, negativeOne);
+        const bool excludesStart =
+            range.op == TokenKind::RangeExclusiveStart ||
+            range.op == TokenKind::RangeExclusiveBoth;
+        auto* initial = start;
+        if (excludesStart) {
+            auto* shifted = builder_.CreateAdd(start, step);
+            initial = builder_.CreateSelect(different, shifted, start);
+        }
+        builder_.CreateStore(initial, valueSlot);
         auto* conditionBlock = llvm::BasicBlock::Create(context_, "for.condition", function);
         auto* bodyBlock = llvm::BasicBlock::Create(context_, "for.body", function);
         auto* incrementBlock = llvm::BasicBlock::Create(context_, "for.increment", function);
@@ -760,16 +779,23 @@ private:
         builder_.CreateBr(conditionBlock);
         builder_.SetInsertPoint(conditionBlock);
         auto* value = builder_.CreateLoad(start->getType(), valueSlot);
-        const auto rangeType = semantic().expressionTypes.find(statement.collection.get());
-        const bool signedRange = rangeType == semantic().expressionTypes.end() ||
-            isSignedInteger(rangeType->second);
-        llvm::Value* condition = nullptr;
-        if (range.op == TokenKind::Range)
-            condition = signedRange ? builder_.CreateICmpSLE(value, end)
-                                    : builder_.CreateICmpULE(value, end);
-        else
-            condition = signedRange ? builder_.CreateICmpSLT(value, end)
-                                    : builder_.CreateICmpULT(value, end);
+        const bool excludesEnd =
+            range.op == TokenKind::RangeExclusive ||
+            range.op == TokenKind::RangeExclusiveBoth;
+        llvm::Value* ascendingCondition = excludesEnd
+            ? (signedRange ? builder_.CreateICmpSLT(value, end)
+                           : builder_.CreateICmpULT(value, end))
+            : (signedRange ? builder_.CreateICmpSLE(value, end)
+                           : builder_.CreateICmpULE(value, end));
+        llvm::Value* descendingCondition = excludesEnd
+            ? (signedRange ? builder_.CreateICmpSGT(value, end)
+                           : builder_.CreateICmpUGT(value, end))
+            : (signedRange ? builder_.CreateICmpSGE(value, end)
+                           : builder_.CreateICmpUGE(value, end));
+        auto* condition = builder_.CreateSelect(
+            ascending, ascendingCondition, descendingCondition);
+        if (excludesStart || excludesEnd)
+            condition = builder_.CreateAnd(different, condition);
         builder_.CreateCondBr(condition, bodyBlock, exitBlock);
         builder_.SetInsertPoint(bodyBlock);
         const auto outerLocals = locals_;
@@ -781,8 +807,14 @@ private:
         if (!builder_.GetInsertBlock()->getTerminator()) builder_.CreateBr(incrementBlock);
         builder_.SetInsertPoint(incrementBlock);
         auto* current = builder_.CreateLoad(start->getType(), valueSlot);
-        builder_.CreateStore(builder_.CreateAdd(
-            current, llvm::ConstantInt::get(start->getType(), 1)), valueSlot);
+        if (!excludesEnd) {
+            auto* advanceBlock = llvm::BasicBlock::Create(
+                context_, "for.advance", function);
+            builder_.CreateCondBr(
+                builder_.CreateICmpEQ(current, end), exitBlock, advanceBlock);
+            builder_.SetInsertPoint(advanceBlock);
+        }
+        builder_.CreateStore(builder_.CreateAdd(current, step), valueSlot);
         builder_.CreateBr(conditionBlock);
         builder_.SetInsertPoint(exitBlock);
     }

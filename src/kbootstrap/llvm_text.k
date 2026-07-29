@@ -3248,6 +3248,8 @@ fn emitStatement(
         if (range) {
             range = collectionNode.aux == 87;
             if (collectionNode.aux == 88) range = true;
+            if (collectionNode.aux == 93) range = true;
+            if (collectionNode.aux == 94) range = true;
         }
         if (!range) {
             return emitCollectionFor(
@@ -3259,9 +3261,50 @@ fn emitStatement(
             buffer, source, nodes, genericArguments, leftRoot, counter);
         val finish = emitExpression(
             buffer, source, nodes, genericArguments, rightRoot, counter);
+        val ascending = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, ascending); appendEquals(buffer);
+        appendComparison(buffer, 81, start.typeKind); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, finish); appendNewline(buffer);
+        val different = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, different); appendEquals(buffer);
+        appendComparison(buffer, 80, start.typeKind); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, finish); appendNewline(buffer);
+        val step = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, step); appendEquals(buffer);
+        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 116);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
+        byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 37); appendDecimal(buffer, ascending);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 45);
+        byteBufferAppend(buffer, 49); appendNewline(buffer);
+        var initial = start;
+        if (collectionNode.aux == 93 || collectionNode.aux == 94) {
+            val shifted = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, shifted); appendEquals(buffer);
+            appendOperator(buffer, 60, start.typeKind); byteBufferAppend(buffer, 32);
+            appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
+            byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 37); appendDecimal(buffer, step); appendNewline(buffer);
+            initial = IrValue(
+                2, 0, 0, shifted, start.typeKind, start.typeName, start.typePointee);
+        }
         val name = nodes.data[statement.subtreeStart];
         appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, start);
+        byteBufferAppend(buffer, 32); appendIrValue(buffer, source, initial);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
         val conditionBlock = nextBlock(counter);
@@ -3275,20 +3318,59 @@ fn emitStatement(
         appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
-        val compared = nextTemporary(counter);
-        appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
-        if (nodes.data[collectionRoot].aux == 87) {
-            appendComparison(buffer, 79, start.typeKind);
-        } else {
-            appendComparison(buffer, 66, start.typeKind);
-        }
+        val ascendingCompared = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, ascendingCompared); appendEquals(buffer);
+        var ascendingOperator: u32 = 81;
+        if (collectionNode.aux == 88 || collectionNode.aux == 94)
+            ascendingOperator = 66;
+        appendComparison(buffer, ascendingOperator, start.typeKind);
         byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         byteBufferAppend(buffer, 32);
         appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
         byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
         appendIrValue(buffer, source, finish); appendNewline(buffer);
+        val descendingCompared = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, descendingCompared); appendEquals(buffer);
+        var descendingOperator: u32 = 82;
+        if (collectionNode.aux == 88 || collectionNode.aux == 94)
+            descendingOperator = 67;
+        appendComparison(buffer, descendingOperator, start.typeKind);
+        byteBufferAppend(buffer, 32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        appendIrValue(buffer, source, finish); appendNewline(buffer);
+        val compared = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
+        byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 108); byteBufferAppend(buffer, 101);
+        byteBufferAppend(buffer, 99); byteBufferAppend(buffer, 116);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
+        byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 37); appendDecimal(buffer, ascending);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+        appendDecimal(buffer, ascendingCompared); byteBufferAppend(buffer, 44);
+        byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 105);
+        byteBufferAppend(buffer, 49); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 37); appendDecimal(buffer, descendingCompared);
+        appendNewline(buffer);
+        var conditionValue = IrValue(2, 0, 0, compared, 2, 0, 0);
+        if (collectionNode.aux != 87) {
+            val nonempty = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, nonempty); appendEquals(buffer);
+            byteBufferAppend(buffer, 97); byteBufferAppend(buffer, 110);
+            byteBufferAppend(buffer, 100); byteBufferAppend(buffer, 32);
+            byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 49);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, compared); byteBufferAppend(buffer, 44);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, different); appendNewline(buffer);
+            conditionValue = IrValue(2, 0, 0, nonempty, 2, 0, 0);
+        }
         appendConditionalBranch(
-            buffer, source, IrValue(2, 0, 0, compared, 2, 0, 0), bodyBlock, endBlock);
+            buffer, source, conditionValue, bodyBlock, endBlock);
         appendBlockLabel(buffer, counter, bodyBlock);
         val outerContinueBlock = counter.continueBlock;
         val outerBreakBlock = counter.breakBlock;
@@ -3305,12 +3387,28 @@ fn emitStatement(
         appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
+        if (collectionNode.aux == 87 || collectionNode.aux == 93) {
+            val terminal = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, terminal); appendEquals(buffer);
+            appendComparison(buffer, 79, start.typeKind); byteBufferAppend(buffer, 32);
+            appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+            byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
+            appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
+            byteBufferAppend(buffer, 32); appendIrValue(buffer, source, finish);
+            appendNewline(buffer);
+            val advanceBlock = nextBlock(counter);
+            appendConditionalBranch(
+                buffer, source, IrValue(2, 0, 0, terminal, 2, 0, 0),
+                endBlock, advanceBlock);
+            appendBlockLabel(buffer, counter, advanceBlock);
+        }
         val advanced = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
         appendOperator(buffer, 60, start.typeKind); byteBufferAppend(buffer, 32);
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); byteBufferAppend(buffer, 32);
         appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, start.typeKind, start.typeName, start.typePointee));
-        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
+        byteBufferAppend(buffer, 44); byteBufferAppend(buffer, 32);
+        byteBufferAppend(buffer, 37); appendDecimal(buffer, step);
         appendNewline(buffer);
         appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         byteBufferAppend(buffer, 32);
@@ -3716,6 +3814,8 @@ fn emitBlockAllocas(
             if (range) {
                 range = collection.aux == 87;
                 if (collection.aux == 88) range = true;
+                if (collection.aux == 93) range = true;
+                if (collection.aux == 94) range = true;
             }
             appendValuePrefix(buffer); appendLocalPrefix(buffer);
             appendDecimal(buffer, name.start); appendEquals(buffer);

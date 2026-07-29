@@ -52,6 +52,11 @@ trái, còn `..<` loại đầu phải. Ví dụ `value in 65..<90` tương đư
 `value >= 65 && value < 90`; biểu thức này dùng trực tiếp trong `if` và
 subjectless `when`.
 
+Integer range trong `for` tự chọn hướng từ hai cận. Nếu cận đầu lớn hơn cận
+cuối, vòng lặp đi lùi với bước `-1`; các dấu mở/đóng vẫn áp dụng theo vị trí
+cận. Vì vậy `for (i in length>..0)` duyệt `length - 1` xuống `0`, còn
+`for (i in 5..0)` duyệt `5` xuống `0`.
+
 Literal số được suy luận theo kiểu đích. Khi không có ngữ cảnh kiểu, literal số nguyên mặc định là `i32` và literal số thực mặc định là `f64`:
 
 ```text

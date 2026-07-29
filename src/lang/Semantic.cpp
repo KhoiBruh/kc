@@ -580,8 +580,7 @@ private:
             const auto collection = analyzeExpr(*forStatement->collection);
             SemanticType element;
             const auto* range = std::get_if<BinaryExpr>(&forStatement->collection->node);
-            if (range && (range->op == TokenKind::Range ||
-                          range->op == TokenKind::RangeExclusive)) {
+            if (range && isMembershipRange(range->op)) {
                 if (forStatement->indexName)
                     diagnose("range for does not accept an index binding",
                              *forStatement->indexName);

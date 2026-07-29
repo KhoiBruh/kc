@@ -405,7 +405,8 @@ TEST(semantic_rejects_non_range_for_collections) {
 
 TEST(semantic_accepts_integer_for_ranges) {
     SemanticFixture fixture{
-        "fn f() { for (i in 0..10) print(i); for (i in 0..<10) print(i); }"};
+        "fn f() { for (i in 0..10) print(i); for (i in 0..<10) print(i); "
+        "for (i in 10>..0) print(i); for (i in 10>..<0) print(i); }"};
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 

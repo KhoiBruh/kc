@@ -545,6 +545,18 @@ TEST(codegen_lowers_inclusive_and_exclusive_integer_ranges) {
     EXPECT_TRUE(ir.find("icmp slt") != std::string::npos);
 }
 
+TEST(codegen_lowers_descending_integer_for_ranges) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn reverse(): i32 { var total = 0; "
+        "for (i in 4>..0) total += i; return total; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("icmp sge i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("select i1") != std::string::npos);
+    EXPECT_TRUE(ir.find("add i32") != std::string::npos);
+}
+
 TEST(codegen_lowers_collection_for_with_value_and_index) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

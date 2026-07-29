@@ -1733,6 +1733,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (range) {
             range = collectionNode.aux == 87;
             if (collectionNode.aux == 88) range = true;
+            if (collectionNode.aux == 93) range = true;
+            if (collectionNode.aux == 94) range = true;
         }
         if (range) {
             if (node.aux == 1) {
