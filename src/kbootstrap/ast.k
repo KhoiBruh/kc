@@ -17,25 +17,25 @@ struct AstNode(
     conversionKind: u32
 )
 
-struct AstList(data: AstNode*, length: u64, capacity: u64)
+struct AstList(data: AstNode*, length: u64, capacity: u64) {
+    fn grow(var self) {
+        val capacity = self.capacity * 2;
+        val data = k_boot_alloc(capacity * sizeof(AstNode)) as AstNode*;
+        for (i in 0..<self.length) data[i] = self.data[i];
+        k_boot_free(self.data as unit*);
+        self.data = data;
+        self.capacity = capacity;
+    }
+
+    fn add(var self, node: AstNode): u64 {
+        if (self.length == self.capacity) self.grow();
+        val index = self.length;
+        self.data[index] = node;
+        self.length++;
+        return index;
+    }
+
+    fn free(val self) => k_boot_free(self.data as unit*);
+}
 
 fn astListNew() => AstList(k_boot_alloc(4 * sizeof(AstNode)) as AstNode*, 0, 4);
-
-fn astListGrow(var list: AstList) {
-    val newCapacity = list.capacity * 2;
-    val newData = k_boot_alloc(newCapacity * sizeof(AstNode)) as AstNode*;
-    for (i in 0..<list.length) newData[i] = list.data[i];
-    k_boot_free(list.data as unit*);
-    list.data = newData;
-    list.capacity = newCapacity;
-}
-
-fn astListAppend(var list: AstList, val node: AstNode): u64 {
-    if (list.length == list.capacity) astListGrow(list);
-    val index = list.length;
-    list.data[index] = node;
-    list.length = index + 1;
-    return index;
-}
-
-fn astListFree(list: AstList) => k_boot_free(list.data as unit*);

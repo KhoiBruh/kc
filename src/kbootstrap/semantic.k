@@ -179,29 +179,6 @@ fn nodeIsPrint(semantic: Semantic, node: AstNode): bool {
     return semantic.source.data[node.start + 4] == 116;
 }
 
-fn declarationFind(list: DeclarationList, name: u64): u64 {
-    for (i in 0..<list.length) if (list.data[i].name == name) return i;
-    return list.length;
-}
-
-fn localFind(locals: LocalList, name: u64): u64 {
-    var index = locals.length;
-    while (index > 0) {
-        index--;
-        if (locals.data[index].name == name) return index;
-    }
-    return locals.length;
-}
-
-fn localFindFrom(locals: LocalList, name: u64, start: u64): u64 {
-    var index = locals.length;
-    while (index > start) {
-        index--;
-        if (locals.data[index].name == name) return index;
-    }
-    return locals.length;
-}
-
 fn semanticFail(var semantic: Semantic, category: u32, node: AstNode) =>
     if (semantic.result.ok) 
         semantic.result = semanticError(category, node, semantic.genericArguments);
@@ -242,7 +219,7 @@ fn enumWhenExhaustive(
     roots: u64*, branchCount: u32, valueForm: bool
 ): bool {
     if (subject.kind != 20) return false;
-    val enumIndex = declarationFind(semantic.enums, subject.name);
+    val enumIndex = semantic.enums.find(subject.name);
     if (enumIndex == semantic.enums.length) return false;
     val declaration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
     var unique: u32 = 0;
@@ -323,8 +300,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
         var locals = semantic.locals;
-        localListAppend(
-            locals,
+        locals.add(
             LocalInfo(
                 nodeHash(semantic, nameNode),
                 typeFromNode(semantic, parameterRoot - 1),
@@ -686,7 +662,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         }
         
         val name = nodeHash(semantic, node);
-        if (declarationFind(semantic.enums, name) != semantic.enums.length) {
+        if (semantic.enums.find(name) != semantic.enums.length) {
             return TypeValue(20, name, 0);
         }
         return TypeValue(8, name, 0);
@@ -760,18 +736,18 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     val node = semantic.nodes.data[root];
     if (node.kind == 10) {
         val name = nodeHash(semantic, node);
-        val local = localFind(semantic.locals, name);
+        val local = semantic.locals.find(name);
         if (local != semantic.locals.length) {
             var resolved = semantic.nodes.data[root];
             resolved.storage = semantic.locals.data[local].storage;
             semantic.nodes.data[root] = resolved;
             return semantic.locals.data[local].valueType;
         }
-        if (declarationFind(semantic.functions, name) !=
+        if (semantic.functions.find(name) !=
                 semantic.functions.length) {
             return TypeValue(12, name, 0);
         }
-        val constant = declarationFind(semantic.constants, name);
+        val constant = semantic.constants.find(name);
         if (constant != semantic.constants.length) {
             val declarationRoot = semantic.constants.data[constant].node;
             var resolved = semantic.nodes.data[root];
@@ -899,8 +875,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         val target = semantic.nodes.data[leftRoot];
         if (target.kind == 10) {
-            val local = localFind(
-                semantic.locals, nodeHash(semantic, target));
+            val local = semantic.locals.find(nodeHash(semantic, target));
             if (local == semantic.locals.length) {
                 semanticFail(semantic, 2, target);
                 return invalidType();
@@ -1032,8 +1007,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             k_boot_free(argumentRoots as unit*);
             return invalidType();
         }
-        val functionIndex = declarationFind(
-            semantic.functions, functionName);
+        val functionIndex = semantic.functions.find(functionName);
         if (functionIndex == semantic.functions.length) {
             if (nodeIsPrint(semantic, callee)) {
                 if (argumentCount != 1) {
@@ -1047,8 +1021,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 k_boot_free(argumentRoots as unit*);
                 return unitType();
             }
-            val structureIndex = declarationFind(
-                semantic.structs, nodeHash(semantic, callee));
+            val structureIndex = semantic.structs.find(nodeHash(semantic, callee));
             if (structureIndex == semantic.structs.length) {
                 semanticFail(semantic, 2, callee);
                 k_boot_free(explicitTypeRoots as unit*);
@@ -1198,8 +1171,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             if (receiverParameter.aux == 2) {
                 val receiverNode = semantic.nodes.data[argumentRoots[0]];
                 if (receiverNode.kind == 10) {
-                    val receiverLocal = localFind(
-                        semantic.locals, nodeHash(semantic, receiverNode));
+                    val receiverLocal =
+                        semantic.locals.find(nodeHash(semantic, receiverNode));
                     if (receiverLocal == semantic.locals.length) {
                         semanticFail(semantic, 7, receiverNode);
                     } else {
@@ -1339,8 +1312,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val objectRoot = root - 1;
         val objectNode = semantic.nodes.data[objectRoot];
         if (objectNode.kind == 10) {
-            val enumIndex = declarationFind(
-                semantic.enums, nodeHash(semantic, objectNode));
+            val enumIndex = semantic.enums.find(nodeHash(semantic, objectNode));
             if (enumIndex != semantic.enums.length) {
                 val enumRoot = semantic.enums.data[enumIndex].node;
                 val enumeration = semantic.nodes.data[enumRoot];
@@ -1373,7 +1345,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             return invalidType();
         }
         val structureIndex =
-            declarationFind(semantic.structs, object.name);
+            semantic.structs.find(object.name);
         if (structureIndex == semantic.structs.length) {
             semanticFail(semantic, 8, node);
             return invalidType();
@@ -1434,7 +1406,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 semanticFail(semantic, 4, node);
             val target = semantic.nodes.data[root - 1];
             if (target.kind == 10) {
-                val local = localFind(semantic.locals, nodeHash(semantic, target));
+                val local = semantic.locals.find(nodeHash(semantic, target));
                 if (local == semantic.locals.length) semanticFail(semantic, 2, target);
                 else {
                     if (!semantic.locals.data[local].mutable)
@@ -1822,13 +1794,11 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val savedLocals = semantic.locals.length;
         val nameNode = semantic.nodes.data[node.subtreeStart];
         var locals = semantic.locals;
-        localListAppend(
-            locals, LocalInfo(
+        locals.add(LocalInfo(
                 nodeHash(semantic, nameNode), valueType, false, nameNode.start));
         if (node.aux == 1) {
             val indexNode = semantic.nodes.data[node.subtreeStart + 1];
-            localListAppend(
-                locals, LocalInfo(
+            locals.add(LocalInfo(
                     nodeHash(semantic, indexNode),
                     TypeValue(7, 0, 0), false, indexNode.start));
         }
@@ -1942,8 +1912,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val initializer = expressionType(semantic, initializerRoot);
         val nameNode = semantic.nodes.data[node.subtreeStart];
         val name = nodeHash(semantic, nameNode);
-        if (localFindFrom(
-                semantic.locals, name, semantic.scopeStart) !=
+        if (semantic.locals.findFrom(name, semantic.scopeStart) !=
                 semantic.locals.length) {
             semanticFail(semantic, 1, nameNode);
             return;
@@ -1979,8 +1948,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
         }
         var locals = semantic.locals;
-        localListAppend(
-            locals,
+        locals.add(
             LocalInfo(
                 name, valueType, node.aux == 7, nameNode.start));
         semantic.locals = locals;
@@ -2082,15 +2050,13 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
         val mutable = parameter.aux != 1;
         val parameterName = nodeHash(semantic, nameNode);
-        if (localFindFrom(
-                semantic.locals, parameterName, 0) !=
+        if (semantic.locals.findFrom(parameterName, 0) !=
                 semantic.locals.length) {
             semanticFail(semantic, 1, nameNode);
             return;
         }
         var locals = semantic.locals;
-        localListAppend(
-            locals,
+        locals.add(
             LocalInfo(
                 parameterName,
                 typeFromNode(semantic, parameterRoot - 1),
@@ -2106,8 +2072,7 @@ fn isConstantExpression(semantic: Semantic, root: u64): bool {
     val node = semantic.nodes.data[root];
     if (node.kind == 11) return true;
     if (node.kind == 10) {
-        return declarationFind(
-            semantic.constants, nodeHash(semantic, node)) !=
+        return semantic.constants.find(nodeHash(semantic, node)) !=
             semantic.constants.length;
     }
     if (node.kind == 12) return isConstantExpression(semantic, root - 1);
@@ -2153,13 +2118,12 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
         if (declaration.kind == 43) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = nodeHash(semantic, nameNode);
-            if (declarationFind(semantic.structs, name) !=
+            if (semantic.structs.find(name) !=
                     semantic.structs.length) {
                 semanticFail(semantic, 1, nameNode);
             } else {
                 var structures = semantic.structs;
-                declarationListAppend(
-                    structures, DeclarationInfo(name, root));
+                structures.add(DeclarationInfo(name, root));
                 semantic.structs = structures;
             }
             var methodRoot = root - 1;
@@ -2181,8 +2145,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         semanticFail(semantic, 4, receiverName);
                     } else {
                         var functions = semantic.functions;
-                        declarationListAppend(
-                            functions, DeclarationInfo(methodName, methodRoot));
+                        functions.add(DeclarationInfo(methodName, methodRoot));
                         semantic.functions = functions;
                     }
                 }
@@ -2240,17 +2203,17 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 typed.typePointee = actual.pointee;
                 semantic.nodes.data[root] = typed;
                 var constants = semantic.constants;
-                declarationListAppend(constants, DeclarationInfo(name, root));
+                constants.add(DeclarationInfo(name, root));
                 semantic.constants = constants;
             } else {
             if (declaration.kind == 49) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = nodeHash(semantic, nameNode);
-                if (declarationFind(semantic.enums, name) != semantic.enums.length) {
+                if (semantic.enums.find(name) != semantic.enums.length) {
                     semanticFail(semantic, 1, nameNode);
                 } else {
                     var enums = semantic.enums;
-                    declarationListAppend(enums, DeclarationInfo(name, root));
+                    enums.add(DeclarationInfo(name, root));
                     semantic.enums = enums;
                 }
                 var left: u32 = 0;
@@ -2272,13 +2235,12 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             if (declaration.kind == 41) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = nodeHash(semantic, nameNode);
-                if (declarationFind(semantic.functions, name) !=
+                if (semantic.functions.find(name) !=
                         semantic.functions.length) {
                     semanticFail(semantic, 1, nameNode);
                 } else {
                     var functions = semantic.functions;
-                    declarationListAppend(
-                        functions, DeclarationInfo(name, root));
+                    functions.add(DeclarationInfo(name, root));
                     semantic.functions = functions;
                 }
             }
@@ -2325,10 +2287,10 @@ fn analyze(source: Source, nodes: AstList): SemanticResult {
     }
     var result = semantic.result;
     result.genericArguments = semantic.genericArguments;
-    localListFree(semantic.locals);
-    declarationListFree(semantic.functions);
-    declarationListFree(semantic.constants);
-    declarationListFree(semantic.enums);
-    declarationListFree(semantic.structs);
+    semantic.locals.free();
+    semantic.functions.free();
+    semantic.constants.free();
+    semantic.enums.free();
+    semantic.structs.free();
     return result;
 }

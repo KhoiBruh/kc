@@ -410,31 +410,31 @@ fn lex(source: Source): LexResult {
 	                        val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
 	                        if (pairKind == 0) {
 	                            offset++;
-	                            tokenListAppend(tokens, Token(63, start, offset));
+	                            tokens.add(Token(63, start, offset));
 	                        } else {
 	                            offset = offset + 2;
-	                            tokenListAppend(tokens, Token(pairKind, start, offset));
+	                            tokens.add(Token(pairKind, start, offset));
 	                        }
 	                    }
                     } else {
                         offset++;
-                        tokenListAppend(tokens, Token(63, start, offset));
+                        tokens.add(Token(63, start, offset));
                     }
                 }
                 value == 34 -> {
                     val end = scanString(source, offset + 1);
                     if (end == offset + 1) return LexResult(tokens, false, start, 1);
                     offset = end;
-                    tokenListAppend(tokens, Token(5, start, offset));
+                    tokens.add(Token(5, start, offset));
                 }
                 isIdentifierStart(value) -> {
                     offset = scanIdentifier(source, offset + 1);
-                    tokenListAppend(tokens, Token(keywordKind(source, start, offset), start, offset));
+                    tokens.add(Token(keywordKind(source, start, offset), start, offset));
                 }
                 isDigit(value) -> {
-                	val number = scanNumber(source, offset + 1);
-                	offset = number.end;
-                	tokenListAppend(tokens, Token(number.kind, start, offset));
+                    val number = scanNumber(source, offset + 1);
+                    offset = number.end;
+                    tokens.add(Token(number.kind, start, offset));
                 }
                 else -> {
                 	var kind = punctuationKind(value);
@@ -474,14 +474,14 @@ fn lex(source: Source): LexResult {
                 		    }
                 	    }
                 	}
-                	if (kind == 0) return LexResult(tokens, false, start, 2);
-                	offset++;
-                	tokenListAppend(tokens, Token(kind, start, offset));
+                    if (kind == 0) return LexResult(tokens, false, start, 2);
+                    offset++;
+                    tokens.add(Token(kind, start, offset));
                 }
             }
         }
     }
 
-    tokenListAppend(tokens, Token(0, source.length, source.length));
+    tokens.add(Token(0, source.length, source.length));
     return LexResult(tokens, true, 0, 0);
 }

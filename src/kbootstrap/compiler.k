@@ -132,7 +132,7 @@ fn compileToLl(
             source, sourceMap, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1
         );
-        tokenListFree(lexed.tokens);
+        lexed.tokens.free();
         return 2;
     }
     val parsed = parse(lexed.tokens);
@@ -141,8 +141,8 @@ fn compileToLl(
             source, sourceMap, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1
 		);
-        astListFree(parsed.nodes);
-        tokenListFree(lexed.tokens);
+        parsed.nodes.free();
+        lexed.tokens.free();
         return 2;
     }
     var checked = analyze(source, parsed.nodes);
@@ -152,8 +152,8 @@ fn compileToLl(
             checked.start, checked.end
         );
         checked.genericArguments.free();
-        astListFree(parsed.nodes);
-        tokenListFree(lexed.tokens);
+        parsed.nodes.free();
+        lexed.tokens.free();
         return 2;
     }
     var resolvedArguments = checked.genericArguments;
@@ -175,8 +175,8 @@ fn compileToLl(
         temporaryPath.free();
         output.free();
         checked.genericArguments.free();
-        astListFree(parsed.nodes);
-        tokenListFree(lexed.tokens);
+        parsed.nodes.free();
+        lexed.tokens.free();
         return 1;
     }
     var verifyCommand = byteBufferNew();
@@ -191,8 +191,8 @@ fn compileToLl(
         temporaryPath.free();
         output.free();
         checked.genericArguments.free();
-        astListFree(parsed.nodes);
-        tokenListFree(lexed.tokens);
+        parsed.nodes.free();
+        lexed.tokens.free();
         if (verified < 0) {
             compilerFailure(2);
             return 1;
@@ -204,8 +204,8 @@ fn compileToLl(
     temporaryPath.free();
     output.free();
     checked.genericArguments.free();
-    astListFree(parsed.nodes);
-    tokenListFree(lexed.tokens);
+    parsed.nodes.free();
+    lexed.tokens.free();
     if (published) return 0;
     compilerFailure(1);
     return 1;

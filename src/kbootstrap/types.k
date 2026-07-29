@@ -151,54 +151,63 @@ fn primitiveType(tokenKind: u32) => when (tokenKind) {
 };
 
 struct LocalInfo(name: u64, valueType: TypeValue, mutable: bool, storage: u64)
-struct LocalList(data: LocalInfo*, length: u64, capacity: u64)
+struct LocalList(data: LocalInfo*, length: u64, capacity: u64) {
+    fn grow(var self) {
+        val capacity = self.capacity * 2;
+        val data = k_boot_alloc(capacity * sizeof(LocalInfo)) as LocalInfo*;
+        for (i in 0..<self.length) data[i] = self.data[i];
+        k_boot_free(self.data as unit*);
+        self.data = data;
+        self.capacity = capacity;
+    }
+
+    fn add(var self, value: LocalInfo) {
+        if (self.length == self.capacity) self.grow();
+        self.data[self.length] = value;
+        self.length++;
+    }
+
+    fn find(val self, name: u64): u64 {
+        for (index in self.length>..0)
+            if (self.data[index].name == name) return index;
+        return self.length;
+    }
+
+    fn findFrom(val self, name: u64, start: u64): u64 {
+        for (index in self.length>..start)
+            if (self.data[index].name == name) return index;
+        return self.length;
+    }
+
+    fn free(val self) => k_boot_free(self.data as unit*);
+}
 
 fn localListNew() => LocalList(k_boot_alloc(8 * sizeof(LocalInfo)) as LocalInfo*, 0, 8);
 
-fn localListGrow(var list: LocalList) {
-    val capacity = list.capacity * 2;
-    val data = k_boot_alloc(capacity * sizeof(LocalInfo)) as LocalInfo*;
-    var index: u64 = 0;
-    while (index < list.length) {
-        data[index] = list.data[index];
-        index = index + 1;
-    }
-    k_boot_free(list.data as unit*);
-    list.data = data;
-    list.capacity = capacity;
-}
-
-fn localListAppend(var list: LocalList, value: LocalInfo) {
-    if (list.length == list.capacity) localListGrow(list);
-    list.data[list.length] = value;
-    list.length = list.length + 1;
-}
-
-fn localListFree(list: LocalList) => k_boot_free(list.data as unit*);
-
 struct DeclarationInfo(name: u64, node: u64)
-struct DeclarationList(data: DeclarationInfo*, length: u64, capacity: u64)
+struct DeclarationList(data: DeclarationInfo*, length: u64, capacity: u64) {
+    fn grow(var self) {
+        val capacity = self.capacity * 2;
+        val data = k_boot_alloc(capacity * sizeof(DeclarationInfo)) as DeclarationInfo*;
+        for (i in 0..<self.length) data[i] = self.data[i];
+        k_boot_free(self.data as unit*);
+        self.data = data;
+        self.capacity = capacity;
+    }
+
+    fn add(var self, value: DeclarationInfo) {
+        if (self.length == self.capacity) self.grow();
+        self.data[self.length] = value;
+        self.length++;
+    }
+
+    fn find(val self, name: u64): u64 {
+        for (index in 0..<self.length)
+            if (self.data[index].name == name) return index;
+        return self.length;
+    }
+
+    fn free(val self) => k_boot_free(self.data as unit*);
+}
 
 fn declarationListNew() => DeclarationList(k_boot_alloc(8 * sizeof(DeclarationInfo)) as DeclarationInfo*, 0, 8);
-
-fn declarationListGrow(var list: DeclarationList) {
-    val capacity = list.capacity * 2;
-    val data = k_boot_alloc(capacity * sizeof(DeclarationInfo)) as DeclarationInfo*;
-    var index: u64 = 0;
-    while (index < list.length) {
-        data[index] = list.data[index];
-        index = index + 1;
-    }
-    k_boot_free(list.data as unit*);
-    list.data = data;
-    list.capacity = capacity;
-}
-
-fn declarationListAppend(
-    var list: DeclarationList, value: DeclarationInfo) {
-    if (list.length == list.capacity) declarationListGrow(list);
-    list.data[list.length] = value;
-    list.length = list.length + 1;
-}
-
-fn declarationListFree(list: DeclarationList) => k_boot_free(list.data as unit*);

@@ -330,7 +330,7 @@ fn loaderScanImports(
         var category: u32 = 4;
         if (lexed.errorKind == 1) category = 3;
         loaderReport(path, source, lexed.errorStart, category);
-        tokenListFree(lexed.tokens);
+        lexed.tokens.free();
         return false;
     }
     val tokens = lexed.tokens;
@@ -338,7 +338,7 @@ fn loaderScanImports(
     if (tokens.data[current].kind == 25) {
         while (tokens.data[current].kind != 58) {
             if (tokens.data[current].kind == 0) {
-                tokenListFree(tokens);
+                tokens.free();
                 return false;
             }
             current++;
@@ -373,7 +373,7 @@ fn loaderScanImports(
         val end = tokens.data[current].end;
         if (tokens.data[current].kind != 58) {
             loader.failureKind = 2;
-            tokenListFree(tokens);
+            tokens.free();
             return false;
         }
         current++;
@@ -383,12 +383,12 @@ fn loaderScanImports(
                 start, end, depth + 1
             )
         ) {
-            tokenListFree(tokens);
+            tokens.free();
             return false;
         }
     }
 
-    tokenListFree(tokens);
+    tokens.free();
 
     return true;
 }

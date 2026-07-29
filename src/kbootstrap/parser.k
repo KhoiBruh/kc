@@ -38,8 +38,7 @@ fn parserAdd(
     subtreeStart: u64,
     aux: u32): u64 {
     var nodes = parser.nodes;
-    val index = astListAppend(
-        nodes,
+    val index = nodes.add(
         AstNode(
             kind, start, end, subtreeStart, aux,
             0, 0, 0, 0, 0, 0, 0));
