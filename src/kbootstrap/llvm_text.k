@@ -1404,7 +1404,7 @@ fn emitImplicitIntegerWiden(
     val temporary = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     var opcode: u32 = 2;
-    if (integerTypeIsSigned(sourceType)) opcode = 1;
+    if (sourceType.isSigned()) opcode = 1;
     appendCastOpcode(buffer, opcode); byteBufferAppend(buffer, 32);
     appendType(
         buffer, genericArguments,
@@ -2029,8 +2029,7 @@ fn emitExpression(
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            if (isFloatType(TypeValue(
-                    node.typeKind, node.typeName, node.typePointee))) {
+            if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
                 byteBufferAppend(buffer, 102); byteBufferAppend(buffer, 110);
                 byteBufferAppend(buffer, 101); byteBufferAppend(buffer, 103);
                 byteBufferAppend(buffer, 32);
@@ -2328,13 +2327,13 @@ fn emitExpression(
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer);
             var opcode: u32 = 1;
-            if (isIntegerType(sourceType)) {
+            if (sourceType.isInteger()) {
                 opcode = 4;
-                if (integerTypeIsSigned(sourceType)) opcode = 3;
+                if (sourceType.isSigned()) opcode = 3;
             } else {
-                if (isIntegerType(targetType)) {
+                if (targetType.isInteger()) {
                     opcode = 6;
-                    if (integerTypeIsSigned(targetType)) opcode = 5;
+                    if (targetType.isSigned()) opcode = 5;
                 } else {
                     if (node.typeKind == 17) opcode = 2;
                 }
@@ -2353,8 +2352,8 @@ fn emitExpression(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
         }
-        val sourceWidth = integerTypeWidth(sourceType);
-        val targetWidth = integerTypeWidth(targetType);
+        val sourceWidth = sourceType.intWidth();
+        val targetWidth = targetType.intWidth();
         var converted = IrValue(
             value.kind, value.start, value.end, value.temporary,
             node.typeKind, node.typeName, node.typePointee);
@@ -2366,7 +2365,7 @@ fn emitExpression(
             var opcode: u32 = 3;
             if (targetWidth > sourceWidth) {
                 opcode = 2;
-                if (integerTypeIsSigned(sourceType)) opcode = 1;
+                if (sourceType.isSigned()) opcode = 1;
             }
             appendCastOpcode(buffer, opcode);
             byteBufferAppend(buffer, 32);
@@ -2393,7 +2392,7 @@ fn emitExpression(
                 appendValuePrefix(buffer); appendDecimal(buffer, roundTrip);
                 appendEquals(buffer);
                 var reverseOpcode: u32 = 2;
-                if (integerTypeIsSigned(targetType)) reverseOpcode = 1;
+                if (targetType.isSigned()) reverseOpcode = 1;
                 appendCastOpcode(buffer, reverseOpcode);
                 byteBufferAppend(buffer, 32);
                 appendNodeType(buffer, genericArguments, node);
@@ -2425,7 +2424,7 @@ fn emitExpression(
                 byteBufferAppend(buffer, 105); byteBufferAppend(buffer, 99);
                 byteBufferAppend(buffer, 109); byteBufferAppend(buffer, 112);
                 byteBufferAppend(buffer, 32);
-                var sourceSigned = integerTypeIsSigned(sourceType);
+                var sourceSigned = sourceType.isSigned();
                 if (sourceSigned) {
                     byteBufferAppend(buffer, 115); byteBufferAppend(buffer, 103);
                     byteBufferAppend(buffer, 101);
@@ -2578,7 +2577,7 @@ fn emitExpression(
             byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 37);
             appendDecimal(buffer, loaded); byteBufferAppend(buffer, 44);
             byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 49);
-            if (isFloatType(TypeValue(node.typeKind, node.typeName, node.typePointee))) {
+            if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
                 byteBufferAppend(buffer, 46);
                 byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);
                 byteBufferAppend(buffer, 48); byteBufferAppend(buffer, 48);

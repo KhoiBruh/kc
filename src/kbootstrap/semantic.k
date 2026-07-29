@@ -158,7 +158,7 @@ fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
     if (value.overflow) return false;
     if (value.negative) {
         if (value.magnitude == 0) return true;
-        if (!integerTypeIsSigned(target)) return false;
+        if (!target.isSigned()) return false;
         if (target.kind == 4) {
             return value.magnitude <= 9223372036854775808;
         }
@@ -725,7 +725,8 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
             size = constant.magnitude;
             childRoot = semantic.nodes.data[childRoot].subtreeStart - 1;
         }
-        return arrayType(typeFromNode(semantic, childRoot), size);
+
+        return typeFromNode(semantic, childRoot).array(size);
     }
     if (node.kind == 3) {
         val inner = typeFromNode(semantic, root - 1);
@@ -861,7 +862,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 upperNode.typeKind = subject.kind;
                 semantic.nodes.data[upperRoot] = upperNode;
             }
-            if (!isIntegerType(subject) && !isFloatType(subject))
+            if (!subject.isInteger() && !subject.isFloat())
                 semanticFail(semantic, 4, node);
             if (!typeAccepts(subject, lower, semantic.genericArguments) ||
                 !typeAccepts(subject, upper, semantic.genericArguments))
@@ -943,8 +944,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             if (target.kind == 9) pointerCast = true;
         }
         var integerCast = false;
-        if (isIntegerType(source)) {
-            if (isIntegerType(target)) integerCast = true;
+        if (source.isInteger()) {
+            if (target.isInteger()) integerCast = true;
         }
         if (integerCast) {
             val constant = integerConstant(semantic, valueRoot);
@@ -961,15 +962,15 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             semantic.nodes.data[root] = castNode;
         } else {
             var floatCast = false;
-            if (isFloatType(source)) {
-                if (isFloatType(target)) floatCast = true;
+            if (source.isFloat()) {
+                if (target.isFloat()) floatCast = true;
             }
-            if (isIntegerType(source)) {
-                if (isFloatType(target)) floatCast = true;
+            if (source.isInteger()) {
+                if (target.isFloat()) floatCast = true;
             }
             var floatToInteger = false;
-            if (isFloatType(source)) {
-                if (isIntegerType(target)) floatToInteger = true;
+            if (source.isFloat()) {
+                if (target.isInteger()) floatToInteger = true;
             }
             if (floatToInteger) {
                 floatCast = true;
@@ -1440,7 +1441,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val operand = expressionType(semantic, root - 1);
         if (node.aux == 91 || node.aux == 92) {
             if (semantic.mutationRoot != root) semanticFail(semantic, 4, node);
-            if (!isFloatType(operand) && !isIntegerType(operand))
+            if (!operand.isFloat() && !operand.isInteger())
                 semanticFail(semantic, 4, node);
             val target = semantic.nodes.data[root - 1];
             if (target.kind == 10) {
@@ -1627,7 +1628,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         return result;
     }
     if (node.kind == 22) {
-        if (node.aux == 0) return arrayType(invalidType(), 0);
+        if (node.aux == 0) return invalidType().array(0);
         var childRoot = root - 1;
         var element = expressionType(semantic, childRoot);
         if (element.kind == 11) element = TypeValue(3, 0, 0);
@@ -1646,7 +1647,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             childRoot = childNode.subtreeStart - 1;
             remaining = remaining - 1;
         }
-        return arrayType(element, node.aux as u64);
+        return element.array(node.aux as u64);
     }
     if (node.kind == 20) return unitType();
     if (node.kind == 21) {
@@ -1824,7 +1825,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             semantic.nodes.data[leftRoot] = leftNode;
         }
         if (range) {
-            if (!isIntegerType(valueType)) {
+            if (!valueType.isInteger()) {
                 semanticFail(semantic, 4, collectionNode);
                 return;
             }
@@ -1878,7 +1879,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 semantic.nodes.data[subjectRoot] = subjectNode;
             }
             var comparable = subject.kind == 2;
-            if (isIntegerType(subject)) comparable = true;
+            if (subject.isInteger()) comparable = true;
             if (subject.kind == 20) comparable = true;
             if (!comparable) {
                 semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
@@ -2241,7 +2242,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
                     if (expected.kind == 19 && typeNode.kind == 5 &&
                         typeNode.aux == 0 && actual.kind == 19) {
-                        actual = arrayType(arrayElement(expected), arraySize(actual));
+                        actual = arrayElement(expected).array(actual.arraySize());
                     } else actual = expected;
                 }
                 var typed = declaration;

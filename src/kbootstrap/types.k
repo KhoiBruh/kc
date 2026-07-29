@@ -3,7 +3,24 @@ module kbootstrap.types;
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.ast.AstNode;
 
-struct TypeValue(kind: u32, name: u64, pointee: u32)
+struct TypeValue(kind: u32, name: u64, pointee: u32) {
+
+	fn array(val self, size: u64) => TypeValue(19, self.name, self.kind + (size as u32) * 256);
+
+	fn arraySize(val self) => self.pointee / 256;
+
+	fn isFloat(val self) => self.kind in 17..18;
+
+	fn isInteger(val self) => self.kind in 3..7;
+
+	fn isSigned(val self) => self.kind in 3..4;
+
+	fn intWidth(val self) => when (self.kind) {
+		5 -> 8;
+		4, 7 -> 64;
+		else -> 32;
+	};
+}
 
 struct TypeValueList(data: TypeValue*, length: u64, capacity: u64) {
 
@@ -47,58 +64,27 @@ fn integerLiteralType(): TypeValue {
     return TypeValue(11, 0, 0);
 }
 
-fn arrayType(element: TypeValue, size: u64): TypeValue {
-    return TypeValue(
-        19, element.name, element.kind + (size as u32) * 256);
-}
-
 fn arrayElement(type: TypeValue): TypeValue {
     return TypeValue(type.pointee % 256, type.name, 0);
 }
 
-fn arraySize(type: TypeValue): u64 {
-    return (type.pointee / 256) as u64;
-}
-
-fn isFloatType(type: TypeValue): bool {
-    if (type.kind == 17) return true;
-    return type.kind == 18;
-}
-
-fn isIntegerType(type: TypeValue): bool {
-    if (type.kind >= 3) return type.kind <= 7;
-    return false;
-}
-
-fn integerTypeWidth(type: TypeValue): u32 {
-    if (type.kind == 4) return 64;
-    if (type.kind == 5) return 8;
-    if (type.kind == 7) return 64;
-    return 32;
-}
-
-fn integerTypeIsSigned(type: TypeValue): bool {
-    if (type.kind == 3) return true;
-    return type.kind == 4;
-}
-
 fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
     if (source.kind == target.kind) return false;
-    val sourceWidth = integerTypeWidth(source);
-    val targetWidth = integerTypeWidth(target);
-    if (integerTypeIsSigned(source) == integerTypeIsSigned(target)) {
+    val sourceWidth = source.intWidth();
+    val targetWidth = target.intWidth();
+    if (source.isSigned() == target.isSigned()) {
         return targetWidth < sourceWidth;
     }
-    if (integerTypeIsSigned(source)) return true;
+    if (source.isSigned()) return true;
     return targetWidth <= sourceWidth;
 }
 
 fn integerImplicitlyWidens(source: TypeValue, target: TypeValue): bool {
-    if (!isIntegerType(source)) return false;
-    if (!isIntegerType(target)) return false;
+    if (!source.isInteger()) return false;
+    if (!target.isInteger()) return false;
     if (source.kind == target.kind) return false;
-    if (integerTypeWidth(target) <= integerTypeWidth(source)) return false;
-    if (integerTypeIsSigned(source) && !integerTypeIsSigned(target)) return false;
+    if (target.intWidth() <= source.intWidth()) return false;
+    if (source.isSigned() && !target.isSigned()) return false;
     return true;
 }
 
@@ -140,11 +126,11 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeVal
         }
     }
     if (actual.kind == 18) {
-        if (isFloatType(expected)) return true;
+        if (expected.isFloat()) return true;
     }
     if (expected.kind == 19) {
         if (actual.kind == 19) {
-            if (arraySize(expected) == arraySize(actual)) {
+            if (expected.arraySize() == actual.arraySize()) {
                 if (arrayElement(actual).kind == 0) return true;
             }
         }
