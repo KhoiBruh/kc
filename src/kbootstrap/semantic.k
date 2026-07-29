@@ -355,10 +355,9 @@ fn functionTypeParameterRoot(semantic: Semantic, functionRoot: u64, position: u3
     for (parameter in 0..<parameters) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
-    var remaining = functionTypeParameterCount(function);
-    while (remaining >= position) {
+    val remaining = functionTypeParameterCount(function);
+    for (index in position - 1..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
@@ -387,10 +386,9 @@ fn structTypeParameterRoot(semantic: Semantic, structureRoot: u64, position: u32
     for (field in 0..<fields) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
-    var remaining = structTypeParameterCount(structure);
-    while (remaining > position) {
+    val remaining = structTypeParameterCount(structure);
+    for (index in position..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
@@ -608,10 +606,9 @@ fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
 fn structTypeArgumentRoot(
     semantic: Semantic, typeRoot: u64, position: u32, count: u32): u64 {
     var root = typeRoot - 1;
-    var remaining = count;
-    while (remaining > position) {
+    val remaining = count;
+    for (index in position..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
@@ -693,10 +690,9 @@ fn functionParameterRoot(
     semantic: Semantic, functionRoot: u64, position: u32): u64 {
     val function = semantic.nodes.data[functionRoot];
     var root = functionReturnRoot(semantic, functionRoot);
-    var remaining = functionParameterCount(function);
-    while (remaining >= position) {
+    val remaining = functionParameterCount(function);
+    for (index in position - 1..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }

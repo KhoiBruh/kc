@@ -1110,10 +1110,9 @@ fn emitterStructTypeParameterRoot(
     for (field in 0..<fields) {
         root = nodes.data[root].subtreeStart - 1;
     }
-    var remaining = emitterStructTypeParameterCount(structure);
-    while (remaining > position) {
+    val remaining = emitterStructTypeParameterCount(structure);
+    for (index in position..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
@@ -3622,10 +3621,9 @@ fn parameterRoot(
     if (!functionIsExtern(function)) {
         root = nodes.data[root].subtreeStart - 1;
     }
-    var remaining = functionParameterCount(function);
-    while (remaining >= position) {
+    val remaining = functionParameterCount(function);
+    for (index in position - 1..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
@@ -3645,11 +3643,10 @@ fn emitterTypeParameterRoot(
     for (parameter in 0..<parameters) {
         root = nodes.data[root].subtreeStart - 1;
     }
-    var remaining =
+    val remaining =
         functionTypeParameterCount(nodes.data[functionRoot]);
-    while (remaining >= position) {
+    for (index in position - 1..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
-        remaining--;
     }
     return root;
 }
