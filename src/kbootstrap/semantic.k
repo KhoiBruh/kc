@@ -221,29 +221,25 @@ fn enumWhenExhaustive(
     if (enumIndex == semantic.enums.length) return false;
     val declaration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
     var unique: u32 = 0;
-    var index: u32 = 0;
-    while (index < branchCount) {
+    for (index in 0..<branchCount) {
         val branch = semantic.nodes.data[roots[index as u64]];
         val isElse = branch.aux % 2 == 1;
 
         if (!isElse) {
-          var patternIndex: u32 = 0;
           val patternCount = branch.aux / 65536;
-          while (patternIndex < patternCount) {
+          for (patternIndex in 0..<patternCount) {
             val conditionRoot = whenPatternRoot(
                 semantic, roots[index as u64], valueForm, patternIndex);
             val condition = semantic.nodes.data[conditionRoot];
             if (condition.kind == 17 && condition.typeKind == 20 &&
                     condition.typeName == subject.name) {
-                var prior: u32 = 0;
-                while (prior <= index) {
+                for (prior in 0..index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
                     val priorElse = priorBranch.aux % 2 == 1;
                     if (!priorElse) {
-                      var priorPattern: u32 = 0;
                       var priorCount = priorBranch.aux / 65536;
                       if (prior == index) priorCount = patternIndex;
-                      while (priorPattern < priorCount) {
+                      for (priorPattern in 0..<priorCount) {
                         val priorRoot = whenPatternRoot(
                             semantic, roots[prior as u64], valueForm,
                             priorPattern);
@@ -258,17 +254,13 @@ fn enumWhenExhaustive(
                             semanticFail(semantic, 1, diagnostic);
                             return false;
                         }
-                        priorPattern++;
                       }
                     }
-                    prior++;
                 }
                 unique++;
             }
-            patternIndex++;
           }
         }
-        index++;
     }
 
     return unique == declaration.aux;
@@ -638,18 +630,14 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         if (typeArgumentCount > 0) {
             val start = semantic.genericArguments.length;
             val typeArguments = k_boot_alloc((typeArgumentCount as u64) * sizeof(TypeValue)) as TypeValue*;
-            var index: u32 = 0;
-            while (index < typeArgumentCount) {
+            for (index in 0..<typeArgumentCount) {
                 val argRoot = structTypeArgumentRoot(semantic, root, index + 1, typeArgumentCount);
                 typeArguments[index as u64] = typeFromNode(semantic, argRoot);
-                index++;
             }
-            index = 0;
-            while (index < typeArgumentCount) {
+            for (index in 0..<typeArgumentCount) {
                 var resolved = semantic.genericArguments;
                 resolved.add(typeArguments[index as u64]);
                 semantic.genericArguments = resolved;
-                index++;
             }
             k_boot_free(typeArguments as unit*);
             return TypeValue(8, nodeHash(semantic, node), start as u32 + typeArgumentCount * 65536);
@@ -970,8 +958,6 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             explicitTypeRoots[explicit as u64] = cursor;
             cursor = semantic.nodes.data[cursor].subtreeStart - 1;
         }
-        var argument: u32 = 0;
-        var explicit: u32 = 0;
         val callee = semantic.nodes.data[cursor];
         var functionName: u64 = 0;
         if (callee.kind == 10) {
@@ -1040,21 +1026,16 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val typeArguments =
                 k_boot_alloc(
                     (typeCount as u64) * sizeof(TypeValue)) as TypeValue*;
-            explicit = 0;
-            while (explicit < typeCount) {
+            for (explicit in 0..<typeCount) {
                 typeArguments[explicit as u64] = invalidType();
-                explicit++;
             }
-            explicit = 0;
-            while (explicit < explicitTypeCount) {
+            for (explicit in 0..<explicitTypeCount) {
                 typeArguments[explicit as u64] =
                     typeFromNode(
                         semantic,
                         explicitTypeRoots[explicit as u64]);
-                explicit++;
             }
-            argument = 0;
-            while (argument < argumentCount) {
+            for (argument in 0..<argumentCount) {
                 var actual = expressionType(
                     semantic, argumentRoots[argument as u64]);
                 val fieldRoot = fieldRootAt(semantic.nodes, structureRoot, argument);
@@ -1105,10 +1086,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         semantic.nodes.data[
                             argumentRoots[argument as u64]]);
                 }
-                argument++;
             }
-            explicit = 0;
-            while (explicit < typeCount) {
+            for (explicit in 0..<typeCount) {
                 val parameterRoot = structTypeParameterRoot(
                     semantic, structureRoot, explicit + 1);
                 val parameter = semantic.nodes.data[parameterRoot];
@@ -1127,7 +1106,6 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     )
                 ) semanticFail(semantic, 4, callee);
 
-                explicit++;
             }
             var start: u32 = 0;
             if (typeCount > 0) {
@@ -1135,12 +1113,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 var callNode = semantic.nodes.data[root];
                 callNode.genericArgumentStart = start as u64;
                 callNode.genericArgumentCount = typeCount;
-                var typeIndex: u32 = 0;
-                while (typeIndex < typeCount) {
+                for (typeIndex in 0..<typeCount) {
                     var resolved = semantic.genericArguments;
                     resolved.add(typeArguments[typeIndex as u64]);
                     semantic.genericArguments = resolved;
-                    typeIndex++;
                 }
                 semantic.nodes.data[root] = callNode;
             }
@@ -1190,21 +1166,16 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val typeArguments =
             k_boot_alloc(
                 (typeCount as u64) * sizeof(TypeValue)) as TypeValue*;
-        explicit = 0;
-        while (explicit < typeCount) {
+        for (explicit in 0..<typeCount) {
             typeArguments[explicit as u64] = invalidType();
-            explicit++;
         }
-        explicit = 0;
-        while (explicit < explicitTypeCount) {
+        for (explicit in 0..<explicitTypeCount) {
             typeArguments[explicit as u64] =
                 typeFromNode(
                     semantic,
                     explicitTypeRoots[explicit as u64]);
-            explicit++;
         }
-        argument = 0;
-        while (argument < argumentCount) {
+        for (argument in 0..<argumentCount) {
             val actual = expressionType(
                 semantic, argumentRoots[argument as u64]);
             val parameterRoot =
@@ -1248,10 +1219,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     semantic.nodes.data[
                         argumentRoots[argument as u64]]);
             }
-            argument++;
         }
-        explicit = 0;
-        while (explicit < typeCount) {
+        for (explicit in 0..<typeCount) {
             val parameterRoot = functionTypeParameterRoot(
                 semantic, functionRoot, explicit + 1);
             val parameter = semantic.nodes.data[parameterRoot];
@@ -1270,7 +1239,6 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 )
             ) semanticFail(semantic, 4, callee);
 
-            explicit++;
         }
         val savedFunction = semantic.currentFunction;
         semantic.currentFunction = functionRoot;
@@ -1284,12 +1252,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             callNode.genericArgumentStart =
                 semantic.genericArguments.length;
             callNode.genericArgumentCount = typeCount;
-            var typeIndex: u32 = 0;
-            while (typeIndex < typeCount) {
+            for (typeIndex in 0..<typeCount) {
                 var resolved = semantic.genericArguments;
                 resolved.add(typeArguments[typeIndex as u64]);
                 semantic.genericArguments = resolved;
-                typeIndex++;
             }
             semantic.nodes.data[root] = callNode;
         }
@@ -1307,8 +1273,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val enumRoot = semantic.enums.data[enumIndex].node;
                 val enumeration = semantic.nodes.data[enumRoot];
                 val wanted = nodeHash(semantic, node);
-                var position: u32 = 0;
-                while (position < enumeration.aux) {
+                for (position in 0..<enumeration.aux) {
                     val variant = semantic.nodes.data[
                         enumeration.subtreeStart + 1 + position as u64];
                     if (nodeHash(semantic, variant) == wanted) {
@@ -1323,7 +1288,6 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         semantic.nodes.data[root] = resolved;
                         return TypeValue(20, resolved.typeName, 0);
                     }
-                    position++;
                 }
                 semanticFail(semantic, 2, node);
                 return invalidType();
@@ -1344,8 +1308,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val structure = semantic.nodes.data[structureRoot];
         val wanted = nodeHash(semantic, node);
         var cursor = rootBeforeStructMethods(semantic.nodes, structureRoot);
-        var remaining = structFieldCount(structure);
-        while (remaining > 0) {
+        val remaining = structFieldCount(structure);
+        for (fieldIndex in 0..<remaining) {
             val field = semantic.nodes.data[cursor];
             val fieldName = semantic.nodes.data[field.subtreeStart];
             if (nodeHash(semantic, fieldName) == wanted) {
@@ -1363,7 +1327,6 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 return fieldType;
             }
             cursor = field.subtreeStart - 1;
-            remaining--;
         }
         semanticFail(semantic, 8, node);
         return invalidType();
@@ -1565,8 +1528,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         var childRoot = root - 1;
         var element = expressionType(semantic, childRoot);
         if (element.kind == 11) element = TypeValue(3, 0, 0);
-        var remaining = node.aux;
-        while (remaining > 0) {
+        for (index in 0..<node.aux) {
             val actual = expressionType(semantic, childRoot);
             if (!typeAccepts(element, actual, semantic.genericArguments)) {
                 semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
@@ -1578,7 +1540,6 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             childNode.typePointee = element.pointee;
             semantic.nodes.data[childRoot] = childNode;
             childRoot = childNode.subtreeStart - 1;
-            remaining--;
         }
         return element.array(node.aux as u64);
     }
@@ -1807,16 +1768,14 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
             }
         }
-        var index: u32 = 0;
         var hasElse = false;
-        while (index < branchCount) {
+        for (index in 0..<branchCount) {
             val current = semantic.nodes.data[roots[index as u64]];
             if (current.aux % 2 == 1) hasElse = true;
             val bodyRoot = roots[index as u64] - 1;
             if (current.aux % 2 == 0) {
-              var patternIndex: u32 = 0;
               val patternCount = current.aux / 65536;
-              while (patternIndex < patternCount) {
+              for (patternIndex in 0..<patternCount) {
                 val conditionRoot = whenPatternRoot(
                     semantic, roots[index as u64], false, patternIndex);
                 val condition = expressionType(semantic, conditionRoot);
@@ -1844,11 +1803,9 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                             semantic.nodes.data[conditionRoot]);
                     }
                 }
-                patternIndex++;
               }
             }
             checkBlock(semantic, bodyRoot);
-            index++;
         }
         val exhaustive = enumWhenExhaustive(
             semantic, subject, roots, branchCount, false);
@@ -1988,14 +1945,12 @@ fn checkFunction(var semantic: Semantic, root: u64) {
     semantic.currentFunction = root;
     if (functionIsExtern(function)) {
         typeFromNode(semantic, functionReturnRoot(semantic, root));
-        var externPosition: u32 = 0;
         val externCount = functionParameterCount(function);
-        while (externPosition < externCount) {
+        for (externPosition in 0..<externCount) {
             val externParameterRoot =
                 functionParameterRoot(
                     semantic, root, externPosition + 1);
             typeFromNode(semantic, externParameterRoot - 1);
-            externPosition++;
         }
         return;
     }
@@ -2004,9 +1959,8 @@ fn checkFunction(var semantic: Semantic, root: u64) {
     semantic.locals = emptyLocals;
     semantic.scopeStart = 0;
     semantic.returnType = functionReturnTypeValue(semantic, root);
-    var position: u32 = 0;
     val count = functionParameterCount(function);
-    while (position < count) {
+    for (position in 0..<count) {
         val parameterRoot =
             functionParameterRoot(semantic, root, position + 1);
         val parameter = semantic.nodes.data[parameterRoot];
@@ -2026,7 +1980,6 @@ fn checkFunction(var semantic: Semantic, root: u64) {
                 mutable,
                 nameNode.start));
         semantic.locals = locals;
-        position++;
     }
     checkBlock(semantic, root - 1);
 }
@@ -2070,8 +2023,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
         roots[index as u64] = root;
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
-    var index: u32 = 0;
-    while (index < program.aux) {
+    for (index in 0..<program.aux) {
         root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
         if (declaration.kind == 43) {
@@ -2086,8 +2038,8 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 semantic.structs = structures;
             }
             var methodRoot = root - 1;
-            var methods = structMethodCount(declaration);
-            while (methods > 0) {
+            val methods = structMethodCount(declaration);
+            for (methodIndex in 0..<methods) {
                 val method = semantic.nodes.data[methodRoot];
                 val methodNameNode = semantic.nodes.data[method.subtreeStart];
                 val methodName = methodHash(name, nodeHash(semantic, methodNameNode));
@@ -2109,17 +2061,15 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     }
                 }
                 methodRoot = method.subtreeStart - 1;
-                methods--;
             }
             var fieldRoot = rootBeforeStructMethods(semantic.nodes, root);
-            var fields = structFieldCount(declaration);
+            val fields = structFieldCount(declaration);
             val savedStruct = semantic.currentStruct;
             semantic.currentStruct = root;
-            while (fields > 0) {
+            for (fieldIndex in 0..<fields) {
                 typeFromNode(semantic, fieldRoot - 1);
                 fieldRoot =
                     semantic.nodes.data[fieldRoot].subtreeStart - 1;
-                fields--;
             }
             semantic.currentStruct = savedStruct;
         } else {
@@ -2175,10 +2125,8 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     enums.add(DeclarationInfo(name, root));
                     semantic.enums = enums;
                 }
-                var left: u32 = 0;
-                while (left < declaration.aux) {
-                    var right = left + 1;
-                    while (right < declaration.aux) {
+                for (left in 0..<declaration.aux) {
+                    for (right in left + 1..<declaration.aux) {
                         val leftNode = semantic.nodes.data[
                             declaration.subtreeStart + 1 + left as u64];
                         val rightNode = semantic.nodes.data[
@@ -2186,9 +2134,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         if (nodeHash(semantic, leftNode) == nodeHash(semantic, rightNode)) {
                             semanticFail(semantic, 1, rightNode);
                         }
-                        right++;
                     }
-                    left++;
                 }
             } else {
             if (declaration.kind == 41) {
@@ -2206,7 +2152,6 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             }
             }
         }
-        index++;
     }
     k_boot_free(roots as unit*);
 }
