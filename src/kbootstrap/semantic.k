@@ -318,8 +318,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
     val savedFunction = semantic.currentFunction;
     val savedReturn = semantic.returnType;
     semantic.currentFunction = functionRoot;
-    var position: u32 = 0;
-    while (position < functionParameterCount(function)) {
+    for (position in 0..<functionParameterCount(function)) {
         val parameterRoot = functionParameterRoot(semantic, functionRoot, position + 1);
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
@@ -331,7 +330,6 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
                 typeFromNode(semantic, parameterRoot - 1),
                 parameter.aux != 1, nameNode.start));
         semantic.locals = locals;
-        position = position + 1;
     }
     val statementRoot = functionRoot - 2;
     val statement = semantic.nodes.data[statementRoot];
@@ -436,14 +434,12 @@ fn structTypeParameterRoot(semantic: Semantic, structureRoot: u64, position: u32
 
 fn structTypeParameterPosition(semantic: Semantic, structureRoot: u64, name: u64): u32 {
     val count = structTypeParameterCount(semantic.nodes.data[structureRoot]);
-    var position: u32 = 1;
-    while (position <= count) {
-        val root = structTypeParameterRoot(semantic, structureRoot, position);
+    for (position in 0..<count) {
+        val root = structTypeParameterRoot(semantic, structureRoot, position + 1);
         val parameter = semantic.nodes.data[root];
         if (nodeHash(semantic, semantic.nodes.data[parameter.subtreeStart]) == name) {
-            return position - 1;
+            return position;
         }
-        position = position + 1;
     }
     return count;
 }
@@ -517,10 +513,9 @@ fn findCurrentTypeParameter(
         val function =
             semantic.nodes.data[semantic.currentFunction];
         val count = functionTypeParameterCount(function);
-        var position: u32 = 1;
-        while (position <= count) {
+        for (position in 0..<count) {
             val root = functionTypeParameterRoot(
-                semantic, semantic.currentFunction, position);
+                semantic, semantic.currentFunction, position + 1);
             val parameter = semantic.nodes.data[root];
             val nameNode =
                 semantic.nodes.data[parameter.subtreeStart];
@@ -534,17 +529,15 @@ fn findCurrentTypeParameter(
                 }
                 return TypeValue(14, name, constraint);
             }
-            position = position + 1;
         }
     }
     if (semantic.currentStruct < semantic.nodes.length) {
         val structure =
             semantic.nodes.data[semantic.currentStruct];
         val count = structTypeParameterCount(structure);
-        var position: u32 = 1;
-        while (position <= count) {
+        for (position in 0..<count) {
             val root = structTypeParameterRoot(
-                semantic, semantic.currentStruct, position);
+                semantic, semantic.currentStruct, position + 1);
             val parameter = semantic.nodes.data[root];
             val nameNode =
                 semantic.nodes.data[parameter.subtreeStart];
@@ -558,7 +551,6 @@ fn findCurrentTypeParameter(
                 }
                 return TypeValue(14, name, constraint);
             }
-            position = position + 1;
         }
     }
     return invalidType();
@@ -568,17 +560,15 @@ fn typeParameterPosition(
     semantic: Semantic, functionRoot: u64, name: u64): u32 {
     val count = functionTypeParameterCount(
         semantic.nodes.data[functionRoot]);
-    var position: u32 = 1;
-    while (position <= count) {
+    for (position in 0..<count) {
         val root = functionTypeParameterRoot(
-            semantic, functionRoot, position);
+            semantic, functionRoot, position + 1);
         val parameter = semantic.nodes.data[root];
         if (nodeHash(
                 semantic,
                 semantic.nodes.data[parameter.subtreeStart]) == name) {
-            return position - 1;
+            return position;
         }
-        position = position + 1;
     }
     return count;
 }

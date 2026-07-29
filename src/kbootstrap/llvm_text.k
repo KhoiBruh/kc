@@ -837,8 +837,7 @@ fn appendStructSpecializationSuffix(
     buffer.add(95);
     buffer.add(115);
     appendDecimal(buffer, count as u64);
-    var index: u32 = 0;
-    while (index < count) {
+    for (index in 0..<count) {
         val type = arguments.data[start + index as u64];
         buffer.add(95);
         appendDecimal(buffer, type.kind as u64);
@@ -846,7 +845,6 @@ fn appendStructSpecializationSuffix(
         appendDecimal(buffer, type.name);
         buffer.add(95);
         appendDecimal(buffer, type.pointee as u64);
-        index = index + 1;
     }
 }
 
@@ -1033,8 +1031,7 @@ fn appendSpecializationSuffix(
     buffer.add(95);
     buffer.add(103);
     appendDecimal(buffer, count as u64);
-    var index: u32 = 0;
-    while (index < count) {
+    for (index in 0..<count) {
         val type = arguments.data[start + index as u64];
         buffer.add(95);
         appendDecimal(buffer, type.kind as u64);
@@ -1042,7 +1039,6 @@ fn appendSpecializationSuffix(
         appendDecimal(buffer, type.name);
         buffer.add(95);
         appendDecimal(buffer, type.pointee as u64);
-        index = index + 1;
     }
 }
 
@@ -1140,16 +1136,14 @@ fn emitterStructTypeParameterPosition(
     source: Source, nodes: AstList, structureRoot: u64, name: u64): u32 {
     val count = emitterStructTypeParameterCount(
         nodes.data[structureRoot]);
-    var position: u32 = 1;
-    while (position <= count) {
+    for (position in 0..<count) {
         val root = emitterStructTypeParameterRoot(
-            source, nodes, structureRoot, position);
+            source, nodes, structureRoot, position + 1);
         val parameter = nodes.data[root];
         val nameNode = nodes.data[parameter.subtreeStart];
         if (sourceHash(source, nameNode.start, nameNode.end) == name) {
-            return position - 1;
+            return position;
         }
-        position = position + 1;
     }
     return count;
 }
@@ -1211,14 +1205,12 @@ fn fieldIndexByName(
     val wanted = sourceHash(source, nameNode.start, nameNode.end);
     val structure = nodes.data[structureRoot];
     val fieldCount = emitterStructFieldCount(structure);
-    var index: u32 = 0;
-    while (index < fieldCount) {
+    for (index in 0..<fieldCount) {
         val field = nodes.data[emitterFieldRootAt(nodes, structureRoot, index)];
         val fieldName = nodes.data[field.subtreeStart];
         if (sourceHash(source, fieldName.start, fieldName.end) == wanted) {
             return index;
         }
-        index = index + 1;
     }
     return fieldCount;
 }
@@ -1254,8 +1246,7 @@ fn typeAlignment(
         val start = pointee % 65536;
         val count = pointee / 65536;
         var alignment: u64 = 1;
-        var index: u32 = 0;
-        while (index < fieldCount) {
+        for (index in 0..<fieldCount) {
             val typeNode = nodes.data[
                 emitterFieldRootAt(nodes, structureRoot, index) - 1];
             var fieldType = TypeValue(typeNode.typeKind, typeNode.typeName, typeNode.typePointee);
@@ -1270,7 +1261,6 @@ fn typeAlignment(
             if (fieldAlignment > alignment) {
                 alignment = fieldAlignment;
             }
-            index = index + 1;
         }
         return alignment;
     }
@@ -1308,8 +1298,7 @@ fn typeSize(
         val start = pointee % 65536;
         val count = pointee / 65536;
         var size: u64 = 0;
-        var index: u32 = 0;
-        while (index < fieldCount) {
+        for (index in 0..<fieldCount) {
             val typeNode = nodes.data[
                 emitterFieldRootAt(nodes, structureRoot, index) - 1];
             var fieldType = TypeValue(typeNode.typeKind, typeNode.typeName, typeNode.typePointee);
@@ -1325,7 +1314,6 @@ fn typeSize(
             size = size + typeSize(
                 source, nodes, genericArguments, fieldType.kind,
                 fieldType.name, fieldType.pointee);
-            index = index + 1;
         }
         return alignUp(
             size, typeAlignment(source, nodes, genericArguments, kind, name, pointee));
