@@ -345,23 +345,18 @@ fn loaderScanImports(
         val first = current;
         var partCount: u64 = 0;
         var wildcard = false;
-        var scanning = true;
-        while (scanning) {
-            if (tokens.data[current].kind != 1) {
-                scanning = false;
-            } else {
-                partCount++;
+        while (tokens.data[current].kind == 1) {
+            partCount++;
+            current++;
+            if (tokens.data[current].kind == 59) {
                 current++;
-                if (tokens.data[current].kind == 59) {
+                if (tokens.data[current].kind == 62) {
+                    wildcard = true;
                     current++;
-                    if (tokens.data[current].kind == 62) {
-                        wildcard = true;
-                        current++;
-                        scanning = false;
-                    }
-                } else {
-                    scanning = false;
+                    break;
                 }
+            } else {
+                break;
             }
         }
         val end = tokens.data[current].end;
