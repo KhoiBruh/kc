@@ -852,8 +852,8 @@ fn parseFunction(
         }
     }
     var aux = parameterCount;
-    if (isExtern) aux = aux + 65536;
-    aux = aux + typeParameterCount * 131072;
+    if (isExtern) aux += 65536;
+    aux += typeParameterCount * 131072;
     val root = parserAdd(parser, 41, start, end, subtreeStart, aux);
     var function = parser.nodes.data[root];
     function.storage = (expressionBody + infersReturn * 2) as u64;

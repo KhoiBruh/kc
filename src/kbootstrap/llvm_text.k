@@ -11,7 +11,7 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
     } else {
         while (remaining > 0) {
             digits[length] = (remaining % 10) as u8 + 48;
-            remaining = remaining / 10;
+            remaining /= 10;
             length++;
         }
         while (length > 0) {
@@ -500,7 +500,7 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
         else if (value == 116) result.add(9);
         else if (value == 48) result.add(0);
         else if (value == 117) {
-            offset = offset + 2;
+            offset += 2;
             var codepoint: u32 = 0;
             while (source.data[offset] != 125) {
                 val digit = source.data[offset];
@@ -1311,7 +1311,7 @@ fn typeSize(
                 source, nodes, genericArguments, fieldType.kind,
                 fieldType.name, fieldType.pointee);
             size = alignUp(size, alignment);
-            size = size + typeSize(
+            size += typeSize(
                 source, nodes, genericArguments, fieldType.kind,
                 fieldType.name, fieldType.pointee);
         }
