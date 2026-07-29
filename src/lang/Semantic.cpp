@@ -890,8 +890,27 @@ private:
                        binary->op == TokenKind::Greater || binary->op == TokenKind::GreaterEqual) {
                 if (!compatible(left, right) && !(isNumeric(left) && isNumeric(right)))
                     diagnose("comparison operands are incompatible", expression.span);
+                if (isNumeric(left) && isNumeric(right)) {
+                    const auto operandType = promote(left, right, expression.span);
+                    if (canImplicitlyWiden(left, operandType))
+                        result_.implicitConversions[binary->left.get()] = operandType;
+                    if (canImplicitlyWiden(right, operandType))
+                        result_.implicitConversions[binary->right.get()] = operandType;
+                }
                 type = {SemanticTypeKind::Bool};
-            } else type = promote(left, right, expression.span);
+            } else {
+                if (expected && isInteger(*expected) &&
+                    canImplicitlyWiden(left, *expected) &&
+                    canImplicitlyWiden(right, *expected)) {
+                    type = *expected;
+                } else {
+                    type = promote(left, right, expression.span);
+                }
+                if (canImplicitlyWiden(left, type))
+                    result_.implicitConversions[binary->left.get()] = type;
+                if (canImplicitlyWiden(right, type))
+                    result_.implicitConversions[binary->right.get()] = type;
+            }
         } else if (const auto* assignment = std::get_if<AssignmentExpr>(&expression.node)) {
             type = analyzeAssignment(*assignment, expression.span);
         } else if (const auto* unary = std::get_if<UnaryExpr>(&expression.node)) {
@@ -976,6 +995,8 @@ private:
             diagnose("member access is not supported yet", expression.span);
         }
         result_.expressionTypes[&expression] = type;
+        if (expected && canImplicitlyWiden(type, *expected))
+            result_.implicitConversions[&expression] = *expected;
         return type;
     }
 
@@ -1533,6 +1554,17 @@ private:
         return {SemanticTypeKind::U128};
     }
 
+    bool canImplicitlyWiden(
+        const SemanticType& source, const SemanticType& target) const {
+        if (!isInteger(source) || !isInteger(target) || source == target)
+            return false;
+        const auto sourceWidth = numericBitWidth(source);
+        const auto targetWidth = numericBitWidth(target);
+        if (targetWidth <= sourceWidth) return false;
+        if (isSignedInteger(source) && !isSignedInteger(target)) return false;
+        return true;
+    }
+
     bool enumWhenExhaustive(
         const SemanticType& subject, const std::vector<const Expr*>& patterns,
         bool hasElse, SourceSpan span) {
@@ -1692,7 +1724,7 @@ private:
             actual.kind == SemanticTypeKind::Array &&
             expected.element && actual.element)
             return *expected.element == *actual.element;
-        return expected == actual;
+        return expected == actual || canImplicitlyWiden(actual, expected);
     }
 
     VariableSymbol* findVariable(const std::string& name) {

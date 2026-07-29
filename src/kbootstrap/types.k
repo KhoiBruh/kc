@@ -99,6 +99,15 @@ fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
     return targetWidth <= sourceWidth;
 }
 
+fn integerImplicitlyWidens(source: TypeValue, target: TypeValue): bool {
+    if (!isIntegerType(source)) return false;
+    if (!isIntegerType(target)) return false;
+    if (source.kind == target.kind) return false;
+    if (integerTypeWidth(target) <= integerTypeWidth(source)) return false;
+    if (integerTypeIsSigned(source) && !integerTypeIsSigned(target)) return false;
+    return true;
+}
+
 fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList): bool {
     if (left.kind != right.kind) return false;
     if (left.name != right.name) return false;
@@ -125,6 +134,7 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: TypeValueList
 
 fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: TypeValueList): bool {
     if (typeEquals(expected, actual, genericArguments)) return true;
+    if (integerImplicitlyWidens(actual, expected)) return true;
     if (expected.kind == 15) {
         if (actual.kind == 16) return true;
         return typeEquals(

@@ -1381,6 +1381,31 @@ fn nextTemporary(var counter: IrCounter): u64 {
     return value;
 }
 
+fn emitImplicitIntegerWiden(
+    var buffer: ByteBuffer, source: Source,
+    genericArguments: TypeValueList, value: IrValue,
+    targetKind: u32, targetName: u64, targetPointee: u32,
+    var counter: IrCounter): IrValue {
+    val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
+    val targetType = TypeValue(targetKind, targetName, targetPointee);
+    if (!integerImplicitlyWidens(sourceType, targetType)) return value;
+    val temporary = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
+    var opcode: u32 = 2;
+    if (integerTypeIsSigned(sourceType)) opcode = 1;
+    appendCastOpcode(buffer, opcode); byteBufferAppend(buffer, 32);
+    appendType(
+        buffer, genericArguments,
+        value.typeKind, value.typeName, value.typePointee);
+    byteBufferAppend(buffer, 32); appendIrValue(buffer, source, value);
+    byteBufferAppend(buffer, 32); byteBufferAppend(buffer, 116);
+    byteBufferAppend(buffer, 111); byteBufferAppend(buffer, 32);
+    appendType(buffer, genericArguments, targetKind, targetName, targetPointee);
+    appendNewline(buffer);
+    return IrValue(
+        2, 0, 0, temporary, targetKind, targetName, targetPointee);
+}
+
 fn nextBlock(var counter: IrCounter): u64 {
     val value = counter.block;
     counter.block = value + 1;
@@ -2057,7 +2082,7 @@ fn emitExpression(
     if (node.kind == 13) {
         val rightRoot = root - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
-        val left = emitExpression(
+        var left = emitExpression(
             buffer, source, nodes, genericArguments,
             leftRoot, counter);
         var logical = node.aux == 83;
@@ -2101,13 +2126,9 @@ fn emitExpression(
             appendNewline(buffer);
             return IrValue(2, 0, 0, temporary, 2, 0, 0);
         }
-        val right = emitExpression(
+        var right = emitExpression(
             buffer, source, nodes, genericArguments,
             rightRoot, counter);
-        val temporary = nextTemporary(counter);
-        appendValuePrefix(buffer);
-        appendDecimal(buffer, temporary);
-        appendEquals(buffer);
         var comparison = false;
         if (node.aux == 66) comparison = true;
         if (node.aux == 67) comparison = true;
@@ -2115,10 +2136,33 @@ fn emitExpression(
             if (node.aux <= 82) comparison = true;
         }
         if (comparison) {
-            appendComparison(buffer, node.aux, left.typeKind);
+            val leftType = TypeValue(left.typeKind, left.typeName, left.typePointee);
+            val rightType = TypeValue(right.typeKind, right.typeName, right.typePointee);
+            if (integerImplicitlyWidens(leftType, rightType)) {
+                left = emitImplicitIntegerWiden(
+                    buffer, source, genericArguments, left,
+                    right.typeKind, right.typeName, right.typePointee, counter);
+            } else {
+                if (integerImplicitlyWidens(rightType, leftType)) {
+                    right = emitImplicitIntegerWiden(
+                        buffer, source, genericArguments, right,
+                        left.typeKind, left.typeName, left.typePointee, counter);
+                }
+            }
         } else {
-            appendOperator(buffer, node.aux, node.typeKind);
+            left = emitImplicitIntegerWiden(
+                buffer, source, genericArguments, left,
+                node.typeKind, node.typeName, node.typePointee, counter);
+            right = emitImplicitIntegerWiden(
+                buffer, source, genericArguments, right,
+                node.typeKind, node.typeName, node.typePointee, counter);
         }
+        val temporary = nextTemporary(counter);
+        appendValuePrefix(buffer);
+        appendDecimal(buffer, temporary);
+        appendEquals(buffer);
+        if (comparison) appendComparison(buffer, node.aux, left.typeKind);
+        else appendOperator(buffer, node.aux, node.typeKind);
         byteBufferAppend(buffer, 32);
         if (comparison) {
             appendType(
@@ -2139,13 +2183,17 @@ fn emitExpression(
     if (node.kind == 14) {
         val rightRoot = root - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
-        val right = emitExpression(
+        var right = emitExpression(
             buffer, source, nodes, genericArguments,
             rightRoot, counter);
         val target = emitAddress(
             buffer, source, nodes, genericArguments,
             leftRoot, counter);
         val targetNode = nodes.data[leftRoot];
+        right = emitImplicitIntegerWiden(
+            buffer, source, genericArguments, right,
+            targetNode.typeKind, targetNode.typeName,
+            targetNode.typePointee, counter);
         appendStore(buffer);
         appendType(
             buffer, genericArguments, targetNode.typeKind,
@@ -2607,6 +2655,24 @@ fn emitExpression(
                 values[index as u64] = emitExpression(
                     buffer, source, nodes, genericArguments,
                     arguments[index as u64], counter);
+                if (functionRoot != nodes.length) {
+                    val parameterType = nodes.data[
+                        parameterRoot(nodes, functionRoot, index + 1) - 1];
+                    val concreteParameter = substituteEmitterType(
+                        source, nodes, functionRoot,
+                        TypeValue(
+                            parameterType.typeKind,
+                            parameterType.typeName,
+                            parameterType.typePointee),
+                        genericArguments,
+                        node.genericArgumentStart,
+                        node.genericArgumentCount);
+                    values[index as u64] = emitImplicitIntegerWiden(
+                        buffer, source, genericArguments,
+                        values[index as u64], concreteParameter.kind,
+                        concreteParameter.name, concreteParameter.pointee,
+                        counter);
+                }
             }
             index = index + 1;
         }
@@ -3158,7 +3224,7 @@ fn emitStatement(
     }
     if (statement.kind == 33) {
         val initializerRoot = root - 1;
-        val initializer = emitExpression(
+        var initializer = emitExpression(
             buffer, source, nodes, genericArguments,
             initializerRoot, counter);
         val name = nodes.data[statement.subtreeStart];
@@ -3174,6 +3240,9 @@ fn emitStatement(
             storageName = declaredType.typeName;
             storagePointee = declaredType.typePointee;
         }
+        initializer = emitImplicitIntegerWiden(
+            buffer, source, genericArguments, initializer,
+            storageKind, storageName, storagePointee, counter);
         appendStore(buffer);
         appendType(
             buffer, genericArguments, storageKind, storageName, storagePointee);
@@ -3201,7 +3270,10 @@ fn emitStatement(
                 val value = emitExpression(
                     buffer, source, nodes, genericArguments,
                     root - 1, counter);
-                var returned = value;
+                var returned = emitImplicitIntegerWiden(
+                    buffer, source, genericArguments, value,
+                    statement.typeKind, statement.typeName,
+                    statement.typePointee, counter);
                 if (statement.conversionKind != 0) {
                     val tagged = nextTemporary(counter);
                     appendValuePrefix(buffer);

@@ -30,6 +30,13 @@ Ngôn ngữ K hỗ trợ các kiểu dữ liệu nguyên thủy ánh xạ trực
 
 ### Ngữ nghĩa số học (Numeric Semantics)
 
+Các số nguyên được tự động mở rộng khi phép chuyển luôn giữ nguyên giá trị:
+cùng signedness từ kiểu hẹp sang kiểu rộng, hoặc unsigned sang signed có nhiều
+bit hơn (`u8 -> u64`, `i32 -> i64`, `u32 -> i64`). Narrowing, signed sang
+unsigned, và đổi signedness cùng độ rộng vẫn cần `as` vì có thể đổi hoặc mất
+giá trị. Quy tắc này áp dụng trong biểu thức số học và các ngữ cảnh có kiểu đích
+như khai báo, gán, đối số và `return`.
+
 Literal số được suy luận theo kiểu đích. Khi không có ngữ cảnh kiểu, literal số nguyên mặc định là `i32` và literal số thực mặc định là `f64`:
 
 ```text

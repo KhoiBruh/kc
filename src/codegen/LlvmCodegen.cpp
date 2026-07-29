@@ -533,13 +533,6 @@ private:
         if (const auto* returnStatement = std::get_if<ReturnStmt>(&statement.node)) {
             if (returnStatement->value) {
                 if (auto* value = emitExpr(*returnStatement->value)) {
-                    const auto conversion =
-                        semantic().implicitConversions.find(
-                            returnStatement->value.get());
-                    if (conversion != semantic().implicitConversions.end())
-                        value = liftNullable(
-                            value, conversion->second,
-                            returnStatement->value->span);
                     builder_.CreateRet(value);
                 }
             } else {
@@ -795,6 +788,25 @@ private:
     }
 
     llvm::Value* emitExpr(const Expr& expression) {
+        auto* value = emitExprRaw(expression);
+        if (!value) return nullptr;
+        const auto conversion = semantic().implicitConversions.find(&expression);
+        if (conversion == semantic().implicitConversions.end()) return value;
+        const auto source = semantic().expressionTypes.find(&expression);
+        if (source != semantic().expressionTypes.end() &&
+            isInteger(source->second) && isInteger(conversion->second)) {
+            auto* target = lowerType(conversion->second, expression.span);
+            if (!target) return nullptr;
+            return isSignedInteger(source->second)
+                ? builder_.CreateSExt(value, target)
+                : builder_.CreateZExt(value, target);
+        }
+        if (conversion->second.kind == SemanticTypeKind::Nullable)
+            return liftNullable(value, conversion->second, expression.span);
+        return value;
+    }
+
+    llvm::Value* emitExprRaw(const Expr& expression) {
         const auto typeFound = semantic().expressionTypes.find(&expression);
         if (typeFound == semantic().expressionTypes.end()) {
             diagnose("expression has no semantic type", expression.span);

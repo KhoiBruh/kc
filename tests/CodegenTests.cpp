@@ -385,6 +385,28 @@ TEST(codegen_lowers_integer_width_casts) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_lossless_implicit_integer_widening) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn widen(val small: u8): u64 {"
+        "val value: u64 = small + 9;"
+        "return value;"
+        "}"
+        "fn signed(val small: i32): i64 { return small; }"
+        "fn unsignedToSigned(val small: u32): i64 { return small; }"
+        "fn accepts(val wide: u64) {}"
+        "fn use(val small: u8, val wide: u64): bool {"
+        "accepts(small); return small < wide;"
+        "}",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("zext i8") != std::string::npos);
+    EXPECT_TRUE(ir.find("sext i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("zext i32") != std::string::npos);
+    EXPECT_TRUE(ir.find("icmp ult i64") != std::string::npos);
+}
+
 TEST(codegen_lowers_string_literals_as_static_string_values) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

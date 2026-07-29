@@ -299,6 +299,26 @@ TEST(semantic_validates_integer_casts) {
     EXPECT_EQ(floatCast.semantic.floatCasts.size(), 1u);
 }
 
+TEST(semantic_allows_lossless_implicit_integer_widening) {
+    SemanticFixture valid{
+        "fn widen(val small: u8): u64 {"
+        "val value: u64 = small + 9;"
+        "return value;"
+        "}"
+        "fn accumulate(var value: u64, val byte: u8): u64 {"
+        "value = value * 33 + byte;"
+        "return value;"
+        "}"
+        "fn signed(val small: i32): i64 { return small; }"
+        "fn unsignedToSigned(val small: u32): i64 { return small; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture unsafe{
+        "fn narrow(val wide: u64): u8 { return wide; }"
+        "fn changeSign(val signed: i32): u64 { return signed; }"};
+    EXPECT_EQ(unsafe.semantic.diagnostics.size(), 2u);
+}
+
 TEST(semantic_validates_float_casts) {
     SemanticFixture valid{
         "fn convert(val small: f32, val wide: f64, val integer: i32): f64 {"
