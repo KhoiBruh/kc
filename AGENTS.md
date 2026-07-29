@@ -223,6 +223,9 @@ Payload-free enum self-hosting is complete for the current contract.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
   generic functions and structs, and minimal nullable values emit typed LLVM
   text directly from K.
+- `src/kbootstrap/list.k` provides generic `List<T>` through
+  `listNew<T>(sizeof(T))`, `listAdd<T>`, and `listFree<T>`; `ByteBuffer` and
+  `SymbolTable` remain dedicated containers.
 - Statement-form `when` is self-hosted with first-match semantics, an optional
   final `else`, and block or single-statement branch bodies.
 - Expression-valued `when` is self-hosted for return/initializer contexts; each

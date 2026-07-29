@@ -804,7 +804,7 @@ UTF-16 tại biên OS.
 Bounds check của array/slice gọi `k_boot_panic`, ghi `index out of bounds` và
 thoát với mã `2`.
 
-### Bootstrap ABI và container chuyên biệt
+### Bootstrap ABI, `List<T>` và container chuyên biệt
 
 K khai báo hàm C ABI không có body bằng `extern fn`, ví dụ:
 
@@ -815,10 +815,14 @@ extern fn k_boot_free(pointer: unit*);
 
 `var` parameter được hạ thành mutable borrow thực sự; thay đổi field qua parameter
 được quan sát tại caller. `sizeof(T)` trả `u64` và dùng LLVM target layout.
-`src/kbootstrap/containers.k` cung cấp vertical slice chạy được cho `ByteBuffer`,
-`TokenList`, `ExprList`, `StringList` và `SymbolTable`. Các container này dùng
-raw allocation, tự grow/copy/free và chưa phụ thuộc generic. Chúng đang nằm
-chung một source file; việc tách nhỏ thêm chỉ thực hiện khi có nhu cầu cụ thể.
+`src/kbootstrap/list.k` cung cấp `List<T>` cùng các hàm tự do
+`listNew<T>(sizeof(T))`, `listAdd<T>` và `listFree<T>` cho mọi danh sách tăng
+động của bootstrap. Generic method chưa được hỗ trợ nên kích thước phần tử được
+truyền tại điểm tạo list. Token, AST, type argument, bảng khai báo, module loader,
+source map và hàng đợi specialization đều dùng container này.
+`ByteBuffer` và `SymbolTable` vẫn ở `src/kbootstrap/containers.k` vì chúng có API
+chuyên biệt cho byte và tra cứu theo key, không phải danh sách tuần tự thuần.
+
 # Bootstrap compiler status
 
 **Module/import self-hosting milestone: complete.** Bootstrap compilation starts
