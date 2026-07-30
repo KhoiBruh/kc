@@ -1102,6 +1102,28 @@ fn emitterRootBeforeStructMethods(nodes: List<AstNode>, structureRoot: u64): u64
     return root;
 }
 
+fn emitterAssociatedOwnerStructRoot(
+    nodes: List<AstNode>, functionRoot: u64): u64 {
+    if (nodes.data[functionRoot].conversionKind != 2) return nodes.length;
+    val program = nodes.data[nodes.length - 1];
+    val roots = declarationRoots(nodes);
+    var owner = nodes.length;
+    for (index in 0..<program.aux) {
+        val structureRoot = roots[index as u64];
+        if (nodes.data[structureRoot].kind == 43) {
+            var methodRoot = structureRoot - 1;
+            val methodCount = emitterStructMethodCount(
+                nodes.data[structureRoot]);
+            for (methodIndex in 0..<methodCount) {
+                if (methodRoot == functionRoot) owner = structureRoot;
+                methodRoot = nodes.data[methodRoot].subtreeStart - 1;
+            }
+        }
+    }
+    k_boot_free(roots as unit*);
+    return owner;
+}
+
 fn emitterStructTypeParameterRoot(
     source: Source, nodes: List<AstNode>, structureRoot: u64, position: u32): u64 {
     val structure = nodes.data[structureRoot];
@@ -2673,18 +2695,23 @@ fn emitExpression(
             cursor = expressionChildBefore(nodes, cursor);
         }
         val callee = nodes.data[cursor];
-        val isMethod = callee.kind == 17;
-        if (isMethod) {
+        val isMember = callee.kind == 17;
+        val calleeHash =
+            sourceHash(source, callee.start, callee.end);
+        var functionRoot = functionRootByName(source, nodes, calleeHash);
+        if (isMember) functionRoot = node.storage;
+        var isInstanceMethod = false;
+        if (isMember && functionRoot != nodes.length) {
+            isInstanceMethod =
+                nodes.data[functionRoot].conversionKind == 1;
+        }
+        if (isInstanceMethod) {
             for (argument in argumentCount>..0) {
                 arguments[argument as u64 + 1] = arguments[argument as u64];
             }
             arguments[0] = cursor - 1;
             argumentCount++;
         }
-        val calleeHash =
-            sourceHash(source, callee.start, callee.end);
-        var functionRoot = functionRootByName(source, nodes, calleeHash);
-        if (isMethod) functionRoot = node.storage;
         val values =
             k_boot_alloc(
                 (argumentCount as u64) * sizeof(IrValue)) as IrValue*;
@@ -2832,12 +2859,20 @@ fn emitExpression(
             appendCall(buffer);
             appendNodeType(buffer, genericArguments, node);
             appendFunctionOpen(buffer);
-            if (isMethod) {
-                val ownerType = nodes.data[arguments[0]].typeName;
-                val ownerRoot = structRootByName(source, nodes, ownerType);
-                val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
-                appendSource(buffer, source, ownerName.start, ownerName.end);
-                buffer.add(46);
+            if (isMember) {
+                if (isInstanceMethod) {
+                    val ownerType = nodes.data[arguments[0]].typeName;
+                    val ownerRoot = structRootByName(source, nodes, ownerType);
+                    val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
+                    appendSource(buffer, source, ownerName.start, ownerName.end);
+                    buffer.add(46);
+                } else {
+                    val ownerRoot = emitterAssociatedOwnerStructRoot(
+                        nodes, functionRoot);
+                    val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
+                    appendSource(buffer, source, ownerName.start, ownerName.end);
+                    buffer.add(46);
+                }
             }
             appendSource(buffer, source, callee.start, callee.end);
             if (functionRoot != nodes.length) {
@@ -3677,6 +3712,13 @@ fn emitterTypeParameterPosition(
                     source, nodes, ownerRoot, name);
             }
         }
+    } else if (function.conversionKind == 2) {
+        val ownerRoot = emitterAssociatedOwnerStructRoot(
+            nodes, functionRoot);
+        if (ownerRoot != nodes.length) {
+            return emitterStructTypeParameterPosition(
+                source, nodes, ownerRoot, name);
+        }
     }
     return count;
 }
@@ -3880,6 +3922,12 @@ fn emitFunction(
         val receiverType = nodes.data[
             parameterRoot(nodes, functionRoot, 1) - 1];
         val ownerRoot = structRootByName(source, nodes, receiverType.typeName);
+        val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
+        appendSource(buffer, source, ownerName.start, ownerName.end);
+        buffer.add(46);
+    } else if (function.conversionKind == 2) {
+        val ownerRoot = emitterAssociatedOwnerStructRoot(
+            nodes, functionRoot);
         val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
         appendSource(buffer, source, ownerName.start, ownerName.end);
         buffer.add(46);
@@ -4307,7 +4355,7 @@ fn emitModule(
         }
     }
     
-    var structRequests = listNew<StructSpecializationRequest>(sizeof(StructSpecializationRequest));
+    var structRequests = List<StructSpecializationRequest>.new(sizeof(StructSpecializationRequest));
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
         if (node.typeKind == 8) {
@@ -4364,7 +4412,7 @@ fn emitModule(
             }
         }
     }
-    var requests = listNew<SpecializationRequest>(sizeof(SpecializationRequest));
+    var requests = List<SpecializationRequest>.new(sizeof(SpecializationRequest));
     for (callIndex in 0..<nodes.length) {
         val call = nodes.data[callIndex];
         if (call.kind == 16) {

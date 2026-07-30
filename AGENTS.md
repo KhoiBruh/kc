@@ -143,8 +143,8 @@ llvm-readobj --file-headers file.obj
 - Fixed structs, fixed arrays, array-to-slice conversion, field/index access,
   and bounds-checked array/slice indexing.
 - Constrained generic functions and structs with explicit or inferred type
-  arguments and demand-driven monomorphization; generic-struct methods capture
-  their enclosing type parameters.
+  arguments and demand-driven monomorphization; generic-struct instance methods
+  and associated functions capture their enclosing type parameters.
 - Minimal tagged nullable values, `null`, lifting `T` to `T?`, and postfix `!`.
 - Integer casts have semantic source/target metadata, positioned constant range
   diagnostics, checked runtime panic lowering, and bootstrap IR/behavior fixtures.
@@ -184,9 +184,9 @@ llvm-readobj --file-headers file.obj
 - String variables, escape decoding in codegen, concatenation, other print
   types, payload enums, and ownership are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
-  type-parameter lists; methods on generic structs capture those parameters.
-  Type packs, independently generic methods, user-defined traits, and overload
-  resolution remain unsupported.
+  type-parameter lists; instance methods and associated functions on generic
+  structs capture those parameters. Type packs, independently generic methods,
+  user-defined traits, and overload resolution remain unsupported.
 - Native output currently requires exactly `fn main(): i32`.
 - Runtime platform adapter exists only for Windows. Keep the common runtime
   separate so a POSIX adapter can be added later.
@@ -223,10 +223,11 @@ Payload-free enum self-hosting is complete for the current contract.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
-  generic functions and structs (including generic-struct methods), and minimal
-  nullable values emit typed LLVM text directly from K.
+  generic functions and structs (including generic-struct instance methods and
+  associated functions), and minimal nullable values emit typed LLVM text
+  directly from K.
 - `src/kbootstrap/list.k` provides generic `List<T>` through
-  `listNew<T>(sizeof(T))`, `listAdd<T>`, and `listFree<T>`; `ByteBuffer` and
+  `List<T>.new(sizeof(T))` and `add`/`free` methods; `ByteBuffer` and
   `SymbolTable` remain dedicated containers.
 - Statement-form `when` is self-hosted with first-match semantics, an optional
   final `else`, and block or single-statement branch bodies.

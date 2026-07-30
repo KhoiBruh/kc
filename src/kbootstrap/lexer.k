@@ -3,7 +3,6 @@ module kbootstrap.lexer;
 import kbootstrap.source.Source;
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
-import kbootstrap.list.listNew;
 import kbootstrap.containers.ByteBuffer;
 
 extern fn k_boot_arg_count(): i32;
@@ -371,7 +370,7 @@ fn doublePunctuationKind(first: u8, second: u8): u32 {
 }
 
 fn lex(source: Source): LexResult {
-    var tokens = listNew<Token>(sizeof(Token));
+    var tokens = List<Token>.new(sizeof(Token));
     var offset: u64 = 0;
     while (offset < source.length) {
         val value = source.data[offset];

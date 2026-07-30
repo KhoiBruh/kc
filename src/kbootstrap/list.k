@@ -5,6 +5,9 @@ extern fn k_boot_free(pointer: unit*);
 
 struct List<T>(data: T*, length: u64, capacity: u64, elementSize: u64) {
 
+    fn new(elementSize: u64): List<T> =>
+        List<T>(k_boot_alloc(2 * elementSize) as T*, 0, 2, elementSize);
+
 	fn add(var self, value: T): u64 {
 		if (self.length == self.capacity) self.grow();
         val index = self.length;
@@ -24,6 +27,3 @@ struct List<T>(data: T*, length: u64, capacity: u64, elementSize: u64) {
 
     fn free(val self) => k_boot_free(self.data as unit*);
 }
-
-fn listNew<T>(elementSize: u64): List<T> =>
-    List<T>(k_boot_alloc(2 * elementSize) as T*, 0, 2, elementSize);

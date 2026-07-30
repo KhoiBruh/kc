@@ -2,7 +2,6 @@ module kbootstrap.parser;
 
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
-import kbootstrap.list.listNew;
 import kbootstrap.ast.AstNode;
 import kbootstrap.containers.ByteBuffer;
 
@@ -393,6 +392,15 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     }
                 }
                 if (!parserExpect(parser, 67)) return 0;
+                var associated: u32 = 0;
+                if (parserMatch(parser, 59)) {
+                    val name = parserPeek(parser);
+                    if (!parserExpect(parser, 1)) return 0;
+                    root = parserAdd(
+                        parser, 17, name.start, name.end, subtreeStart,
+                        typeArgumentCount);
+                    associated = 1;
+                }
                 if (!parserExpect(parser, 50)) return 0;
                 var argumentCount: u32 = 0;
                 if (!parserCheck(parser, 51)) {
@@ -409,7 +417,8 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 root = parserAdd(
                     parser, 16, first.start, parserPrevious(parser).end,
                     subtreeStart,
-                    argumentCount + typeArgumentCount * 65536);
+                    argumentCount +
+                        (typeArgumentCount * 65536) * (1 - associated));
             } else {
                 val leftPower = leftBindingPower(token.kind);
                 if (leftPower < minimumPower) {
@@ -538,7 +547,12 @@ fn parserGenericCallAhead(parser: Parser): bool {
                     if (cursor + 1 >= parser.tokens.length) {
                         return false;
                     }
-                    return parser.tokens.data[cursor + 1].kind == 50;
+                    val next = parser.tokens.data[cursor + 1].kind;
+                    if (next == 50) return true;
+                    if (next != 59) return false;
+                    if (cursor + 3 >= parser.tokens.length) return false;
+                    if (parser.tokens.data[cursor + 2].kind != 1) return false;
+                    return parser.tokens.data[cursor + 3].kind == 50;
                 }
             }
         }
@@ -777,6 +791,8 @@ fn parseFunction(
     }
     if (!parserExpect(parser, 50)) return 0;
     var parameterCount: u32 = 0;
+    var associated: u32 = 0;
+    if (ownerEnd != ownerStart) associated = 1;
     if (!parserCheck(parser, 51)) {
         var parameters = true;
         while (parameters) {
@@ -795,6 +811,7 @@ fn parseFunction(
             var typeNode: u64 = 0;
             if (ownerEnd != ownerStart && parameterCount == 0) {
                 if (!parserCheck(parser, 57)) {
+                    associated = 0;
                     typeNode = parserAdd(
                         parser, 1, ownerStart, ownerEnd,
                         parser.nodes.length, 1);
@@ -857,7 +874,7 @@ fn parseFunction(
     var function = parser.nodes.data[root];
     function.storage = (expressionBody + infersReturn * 2) as u64;
     if (ownerEnd > ownerStart) {
-        function.conversionKind = 1;
+        function.conversionKind = 1 + associated;
     }
     parser.nodes.data[root] = function;
     return root;
@@ -1049,7 +1066,7 @@ fn parseConstant(var parser: Parser): u64 {
 }
 
 fn parse(tokens: List<Token>): ParseResult {
-    var parser = Parser(tokens, listNew<AstNode>(sizeof(AstNode)), 0, true, 0);
+    var parser = Parser(tokens, List<AstNode>.new(sizeof(AstNode)), 0, true, 0);
     val start = parserPeek(parser).start;
     var declarationCount: u32 = 0;
     if (parserCheck(parser, 25)) {

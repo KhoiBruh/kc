@@ -347,10 +347,11 @@ val c = b.copy()   // Tạo một deep copy độc lập; b vẫn hợp lệ
 
 ## 4. Hướng đối tượng giả thủ tục (Procedural OOP)
 
-Mọi cấu trúc dữ liệu đều là `struct`. Method viết bên trong `struct` phải nhận
-receiver đầu tiên là `val self` để chỉ đọc hoặc `var self` để sửa object. Kiểu
-của `self` được suy ra từ struct nên không viết lại. Receiver nhận ownership,
-static method, overload và generic method độc lập chưa thuộc v0.1.
+Mọi cấu trúc dữ liệu đều là `struct`. Hàm bên trong `struct` có hai dạng:
+instance method nhận receiver đầu tiên là `val self` để chỉ đọc hoặc `var self`
+để sửa object; associated function không có `self` và được gọi bằng tên kiểu.
+Kiểu của `self` được suy ra từ struct nên không viết lại. Overload và generic
+method độc lập chưa thuộc v0.1.
 
 ### Cú pháp cơ bản & RAII
 
@@ -381,32 +382,22 @@ val value = counter.read();
 ```
 
 Method của generic struct được hỗ trợ và dùng trực tiếp type parameter của
-struct; method không được khai báo type parameter riêng. Constructor và
-destructor chưa được hỗ trợ.
+struct; method không được khai báo type parameter riêng. Associated function
+cũng capture các type parameter đó, nhưng caller phải viết rõ chúng. `new` chỉ
+là quy ước đặt tên factory, không phải constructor tự động hay overload của
+`Struct(...)`.
 
 ```text
-struct Player(
-    name: string = "Unknown", // Hỗ trợ giá trị mặc định
-    score: f32,
-    buffer_id: u32
-) {
-    // Tự động gọi khi 'val p = Player()'
-    override fn new() {
-        self.buffer_id = glGenbuffers();
-    }
-
-    // Tự động gọi khi biến ra khỏi phạm vi (Scope)
-    override fn free() {
-        glDeleteBuffers(self.buffer_id);
-    }
-
-    // Mượn Player độc quyền trong thời gian gọi để thay đổi dữ liệu
-    fn updateScore(var self, points: f32) {
-        self.score = self.score + points;
-    }
+struct Box<T>(value: T) {
+    fn new(value: T): Box<T> => Box<T>(value);
 }
 
+val box = Box<i32>.new(16);
 ```
+
+`Box<i32>(...)` vẫn là khởi tạo aggregate theo đúng field layout; factory phải
+được gọi rõ là `Box<i32>.new(...)`. Không có suy luận type argument cho
+associated function generic, nên `Box.new(16)` là invalid.
 
 ### Hàm mở rộng (Extension Functions)
 
@@ -817,11 +808,11 @@ extern fn k_boot_free(pointer: unit*);
 
 `var` parameter được hạ thành mutable borrow thực sự; thay đổi field qua parameter
 được quan sát tại caller. `sizeof(T)` trả `u64` và dùng LLVM target layout.
-`src/kbootstrap/list.k` cung cấp `List<T>` cùng các hàm tự do
-`listNew<T>(sizeof(T))`, `listAdd<T>` và `listFree<T>` cho mọi danh sách tăng
-động của bootstrap. Generic method chưa được hỗ trợ nên kích thước phần tử được
-truyền tại điểm tạo list. Token, AST, type argument, bảng khai báo, module loader,
-source map và hàng đợi specialization đều dùng container này.
+`src/kbootstrap/list.k` cung cấp `List<T>` với factory
+`List<T>.new(sizeof(T))` và các instance method `add`/`free` cho mọi danh sách
+tăng động của bootstrap. Kích thước phần tử được truyền tại điểm tạo list.
+Token, AST, type argument, bảng khai báo, module loader, source map và hàng đợi
+specialization đều dùng container này.
 `ByteBuffer` và `SymbolTable` vẫn ở `src/kbootstrap/containers.k` vì chúng có API
 chuyên biệt cho byte và tra cứu theo key, không phải danh sách tuần tự thuần.
 
@@ -894,7 +885,8 @@ nullable subset supports `T?`, `null`, implicit lifting from `T`, and postfix
 Bootstrap generic functions and structs accept arbitrary ordered type-parameter
 lists. Specialization identity and LLVM symbol names include every concrete
 type argument in declaration order; struct construction remains explicit (for
-example, `Pair<i32, bool>(40, true)`). Methods on a generic struct capture its
-enclosing type parameters, while independently generic methods remain
-unsupported. Type packs, overload resolution, ownership/moves, payload enums,
-and user-defined traits remain unsupported.
+example, `Pair<i32, bool>(40, true)`). Instance methods and associated
+functions on a generic struct capture its enclosing type parameters; the latter
+use explicit syntax such as `Pair<i32, bool>.new(...)`. Independently generic
+methods remain unsupported, as do type packs, overload resolution,
+ownership/moves, payload enums, and user-defined traits.
