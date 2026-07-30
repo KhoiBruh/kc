@@ -380,7 +380,7 @@ private:
             diagnose("duplicate struct '" + name + "'", structure.name);
             return;
         }
-        result_.structs.emplace(name, StructSymbol{&structure, {}, {}});
+        result_.structs.emplace(name, StructSymbol{&structure, &source_, {}, {}});
     }
 
     void defineStruct(const StructDecl& structure) {
@@ -2090,7 +2090,7 @@ private:
             const auto found = result_.structs.find(type.name);
             if (found != result_.structs.end()) {
                 for (const auto& method : found->second.declaration->methods) {
-                    if (spelling(source_, method.name) == "free" &&
+                    if (spelling(*found->second.source, method.name) == "free" &&
                         !method.parameters.empty() &&
                         method.parameters.front().mode == ParameterMode::Owned)
                         return true;

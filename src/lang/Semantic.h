@@ -55,6 +55,7 @@ struct StructFieldSymbol {
 
 struct StructSymbol {
     const StructDecl* declaration;
+    const Source* source;
     std::vector<TypeParameterSymbol> typeParameters;
     std::vector<StructFieldSymbol> fields;
 };

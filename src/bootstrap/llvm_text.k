@@ -4134,7 +4134,7 @@ fn emitFunction(
 
 fn emitSpecializedFunction(
     var buffer: ByteBuffer, source: Source,
-    var nodes: List<AstNode>,
+    nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     functionRoot: u64,
     argumentStart: u64,
@@ -4411,7 +4411,7 @@ fn callArgumentsAreConcrete(
 }
 
 fn emitModule(
-    source: Source, val nodes: List<AstNode>,
+    source: Source, nodes: List<AstNode>,
     var genericArguments: List<TypeValue>): ByteBuffer {
     var buffer = ByteBuffer.new();
     appendModuleHeader(buffer);

@@ -279,7 +279,6 @@ fn loaderScanImports(
         return false;
     }
     val tokens = lexed.tokens;
-    defer tokens.free();
     var current: u64 = 0;
     if (tokens.data[current].kind == 25) {
         while (tokens.data[current].kind != 58) {
@@ -400,9 +399,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
         workingData, 0, false
     );
     var combined = ByteBuffer.new();
-    defer combined.free();
     var sourceMap = List<SourceMapSegment>.new();
-    defer sourceMapFree(sourceMap);
 
     if (loaded) {
         for (i in 0..<loader.modules.length) {
@@ -426,6 +423,8 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     loader.entryDirectory.free();
 
     if (!loaded) {
+        combined.free();
+        sourceMapFree(sourceMap);
         return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, loader.failureKind);
     }
 

@@ -20,7 +20,7 @@ struct Semantic(
     mutationRoot: u64
 ) {
 
-	fn free(self) {
+	fn free(var self) {
 		self.locals.free();
 		self.functions.free();
 		self.constants.free();
