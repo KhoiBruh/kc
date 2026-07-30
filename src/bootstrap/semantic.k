@@ -2378,7 +2378,6 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
 
 fn analyze(source: Source, val nodes: List<AstNode>): SemanticResult {
     val genericArguments = List<TypeValue>.new();
-    defer genericArguments.free();
     var semantic = Semantic(
         source, nodes,
         List<DeclarationInfo>.new(),

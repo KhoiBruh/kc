@@ -1758,6 +1758,7 @@ fn emitExpression(
             }
         }
         var elseDefers = List<u64>.new();
+        defer elseDefers.free();
         for (index in 0..<elseCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
@@ -1765,7 +1766,6 @@ fn emitExpression(
         }
         val elseValue = emitExpression(
             buffer, source, nodes, genericArguments, elseValueRoot, counter);
-        defer elseDefer.free();
         emitDeferRange(
             buffer, source, nodes, genericArguments,
             counter, elseDefers, elseDefers.length, 0);

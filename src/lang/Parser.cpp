@@ -1045,7 +1045,8 @@ ExprPtr Parser::parseWhenExpression() {
             while (!check(TokenKind::RightBrace) && !atEnd()) {
                 const bool statementStart =
                     check(TokenKind::KwVal) || check(TokenKind::KwVar) ||
-                    check(TokenKind::KwReturn) || check(TokenKind::KwIf) ||
+                    check(TokenKind::KwReturn) || check(TokenKind::KwDefer) ||
+                    check(TokenKind::KwWhen) || check(TokenKind::KwIf) ||
                     check(TokenKind::KwWhile) || check(TokenKind::KwFor) ||
                     check(TokenKind::KwBreak) || check(TokenKind::KwContinue) ||
                     check(TokenKind::LeftBrace);
