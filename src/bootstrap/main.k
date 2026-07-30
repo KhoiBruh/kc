@@ -7,7 +7,7 @@ import kbootstrap.loader.loadModules;
 struct Argument(data: u8*, length: u64, ok: bool)
 
 fn mainError(kind: u32) {
-    var message = byteBufferNew();
+    var message = ByteBuffer.new();
     message.add(101); message.add(114);
     message.add(114); message.add(111);
     message.add(114); message.add(58);
@@ -42,7 +42,7 @@ fn mainError(kind: u32) {
 }
 
 fn mainPathError(kind: u32) {
-    var message = byteBufferNew();
+    var message = ByteBuffer.new();
     message.add(101); message.add(114);
     message.add(114); message.add(111);
     message.add(114); message.add(58);

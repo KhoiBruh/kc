@@ -483,7 +483,7 @@ fn appendUtf8(var buffer: ByteBuffer, codepoint: u32) {
 }
 
 fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
-    var result = byteBufferNew();
+    var result = ByteBuffer.new();
     var offset = node.start + 1;
     while (offset + 1 < node.end) {
         var value = source.data[offset];
@@ -4328,7 +4328,7 @@ fn callArgumentsAreConcrete(
 fn emitModule(
     source: Source, nodes: List<AstNode>,
     var genericArguments: List<TypeValue>): ByteBuffer {
-    var buffer = byteBufferNew();
+    var buffer = ByteBuffer.new();
     appendModuleHeader(buffer);
     appendPrintDeclaration(buffer);
     appendPanicDeclaration(buffer);

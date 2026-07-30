@@ -76,7 +76,7 @@ fn appendEmitLlFlag(var buffer: ByteBuffer) {
 }
 
 fn compilerFailure(kind: u32) {
-    var message = byteBufferNew();
+    var message = ByteBuffer.new();
     message.add(101); message.add(114);
     message.add(114); message.add(111);
     message.add(114); message.add(58);
@@ -160,7 +160,7 @@ fn compileToLl(
     var resolvedArguments = checked.genericArguments;
     val output = emitModule(source, parsed.nodes, resolvedArguments);
     checked.genericArguments = resolvedArguments;
-    var temporaryPath = byteBufferNew();
+    var temporaryPath = ByteBuffer.new();
     appendRaw(temporaryPath, outputPath, outputPathLength);
     temporaryPath.add(46);
     temporaryPath.add(116);
@@ -180,7 +180,7 @@ fn compileToLl(
         lexed.tokens.free();
         return 1;
     }
-    var verifyCommand = byteBufferNew();
+    var verifyCommand = ByteBuffer.new();
     appendQuoted(verifyCommand, optPath, optPathLength);
     appendVerifyFlags(verifyCommand);
     appendQuoted(
@@ -219,7 +219,7 @@ fn linkLl(
     bootstrapRuntime: u8*, bootstrapRuntimeLength: u64,
     executablePath: u8*, executablePathLength: u64
 ): i32 {
-    var command = byteBufferNew();
+    var command = ByteBuffer.new();
     appendQuoted(command, clangPath, clangPathLength);
     command.add(32);
     appendQuoted(command, llPath, llPathLength);
@@ -257,7 +257,7 @@ fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
 fn stderrWrite(data: u8*, length: u64) => k_boot_stderr(data, length);
 
 fn stderrNumber(value: u64): ByteBuffer {
-    var buf = byteBufferNew();
+    var buf = ByteBuffer.new();
     if (value == 0) {
         buf.add(48);
         return buf;
@@ -450,7 +450,7 @@ fn printDiagnostic(
     source: Source, sourceMap: List<SourceMapSegment>,
     category: u32, start: u64, end: u64
 ) {
-    var buf = byteBufferNew();
+    var buf = ByteBuffer.new();
     var sourceStart: u64 = 0;
     for (i in 0..<sourceMap.length) {
         val segment = sourceMap.data[i];

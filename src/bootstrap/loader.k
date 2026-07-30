@@ -45,7 +45,7 @@ fn loaderAppend(var buffer: ByteBuffer, data: u8*, length: u64) {
 }
 
 fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
-    var digits = byteBufferNew();
+    var digits = ByteBuffer.new();
     var current = value;
     if (current == 0) digits.add(48);
     while (current > 0) {
@@ -66,7 +66,7 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
         }
         else column++;
     }
-    var message = byteBufferNew();
+    var message = ByteBuffer.new();
     loaderAppend(message, path.data, path.length);
     message.add(58); loaderAppendNumber(message, line);
     message.add(58); loaderAppendNumber(message, column);
@@ -158,14 +158,14 @@ fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
         }
     }
 
-    var result = byteBufferNew();
+    var result = ByteBuffer.new();
     loaderAppend(result, path, end);
 
     return result;
 }
 
 fn loaderCandidate(root: u8*, rootLength: u64, relative: ByteBuffer): ByteBuffer {
-    var result = byteBufferNew();
+    var result = ByteBuffer.new();
     loaderAppend(result, root, rootLength);
     if (rootLength > 0) result.add(47);
     loaderAppend(result, relative.data, relative.length);
@@ -177,7 +177,7 @@ fn loaderRelative(
     first: u64, partCount: u64,
     wildcard: bool
 ): ByteBuffer {
-    var result = byteBufferNew();
+    var result = ByteBuffer.new();
     var count = partCount;
     if (!wildcard) count--;
 
@@ -223,7 +223,7 @@ fn loaderResolveImport(
     val relative = loaderRelative(source, tokens, first, partCount, wildcard);
     val currentDirectory = loaderDirectory(currentPath.data, currentPath.length);
     for (i in 0..<3) {
-        var candidate = byteBufferNew();
+        var candidate = ByteBuffer.new();
         candidate = when (i) {
             0 -> loaderCandidate(
 				loader.workingDirectory.data,
@@ -405,7 +405,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
         loader, entryPath, entryPathLength, 0,
         workingData, 0, false
     );
-    var combined = byteBufferNew();
+    var combined = ByteBuffer.new();
     var sourceMap = List<SourceMapSegment>.new(sizeof(SourceMapSegment));
 
     if (loaded) {

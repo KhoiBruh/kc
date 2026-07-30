@@ -7,6 +7,9 @@ extern fn k_boot_live_allocations(): u64;
 extern fn k_boot_stderr(data: u8*, length: u64);
 
 struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
+
+	fn new() => ByteBuffer(k_boot_alloc(2) as u8*, 0, 2);
+
     fn grow(var self) {
         val capacity = self.capacity * 2;
         val data = k_boot_alloc(capacity) as u8*;
@@ -25,17 +28,18 @@ struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
     fn free(val self) => k_boot_free(self.data as unit*);
 }
 
-fn byteBufferNew() => ByteBuffer(k_boot_alloc(2) as u8*, 0, 2);
-
 struct StringRef(data: u8*, length: u64)
 
 struct SymbolEntry(key: u64, value: unit*)
 struct SymbolTable(data: SymbolEntry*, length: u64, capacity: u64) {
+
+	fn new() => SymbolTable(k_boot_alloc(2 * sizeof(SymbolEntry)) as SymbolEntry*, 0, 2);
+
     fn grow(var self) {
         val capacity = self.capacity * 2;
         val data = k_boot_alloc(capacity * sizeof(SymbolEntry)) as SymbolEntry*;
         for (i in 0..<self.length) data[i] = self.data[i];
-        k_boot_free(self.data as unit*);
+        self.free();
         self.data = data;
         self.capacity = capacity;
     }
@@ -53,5 +57,3 @@ struct SymbolTable(data: SymbolEntry*, length: u64, capacity: u64) {
 
     fn free(val self) => k_boot_free(self.data as unit*);
 }
-
-fn symbolTableNew() => SymbolTable(k_boot_alloc(2 * sizeof(SymbolEntry)) as SymbolEntry*, 0, 2);
