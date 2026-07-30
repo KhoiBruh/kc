@@ -1,4 +1,4 @@
-import kbootstrap.list.List;
+import bootstrap.list.List;
 
 fn main(): i32 {
     var values: List<i32> = List<i32>.new(sizeof(i32));

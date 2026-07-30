@@ -1,4 +1,4 @@
-module kbootstrap.ast;
+module bootstrap.ast;
 
 struct AstNode(
     kind: u32,

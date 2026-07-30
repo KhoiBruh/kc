@@ -1,5 +1,5 @@
 fn main(): i32 {
-    var bytes = byteBufferNew();
+    var bytes = ByteBuffer.new();
     bytes.add(7);
     bytes.add(8);
     bytes.add(9);
@@ -39,7 +39,7 @@ fn main(): i32 {
     k_boot_free(text as unit*);
 
     val symbolValue = k_boot_alloc(1);
-    var symbols = symbolTableNew();
+    var symbols = SymbolTable.new();
     symbols.add(SymbolEntry(42, symbolValue));
     if (symbols.find(42) != 0) {
         return 6;

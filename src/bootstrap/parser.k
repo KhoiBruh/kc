@@ -1,9 +1,9 @@
-module kbootstrap.parser;
+module bootstrap.parser;
 
-import kbootstrap.token.Token;
-import kbootstrap.list.List;
-import kbootstrap.ast.AstNode;
-import kbootstrap.containers.ByteBuffer;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.ast.AstNode;
+import bootstrap.containers.ByteBuffer;
 
 struct ParseResult(nodes: List<AstNode>, ok: bool, errorStart: u64, expectedKind: u32)
 struct Parser(

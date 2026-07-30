@@ -1,6 +1,6 @@
-module kbootstrap.llvm_text;
+module bootstrap.llvm_text;
 
-import kbootstrap.*;
+import bootstrap.*;
 
 fn appendDecimal(var buffer: ByteBuffer, value: u64) {
     val digits = k_boot_alloc(20) as u8*;

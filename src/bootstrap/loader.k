@@ -1,10 +1,10 @@
-module kbootstrap.loader;
+module bootstrap.loader;
 
-import kbootstrap.source.Source;
-import kbootstrap.token.Token;
-import kbootstrap.list.List;
-import kbootstrap.containers.ByteBuffer;
-import kbootstrap.lexer.lex;
+import bootstrap.source.Source;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.lexer.lex;
 
 extern fn k_boot_current_directory(data: u8**, dataLength: u64*): bool;
 extern fn k_boot_canonical_path(path: u8*, pathLength: u64, data: u8**, dataLength: u64*): bool;

@@ -1,8 +1,8 @@
-module kbootstrap.compiler;
+module bootstrap.compiler;
 
-import kbootstrap.*;
-import kbootstrap.loader.LoadResult;
-import kbootstrap.loader.SourceMapSegment;
+import bootstrap.*;
+import bootstrap.loader.LoadResult;
+import bootstrap.loader.SourceMapSegment;
 
 extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;

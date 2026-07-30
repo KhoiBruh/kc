@@ -1,8 +1,8 @@
-module kbootstrap.types;
+module bootstrap.types;
 
-import kbootstrap.containers.ByteBuffer;
-import kbootstrap.ast.AstNode;
-import kbootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.ast.AstNode;
+import bootstrap.list.List;
 
 struct TypeValue(kind: u32, name: u64, pointee: u32) {
 

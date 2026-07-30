@@ -201,7 +201,7 @@ Integer-cast self-hosting is complete for the approved integer matrix.
 Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 Payload-free enum self-hosting is complete for the current contract.
 
-- `src/kbootstrap/` contains the K implementation of source loading, lexer,
+- `src/bootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
 - The K module loader resolves symbol imports to `.k`, wildcard imports to
   `mod.k`, loads dependencies first, and de-duplicates canonical paths.
@@ -218,7 +218,7 @@ Payload-free enum self-hosting is complete for the current contract.
   runtime paths before source loading or process launch.
 - Bootstrap acceptance requires stable CLI failure messages exactly once across
   `kc1` through `kc4`, plus exact semantic diagnostic parity.
-- Bootstrap stages compile `src/kbootstrap/main.k` as a real module graph;
+- Bootstrap stages compile `src/bootstrap/main.k` as a real module graph;
   `manifest.txt` only verifies that every compiler source remains reachable.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
@@ -226,7 +226,7 @@ Payload-free enum self-hosting is complete for the current contract.
   generic functions and structs (including generic-struct instance methods and
   associated functions), and minimal nullable values emit typed LLVM text
   directly from K.
-- `src/kbootstrap/list.k` provides generic `List<T>` through
+- `src/bootstrap/list.k` provides generic `List<T>` through
   `List<T>.new(sizeof(T))` and `add`/`free` methods; `ByteBuffer` and
   `SymbolTable` remain dedicated containers.
 - Statement-form `when` is self-hosted with first-match semantics, an optional

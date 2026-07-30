@@ -139,9 +139,9 @@ if(BUILD_TESTING)
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapContainerTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
-            -Token "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/token.k"
-            -List "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/list.k"
-            -Library "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/containers.k"
+            -Token "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/token.k"
+            -List "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/list.k"
+            -Library "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/containers.k"
             -TestSource "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/container_tests.k"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-containers-test.exe"
     )
@@ -152,11 +152,11 @@ if(BUILD_TESTING)
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapLexerTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -TokenDump "$<TARGET_FILE:k_token_dump>"
-            -SourceModule "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/source.k"
-            -Token "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/token.k"
-            -List "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/list.k"
-            -Containers "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/containers.k"
-            -Lexer "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/lexer.k"
+            -SourceModule "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/source.k"
+            -Token "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/token.k"
+            -List "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/list.k"
+            -Containers "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/containers.k"
+            -Lexer "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/lexer.k"
             -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/lexer_main.k"
             -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/bootstrap-lexer.k"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-lexer-test.exe"
@@ -168,7 +168,7 @@ if(BUILD_TESTING)
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapParserTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -AstDump "$<TARGET_FILE:k_ast_shape_dump>"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
+            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
             -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/parser_main.k"
             -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/bootstrap-lexer.k"
             -SecondFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/bootstrap-parser.k"
@@ -182,7 +182,7 @@ if(BUILD_TESTING)
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapSemanticTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -SemanticDump "$<TARGET_FILE:k_semantic_shape_dump>"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
+            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
             -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/semantic_main.k"
             -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-semantic-test.exe"
@@ -192,8 +192,8 @@ if(BUILD_TESTING)
         NAME k_bootstrap_manifest_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapManifestTests.ps1"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
-            -Manifest "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap/manifest.txt"
+            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
+            -Manifest "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/manifest.txt"
     )
 
     add_test(
@@ -205,7 +205,7 @@ if(BUILD_TESTING)
             -Clang "${LLVM_TOOLS_BINARY_DIR}/clang.exe"
             -StdRuntime "$<TARGET_FILE:k_std_runtime>"
             -BootstrapRuntime "$<TARGET_FILE:k_bootstrap_runtime>"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/kbootstrap"
+            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
             -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap"
             -InvalidFixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -OutputDirectory "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-acceptance"

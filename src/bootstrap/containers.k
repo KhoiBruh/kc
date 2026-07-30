@@ -1,7 +1,7 @@
-module kbootstrap.containers;
+module bootstrap.containers;
 
-import kbootstrap.list.k_boot_alloc;
-import kbootstrap.list.k_boot_free;
+import bootstrap.list.k_boot_alloc;
+import bootstrap.list.k_boot_free;
 
 extern fn k_boot_live_allocations(): u64;
 extern fn k_boot_stderr(data: u8*, length: u64);

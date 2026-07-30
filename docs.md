@@ -712,7 +712,7 @@ import math.utils.Vector;
 dependency-first rồi phân tích semantic và phát một LLVM module cho toàn bộ
 graph. Canonical path được dùng để chỉ tải module dùng chung một lần; diamond
 dependency và wildcard `mod.k` đều được hỗ trợ. Compiler bootstrap được build
-trực tiếp từ entry `src/kbootstrap/main.k`; PowerShell không còn ghép source.
+trực tiếp từ entry `src/bootstrap/main.k`; PowerShell không còn ghép source.
 Loader giữ source-map segment cho từng canonical path, vì vậy lexer, parser,
 semantic và import diagnostics đều báo `path:line:column` theo tệp gốc thay vì
 offset trong source tổng hợp. Bootstrap lexer phân biệt chuỗi chưa kết thúc và
@@ -808,18 +808,18 @@ extern fn k_boot_free(pointer: unit*);
 
 `var` parameter được hạ thành mutable borrow thực sự; thay đổi field qua parameter
 được quan sát tại caller. `sizeof(T)` trả `u64` và dùng LLVM target layout.
-`src/kbootstrap/list.k` cung cấp `List<T>` với factory
+`src/bootstrap/list.k` cung cấp `List<T>` với factory
 `List<T>.new(sizeof(T))` và các instance method `add`/`free` cho mọi danh sách
 tăng động của bootstrap. Kích thước phần tử được truyền tại điểm tạo list.
 Token, AST, type argument, bảng khai báo, module loader, source map và hàng đợi
 specialization đều dùng container này.
-`ByteBuffer` và `SymbolTable` vẫn ở `src/kbootstrap/containers.k` vì chúng có API
+`ByteBuffer` và `SymbolTable` vẫn ở `src/bootstrap/containers.k` vì chúng có API
 chuyên biệt cho byte và tra cứu theo key, không phải danh sách tuần tự thuần.
 
 # Bootstrap compiler status
 
 **Module/import self-hosting milestone: complete.** Bootstrap compilation starts
-from `src/kbootstrap/main.k`, resolves symbol and wildcard imports in K, loads
+from `src/bootstrap/main.k`, resolves symbol and wildcard imports in K, loads
 dependencies first, de-duplicates canonical paths (including cycles), enforces
 the depth-64 boundary, and maps dependency diagnostics back to original files.
 Acceptance covers diamond graphs, wildcard `mod.k`, cycles, missing modules,
@@ -846,7 +846,7 @@ IR hợp lệ và fixed-point `kc3.ll == kc4.ll`.
 `Enum.Variant`, truyền/trả enum, tag `u32`, và exhaustive enum `when` có
 diagnostic span/category parity đều được compiler K tự biên dịch qua `kc1`–`kc4`.
 
-The bootstrap subset lives in `src/kbootstrap/`; `manifest.txt` is an inventory
+The bootstrap subset lives in `src/bootstrap/`; `manifest.txt` is an inventory
 and the bootstrap-manifest test requires every listed K source to be reachable
 from `main.k` through imports. It currently supports the
 dependency-first module loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,

@@ -1,13 +1,13 @@
-module kbootstrap;
+module bootstrap;
 
-import kbootstrap.source.Source;
-import kbootstrap.token.Token;
-import kbootstrap.list.List;
-import kbootstrap.containers.ByteBuffer;
-import kbootstrap.lexer.lex;
-import kbootstrap.ast.AstNode;
-import kbootstrap.parser.parse;
-import kbootstrap.types.TypeValue;
-import kbootstrap.diagnostic.SemanticResult;
-import kbootstrap.semantic.analyze;
-import kbootstrap.llvm_text.emitModule;
+import bootstrap.source.Source;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.lexer.lex;
+import bootstrap.ast.AstNode;
+import bootstrap.parser.parse;
+import bootstrap.types.TypeValue;
+import bootstrap.diagnostic.SemanticResult;
+import bootstrap.semantic.analyze;
+import bootstrap.llvm_text.emitModule;

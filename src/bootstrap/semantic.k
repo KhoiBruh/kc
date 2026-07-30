@@ -1,6 +1,6 @@
-module kbootstrap.semantic;
+module bootstrap.semantic;
 
-import kbootstrap.*;
+import bootstrap.*;
 
 struct Semantic(
     source: Source,
