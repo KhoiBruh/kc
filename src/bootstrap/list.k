@@ -15,11 +15,11 @@ struct List<T>(data: T*, length: u64, capacity: u64, size: u64) {
         return index;
 	}
 
-	fn grow(var self) {
+ 	fn grow(var self) {
         val capacity = self.capacity * 2;
         val data = k_boot_alloc(capacity * self.size) as T*;
         for (i in 0..<self.length) data[i] = self.data[i];
-        self.free();
+        k_boot_free(self.data as unit*);
         self.data = data;
         self.capacity = capacity;
     }

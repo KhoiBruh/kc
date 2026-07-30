@@ -128,39 +128,41 @@ fn compileToLl(
 ): i32 {
     val source = Source(sourceData, sourceLength);
     val lexed = lex(source);
+    defer lexed.tokens.free();
     if (!lexed.ok) {
         printDiagnostic(
             source, sourceMap, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1
         );
-        lexed.tokens.free();
         return 2;
     }
+
     val parsed = parse(lexed.tokens);
+    defer parsed.nodes.free();
     if (!parsed.ok) {
         printDiagnostic(
             source, sourceMap, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1
 		);
-        parsed.nodes.free();
-        lexed.tokens.free();
         return 2;
     }
+
     var checked = analyze(source, parsed.nodes);
+    defer checked.genericArguments.free();
     if (!checked.ok) {
         printDiagnostic(
             source, sourceMap, checked.category,
             checked.start, checked.end
         );
-        checked.genericArguments.free();
-        parsed.nodes.free();
-        lexed.tokens.free();
         return 2;
     }
     var resolvedArguments = checked.genericArguments;
     val output = emitModule(source, parsed.nodes, resolvedArguments);
     checked.genericArguments = resolvedArguments;
+    defer output.free();
+
     var temporaryPath = ByteBuffer.new();
+    defer temporaryPath.free();
     appendRaw(temporaryPath, outputPath, outputPathLength);
     temporaryPath.add(46);
     temporaryPath.add(116);
@@ -173,11 +175,6 @@ fn compileToLl(
         temporaryPath.data, temporaryPath.length, output.data, output.length);
     if (!written) {
         compilerFailure(1);
-        temporaryPath.free();
-        output.free();
-        checked.genericArguments.free();
-        parsed.nodes.free();
-        lexed.tokens.free();
         return 1;
     }
     var verifyCommand = ByteBuffer.new();
@@ -188,11 +185,6 @@ fn compileToLl(
     appendQuoted(verifyCommand, temporaryPath.data, temporaryPath.length);
     val verified = k_boot_run(verifyCommand.data, verifyCommand.length);
     if (verified != 0) {
-        temporaryPath.free();
-        output.free();
-        checked.genericArguments.free();
-        parsed.nodes.free();
-        lexed.tokens.free();
         if (verified < 0) {
             compilerFailure(2);
             return 1;
@@ -201,11 +193,6 @@ fn compileToLl(
     }
     val published = k_boot_write_file(
         outputPath, outputPathLength, output.data, output.length);
-    temporaryPath.free();
-    output.free();
-    checked.genericArguments.free();
-    parsed.nodes.free();
-    lexed.tokens.free();
     if (published) return 0;
     compilerFailure(1);
     return 1;

@@ -805,7 +805,9 @@ private:
             return true;
         }
         if (const auto* deferStatement = std::get_if<DeferStmt>(&statement.node)) {
+            suppressMoves_ = true;
             analyzeStatement(*deferStatement->statement);
+            suppressMoves_ = false;
             return false;
         }
         const auto& expression = std::get<ExpressionStmt>(statement.node).expression;
@@ -2099,6 +2101,7 @@ private:
     }
 
     void markAsMoved(const Expr& expression) {
+        if (suppressMoves_) return;
         const auto typeIter = result_.expressionTypes.find(&expression);
         if (typeIter == result_.expressionTypes.end()) return;
         if (!isMoveOnlyType(typeIter->second)) return;
@@ -2138,6 +2141,7 @@ private:
     SemanticType currentReturn_;
     std::size_t loopDepth_ = 0;
     const Expr* postfixMutationRoot_ = nullptr;
+    bool suppressMoves_ = false;
     std::unordered_map<const FunctionDecl*, int> inferredReturnStates_;
 };
 
