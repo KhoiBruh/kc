@@ -2,7 +2,6 @@ module kbootstrap.parser;
 
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
-import kbootstrap.list.listAdd;
 import kbootstrap.list.listNew;
 import kbootstrap.ast.AstNode;
 import kbootstrap.containers.ByteBuffer;
@@ -41,10 +40,12 @@ fn parserAdd(
     subtreeStart: u64,
     aux: u32): u64 {
     var nodes = parser.nodes;
-    val index = listAdd<AstNode>(nodes,
+    val index = nodes.add(
         AstNode(
             kind, start, end, subtreeStart, aux,
-            0, 0, 0, 0, 0, 0, 0));
+            0, 0, 0, 0, 0, 0, 0
+		)
+    );
     parser.nodes = nodes;
     return index;
 }

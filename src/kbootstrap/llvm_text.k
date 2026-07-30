@@ -3701,7 +3701,7 @@ fn substituteEmitterType(
         val newStart = arguments.length;
         for (index in 0..<argumentCount) {
             var resolved = arguments;
-            listAdd<TypeValue>(resolved, substituted[index as u64]);
+            resolved.add(substituted[index as u64]);
             arguments = resolved;
         }
         k_boot_free(substituted as unit*);
@@ -4041,7 +4041,7 @@ fn emitSpecializedFunction(
                 val concreteStart = genericArguments.length;
                 for (genericIndex in 0..<genericCount) {
                     var resolved = genericArguments;
-                    listAdd<TypeValue>(resolved, substituted[genericIndex as u64]);
+                    resolved.add(substituted[genericIndex as u64]);
                     genericArguments = resolved;
                 }
                 k_boot_free(substituted as unit*);
@@ -4323,10 +4323,7 @@ fn emitModule(
                                 structureRoot, start as u64, count
                             )
                         ) {
-                            listAdd<StructSpecializationRequest>(
-                                structRequests,
-                                StructSpecializationRequest(
-                                    structureRoot, start as u64, count));
+							structRequests.add(StructSpecializationRequest(structureRoot, start as u64, count));
                         }
                     }
                 }
@@ -4340,7 +4337,7 @@ fn emitModule(
             buffer, source, nodes, genericArguments,
             request.structureRoot, request.argumentStart, request.argumentCount);
     }
-    listFree<StructSpecializationRequest>(structRequests);
+    structRequests.free();
     
     appendNewline(buffer);
     for (index in 0..<program.aux) {
@@ -4389,12 +4386,13 @@ fn emitModule(
                             call.genericArgumentCount
                         )
                     ) {
-                        listAdd<SpecializationRequest>(
-                            requests,
-                            SpecializationRequest(
-                                functionRoot,
-                                call.genericArgumentStart,
-                                call.genericArgumentCount));
+						requests.add(
+						    SpecializationRequest(
+						        functionRoot,
+						        call.genericArgumentStart,
+						        call.genericArgumentCount
+						    )
+						);
                     }
                 }
             }
@@ -4435,7 +4433,7 @@ fn emitModule(
                     val concreteStart = genericArguments.length;
                     for (nestedArgument in 0..<nestedCount) {
                         var resolved = genericArguments;
-                        listAdd<TypeValue>(resolved, substituted[nestedArgument as u64]);
+                        resolved.add(substituted[nestedArgument as u64]);
                         genericArguments = resolved;
                     }
                     k_boot_free(substituted as unit*);
@@ -4446,11 +4444,12 @@ fn emitModule(
                             nestedCount
                         )
                     ) {
-                        listAdd<SpecializationRequest>(
-                            requests,
-                            SpecializationRequest(
-                                nestedFunctionRoot, concreteStart,
-                                nestedCount));
+						requests.add(
+							SpecializationRequest(
+								nestedFunctionRoot, concreteStart,
+								nestedCount
+							)
+						);
                     }
                 }
             }
@@ -4465,7 +4464,7 @@ fn emitModule(
             request.functionRoot, request.argumentStart,
             request.argumentCount);
     }
-    listFree<SpecializationRequest>(requests);
+    requests.free();
     k_boot_free(roots as unit*);
     return buffer;
 }

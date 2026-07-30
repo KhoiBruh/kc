@@ -3,7 +3,6 @@ module kbootstrap.lexer;
 import kbootstrap.source.Source;
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
-import kbootstrap.list.listAdd;
 import kbootstrap.list.listNew;
 import kbootstrap.containers.ByteBuffer;
 
@@ -390,31 +389,31 @@ fn lex(source: Source): LexResult {
 	                        val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
 	                        if (pairKind == 0) {
 	                            offset++;
-	                            listAdd<Token>(tokens, Token(63, start, offset));
+	                            tokens.add(Token(63, start, offset));
 	                        } else {
 	                            offset = offset + 2;
-	                            listAdd<Token>(tokens, Token(pairKind, start, offset));
+	                            tokens.add(Token(pairKind, start, offset));
 	                        }
 	                    }
                     } else {
                         offset++;
-                        listAdd<Token>(tokens, Token(63, start, offset));
+                        tokens.add(Token(63, start, offset));
                     }
                 }
                 value == 34 -> {
                     val end = scanString(source, offset + 1);
                     if (end == offset + 1) return LexResult(tokens, false, start, 1);
                     offset = end;
-                    listAdd<Token>(tokens, Token(5, start, offset));
+                    tokens.add(Token(5, start, offset));
                 }
                 isIdentifierStart(value) -> {
                     offset = scanIdentifier(source, offset + 1);
-                    listAdd<Token>(tokens, Token(keywordKind(source, start, offset), start, offset));
+                    tokens.add(Token(keywordKind(source, start, offset), start, offset));
                 }
                 isDigit(value) -> {
                     val number = scanNumber(source, offset + 1);
                     offset = number.end;
-                    listAdd<Token>(tokens, Token(number.kind, start, offset));
+                    tokens.add(Token(number.kind, start, offset));
                 }
                 else -> {
                 	var kind = punctuationKind(value);
@@ -456,12 +455,12 @@ fn lex(source: Source): LexResult {
                 	}
                     if (kind == 0) return LexResult(tokens, false, start, 2);
                     offset++;
-                    listAdd<Token>(tokens, Token(kind, start, offset));
+                    tokens.add(Token(kind, start, offset));
                 }
             }
         }
     }
 
-    listAdd<Token>(tokens, Token(0, source.length, source.length));
+    tokens.add(Token(0, source.length, source.length));
     return LexResult(tokens, true, 0, 0);
 }

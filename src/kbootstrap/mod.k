@@ -3,8 +3,6 @@ module kbootstrap;
 import kbootstrap.source.Source;
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
-import kbootstrap.list.listAdd;
-import kbootstrap.list.listFree;
 import kbootstrap.list.listNew;
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.lexer.lex;

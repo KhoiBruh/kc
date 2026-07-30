@@ -3,8 +3,6 @@ module kbootstrap.loader;
 import kbootstrap.source.Source;
 import kbootstrap.token.Token;
 import kbootstrap.list.List;
-import kbootstrap.list.listAdd;
-import kbootstrap.list.listFree;
 import kbootstrap.list.listNew;
 import kbootstrap.containers.ByteBuffer;
 import kbootstrap.lexer.lex;
@@ -26,7 +24,7 @@ struct ModuleLoader(
 
 fn sourceMapFree(sourceMap: List<SourceMapSegment>) {
     for (i in 0..<sourceMap.length) k_boot_free(sourceMap.data[i].path as unit*);
-    listFree<SourceMapSegment>(sourceMap);
+    sourceMap.free();
 }
 
 fn loaderBytesEqual(a: u8*, aLength: u64, b: u8*, bLength: u64): bool {
@@ -280,7 +278,7 @@ fn loaderScanImports(
         var category: u32 = 4;
         if (lexed.errorKind == 1) category = 3;
         loaderReport(path, source, lexed.errorStart, category);
-        listFree<Token>(lexed.tokens);
+        lexed.tokens.free();
         return false;
     }
     val tokens = lexed.tokens;
@@ -288,7 +286,7 @@ fn loaderScanImports(
     if (tokens.data[current].kind == 25) {
         while (tokens.data[current].kind != 58) {
             if (tokens.data[current].kind == 0) {
-                listFree<Token>(tokens);
+                tokens.free();
                 return false;
             }
             current++;
@@ -318,7 +316,7 @@ fn loaderScanImports(
         val end = tokens.data[current].end;
         if (tokens.data[current].kind != 58) {
             loader.failureKind = 2;
-            listFree<Token>(tokens);
+            tokens.free();
             return false;
         }
         current++;
@@ -328,12 +326,12 @@ fn loaderScanImports(
                 start, end, depth + 1
             )
         ) {
-            listFree<Token>(tokens);
+            tokens.free();
             return false;
         }
     }
 
-    listFree<Token>(tokens);
+    tokens.free();
 
     return true;
 }
@@ -364,7 +362,7 @@ fn loaderLoadModule(
         return true;
     }
     var visited = loader.visited;
-    listAdd<LoadedPath>(visited, canonical);
+    visited.add(canonical);
     loader.visited = visited;
     var data = suppliedData;
     var length = suppliedLength;
@@ -385,7 +383,7 @@ fn loaderLoadModule(
         return false;
     }
     var modules = loader.modules;
-    listAdd<LoadedModule>(modules, LoadedModule(canonical, data, length));
+    modules.add(LoadedModule(canonical, data, length));
     loader.modules = modules;
     return true;
 }
@@ -414,8 +412,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     if (loaded) {
         for (i in 0..<loader.modules.length) {
             val loadedModule = loader.modules.data[i];
-            listAdd<SourceMapSegment>(
-                sourceMap,
+            sourceMap.add(
                 SourceMapSegment(
 	                loadedModule.path.data, loadedModule.path.length,
 	                combined.length, loadedModule.length
@@ -428,8 +425,8 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     }
     else for (i in 0..<loader.visited.length) k_boot_free(loader.visited.data[i].data as unit*);
 
-    listFree<LoadedModule>(loader.modules);
-    listFree<LoadedPath>(loader.visited);
+    loader.modules.free();
+    loader.visited.free();
     k_boot_free(loader.workingDirectory.data as unit*);
     loader.entryDirectory.free();
 

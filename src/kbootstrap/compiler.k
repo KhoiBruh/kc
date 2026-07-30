@@ -133,7 +133,7 @@ fn compileToLl(
             source, sourceMap, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1
         );
-        listFree<Token>(lexed.tokens);
+        lexed.tokens.free();
         return 2;
     }
     val parsed = parse(lexed.tokens);
@@ -142,8 +142,8 @@ fn compileToLl(
             source, sourceMap, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1
 		);
-        listFree<AstNode>(parsed.nodes);
-        listFree<Token>(lexed.tokens);
+        parsed.nodes.free();
+        lexed.tokens.free();
         return 2;
     }
     var checked = analyze(source, parsed.nodes);
@@ -152,9 +152,9 @@ fn compileToLl(
             source, sourceMap, checked.category,
             checked.start, checked.end
         );
-        listFree<TypeValue>(checked.genericArguments);
-        listFree<AstNode>(parsed.nodes);
-        listFree<Token>(lexed.tokens);
+        checked.genericArguments.free();
+        parsed.nodes.free();
+        lexed.tokens.free();
         return 2;
     }
     var resolvedArguments = checked.genericArguments;
@@ -175,9 +175,9 @@ fn compileToLl(
         compilerFailure(1);
         temporaryPath.free();
         output.free();
-        listFree<TypeValue>(checked.genericArguments);
-        listFree<AstNode>(parsed.nodes);
-        listFree<Token>(lexed.tokens);
+        checked.genericArguments.free();
+        parsed.nodes.free();
+        lexed.tokens.free();
         return 1;
     }
     var verifyCommand = byteBufferNew();
@@ -191,9 +191,9 @@ fn compileToLl(
     if (verified != 0) {
         temporaryPath.free();
         output.free();
-        listFree<TypeValue>(checked.genericArguments);
-        listFree<AstNode>(parsed.nodes);
-        listFree<Token>(lexed.tokens);
+        checked.genericArguments.free();
+        parsed.nodes.free();
+        lexed.tokens.free();
         if (verified < 0) {
             compilerFailure(2);
             return 1;
@@ -204,9 +204,9 @@ fn compileToLl(
         outputPath, outputPathLength, output.data, output.length);
     temporaryPath.free();
     output.free();
-    listFree<TypeValue>(checked.genericArguments);
-    listFree<AstNode>(parsed.nodes);
-    listFree<Token>(lexed.tokens);
+    checked.genericArguments.free();
+    parsed.nodes.free();
+    lexed.tokens.free();
     if (published) return 0;
     compilerFailure(1);
     return 1;
