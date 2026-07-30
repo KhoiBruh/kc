@@ -8,6 +8,7 @@ struct Argument(data: u8*, length: u64, ok: bool)
 
 fn mainError(kind: u32) {
     var message = ByteBuffer.new();
+    defer message.free();
     message.add(101); message.add(114);
     message.add(114); message.add(111);
     message.add(114); message.add(58);
@@ -38,11 +39,11 @@ fn mainError(kind: u32) {
 
     message.add(10);
     k_boot_stderr(message.data, message.length);
-    message.free();
 }
 
 fn mainPathError(kind: u32) {
     var message = ByteBuffer.new();
+    defer message.free();
     message.add(101); message.add(114);
     message.add(114); message.add(111);
     message.add(114); message.add(58);
@@ -81,7 +82,6 @@ fn mainPathError(kind: u32) {
     }
     message.add(10);
     k_boot_stderr(message.data, message.length);
-    message.free();
 }
 
 fn hasKExtension(argument: Argument): bool {

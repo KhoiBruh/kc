@@ -46,6 +46,7 @@ fn loaderAppend(var buffer: ByteBuffer, data: u8*, length: u64) {
 
 fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
     var digits = ByteBuffer.new();
+    defer digits.free();
     var current = value;
     if (current == 0) digits.add(48);
     while (current > 0) {
@@ -53,7 +54,6 @@ fn loaderAppendNumber(var buffer: ByteBuffer, value: u64) {
         current /= 10;
     }
     for (i in digits.length>..0) buffer.add(digits.data[i]);
-    digits.free();
 }
 
 fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
@@ -67,6 +67,7 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
         else column++;
     }
     var message = ByteBuffer.new();
+    defer message.free();
     loaderAppend(message, path.data, path.length);
     message.add(58); loaderAppendNumber(message, line);
     message.add(58); loaderAppendNumber(message, column);
@@ -142,7 +143,6 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
     
     message.add(10);
     k_boot_stderr(message.data, message.length);
-    message.free();
 }
 
 fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
@@ -221,9 +221,12 @@ fn loaderResolveImport(
         }
     }
     val relative = loaderRelative(source, tokens, first, partCount, wildcard);
+    defer relative.free();
     val currentDirectory = loaderDirectory(currentPath.data, currentPath.length);
+    defer currentDirectory.free();
     for (i in 0..<3) {
         var candidate = ByteBuffer.new();
+        defer candidate.free();
         candidate = when (i) {
             0 -> loaderCandidate(
 				loader.workingDirectory.data,
@@ -251,17 +254,12 @@ fn loaderResolveImport(
                 loader, candidate.data, candidate.length, depth,
                 data, length, true
             );
-            candidate.free();
-            currentDirectory.free();
-            relative.free();
+
             return loaded;
         }
         k_boot_free(placeholder);
-        candidate.free();
     }
 
-    currentDirectory.free();
-    relative.free();
     loaderReport(currentPath, source, start, 1);
 
     return false;
@@ -272,20 +270,20 @@ fn loaderScanImports(
     source: Source, depth: u64
 ): bool {
     val lexed = lex(source);
+    defer lexed.tokens.free();
     if (!lexed.ok) {
         loader.failureKind = 2;
         var category: u32 = 4;
         if (lexed.errorKind == 1) category = 3;
         loaderReport(path, source, lexed.errorStart, category);
-        lexed.tokens.free();
         return false;
     }
     val tokens = lexed.tokens;
+    defer tokens.free();
     var current: u64 = 0;
     if (tokens.data[current].kind == 25) {
         while (tokens.data[current].kind != 58) {
             if (tokens.data[current].kind == 0) {
-                tokens.free();
                 return false;
             }
             current++;
@@ -315,7 +313,6 @@ fn loaderScanImports(
         val end = tokens.data[current].end;
         if (tokens.data[current].kind != 58) {
             loader.failureKind = 2;
-            tokens.free();
             return false;
         }
         current++;
@@ -325,12 +322,9 @@ fn loaderScanImports(
                 start, end, depth + 1
             )
         ) {
-            tokens.free();
             return false;
         }
     }
-
-    tokens.free();
 
     return true;
 }
@@ -406,7 +400,9 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
         workingData, 0, false
     );
     var combined = ByteBuffer.new();
+    defer combined.free();
     var sourceMap = List<SourceMapSegment>.new();
+    defer sourceMapFree(sourceMap);
 
     if (loaded) {
         for (i in 0..<loader.modules.length) {
@@ -430,8 +426,6 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     loader.entryDirectory.free();
 
     if (!loaded) {
-        combined.free();
-        sourceMapFree(sourceMap);
         return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, loader.failureKind);
     }
 

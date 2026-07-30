@@ -77,6 +77,8 @@ fn appendEmitLlFlag(var buffer: ByteBuffer) {
 
 fn compilerFailure(kind: u32) {
     var message = ByteBuffer.new();
+    defer message.free();
+
     message.add(101); message.add(114);
     message.add(114); message.add(111);
     message.add(114); message.add(58);
@@ -114,13 +116,12 @@ fn compilerFailure(kind: u32) {
     }
     message.add(10);
     k_boot_stderr(message.data, message.length);
-    message.free();
 }
 
 fn compileToLl(
     sourceData: u8*,
     sourceLength: u64,
-    sourceMap: List<SourceMapSegment>,
+    val sourceMap: List<SourceMapSegment>,
     outputPath: u8*,
     outputPathLength: u64,
     optPath: u8*,
@@ -206,6 +207,7 @@ fn linkLl(
     executablePath: u8*, executablePathLength: u64
 ): i32 {
     var command = ByteBuffer.new();
+    defer command.free();
     appendQuoted(command, clangPath, clangPathLength);
     command.add(32);
     appendQuoted(command, llPath, llPathLength);
@@ -216,7 +218,6 @@ fn linkLl(
     appendOutputFlag(command);
     appendQuoted(command, executablePath, executablePathLength);
     val result = k_boot_run(command.data, command.length);
-    command.free();
     if (result == 0) return 0;
     if (result < 0) { 
         compilerFailure(3); 
@@ -433,10 +434,11 @@ fn appendErrorMessage(var buffer: ByteBuffer, category: u32) {
 }
 
 fn printDiagnostic(
-    source: Source, sourceMap: List<SourceMapSegment>,
+    source: Source, val sourceMap: List<SourceMapSegment>,
     category: u32, start: u64, end: u64
 ) {
     var buf = ByteBuffer.new();
+    defer buf.free();
     var sourceStart: u64 = 0;
     for (i in 0..<sourceMap.length) {
         val segment = sourceMap.data[i];
@@ -450,12 +452,12 @@ fn printDiagnostic(
     }
     
     val lineNum = stderrNumber(findLine(source, sourceStart, start));
+    defer lineNum.free();
     appendRaw(buf, lineNum.data, lineNum.length);
-    lineNum.free();
     buf.add(58);
     val colNum = stderrNumber(findColumn(source, sourceStart, start));
+    defer colNum.free();
     appendRaw(buf, colNum.data, colNum.length);
-    colNum.free();
     buf.add(58);
     buf.add(32);
     buf.add(101);
@@ -468,5 +470,4 @@ fn printDiagnostic(
     appendErrorMessage(buf, category);
     buf.add(10);
     k_boot_stderr(buf.data, buf.length);
-    buf.free();
 }

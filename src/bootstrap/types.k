@@ -53,7 +53,7 @@ fn integerImplicitlyWidens(source: TypeValue, target: TypeValue): bool {
     return true;
 }
 
-fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: List<TypeValue>): bool {
+fn typeEquals(left: TypeValue, right: TypeValue, val genericArguments: List<TypeValue>): bool {
     if (left.kind != right.kind) return false;
     if (left.name != right.name) return false;
     if (left.kind == 8) {
@@ -75,7 +75,7 @@ fn typeEquals(left: TypeValue, right: TypeValue, genericArguments: List<TypeValu
     return left.pointee == right.pointee;
 }
 
-fn typeAccepts(expected: TypeValue, actual: TypeValue, genericArguments: List<TypeValue>): bool {
+fn typeAccepts(expected: TypeValue, actual: TypeValue, val genericArguments: List<TypeValue>): bool {
     if (typeEquals(expected, actual, genericArguments)) return true;
     if (integerImplicitlyWidens(actual, expected)) return true;
     if (expected.kind == 15) {
@@ -116,20 +116,20 @@ fn primitiveType(tokenKind: u32) => when (tokenKind) {
 };
 
 struct LocalInfo(name: u64, valueType: TypeValue, mutable: bool, storage: u64)
-fn localFind(locals: List<LocalInfo>, name: u64): u64 {
+fn localFind(val locals: List<LocalInfo>, name: u64): u64 {
     for (index in locals.length>..0)
         if (locals.data[index].name == name) return index;
     return locals.length;
 }
 
-fn localFindFrom(locals: List<LocalInfo>, name: u64, start: u64): u64 {
+fn localFindFrom(val locals: List<LocalInfo>, name: u64, start: u64): u64 {
     for (index in locals.length>..start)
         if (locals.data[index].name == name) return index;
     return locals.length;
 }
 
 struct DeclarationInfo(name: u64, node: u64)
-fn declarationFind(declarations: List<DeclarationInfo>, name: u64): u64 {
+fn declarationFind(val declarations: List<DeclarationInfo>, name: u64): u64 {
     for (index in 0..<declarations.length)
         if (declarations.data[index].name == name) return index;
     return declarations.length;

@@ -514,6 +514,7 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
 
 fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, root: u64) {
     var decoded = decodeStringLiteral(source, node);
+    decoded.free();
     buffer.add(64); buffer.add(46); buffer.add(107);
     buffer.add(115); appendDecimal(buffer, root);
     appendPrivateStringPrefix(buffer);
@@ -521,7 +522,6 @@ fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, roo
     appendStringArrayPrefix(buffer);
     for (index in 0..<decoded.length) appendEscapedByte(buffer, decoded.data[index]);
     appendStringTerminator(buffer);
-    decoded.free();
 }
 
 fn appendPanicDeclaration(var buffer: ByteBuffer) {
@@ -937,7 +937,7 @@ fn appendType(
     }
 }
 
-fn appendNodeType(var buffer: ByteBuffer, genericArguments: List<TypeValue>, node: AstNode) {
+fn appendNodeType(var buffer: ByteBuffer, val genericArguments: List<TypeValue>, node: AstNode) {
     appendType(
         buffer, genericArguments, node.typeKind, node.typeName, node.typePointee);
 }
@@ -1037,7 +1037,7 @@ fn appendSpecializationSuffix(
     }
 }
 
-fn declarationRoots(nodes: List<AstNode>): u64* {
+fn declarationRoots(val nodes: List<AstNode>): u64* {
     val programRoot = nodes.length - 1;
     val program = nodes.data[programRoot];
     val roots =
@@ -1051,7 +1051,7 @@ fn declarationRoots(nodes: List<AstNode>): u64* {
 }
 
 fn structRootByName(
-    source: Source, nodes: List<AstNode>, name: u64): u64 {
+    source: Source, val nodes: List<AstNode>, name: u64): u64 {
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
     var found = nodes.length;
@@ -1070,7 +1070,7 @@ fn structRootByName(
 }
 
 fn functionRootByName(
-    source: Source, nodes: List<AstNode>, name: u64): u64 {
+    source: Source, val nodes: List<AstNode>, name: u64): u64 {
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
     var found = nodes.length;
@@ -1094,7 +1094,7 @@ fn emitterStructFieldCount(structure: AstNode) => structure.aux % 65536;
 
 fn emitterStructMethodCount(structure: AstNode) => structure.storage;
 
-fn emitterRootBeforeStructMethods(nodes: List<AstNode>, structureRoot: u64): u64 {
+fn emitterRootBeforeStructMethods(val nodes: List<AstNode>, structureRoot: u64): u64 {
     var root = structureRoot - 1;
     val remaining = emitterStructMethodCount(nodes.data[structureRoot]);
     for (method in 0..<remaining) {
@@ -1104,7 +1104,7 @@ fn emitterRootBeforeStructMethods(nodes: List<AstNode>, structureRoot: u64): u64
 }
 
 fn emitterAssociatedOwnerStructRoot(
-    nodes: List<AstNode>, functionRoot: u64): u64 {
+    val nodes: List<AstNode>, functionRoot: u64): u64 {
     if (nodes.data[functionRoot].conversionKind != 2) return nodes.length;
     val program = nodes.data[nodes.length - 1];
     val roots = declarationRoots(nodes);
@@ -1126,7 +1126,7 @@ fn emitterAssociatedOwnerStructRoot(
 }
 
 fn emitterStructTypeParameterRoot(
-    source: Source, nodes: List<AstNode>, structureRoot: u64, position: u32): u64 {
+    source: Source, val nodes: List<AstNode>, structureRoot: u64, position: u32): u64 {
     val structure = nodes.data[structureRoot];
     var root = emitterRootBeforeStructMethods(nodes, structureRoot);
     val fields = emitterStructFieldCount(structure);
@@ -1141,7 +1141,7 @@ fn emitterStructTypeParameterRoot(
 }
 
 fn emitterStructTypeParameterPosition(
-    source: Source, nodes: List<AstNode>, structureRoot: u64, name: u64): u32 {
+    source: Source, val nodes: List<AstNode>, structureRoot: u64, name: u64): u32 {
     val count = emitterStructTypeParameterCount(
         nodes.data[structureRoot]);
     for (position in 0..<count) {
@@ -1157,7 +1157,7 @@ fn emitterStructTypeParameterPosition(
 }
 
 fn substituteStructEmitterType(
-    source: Source, nodes: List<AstNode>, structureRoot: u64,
+    source: Source, val nodes: List<AstNode>, structureRoot: u64,
     pattern: TypeValue, arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
     if (pattern.kind == 14) {
@@ -1545,7 +1545,7 @@ fn appendComparison(
     }
 }
 
-fn expressionChildBefore(nodes: List<AstNode>, root: u64) =>
+fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
     nodes.data[root].subtreeStart - 1;
 
 fn emitAddress(
@@ -1677,6 +1677,7 @@ fn emitExpression(
         }
         if (node.typeKind == 10) {
             var decoded = decodeStringLiteral(source, node);
+            defer decoded.free();
             var temporary = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
             appendStringInsertPointer(buffer);
@@ -1692,7 +1693,6 @@ fn emitExpression(
             appendSpacedStringType(buffer);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
             appendStringCapacity(buffer);
-            decoded.free();
             return IrValue(2, 0, 0, temporary, 10, 0, 0);
         }
         return IrValue(
@@ -1735,6 +1735,7 @@ fn emitExpression(
             }
         }
         var thenDefers = List<u64>.new();
+        defer thenDefers.free();
         for (index in 0..<thenCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
@@ -1746,7 +1747,6 @@ fn emitExpression(
             buffer, source, nodes, genericArguments,
             counter, thenDefers, thenDefers.length, 0);
         val thenValueBlock = counter.currentBlock;
-        thenDefers.free();
         appendBranch(buffer, mergeBlock);
         appendBlockLabel(buffer, counter, elseBlock);
         for (index in 0..<elseCount) {
@@ -1765,11 +1765,11 @@ fn emitExpression(
         }
         val elseValue = emitExpression(
             buffer, source, nodes, genericArguments, elseValueRoot, counter);
+        defer elseDefer.free();
         emitDeferRange(
             buffer, source, nodes, genericArguments,
             counter, elseDefers, elseDefers.length, 0);
         val elseValueBlock = counter.currentBlock;
-        elseDefers.free();
         appendBranch(buffer, mergeBlock);
         appendBlockLabel(buffer, counter, mergeBlock);
         val temporary = nextTemporary(counter);
@@ -1879,6 +1879,7 @@ fn emitExpression(
             }
             appendBlockLabel(buffer, counter, bodyBlock);
             var branchDefers = List<u64>.new();
+            defer branchDefers.free();
             for (statementIndex in 0..<statementCount) {
                 emitStatement(
                     buffer, source, nodes, genericArguments,
@@ -1890,7 +1891,6 @@ fn emitExpression(
                 buffer, source, nodes, genericArguments,
                 counter, branchDefers, branchDefers.length, 0);
             blocks[index as u64] = counter.currentBlock;
-            branchDefers.free();
             appendBranch(buffer, mergeBlock);
             if (branch.aux % 2 == 0) {
                 appendBlockLabel(buffer, counter, nextBlockValue);
@@ -2957,7 +2957,7 @@ fn emitExpression(
     return IrValue(0, 0, 0, 0, 0, 0, 0);
 }
 
-fn blockStatementRoots(nodes: List<AstNode>, blockRoot: u64): u64* {
+fn blockStatementRoots(val nodes: List<AstNode>, blockRoot: u64): u64* {
     val block = nodes.data[blockRoot];
     val roots =
         k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
@@ -3745,7 +3745,7 @@ fn parameterRoot(
     return root;
 }
 
-fn returnTypeRoot(nodes: List<AstNode>, functionRoot: u64): u64 {
+fn returnTypeRoot(val nodes: List<AstNode>, functionRoot: u64): u64 {
     if (functionIsExtern(nodes.data[functionRoot])) {
         return functionRoot - 1;
     }
@@ -4104,11 +4104,11 @@ fn emitFunction(
     val blockRoot = functionRoot - 1;
     emitBlockAllocas(buffer, genericArguments, nodes, blockRoot);
     var defers = List<u64>.new();
+    defer defers.free();
     val terminated =
         emitBlock(
             buffer, source, nodes, genericArguments,
             blockRoot, counter, defers);
-    defers.free();
     if (!terminated) {
         var returnsUnit = returnType.typeKind == 1;
         if (returnType.kind == 1 && returnType.aux == 49) returnsUnit = true;
@@ -4192,7 +4192,7 @@ fn emitSpecializedFunction(
     k_boot_free(saved as unit*);
 }
 
-fn callCalleeRoot(nodes: List<AstNode>, callRoot: u64): u64 {
+fn callCalleeRoot(val nodes: List<AstNode>, callRoot: u64): u64 {
     val call = nodes.data[callRoot];
     var cursor = callRoot - 1;
     val argumentCount = call.aux % 65536;
@@ -4206,7 +4206,7 @@ fn callCalleeRoot(nodes: List<AstNode>, callRoot: u64): u64 {
     return cursor;
 }
 
-fn firstStatementRoot(nodes: List<AstNode>, blockRoot: u64): u64 {
+fn firstStatementRoot(val nodes: List<AstNode>, blockRoot: u64): u64 {
     val block = nodes.data[blockRoot];
     var roots =
         k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
@@ -4411,7 +4411,7 @@ fn callArgumentsAreConcrete(
 }
 
 fn emitModule(
-    source: Source, nodes: List<AstNode>,
+    source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>): ByteBuffer {
     var buffer = ByteBuffer.new();
     appendModuleHeader(buffer);
@@ -4441,6 +4441,7 @@ fn emitModule(
     }
     
     var structRequests = List<StructSpecializationRequest>.new();
+    defer structRequests.free();
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
         if (node.typeKind == 8) {
@@ -4470,7 +4471,6 @@ fn emitModule(
             buffer, source, nodes, genericArguments,
             request.structureRoot, request.argumentStart, request.argumentCount);
     }
-    structRequests.free();
     
     appendNewline(buffer);
     for (index in 0..<program.aux) {
@@ -4498,6 +4498,7 @@ fn emitModule(
         }
     }
     var requests = List<SpecializationRequest>.new();
+    defer requests.free();
     for (callIndex in 0..<nodes.length) {
         val call = nodes.data[callIndex];
         if (call.kind == 16) {
@@ -4597,7 +4598,6 @@ fn emitModule(
             request.functionRoot, request.argumentStart,
             request.argumentCount);
     }
-    requests.free();
     k_boot_free(roots as unit*);
     return buffer;
 }
