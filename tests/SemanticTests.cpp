@@ -832,7 +832,7 @@ TEST(semantic_move_only_rejects_use_after_assignment_move) {
         "}"};
     EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
     EXPECT_EQ(fixture.semantic.diagnostics[0].message,
-              "use of moved value 'a'");
+              "use of moved value 'a' of type 'Resource'");
 }
 
 TEST(semantic_move_only_rejects_use_after_owned_parameter_move) {
@@ -846,7 +846,7 @@ TEST(semantic_move_only_rejects_use_after_owned_parameter_move) {
         "}"};
     EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
     EXPECT_EQ(fixture.semantic.diagnostics[0].message,
-              "use of moved value 'a'");
+              "use of moved value 'a' of type 'Resource'");
 }
 
 TEST(semantic_move_only_allows_move_from_val_binding) {
@@ -884,7 +884,7 @@ TEST(semantic_move_only_rejects_use_after_return_move) {
         "}"};
     EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
     EXPECT_EQ(fixture.semantic.diagnostics[0].message,
-              "use of moved value 'r'");
+              "use of moved value 'r' of type 'Resource'");
 }
 
 TEST(semantic_non_move_only_types_are_not_affected) {
@@ -904,6 +904,230 @@ TEST(semantic_struct_without_free_is_not_move_only) {
         "var a = Point(1, 2);"
         "var b = a;"
         "var c = a;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_rejects_use_after_field_move) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "struct Container(value: Resource)"
+        "fn main() {"
+        "var c = Container(Resource(1));"
+        "var r = c.value;"
+        "var r2 = c.value;"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'c' of type 'Container'");
+}
+
+TEST(semantic_move_only_allows_field_move_then_reuse_struct) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "struct Container(value: Resource)"
+        "fn main() {"
+        "var c = Container(Resource(1));"
+        "var r = c.value;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_field_move_through_owned_parameter) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "struct Container(value: Resource)"
+        "fn consume(r: Resource) {}"
+        "fn main() {"
+        "var c = Container(Resource(1));"
+        "consume(c.value);"
+        "consume(c.value);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'c' of type 'Container'");
+}
+
+TEST(semantic_move_only_field_move_is_not_triggered_for_non_move_only_fields) {
+    SemanticFixture fixture{
+        "struct Pair(first: i32, second: i32) {}"
+        "fn main() {"
+        "var p = Pair(1, 2);"
+        "var a = p.first;"
+        "var b = p.second;"
+        "var c = p.first;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_nested_field_move_marks_root) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "struct Inner(payload: Resource)"
+        "struct Outer(inner: Inner)"
+        "fn main() {"
+        "var o = Outer(Inner(Resource(1)));"
+        "var r = o.inner.payload;"
+        "var r2 = o.inner.payload;"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'o' of type 'Outer'");
+}
+
+TEST(semantic_move_only_if_moved_in_then_not_else_marks_moved_after) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main(val cond: bool) {"
+        "var a = Resource(1);"
+        "if (cond) { consume(a); } else { }"
+        "consume(a);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a' of type 'Resource'");
+}
+
+TEST(semantic_move_only_if_moved_in_both_branches_marks_moved_after) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main(val cond: bool) {"
+        "var a = Resource(1);"
+        "if (cond) { consume(a); } else { consume(a); }"
+        "consume(a);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a' of type 'Resource'");
+}
+
+TEST(semantic_move_only_if_not_moved_in_either_branch_stays_valid) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main(val cond: bool) {"
+        "var a = Resource(1);"
+        "if (cond) { } else { }"
+        "consume(a);"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_if_without_else_moved_in_then_marks_moved_after) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main(val cond: bool) {"
+        "var a = Resource(1);"
+        "if (cond) { consume(a); }"
+        "consume(a);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a' of type 'Resource'");
+}
+
+TEST(semantic_move_only_when_moved_in_one_branch_marks_moved_after) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main() {"
+        "var a = Resource(1);"
+        "when (true) { true -> consume(a); else -> {} }"
+        "consume(a);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a' of type 'Resource'");
+}
+
+TEST(semantic_move_only_when_not_moved_in_any_branch_stays_valid) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main() {"
+        "var a = Resource(1);"
+        "when (true) { true -> {} else -> {} }"
+        "consume(a);"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_nested_if_else_merge_works_correctly) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main(val x: bool, val y: bool) {"
+        "var a = Resource(1);"
+        "if (x) {"
+        "if (y) { consume(a); } else { }"
+        "} else { }"
+        "consume(a);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a' of type 'Resource'");
+}
+
+TEST(semantic_move_only_owned_self_method_moves_receiver) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main() {"
+        "var a = Resource(1);"
+        "a.free();"
+        "var b = a;"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a' of type 'Resource'");
+}
+
+TEST(semantic_move_only_copy_method_does_not_move_receiver) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) {"
+        "fn free(self) {}"
+        "fn copy(val self): Resource => Resource(self.id);"
+        "}"
+        "fn main() {"
+        "var a = Resource(1);"
+        "var b = a.copy();"
+        "var c = a;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_rejects_overwrite_without_free) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main() {"
+        "var a = Resource(1);"
+        "a = Resource(2);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "assigning to 'a' discards a value of type 'Resource' that requires explicit free");
+}
+
+TEST(semantic_move_only_allows_overwrite_after_free) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main() {"
+        "var a = Resource(1);"
+        "a.free();"
+        "a = Resource(2);"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_allows_overwrite_after_move) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main() {"
+        "var a = Resource(1);"
+        "var b = a;"
+        "a = Resource(2);"
         "}"};
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }

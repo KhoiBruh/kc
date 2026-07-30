@@ -65,6 +65,7 @@ struct VariableSymbol {
     SemanticType type;
     bool mutableBinding;
     bool moved = false;
+    std::optional<SourceSpan> movedAt;
 };
 
 class Analysis {
@@ -623,9 +624,16 @@ private:
             const auto condition = analyzeExpr(*ifStatement->condition);
             if (condition.kind != SemanticTypeKind::Bool)
                 diagnose("if condition must be bool", ifStatement->condition->span);
+            auto preState = captureMovedState();
             const bool thenTerminates = analyzeBlock(*ifStatement->thenBranch, true);
-            const bool elseTerminates = ifStatement->elseBranch &&
-                analyzeBlock(*ifStatement->elseBranch, true);
+            auto thenState = captureMovedState();
+            restoreMovedState(preState);
+            bool elseTerminates = false;
+            if (ifStatement->elseBranch) {
+                elseTerminates = analyzeBlock(*ifStatement->elseBranch, true);
+            }
+            auto elseState = captureMovedState();
+            mergeMovedState(thenState, elseState);
             return thenTerminates && elseTerminates;
         }
         if (const auto* whileStatement = std::get_if<WhileStmt>(&statement.node)) {
@@ -693,7 +701,10 @@ private:
             bool allTerminate = !whenStatement->branches.empty();
             bool hasElse = false;
             std::vector<const Expr*> patterns;
+            auto preState = captureMovedState();
+            std::optional<std::unordered_map<std::string, bool>> mergedState;
             for (const auto& branch : whenStatement->branches) {
+                restoreMovedState(preState);
                 if (!branch.conditions.empty()) {
                     for (const auto& pattern : branch.conditions) {
                     const auto condition = analyzeExpr(*pattern, subject);
@@ -712,6 +723,11 @@ private:
                     hasElse = true;
                 }
                 allTerminate = analyzeBlock(*branch.body, true) && allTerminate;
+                auto branchState = captureMovedState();
+                if (!mergedState)
+                    mergedState = std::move(branchState);
+                else
+                    mergeMovedState(*mergedState, branchState);
             }
             const bool exhaustive =
                 subject && enumWhenExhaustive(*subject, patterns, hasElse,
@@ -807,8 +823,11 @@ private:
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
             if (const auto* variable = findVariable(name)) {
-                if (variable->moved)
-                    diagnose("use of moved value '" + name + "'", identifier->name);
+                if (variable->moved) {
+                    auto msg = "use of moved value '" + name + "' of type '" +
+                              semanticTypeName(variable->type) + "'";
+                    diagnose(msg, identifier->name);
+                }
                 type = variable->type;
             }
             else if (const auto constant = result_.constants.find(name);
@@ -1495,6 +1514,10 @@ private:
                 ParameterMode::MutableBorrow &&
             !isMutableTarget(*member.object))
             diagnose("var self requires a mutable receiver", member.object->span);
+        if (!symbol.declaration->parameters.empty() &&
+            symbol.declaration->parameters.front().mode ==
+                ParameterMode::Owned)
+            markAsMoved(*member.object);
         for (std::size_t i = 0; i < call.arguments.size(); ++i) {
             const auto expected = i + 1 < parameterTypes.size()
                 ? std::optional<SemanticType>{parameterTypes[i + 1]}
@@ -1778,8 +1801,13 @@ private:
         if (assignment.op == TokenKind::Equal) {
             if (!compatible(variable->type, value))
                 diagnose("assigned value has the wrong type", assignment.value->span);
-            else
+            else {
+                if (!variable->moved && isMoveOnlyType(variable->type))
+                    diagnose("assigning to '" + name + "' discards a value of type '" +
+                            semanticTypeName(variable->type) + "' that requires explicit free",
+                            assignment.target->span);
                 markAsMoved(*assignment.value);
+            }
         } else {
             const auto combined = promote(variable->type, value, span);
             if (!(combined == variable->type))
@@ -2026,6 +2054,34 @@ private:
         result_.diagnostics.push_back({std::move(message), span});
     }
 
+    std::unordered_map<std::string, bool> captureMovedState() const {
+        std::unordered_map<std::string, bool> snapshot;
+        for (const auto& scope : scopes_)
+            for (const auto& [name, symbol] : scope)
+                snapshot[name] = symbol.moved;
+        return snapshot;
+    }
+
+    void restoreMovedState(
+        const std::unordered_map<std::string, bool>& snapshot) {
+        for (auto& scope : scopes_)
+            for (auto& [name, symbol] : scope)
+                if (const auto it = snapshot.find(name); it != snapshot.end())
+                    symbol.moved = it->second;
+    }
+
+    void mergeMovedState(
+        const std::unordered_map<std::string, bool>& left,
+        const std::unordered_map<std::string, bool>& right) {
+        for (auto& scope : scopes_)
+            for (auto& [name, symbol] : scope) {
+                const auto inLeft = left.find(name);
+                const auto inRight = right.find(name);
+                symbol.moved = (inLeft != left.end() && inLeft->second) ||
+                              (inRight != right.end() && inRight->second);
+            }
+    }
+
     bool isMoveOnlyType(const SemanticType& type) const {
         if (type.kind == SemanticTypeKind::String) return true;
         if (type.kind == SemanticTypeKind::Struct) {
@@ -2043,11 +2099,30 @@ private:
     }
 
     void markAsMoved(const Expr& expression) {
+        const auto typeIter = result_.expressionTypes.find(&expression);
+        if (typeIter == result_.expressionTypes.end()) return;
+        if (!isMoveOnlyType(typeIter->second)) return;
+
+        if (const auto* member = std::get_if<MemberExpr>(&expression.node)) {
+            const Expr* root = member->object.get();
+            while (const auto* inner = std::get_if<MemberExpr>(&root->node))
+                root = inner->object.get();
+            if (const auto* identifier = std::get_if<IdentifierExpr>(&root->node)) {
+                const auto name = spelling(source_, identifier->name);
+                auto* variable = findVariable(name);
+                if (variable && !variable->moved) {
+                    variable->moved = true;
+                    variable->movedAt = expression.span;
+                }
+            }
+            return;
+        }
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
             auto* variable = findVariable(name);
-            if (variable && !variable->moved && isMoveOnlyType(variable->type)) {
+            if (variable && !variable->moved) {
                 variable->moved = true;
+                variable->movedAt = expression.span;
             }
         }
     }
