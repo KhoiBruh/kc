@@ -472,6 +472,26 @@ TEST(codegen_monomorphizes_generic_struct_methods) {
     EXPECT_TRUE(ir.find("type { i32, i1 }") != std::string::npos);
 }
 
+TEST(codegen_lowers_associated_factories) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Counter(value: i32) {"
+        "fn new(value: i32): Counter => Counter(value);"
+        "}"
+        "struct Box<T>(value: T) {"
+        "fn new(value: T): Box<T> => Box<T>(value);"
+        "}"
+        "fn main(): i32 {"
+        "val counter = Counter.new(1);"
+        "val box = Box<i32>.new(41);"
+        "return counter.value + box.value;"
+        "}",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("Counter.new") != std::string::npos);
+    EXPECT_TRUE(ir.find("Box.new__g") != std::string::npos);
+}
+
 TEST(codegen_lowers_integer_range_membership) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

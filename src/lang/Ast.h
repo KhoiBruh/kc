@@ -159,6 +159,7 @@ struct FunctionDecl {
     bool isExpressionBody = false;
     bool infersReturnType = false;
     std::optional<SourceSpan> ownerStruct;
+    bool isAssociated = false;
 };
 
 struct StructDecl {

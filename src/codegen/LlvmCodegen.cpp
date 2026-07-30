@@ -1178,15 +1178,18 @@ private:
                 if (!target) return nullptr;
                 const auto& declaration = *resolved->second.declaration;
                 std::vector<llvm::Value*> arguments;
-                llvm::Value* receiver = declaration.parameters.front().mode ==
-                        ParameterMode::MutableBorrow
-                    ? emitMutationPointer(*member->object)
-                    : emitExpr(*member->object);
-                if (!receiver) return nullptr;
-                arguments.push_back(receiver);
+                if (!declaration.isAssociated) {
+                    llvm::Value* receiver = declaration.parameters.front().mode ==
+                            ParameterMode::MutableBorrow
+                        ? emitMutationPointer(*member->object)
+                        : emitExpr(*member->object);
+                    if (!receiver) return nullptr;
+                    arguments.push_back(receiver);
+                }
                 for (std::size_t i = 0; i < call->arguments.size(); ++i) {
                     llvm::Value* value = nullptr;
-                    const auto parameterIndex = i + 1;
+                    const auto parameterIndex = i +
+                        (declaration.isAssociated ? 0u : 1u);
                     if (parameterIndex < declaration.parameters.size() &&
                         declaration.parameters[parameterIndex].mode ==
                             ParameterMode::MutableBorrow)

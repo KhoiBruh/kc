@@ -367,6 +367,33 @@ TEST(semantic_resolves_generic_struct_methods_with_captured_type_parameters) {
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 
+TEST(semantic_resolves_associated_factories) {
+    SemanticFixture fixture{
+        "struct Counter(value: i32) {"
+        "fn new(value: i32): Counter => Counter(value);"
+        "}"
+        "struct Box<T>(value: T) {"
+        "fn new(value: T): Box<T> => Box<T>(value);"
+        "fn fromValue(value: T): Box<T> => Box<T>(value);"
+        "}"
+        "fn use(): i32 {"
+        "val counter = Counter.new(1);"
+        "val box = Box<i32>.new(41);"
+        "val copied = Box<i32>.fromValue(box.value);"
+        "return counter.value + copied.value;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_requires_explicit_struct_arguments_for_associated_factories) {
+    SemanticFixture fixture{
+        "struct Box<T>(value: T) {"
+        "fn new(value: T): Box<T> => Box<T>(value);"
+        "}"
+        "fn use(): i32 { return Box.new(41).value; }"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+}
+
 TEST(semantic_validates_integer_range_membership) {
     SemanticFixture valid{
         "fn contains(value: u8): bool { return "

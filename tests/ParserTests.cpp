@@ -105,6 +105,29 @@ TEST(parser_parses_explicit_call_type_arguments) {
     EXPECT_TRUE(printed.find("TypeArguments") != std::string::npos);
 }
 
+TEST(parser_parses_associated_factory_calls) {
+    ParseFixture fixture{
+        "struct Counter(value: i32) {"
+        "fn new(value: i32): Counter => Counter(value);"
+        "}"
+        "struct Box<T>(value: T) {"
+        "fn new(value: T): Box<T> => Box<T>(value);"
+        "}"
+        "fn main(): i32 {"
+        "val counter = Counter.new(1);"
+        "val box = Box<i32>.new(42);"
+        "return counter.value + box.value;"
+        "}"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    const auto& statements = fixture.parsed.program.functions[0].body->statements;
+    const auto& counter = std::get<k::VariableDecl>(statements[0]->node);
+    EXPECT_TRUE(std::holds_alternative<k::CallExpr>(counter.initializer->node));
+    const auto& box = std::get<k::VariableDecl>(statements[1]->node);
+    const auto& call = std::get<k::CallExpr>(box.initializer->node);
+    EXPECT_EQ(call.typeArguments.size(), 1u);
+    EXPECT_TRUE(std::holds_alternative<k::MemberExpr>(call.callee->node));
+}
+
 TEST(parser_keeps_less_than_as_comparison) {
     ParseFixture fixture{
         "fn less(a: i32, b: i32): bool { return a < b; }"};

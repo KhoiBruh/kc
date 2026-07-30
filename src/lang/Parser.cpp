@@ -379,10 +379,16 @@ std::optional<FunctionDecl> Parser::parseFunction(
         body = parseBlock(bodySpan);
         if (!body) return std::nullopt;
     }
+    const bool isAssociated = ownerStruct &&
+        (parameters.empty() ||
+         source_.text().substr(parameters.front().name.start,
+                               parameters.front().name.end -
+                                   parameters.front().name.start) != "self");
     return FunctionDecl{name, std::move(typeParameters),
                         std::move(parameters), std::move(returnType),
                         std::move(body), spanFrom(start, bodySpan), isExtern,
-                        isExpressionBody, infersReturnType, ownerStruct};
+                        isExpressionBody, infersReturnType, ownerStruct,
+                        isAssociated};
 }
 
 bool Parser::arrowIfHasElseAhead() const noexcept {
@@ -780,6 +786,14 @@ ExprPtr Parser::parseExpression(int minimumBindingPower) {
             if (!expect(TokenKind::Greater,
                         "expected '>' after explicit type arguments"))
                 return nullptr;
+            if (match(TokenKind::Dot)) {
+                if (!expect(TokenKind::Identifier,
+                            "expected associated function name after '.'"))
+                    return nullptr;
+                const auto span = spanFrom(left->span, previous().span);
+                left = makeExpr(
+                    span, MemberExpr{std::move(left), previous().span});
+            }
             if (!check(TokenKind::LeftParen)) {
                 report(peek().span,
                        "expected '(' after explicit type arguments");
@@ -1074,8 +1088,12 @@ bool Parser::genericCallAhead() const noexcept {
         } else if (tokens_[cursor].kind == TokenKind::Greater) {
             --depth;
             if (depth == 0) {
-                return cursor + 1 < tokens_.size() &&
-                       tokens_[cursor + 1].kind == TokenKind::LeftParen;
+                if (cursor + 1 >= tokens_.size()) return false;
+                if (tokens_[cursor + 1].kind == TokenKind::LeftParen) return true;
+                return cursor + 3 < tokens_.size() &&
+                    tokens_[cursor + 1].kind == TokenKind::Dot &&
+                    tokens_[cursor + 2].kind == TokenKind::Identifier &&
+                    tokens_[cursor + 3].kind == TokenKind::LeftParen;
             }
         } else if (tokens_[cursor].kind == TokenKind::Semicolon ||
                    tokens_[cursor].kind == TokenKind::LeftBrace) {

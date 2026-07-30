@@ -435,9 +435,10 @@ private:
                 diagnose("duplicate method '" + methodName + "'", method.name);
             if (!method.typeParameters.empty())
                 diagnose("generic methods are not supported yet", method.name);
-            if (method.parameters.empty() ||
-                spelling(source_, method.parameters.front().name) != "self" ||
-                method.parameters.front().mode == ParameterMode::Owned)
+            if (!method.isAssociated &&
+                (method.parameters.empty() ||
+                 spelling(source_, method.parameters.front().name) != "self" ||
+                 method.parameters.front().mode == ParameterMode::Owned))
                 diagnose("method must begin with 'val self' or 'var self'",
                          method.name);
         }
@@ -1432,6 +1433,12 @@ private:
 
     SemanticType analyzeMethodCall(
         const CallExpr& call, const MemberExpr& member) {
+        if (const auto* identifier =
+                std::get_if<IdentifierExpr>(&member.object->node)) {
+            const auto ownerName = spelling(source_, identifier->name);
+            if (result_.structs.contains(ownerName))
+                return analyzeAssociatedCall(call, member, ownerName);
+        }
         const auto receiverType = analyzeExpr(*member.object);
         if (receiverType.kind != SemanticTypeKind::Struct) {
             diagnose("method receiver must be a struct", member.object->span);
@@ -1441,7 +1448,8 @@ private:
         const auto name = receiverType.name + "." + spelling(source_, member.name);
         const auto found = result_.functions.find(name);
         if (found == result_.functions.end() ||
-            !found->second.declaration->ownerStruct) {
+            !found->second.declaration->ownerStruct ||
+            found->second.declaration->isAssociated) {
             diagnose("unknown method '" + spelling(source_, member.name) + "'",
                      member.name);
             for (const auto& argument : call.arguments) analyzeExpr(*argument);
@@ -1489,6 +1497,72 @@ private:
                     result_.requestedSpecializations.begin(),
                     result_.requestedSpecializations.end(),
                     key) == result_.requestedSpecializations.end())
+                result_.requestedSpecializations.push_back(key);
+        }
+        return returnType;
+    }
+
+    SemanticType analyzeAssociatedCall(
+        const CallExpr& call, const MemberExpr& member,
+        const std::string& ownerName) {
+        const auto structure = result_.structs.find(ownerName);
+        const auto name = ownerName + "." + spelling(source_, member.name);
+        const auto found = result_.functions.find(name);
+        if (structure == result_.structs.end() ||
+            found == result_.functions.end() ||
+            !found->second.declaration->ownerStruct ||
+            !found->second.declaration->isAssociated) {
+            diagnose("unknown associated function '" +
+                         spelling(source_, member.name) + "'",
+                     member.name);
+            for (const auto& argument : call.arguments) analyzeExpr(*argument);
+            return {};
+        }
+        const auto& symbol = found->second;
+        std::vector<SemanticType> typeArguments;
+        if (structure->second.typeParameters.empty()) {
+            if (!call.typeArguments.empty())
+                diagnose("non-generic struct does not accept type arguments",
+                         member.object->span);
+        } else if (call.typeArguments.size() !=
+                   structure->second.typeParameters.size()) {
+            diagnose("wrong number of explicit struct type arguments",
+                     member.object->span);
+        } else {
+            for (const auto& argument : call.typeArguments)
+                typeArguments.push_back(resolve(*argument));
+        }
+        std::vector<SemanticType> parameterTypes;
+        parameterTypes.reserve(symbol.parameterTypes.size());
+        for (const auto& parameter : symbol.parameterTypes)
+            parameterTypes.push_back(substitute(parameter, typeArguments));
+        const auto returnType = substitute(symbol.returnType, typeArguments);
+        if (call.arguments.size() != parameterTypes.size())
+            diagnose("associated function argument count does not match",
+                     member.name);
+        for (std::size_t i = 0; i < call.arguments.size(); ++i) {
+            const auto expected = i < parameterTypes.size()
+                ? std::optional<SemanticType>{parameterTypes[i]} : std::nullopt;
+            const auto actual = analyzeExpr(*call.arguments[i], expected);
+            if (expected && !compatible(*expected, actual))
+                diagnose("associated function argument type does not match parameter type",
+                         call.arguments[i]->span);
+            if (i < symbol.declaration->parameters.size() &&
+                symbol.declaration->parameters[i].mode ==
+                    ParameterMode::MutableBorrow &&
+                !isMutableTarget(*call.arguments[i]))
+                diagnose("var argument must be a mutable local",
+                         call.arguments[i]->span);
+        }
+        result_.resolvedCalls[&call] = ResolvedCall{
+            symbol.declaration, typeArguments, parameterTypes, returnType};
+        result_.expressionTypes[call.callee.get()] = returnType;
+        if (!typeArguments.empty() && typeParameters_.empty()) {
+            const SpecializationKey key{symbol.declaration, typeArguments};
+            if (std::find(
+                    result_.requestedSpecializations.begin(),
+                    result_.requestedSpecializations.end(), key) ==
+                result_.requestedSpecializations.end())
                 result_.requestedSpecializations.push_back(key);
         }
         return returnType;
