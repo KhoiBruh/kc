@@ -379,6 +379,19 @@ fn rootBeforeStructMethods(nodes: List<AstNode>, structureRoot: u64): u64 {
 
 fn methodHash(owner: u64, name: u64) => owner * 33 + name;
 
+fn methodOwnerStructRoot(
+    semantic: Semantic, functionRoot: u64): u64 {
+    val function = semantic.nodes.data[functionRoot];
+    if (function.conversionKind != 1) return semantic.nodes.length;
+    if (functionParameterCount(function) == 0) return semantic.nodes.length;
+    val receiverType = semantic.nodes.data[
+        functionParameterRoot(semantic, functionRoot, 1) - 1];
+    val structure = declarationFind(
+        semantic.structs, nodeHash(semantic, receiverType));
+    if (structure == semantic.structs.length) return semantic.nodes.length;
+    return semantic.structs.data[structure].node;
+}
+
 fn structTypeParameterRoot(semantic: Semantic, structureRoot: u64, position: u32): u64 {
     val structure = semantic.nodes.data[structureRoot];
     var root = rootBeforeStructMethods(semantic.nodes, structureRoot);
@@ -610,7 +623,42 @@ fn constraintAcceptsType(constraint: u32, type: TypeValue): bool {
 }
 
 fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
-    val value = inferTypeFromNode(semantic, root);
+    var value = invalidType();
+    if (semantic.currentFunction < semantic.nodes.length) {
+        if (semantic.currentStruct < semantic.nodes.length) {
+        val function = semantic.nodes.data[semantic.currentFunction];
+        val structure = semantic.nodes.data[semantic.currentStruct];
+        if (function.conversionKind == 1) {
+            if (structTypeParameterCount(structure) > 0) {
+                if (root == functionParameterRoot(
+                        semantic, semantic.currentFunction, 1) - 1) {
+                    val count = structTypeParameterCount(structure);
+                    val start = semantic.genericArguments.length;
+                    for (position in 0..<count) {
+                        val parameterRoot = structTypeParameterRoot(
+                            semantic, semantic.currentStruct, position + 1);
+                        val parameter = semantic.nodes.data[parameterRoot];
+                        val nameNode = semantic.nodes.data[parameter.subtreeStart];
+                        var constraint: u32 = 0;
+                        if (parameter.aux == 1) {
+                            constraint = constraintFromHash(nodeHash(
+                                semantic, semantic.nodes.data[parameterRoot - 1]));
+                        }
+                        var arguments = semantic.genericArguments;
+                        listAdd<TypeValue>(arguments,
+                            TypeValue(14, nodeHash(semantic, nameNode), constraint));
+                        semantic.genericArguments = arguments;
+                    }
+                    val ownerName = semantic.nodes.data[structure.subtreeStart];
+                    value = TypeValue(
+                        8, nodeHash(semantic, ownerName),
+                        start as u32 + count * 65536);
+                }
+            }
+        }
+        }
+    }
+    if (value.kind == 0) value = inferTypeFromNode(semantic, root);
     var node = semantic.nodes.data[root];
     node.typeKind = value.kind;
     node.typeName = value.name;
@@ -1168,7 +1216,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             k_boot_free(argumentRoots as unit*);
             return invalidType();
         }
-        val typeCount = functionTypeParameterCount(function);
+        val methodOwner = methodOwnerStructRoot(semantic, functionRoot);
+        val typeCount = if (methodOwner != semantic.nodes.length)
+                structTypeParameterCount(semantic.nodes.data[methodOwner])
+            else functionTypeParameterCount(function);
         if (explicitTypeCount > 0) {
             if (explicitTypeCount != typeCount) {
                 semanticFail(semantic, 3, callee);
@@ -1183,11 +1234,25 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         for (explicit in 0..<typeCount) {
             typeArguments[explicit as u64] = invalidType();
         }
-        for (explicit in 0..<explicitTypeCount) {
-            typeArguments[explicit as u64] =
-                typeFromNode(
-                    semantic,
-                    explicitTypeRoots[explicit as u64]);
+        if (methodOwner != semantic.nodes.length) {
+            val receiver = expressionType(semantic, argumentRoots[0]);
+            val start = receiver.pointee % 65536;
+            val count = receiver.pointee / 65536;
+            if (receiver.kind != 8 || count != typeCount) {
+                semanticFail(semantic, 4, callee);
+            } else {
+                for (position in 0..<typeCount) {
+                    typeArguments[position as u64] = semantic.genericArguments.data[
+                        start as u64 + position as u64];
+                }
+            }
+        } else {
+            for (explicit in 0..<explicitTypeCount) {
+                typeArguments[explicit as u64] =
+                    typeFromNode(
+                        semantic,
+                        explicitTypeRoots[explicit as u64]);
+            }
         }
         for (argument in 0..<argumentCount) {
             val actual = expressionType(
@@ -1196,12 +1261,20 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 functionParameterRoot(
                     semantic, functionRoot, argument + 1);
             val savedFunction = semantic.currentFunction;
+            val savedStruct = semantic.currentStruct;
             semantic.currentFunction = functionRoot;
+            if (methodOwner != semantic.nodes.length)
+                semantic.currentStruct = methodOwner;
             val pattern = typeFromNode(semantic, parameterRoot - 1);
             semantic.currentFunction = savedFunction;
+            semantic.currentStruct = savedStruct;
             if (pattern.kind == 14) {
-                val position = typeParameterPosition(
+                var position = typeParameterPosition(
                     semantic, functionRoot, pattern.name);
+                if (methodOwner != semantic.nodes.length) {
+                    position = structTypeParameterPosition(
+                        semantic, methodOwner, pattern.name);
+                }
                 if (explicitTypeCount == 0) {
                     var inferredActual = actual;
                     if (inferredActual.kind == 11) {
@@ -1224,9 +1297,17 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     }
                 }
             }
-            val expected = substituteGenericType(
+            var expected = substituteGenericType(
                 semantic, functionRoot, pattern,
                 typeArguments, typeCount);
+            if (methodOwner != semantic.nodes.length) {
+                expected = substituteStructType(
+                    semantic, methodOwner, pattern,
+                    List<TypeValue>(
+                        typeArguments, typeCount as u64, typeCount as u64,
+                        sizeof(TypeValue)),
+                    0, typeCount);
+            }
             if (!typeAccepts(expected, actual, semantic.genericArguments)) {
                 semanticFail(
                     semantic, 4,
@@ -1235,8 +1316,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         for (explicit in 0..<typeCount) {
-            val parameterRoot = functionTypeParameterRoot(
+            var parameterRoot = functionTypeParameterRoot(
                 semantic, functionRoot, explicit + 1);
+            if (methodOwner != semantic.nodes.length) {
+                parameterRoot = structTypeParameterRoot(
+                    semantic, methodOwner, explicit + 1);
+            }
             val parameter = semantic.nodes.data[parameterRoot];
             var constraint: u32 = 0;
             if (parameter.aux == 1) {
@@ -1255,12 +1340,24 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
 
         }
         val savedFunction = semantic.currentFunction;
+        val savedStruct = semantic.currentStruct;
         semantic.currentFunction = functionRoot;
+        if (methodOwner != semantic.nodes.length)
+            semantic.currentStruct = methodOwner;
         val returnPattern = functionReturnTypeValue(semantic, functionRoot);
         semantic.currentFunction = savedFunction;
-        val returnType = substituteGenericType(
+        semantic.currentStruct = savedStruct;
+        var returnType = substituteGenericType(
             semantic, functionRoot, returnPattern,
             typeArguments, typeCount);
+        if (methodOwner != semantic.nodes.length) {
+            returnType = substituteStructType(
+                semantic, methodOwner, returnPattern,
+                List<TypeValue>(
+                    typeArguments, typeCount as u64, typeCount as u64,
+                    sizeof(TypeValue)),
+                0, typeCount);
+        }
         if (typeCount > 0) {
             var callNode = semantic.nodes.data[root];
             callNode.genericArgumentStart =
@@ -2057,8 +2154,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 val method = semantic.nodes.data[methodRoot];
                 val methodNameNode = semantic.nodes.data[method.subtreeStart];
                 val methodName = methodHash(name, nodeHash(semantic, methodNameNode));
-                if (structTypeParameterCount(declaration) != 0 ||
-                    functionTypeParameterCount(method) != 0 ||
+                if (functionTypeParameterCount(method) != 0 ||
                     functionParameterCount(method) == 0) {
                     semanticFail(semantic, 4, methodNameNode);
                 } else {
@@ -2195,7 +2291,10 @@ fn analyze(source: Source, nodes: List<AstNode>): SemanticResult {
                     var methodRoot = root - 1;
                     val methods = structMethodCount(nodes.data[root]);
                     for (method in 0..<methods) {
+                        val savedStruct = semantic.currentStruct;
+                        semantic.currentStruct = root;
                         checkFunction(semantic, methodRoot);
+                        semantic.currentStruct = savedStruct;
                         methodRoot = nodes.data[methodRoot].subtreeStart - 1;
                     }
                 }

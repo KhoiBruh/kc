@@ -2841,8 +2841,7 @@ fn emitExpression(
             }
             appendSource(buffer, source, callee.start, callee.end);
             if (functionRoot != nodes.length) {
-                if (functionTypeParameterCount(
-                        nodes.data[functionRoot]) > 0) {
+                if (node.genericArgumentCount > 0) {
                     appendSpecializationSuffix(
                         buffer, genericArguments,
                         node.genericArgumentStart,
@@ -3665,6 +3664,20 @@ fn emitterTypeParameterPosition(
             return position;
         }
     }
+    val function = nodes.data[functionRoot];
+    if (function.conversionKind == 1) {
+        if (functionParameterCount(function) > 0) {
+            val receiverType = nodes.data[
+                parameterRoot(nodes, functionRoot, 1) - 1];
+            val ownerRoot = structRootByName(
+                source, nodes,
+                sourceHash(source, receiverType.start, receiverType.end));
+            if (ownerRoot != nodes.length) {
+                return emitterStructTypeParameterPosition(
+                    source, nodes, ownerRoot, name);
+            }
+        }
+    }
     return count;
 }
 
@@ -4343,9 +4356,12 @@ fn emitModule(
                 var methodRoot = root - 1;
                 val methods = emitterStructMethodCount(nodes.data[root]);
                 for (method in 0..<methods) {
-                    emitFunction(
-                        buffer, source, nodes, genericArguments,
-                        methodRoot, 0, 0);
+                    if (emitterStructTypeParameterCount(
+                            nodes.data[root]) == 0) {
+                        emitFunction(
+                            buffer, source, nodes, genericArguments,
+                            methodRoot, 0, 0);
+                    }
                     methodRoot = nodes.data[methodRoot].subtreeStart - 1;
                 }
             }
@@ -4358,11 +4374,12 @@ fn emitModule(
             if (callArgumentsAreConcrete(call, genericArguments)) {
                 val calleeRoot = callCalleeRoot(nodes, callIndex);
                 val callee = nodes.data[calleeRoot];
-                val functionRoot =
+                var functionRoot =
                     functionRootByName(
                         source, nodes,
                         sourceHash(
                             source, callee.start, callee.end));
+                if (callee.kind == 17) functionRoot = call.storage;
                 if (functionRoot != nodes.length) {
                     if (
                         !specializationRequestExists(
@@ -4395,11 +4412,12 @@ fn emitModule(
                 val calleeRoot =
                     callCalleeRoot(nodes, nestedIndex);
                 val callee = nodes.data[calleeRoot];
-                val nestedFunctionRoot =
+                var nestedFunctionRoot =
                     functionRootByName(
                         source, nodes,
                         sourceHash(
                             source, callee.start, callee.end));
+                if (callee.kind == 17) nestedFunctionRoot = nestedCall.storage;
                 if (nestedFunctionRoot != nodes.length) {
                     val nestedCount = nestedCall.genericArgumentCount;
                     val substituted =

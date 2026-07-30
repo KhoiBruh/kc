@@ -350,7 +350,7 @@ val c = b.copy()   // Tạo một deep copy độc lập; b vẫn hợp lệ
 Mọi cấu trúc dữ liệu đều là `struct`. Method viết bên trong `struct` phải nhận
 receiver đầu tiên là `val self` để chỉ đọc hoặc `var self` để sửa object. Kiểu
 của `self` được suy ra từ struct nên không viết lại. Receiver nhận ownership,
-static method, overload và generic method chưa thuộc v0.1.
+static method, overload và generic method độc lập chưa thuộc v0.1.
 
 ### Cú pháp cơ bản & RAII
 
@@ -380,7 +380,9 @@ counter.increment();
 val value = counter.read();
 ```
 
-Method của generic struct, constructor và destructor chưa được hỗ trợ.
+Method của generic struct được hỗ trợ và dùng trực tiếp type parameter của
+struct; method không được khai báo type parameter riêng. Constructor và
+destructor chưa được hỗ trợ.
 
 ```text
 struct Player(
@@ -892,5 +894,7 @@ nullable subset supports `T?`, `null`, implicit lifting from `T`, and postfix
 Bootstrap generic functions and structs accept arbitrary ordered type-parameter
 lists. Specialization identity and LLVM symbol names include every concrete
 type argument in declaration order; struct construction remains explicit (for
-example, `Pair<i32, bool>(40, true)`). Type packs, overload resolution,
-ownership/moves, payload enums, and user-defined traits remain unsupported.
+example, `Pair<i32, bool>(40, true)`). Methods on a generic struct capture its
+enclosing type parameters, while independently generic methods remain
+unsupported. Type packs, overload resolution, ownership/moves, payload enums,
+and user-defined traits remain unsupported.
