@@ -450,6 +450,28 @@ TEST(codegen_lowers_struct_methods_with_explicit_receivers) {
     EXPECT_TRUE(ir.find("call void") != std::string::npos);
 }
 
+TEST(codegen_monomorphizes_generic_struct_methods) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Box<T>(value: T) {"
+        "fn read(val self): T => self.value;"
+        "fn replace(var self, value: T) { self.value = value; }"
+        "}"
+        "struct Pair<A, B>(first: A, second: B) {"
+        "fn secondValue(val self): B => self.second;"
+        "}"
+        "fn main(): i32 { var box: Box<i32> = Box<i32>(41); "
+        "box.replace(42); val pair: Pair<i32, bool> = Pair<i32, bool>(0, true); "
+        "if (pair.secondValue() == false) return 0; return box.read(); }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("Box.read__g") != std::string::npos);
+    EXPECT_TRUE(ir.find("Box.replace__g") != std::string::npos);
+    EXPECT_TRUE(ir.find("Pair.secondValue__g") != std::string::npos);
+    EXPECT_TRUE(ir.find("type { i32 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("type { i32, i1 }") != std::string::npos);
+}
+
 TEST(codegen_lowers_integer_range_membership) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

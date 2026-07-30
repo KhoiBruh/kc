@@ -428,8 +428,6 @@ private:
             found->second.fields.push_back(
                 {fieldName, resolve(*field.type), i});
         }
-        if (!structure.typeParameters.empty() && !structure.methods.empty())
-            diagnose("generic structs do not support methods yet", structure.name);
         std::unordered_set<std::string> methodNames;
         for (const auto& method : structure.methods) {
             const auto methodName = spelling(source_, method.name);
@@ -467,38 +465,66 @@ private:
         }
         typeParameters_.clear();
         std::vector<TypeParameterSymbol> typeParameters;
-        for (std::size_t i = 0; i < function.typeParameters.size(); ++i) {
-            const auto& syntax = function.typeParameters[i];
-            const auto parameterName = spelling(source_, syntax.name);
-            if (typeParameters_.contains(parameterName)) {
-                diagnose(
-                    "duplicate type parameter '" + parameterName + "'",
-                    syntax.name);
-                continue;
+        const auto owner = function.ownerStruct
+            ? result_.structs.find(spelling(source_, *function.ownerStruct))
+            : result_.structs.end();
+        if (owner != result_.structs.end()) {
+            for (const auto& parameter : owner->second.typeParameters) {
+                typeParameters_.emplace(parameter.name, parameter);
+                typeParameters.push_back(parameter);
             }
-            auto constraint = GenericConstraint::Any;
-            if (syntax.constraint) {
-                const auto constraintText =
-                    spelling(source_, *syntax.constraint);
-                const auto parsed = parseConstraint(constraintText);
-                if (!parsed) {
+        } else {
+            for (std::size_t i = 0; i < function.typeParameters.size(); ++i) {
+                const auto& syntax = function.typeParameters[i];
+                const auto parameterName = spelling(source_, syntax.name);
+                if (typeParameters_.contains(parameterName)) {
                     diagnose(
-                        "unknown generic constraint '" + constraintText + "'",
-                        *syntax.constraint);
-                } else {
-                    constraint = *parsed;
+                        "duplicate type parameter '" + parameterName + "'",
+                        syntax.name);
+                    continue;
                 }
+                auto constraint = GenericConstraint::Any;
+                if (syntax.constraint) {
+                    const auto constraintText =
+                        spelling(source_, *syntax.constraint);
+                    const auto parsed = parseConstraint(constraintText);
+                    if (!parsed) {
+                        diagnose(
+                            "unknown generic constraint '" + constraintText + "'",
+                            *syntax.constraint);
+                    } else {
+                        constraint = *parsed;
+                    }
+                }
+                TypeParameterSymbol symbol{
+                    parameterName, constraint, typeParameters.size()};
+                typeParameters_.emplace(parameterName, symbol);
+                typeParameters.push_back(std::move(symbol));
             }
-            TypeParameterSymbol symbol{
-                parameterName, constraint, typeParameters.size()};
-            typeParameters_.emplace(parameterName, symbol);
-            typeParameters.push_back(std::move(symbol));
         }
         if (function.isExtern && !typeParameters.empty())
             diagnose("extern functions cannot be generic", function.name);
         std::vector<SemanticType> parameters;
-        for (const auto& parameter : function.parameters)
-            parameters.push_back(resolve(*parameter.type));
+        for (std::size_t i = 0; i < function.parameters.size(); ++i) {
+            const auto& parameter = function.parameters[i];
+            if (owner != result_.structs.end() && i == 0 &&
+                spelling(source_, parameter.name) == "self") {
+                std::vector<SemanticType> typeArguments;
+                typeArguments.reserve(owner->second.typeParameters.size());
+                for (const auto& typeParameter : owner->second.typeParameters) {
+                    SemanticType type{SemanticTypeKind::TypeParameter};
+                    type.name = typeParameter.name;
+                    type.typeParameterIndex =
+                        static_cast<std::uint32_t>(typeParameter.index);
+                    typeArguments.push_back(std::move(type));
+                }
+                parameters.push_back(
+                    structType(spelling(source_, *function.ownerStruct),
+                               std::move(typeArguments)));
+            } else {
+                parameters.push_back(resolve(*parameter.type));
+            }
+        }
         result_.functions.emplace(name, FunctionSymbol{
             &function, std::move(typeParameters), std::move(parameters),
             function.infersReturnType ? SemanticType{} : resolve(*function.returnType)});
@@ -1424,10 +1450,21 @@ private:
         const auto& symbol = found->second;
         if (!call.typeArguments.empty())
             diagnose("methods do not accept type arguments yet", member.name);
-        if (call.arguments.size() + 1 != symbol.parameterTypes.size())
+        const auto typeArguments = symbol.typeParameters.empty()
+            ? std::vector<SemanticType>{}
+            : receiverType.typeArguments;
+        if (!symbol.typeParameters.empty() &&
+            typeArguments.size() != symbol.typeParameters.size())
+            diagnose("method receiver has the wrong type", member.object->span);
+        std::vector<SemanticType> parameterTypes;
+        parameterTypes.reserve(symbol.parameterTypes.size());
+        for (const auto& parameter : symbol.parameterTypes)
+            parameterTypes.push_back(substitute(parameter, typeArguments));
+        const auto returnType = substitute(symbol.returnType, typeArguments);
+        if (call.arguments.size() + 1 != parameterTypes.size())
             diagnose("method argument count does not match", member.name);
-        if (!symbol.parameterTypes.empty() &&
-            !compatible(symbol.parameterTypes.front(), receiverType))
+        if (!parameterTypes.empty() &&
+            !compatible(parameterTypes.front(), receiverType))
             diagnose("method receiver has the wrong type", member.object->span);
         if (!symbol.declaration->parameters.empty() &&
             symbol.declaration->parameters.front().mode ==
@@ -1435,8 +1472,8 @@ private:
             !isMutableTarget(*member.object))
             diagnose("var self requires a mutable receiver", member.object->span);
         for (std::size_t i = 0; i < call.arguments.size(); ++i) {
-            const auto expected = i + 1 < symbol.parameterTypes.size()
-                ? std::optional<SemanticType>{symbol.parameterTypes[i + 1]}
+            const auto expected = i + 1 < parameterTypes.size()
+                ? std::optional<SemanticType>{parameterTypes[i + 1]}
                 : std::nullopt;
             const auto actual = analyzeExpr(*call.arguments[i], expected);
             if (expected && !compatible(*expected, actual))
@@ -1444,9 +1481,17 @@ private:
                          call.arguments[i]->span);
         }
         result_.resolvedCalls[&call] = ResolvedCall{
-            symbol.declaration, {}, symbol.parameterTypes, symbol.returnType};
-        result_.expressionTypes[call.callee.get()] = symbol.returnType;
-        return symbol.returnType;
+            symbol.declaration, typeArguments, parameterTypes, returnType};
+        result_.expressionTypes[call.callee.get()] = returnType;
+        if (!typeArguments.empty() && typeParameters_.empty()) {
+            const SpecializationKey key{symbol.declaration, typeArguments};
+            if (std::find(
+                    result_.requestedSpecializations.begin(),
+                    result_.requestedSpecializations.end(),
+                    key) == result_.requestedSpecializations.end())
+                result_.requestedSpecializations.push_back(key);
+        }
+        return returnType;
     }
 
     SemanticType analyzeMember(const MemberExpr& member) {

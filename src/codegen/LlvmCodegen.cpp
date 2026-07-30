@@ -274,10 +274,10 @@ private:
     }
 
     void declareFunction(const FunctionDecl& function) {
-            if (!function.typeParameters.empty()) return;
             const auto name = functionName(function, source());
             const auto symbol = current_->semantic->functions.find(name);
             if (symbol == current_->semantic->functions.end()) return;
+            if (!symbol->second.typeParameters.empty()) return;
             std::vector<llvm::Type*> parameters;
             for (std::size_t i = 0; i < symbol->second.parameterTypes.size(); ++i) {
                 auto* type = lowerType(
@@ -368,7 +368,7 @@ private:
         const auto* owner = ownerModule(declaration);
         const Source* ownerSource = owner ? owner->source.get() : nullptr;
         if (ownerSource == nullptr) ownerSource = &source();
-        return spelling(*ownerSource, declaration.name) +
+        return functionName(declaration, *ownerSource) +
             "__g" + std::to_string(hash);
     }
 
@@ -425,8 +425,12 @@ private:
     }
 
     void emitFunction(const FunctionDecl& declaration) {
-        if (!declaration.typeParameters.empty()) return;
         if (declaration.isExtern) return;
+        const auto symbol = current_->semantic->functions.find(
+            functionName(declaration, source()));
+        if (symbol == current_->semantic->functions.end() ||
+            !symbol->second.typeParameters.empty())
+            return;
         const auto found = functions_.find(&declaration);
         if (found == functions_.end()) return;
         emitFunctionBody(declaration, found->second, {});
@@ -461,7 +465,7 @@ private:
                 const auto symbol = current_->semantic->functions.find(
                     functionName(declaration, owner));
                 auto* valueType = lowerType(
-                    symbol->second.parameterTypes[parameterIndex],
+                    substituteActive(symbol->second.parameterTypes[parameterIndex]),
                     parameter.type->span);
                 locals_.emplace(
                     name, LocalSlot{&argument, valueType});
@@ -1156,8 +1160,22 @@ private:
                 if (resolved == semantic().resolvedCalls.end() ||
                     !resolved->second.declaration)
                     return nullptr;
-                const auto target = functions_.find(resolved->second.declaration);
-                if (target == functions_.end()) return nullptr;
+                llvm::Function* target = nullptr;
+                if (!resolved->second.typeArguments.empty()) {
+                    std::vector<SemanticType> concreteArguments;
+                    concreteArguments.reserve(resolved->second.typeArguments.size());
+                    for (const auto& argument : resolved->second.typeArguments)
+                        concreteArguments.push_back(substituteActive(argument));
+                    target = getOrDeclareSpecialization(
+                        SpecializationKey{
+                            resolved->second.declaration,
+                            std::move(concreteArguments)});
+                } else if (const auto found =
+                               functions_.find(resolved->second.declaration);
+                           found != functions_.end()) {
+                    target = found->second;
+                }
+                if (!target) return nullptr;
                 const auto& declaration = *resolved->second.declaration;
                 std::vector<llvm::Value*> arguments;
                 llvm::Value* receiver = declaration.parameters.front().mode ==
@@ -1178,7 +1196,7 @@ private:
                     if (!value) return nullptr;
                     arguments.push_back(value);
                 }
-                return builder_.CreateCall(target->second, arguments);
+                return builder_.CreateCall(target, arguments);
             }
             const auto* callee = std::get_if<IdentifierExpr>(&call->callee->node);
             if (callee && spelling(source(), callee->name) == "print" &&
@@ -1214,7 +1232,7 @@ private:
                         semantic().resolvedCalls.find(call);
                     resolved != semantic().resolvedCalls.end() &&
                     resolved->second.declaration &&
-                    !resolved->second.declaration->typeParameters.empty()) {
+                    !resolved->second.typeArguments.empty()) {
                     std::vector<SemanticType> concreteArguments;
                     concreteArguments.reserve(
                         resolved->second.typeArguments.size());

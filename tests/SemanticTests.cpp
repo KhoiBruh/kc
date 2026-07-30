@@ -352,6 +352,21 @@ TEST(semantic_resolves_struct_methods_and_receiver_mutability) {
               "var self requires a mutable receiver");
 }
 
+TEST(semantic_resolves_generic_struct_methods_with_captured_type_parameters) {
+    SemanticFixture fixture{
+        "struct Box<T>(value: T) {"
+        "fn read(val self): T => self.value;"
+        "fn replace(var self, value: T) { self.value = value; }"
+        "}"
+        "struct Pair<A, B>(first: A, second: B) {"
+        "fn secondValue(val self): B => self.second;"
+        "}"
+        "fn use(): i32 { var box: Box<i32> = Box<i32>(41); "
+        "box.replace(42); val pair: Pair<i32, bool> = Pair<i32, bool>(0, true); "
+        "if (pair.secondValue() == false) return 0; return box.read(); }"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
 TEST(semantic_validates_integer_range_membership) {
     SemanticFixture valid{
         "fn contains(value: u8): bool { return "
