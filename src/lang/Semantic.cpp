@@ -64,6 +64,7 @@ std::string_view constraintName(GenericConstraint constraint) {
 struct VariableSymbol {
     SemanticType type;
     bool mutableBinding;
+    bool moved = false;
 };
 
 class Analysis {
@@ -438,7 +439,8 @@ private:
             if (!method.isAssociated &&
                 (method.parameters.empty() ||
                  spelling(source_, method.parameters.front().name) != "self" ||
-                 method.parameters.front().mode == ParameterMode::Owned))
+                 (method.parameters.front().mode == ParameterMode::Owned &&
+                  methodName != "free")))
                 diagnose("method must begin with 'val self' or 'var self'",
                          method.name);
         }
@@ -730,6 +732,7 @@ private:
             std::optional<SemanticType> declared;
             if (variable->declaredType) declared = resolve(*variable->declaredType);
             auto initializer = analyzeExpr(*variable->initializer, declared);
+            markAsMoved(*variable->initializer);
             if (!declared && (initializer.kind == SemanticTypeKind::NullLiteral ||
                               (initializer.kind == SemanticTypeKind::Array &&
                                initializer.arraySizeKind == ArraySizeKind::Inferred))) {
@@ -781,6 +784,7 @@ private:
                 else if (!(currentReturn_ == type))
                     result_.implicitConversions[value->value.get()] =
                         currentReturn_;
+                markAsMoved(*value->value);
             }
             return true;
         }
@@ -802,7 +806,11 @@ private:
         SemanticType type;
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
-            if (const auto* variable = findVariable(name)) type = variable->type;
+            if (const auto* variable = findVariable(name)) {
+                if (variable->moved)
+                    diagnose("use of moved value '" + name + "'", identifier->name);
+                type = variable->type;
+            }
             else if (const auto constant = result_.constants.find(name);
                     constant != result_.constants.end()) type = constant->second.type;
             else if (result_.functions.contains(name)) {
@@ -1276,6 +1284,7 @@ private:
                 if (expected && !compatible(*expected, actual))
                     diagnose("struct field argument has the wrong type",
                              call.arguments[i]->span);
+                markAsMoved(*call.arguments[i]);
             }
             const auto type = structType(name, std::move(typeArguments));
             result_.expressionTypes[call.callee.get()] = type;
@@ -1418,17 +1427,20 @@ private:
             const auto actual = analyzeExpr(*call.arguments[i], expected);
             if (expected && !compatible(*expected, actual))
                 diagnose("argument type does not match parameter type", call.arguments[i]->span);
-            if (i < function->second.declaration->parameters.size() &&
-                function->second.declaration->parameters[i].mode ==
-                    ParameterMode::MutableBorrow) {
-                const auto* identifier =
-                    std::get_if<IdentifierExpr>(&call.arguments[i]->node);
-                const auto* variable = identifier
-                    ? findVariable(spelling(source_, identifier->name))
-                    : nullptr;
-                if (!variable || !variable->mutableBinding)
-                    diagnose("var argument must be a mutable local",
-                             call.arguments[i]->span);
+            if (i < function->second.declaration->parameters.size()) {
+                const auto mode = function->second.declaration->parameters[i].mode;
+                if (mode == ParameterMode::MutableBorrow) {
+                    const auto* identifier =
+                        std::get_if<IdentifierExpr>(&call.arguments[i]->node);
+                    const auto* variable = identifier
+                        ? findVariable(spelling(source_, identifier->name))
+                        : nullptr;
+                    if (!variable || !variable->mutableBinding)
+                        diagnose("var argument must be a mutable local",
+                                 call.arguments[i]->span);
+                } else if (mode == ParameterMode::Owned) {
+                    markAsMoved(*call.arguments[i]);
+                }
             }
         }
         result_.expressionTypes[call.callee.get()] = function->second.returnType;
@@ -1766,6 +1778,8 @@ private:
         if (assignment.op == TokenKind::Equal) {
             if (!compatible(variable->type, value))
                 diagnose("assigned value has the wrong type", assignment.value->span);
+            else
+                markAsMoved(*assignment.value);
         } else {
             const auto combined = promote(variable->type, value, span);
             if (!(combined == variable->type))
@@ -2010,6 +2024,32 @@ private:
 
     void diagnose(std::string message, SourceSpan span) {
         result_.diagnostics.push_back({std::move(message), span});
+    }
+
+    bool isMoveOnlyType(const SemanticType& type) const {
+        if (type.kind == SemanticTypeKind::String) return true;
+        if (type.kind == SemanticTypeKind::Struct) {
+            const auto found = result_.structs.find(type.name);
+            if (found != result_.structs.end()) {
+                for (const auto& method : found->second.declaration->methods) {
+                    if (spelling(source_, method.name) == "free" &&
+                        !method.parameters.empty() &&
+                        method.parameters.front().mode == ParameterMode::Owned)
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void markAsMoved(const Expr& expression) {
+        if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
+            const auto name = spelling(source_, identifier->name);
+            auto* variable = findVariable(name);
+            if (variable && !variable->moved && isMoveOnlyType(variable->type)) {
+                variable->moved = true;
+            }
+        }
     }
 
     const Source& source_;

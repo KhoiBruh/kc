@@ -822,6 +822,92 @@ TEST(semantic_treats_statement_like_arrow_bodies_as_unit) {
               k::SemanticType{k::SemanticTypeKind::Unit});
 }
 
+TEST(semantic_move_only_rejects_use_after_assignment_move) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main() {"
+        "var a = Resource(1);"
+        "var b = a;"
+        "var c = a;"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a'");
+}
+
+TEST(semantic_move_only_rejects_use_after_owned_parameter_move) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main() {"
+        "var a = Resource(1);"
+        "consume(a);"
+        "consume(a);"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'a'");
+}
+
+TEST(semantic_move_only_allows_move_from_val_binding) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(r: Resource) {}"
+        "fn main() {"
+        "val a = Resource(1);"
+        "consume(a);"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_allows_move_from_var_binding) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main() {"
+        "var a = Resource(1);"
+        "var b = a;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_move_only_rejects_use_after_return_move) {
+    SemanticFixture fixture{
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn give(): Resource {"
+        "var a = Resource(1);"
+        "return a;"
+        "}"
+        "fn main() {"
+        "var r = give();"
+        "var x = r;"
+        "var y = r;"
+        "}"};
+    EXPECT_EQ(fixture.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(fixture.semantic.diagnostics[0].message,
+              "use of moved value 'r'");
+}
+
+TEST(semantic_non_move_only_types_are_not_affected) {
+    SemanticFixture fixture{
+        "fn main() {"
+        "var a: i32 = 1;"
+        "var b = a;"
+        "var c = a;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_struct_without_free_is_not_move_only) {
+    SemanticFixture fixture{
+        "struct Point(x: i32, y: i32) {}"
+        "fn main() {"
+        "var a = Point(1, 2);"
+        "var b = a;"
+        "var c = a;"
+        "}"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
 int main() {
     return test::runAll();
 }
