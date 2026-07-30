@@ -1066,7 +1066,7 @@ fn parseConstant(var parser: Parser): u64 {
 }
 
 fn parse(tokens: List<Token>): ParseResult {
-    var parser = Parser(tokens, List<AstNode>.new(sizeof(AstNode)), 0, true, 0);
+    var parser = Parser(tokens, List<AstNode>.new(), 0, true, 0);
     val start = parserPeek(parser).start;
     var declarationCount: u32 = 0;
     if (parserCheck(parser, 25)) {

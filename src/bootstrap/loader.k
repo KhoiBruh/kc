@@ -393,12 +393,12 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     var workingLength: u64 = 0;
     if (!k_boot_current_directory(&workingData, &workingLength)) {
         k_boot_free(workingData as unit*);
-        return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(sizeof(SourceMapSegment)), false, 1);
+        return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, 1);
     }
     k_boot_free(workingPlaceholder);
     val entryDirectory = loaderDirectory(entryPath, entryPathLength);
     var loader = ModuleLoader(
-        List<LoadedModule>.new(sizeof(LoadedModule)), List<LoadedPath>.new(sizeof(LoadedPath)),
+        List<LoadedModule>.new(), List<LoadedPath>.new(),
         LoadedPath(workingData, workingLength), entryDirectory, 1
     );
     val loaded = loaderLoadModule(
@@ -406,7 +406,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
         workingData, 0, false
     );
     var combined = ByteBuffer.new();
-    var sourceMap = List<SourceMapSegment>.new(sizeof(SourceMapSegment));
+    var sourceMap = List<SourceMapSegment>.new();
 
     if (loaded) {
         for (i in 0..<loader.modules.length) {
@@ -432,7 +432,7 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     if (!loaded) {
         combined.free();
         sourceMapFree(sourceMap);
-        return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(sizeof(SourceMapSegment)), false, loader.failureKind);
+        return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, loader.failureKind);
     }
 
     return LoadResult(Source(combined.data, combined.length), sourceMap, true, 0);

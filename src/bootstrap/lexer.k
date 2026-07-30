@@ -370,7 +370,7 @@ fn doublePunctuationKind(first: u8, second: u8): u32 {
 }
 
 fn lex(source: Source): LexResult {
-    var tokens = List<Token>.new(sizeof(Token));
+    var tokens = List<Token>.new();
     var offset: u64 = 0;
     while (offset < source.length) {
         val value = source.data[offset];

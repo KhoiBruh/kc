@@ -227,7 +227,7 @@ Payload-free enum self-hosting is complete for the current contract.
   associated functions), and minimal nullable values emit typed LLVM text
   directly from K.
 - `src/bootstrap/list.k` provides generic `List<T>` through
-  `List<T>.new(sizeof(T))` and `add`/`free` methods; `ByteBuffer` and
+  `List<T>.new()` and `add`/`free` methods; `ByteBuffer` and
   `SymbolTable` remain dedicated containers.
 - Statement-form `when` is self-hosted with first-match semantics, an optional
   final `else`, and block or single-statement branch bodies.

@@ -2360,14 +2360,14 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
 }
 
 fn analyze(source: Source, nodes: List<AstNode>): SemanticResult {
-    val genericArguments = List<TypeValue>.new(sizeof(TypeValue));
+    val genericArguments = List<TypeValue>.new();
     var semantic = Semantic(
         source, nodes,
-        List<DeclarationInfo>.new(sizeof(DeclarationInfo)),
-        List<DeclarationInfo>.new(sizeof(DeclarationInfo)),
-        List<DeclarationInfo>.new(sizeof(DeclarationInfo)),
-        List<DeclarationInfo>.new(sizeof(DeclarationInfo)),
-        List<LocalInfo>.new(sizeof(LocalInfo)), genericArguments,
+        List<DeclarationInfo>.new(),
+        List<DeclarationInfo>.new(),
+        List<DeclarationInfo>.new(),
+        List<DeclarationInfo>.new(),
+        List<LocalInfo>.new(), genericArguments,
         semanticSuccess(genericArguments), unitType(), 0,
         nodes.length, nodes.length, 0, nodes.length
     );

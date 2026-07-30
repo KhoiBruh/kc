@@ -11,7 +11,7 @@ fn main(): i32 {
     }
     bytes.free();
 
-    var tokens = List<Token>.new(sizeof(Token));
+    var tokens = List<Token>.new();
     tokens.add(Token(4, 10, 12));
     tokens.add(Token(5, 12, 14));
     tokens.add(Token(6, 14, 16));
@@ -21,7 +21,7 @@ fn main(): i32 {
     tokens.free();
 
     val expression = k_boot_alloc(1);
-    var expressions = List<unit*>.new(sizeof(unit*));
+    var expressions = List<unit*>.new();
     expressions.add(expression);
     if (expressions.data[0] != expression) {
         return 4;
@@ -30,7 +30,7 @@ fn main(): i32 {
     k_boot_free(expression);
 
     val text = k_boot_alloc(4) as u8*;
-    var strings = List<StringRef>.new(sizeof(StringRef));
+    var strings = List<StringRef>.new();
     strings.add(StringRef(text, 4));
     if (strings.data[0].length != 4) {
         return 5;

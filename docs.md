@@ -809,7 +809,7 @@ extern fn k_boot_free(pointer: unit*);
 `var` parameter được hạ thành mutable borrow thực sự; thay đổi field qua parameter
 được quan sát tại caller. `sizeof(T)` trả `u64` và dùng LLVM target layout.
 `src/bootstrap/list.k` cung cấp `List<T>` với factory
-`List<T>.new(sizeof(T))` và các instance method `add`/`free` cho mọi danh sách
+`List<T>.new()` và các instance method `add`/`free` cho mọi danh sách
 tăng động của bootstrap. Kích thước phần tử được truyền tại điểm tạo list.
 Token, AST, type argument, bảng khai báo, module loader, source map và hàng đợi
 specialization đều dùng container này.

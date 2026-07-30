@@ -4355,7 +4355,7 @@ fn emitModule(
         }
     }
     
-    var structRequests = List<StructSpecializationRequest>.new(sizeof(StructSpecializationRequest));
+    var structRequests = List<StructSpecializationRequest>.new();
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
         if (node.typeKind == 8) {
@@ -4412,7 +4412,7 @@ fn emitModule(
             }
         }
     }
-    var requests = List<SpecializationRequest>.new(sizeof(SpecializationRequest));
+    var requests = List<SpecializationRequest>.new();
     for (callIndex in 0..<nodes.length) {
         val call = nodes.data[callIndex];
         if (call.kind == 16) {

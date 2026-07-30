@@ -5,7 +5,7 @@ extern fn k_boot_free(pointer: unit*);
 
 struct List<T>(data: T*, length: u64, capacity: u64, size: u64) {
 
-    fn new(size: u64) => List<T>(k_boot_alloc(2 * size) as T*, 0, 2, size);
+    fn new() => List<T>(k_boot_alloc(2 * sizeof(T)) as T*, 0, 2, sizeof(T));
 
 	fn add(var self, value: T): u64 {
 		if (self.length == self.capacity) self.grow();
