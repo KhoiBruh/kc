@@ -181,13 +181,12 @@ fn compileToLl(
         return 1;
     }
     var verifyCommand = ByteBuffer.new();
+    defer verifyCommand.free();
+
     appendQuoted(verifyCommand, optPath, optPathLength);
     appendVerifyFlags(verifyCommand);
-    appendQuoted(
-        verifyCommand, temporaryPath.data, temporaryPath.length);
-    val verified =
-        k_boot_run(verifyCommand.data, verifyCommand.length);
-    verifyCommand.free();
+    appendQuoted(verifyCommand, temporaryPath.data, temporaryPath.length);
+    val verified = k_boot_run(verifyCommand.data, verifyCommand.length);
     if (verified != 0) {
         temporaryPath.free();
         output.free();

@@ -714,6 +714,12 @@ fn parseStatement(var parser: Parser): u64 {
             parser, 33, first.start, parserPrevious(parser).end,
             subtreeStart, first.kind);
     }
+    if (parserMatch(parser, 21)) {
+        parseStatement(parser);
+        return parserAdd(
+            parser, 41, first.start, parserPrevious(parser).end,
+            subtreeStart, 0);
+    }
     if (parserMatch(parser, 20)) {
         var hasValue: u32 = 0;
         if (!parserCheck(parser, 58)) {

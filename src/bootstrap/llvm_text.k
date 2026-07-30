@@ -822,7 +822,8 @@ struct IrCounter(
     block: u64,
     currentBlock: u64,
     continueBlock: u64,
-    breakBlock: u64)
+    breakBlock: u64,
+    loopDeferDepth: u64)
 
 fn appendStructSpecializationSuffix(
     var buffer: ByteBuffer, arguments: List<TypeValue>,
@@ -1733,14 +1734,19 @@ fn emitExpression(
                     thenRoots[index as u64]);
             }
         }
+        var thenDefers = List<u64>.new();
         for (index in 0..<thenCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
-                thenRoots[index as u64], counter);
+                thenRoots[index as u64], counter, thenDefers);
         }
         val thenValue = emitExpression(
             buffer, source, nodes, genericArguments, thenValueRoot, counter);
+        emitDeferRange(
+            buffer, source, nodes, genericArguments,
+            counter, thenDefers, thenDefers.length, 0);
         val thenValueBlock = counter.currentBlock;
+        thenDefers.free();
         appendBranch(buffer, mergeBlock);
         appendBlockLabel(buffer, counter, elseBlock);
         for (index in 0..<elseCount) {
@@ -1751,14 +1757,19 @@ fn emitExpression(
                     elseRoots[index as u64]);
             }
         }
+        var elseDefers = List<u64>.new();
         for (index in 0..<elseCount) {
             emitStatement(
                 buffer, source, nodes, genericArguments,
-                elseRoots[index as u64], counter);
+                elseRoots[index as u64], counter, elseDefers);
         }
         val elseValue = emitExpression(
             buffer, source, nodes, genericArguments, elseValueRoot, counter);
+        emitDeferRange(
+            buffer, source, nodes, genericArguments,
+            counter, elseDefers, elseDefers.length, 0);
         val elseValueBlock = counter.currentBlock;
+        elseDefers.free();
         appendBranch(buffer, mergeBlock);
         appendBlockLabel(buffer, counter, mergeBlock);
         val temporary = nextTemporary(counter);
@@ -1867,14 +1878,19 @@ fn emitExpression(
                 appendBranch(buffer, bodyBlock);
             }
             appendBlockLabel(buffer, counter, bodyBlock);
+            var branchDefers = List<u64>.new();
             for (statementIndex in 0..<statementCount) {
                 emitStatement(
                     buffer, source, nodes, genericArguments,
-                    statementRoots[statementIndex as u64], counter);
+                    statementRoots[statementIndex as u64], counter, branchDefers);
             }
             values[index as u64] = emitExpression(
                 buffer, source, nodes, genericArguments, valueRoot, counter);
+            emitDeferRange(
+                buffer, source, nodes, genericArguments,
+                counter, branchDefers, branchDefers.length, 0);
             blocks[index as u64] = counter.currentBlock;
+            branchDefers.free();
             appendBranch(buffer, mergeBlock);
             if (branch.aux % 2 == 0) {
                 appendBlockLabel(buffer, counter, nextBlockValue);
@@ -2953,30 +2969,67 @@ fn blockStatementRoots(nodes: List<AstNode>, blockRoot: u64): u64* {
     return roots;
 }
 
+fn emitDeferRange(
+    var buffer: ByteBuffer,
+    source: Source,
+    nodes: List<AstNode>,
+    var genericArguments: List<TypeValue>,
+    var counter: IrCounter,
+    var defers: List<u64>,
+    fromLen: u64,
+    toLen: u64) {
+    if (fromLen > toLen) {
+        val count = fromLen - toLen;
+        val saved = k_boot_alloc(count * sizeof(u64)) as u64*;
+        for (idx in 0..<count) {
+            saved[idx] = defers.data[fromLen - 1 - idx];
+        }
+        for (idx in 0..<count) {
+            emitStatement(
+                buffer, source, nodes, genericArguments,
+                saved[idx], counter, defers);
+        }
+        k_boot_free(saved as unit*);
+    }
+}
+
 fn emitBlock(
     var buffer: ByteBuffer,
     source: Source,
     nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     root: u64,
-    var counter: IrCounter): bool {
+    var counter: IrCounter,
+    var defers: List<u64>): bool {
+    if (nodes.data[root].kind != 30) {
+        return emitStatement(
+            buffer, source, nodes, genericArguments,
+            root, counter, defers);
+    }
+    val baseDepth = defers.length;
     val roots = blockStatementRoots(nodes, root);
     var terminated = false;
     for (index in 0..<nodes.data[root].aux) {
         if (!terminated) {
             terminated = emitStatement(
                 buffer, source, nodes, genericArguments,
-                roots[index as u64], counter);
+                roots[index as u64], counter, defers);
         }
     }
     k_boot_free(roots as unit*);
+    if (!terminated) {
+        emitDeferRange(
+            buffer, source, nodes, genericArguments,
+            counter, defers, defers.length, baseDepth);
+    }
+    defers.length = baseDepth;
     return terminated;
 }
 
 fn emitCollectionFor(
     var buffer: ByteBuffer, source: Source, nodes: List<AstNode>,
     var genericArguments: List<TypeValue>, root: u64,
-    var counter: IrCounter): bool {
+    var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
     val bodyRoot = root - 1;
     val collectionRoot = expressionChildBefore(nodes, bodyRoot);
@@ -3074,10 +3127,13 @@ fn emitCollectionFor(
     appendNewline(buffer);
     val outerContinueBlock = counter.continueBlock;
     val outerBreakBlock = counter.breakBlock;
+    val outerLoopDeferDepth = counter.loopDeferDepth;
     counter.continueBlock = incrementBlock; counter.breakBlock = endBlock;
+    counter.loopDeferDepth = defers.length;
     val terminated = emitBlock(
-        buffer, source, nodes, genericArguments, bodyRoot, counter);
+        buffer, source, nodes, genericArguments, bodyRoot, counter, defers);
     counter.continueBlock = outerContinueBlock; counter.breakBlock = outerBreakBlock;
+    counter.loopDeferDepth = outerLoopDeferDepth;
     if (!terminated) appendBranch(buffer, incrementBlock);
     appendBlockLabel(buffer, counter, incrementBlock);
     val loaded = nextTemporary(counter);
@@ -3102,7 +3158,7 @@ fn emitCollectionFor(
 fn emitWhen(
     var buffer: ByteBuffer, source: Source, nodes: List<AstNode>,
     var genericArguments: List<TypeValue>, root: u64,
-    var counter: IrCounter): bool {
+    var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
     val branchCount = statement.aux % 65536;
     val hasSubject = statement.aux / 65536;
@@ -3167,7 +3223,7 @@ fn emitWhen(
             k_boot_free(patternRoots as unit*);
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
-                buffer, source, nodes, genericArguments, bodyRoot, counter);
+                buffer, source, nodes, genericArguments, bodyRoot, counter, defers);
             if (!terminated) appendBranch(buffer, mergeBlock);
             if (!terminated) allTerminate = false;
             if (index + 1 < branchCount) {
@@ -3178,7 +3234,7 @@ fn emitWhen(
             appendBranch(buffer, bodyBlock);
             appendBlockLabel(buffer, counter, bodyBlock);
             val terminated = emitBlock(
-                buffer, source, nodes, genericArguments, bodyRoot, counter);
+                buffer, source, nodes, genericArguments, bodyRoot, counter, defers);
             if (!terminated) appendBranch(buffer, mergeBlock);
             if (!terminated) allTerminate = false;
         }
@@ -3201,13 +3257,26 @@ fn emitStatement(
     nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     root: u64,
-    var counter: IrCounter): bool {
+    var counter: IrCounter,
+    var defers: List<u64>): bool {
     val statement = nodes.data[root];
+    if (statement.kind == 41) {
+        var mutableDefers = defers;
+        mutableDefers.add(root - 1);
+        defers = mutableDefers;
+        return false;
+    }
     if (statement.kind == 36) {
+        emitDeferRange(
+            buffer, source, nodes, genericArguments,
+            counter, defers, defers.length, counter.loopDeferDepth);
         appendBranch(buffer, counter.breakBlock);
         return true;
     }
     if (statement.kind == 37) {
+        emitDeferRange(
+            buffer, source, nodes, genericArguments,
+            counter, defers, defers.length, counter.loopDeferDepth);
         appendBranch(buffer, counter.continueBlock);
         return true;
     }
@@ -3224,7 +3293,7 @@ fn emitStatement(
         }
         if (!range) {
             return emitCollectionFor(
-                buffer, source, nodes, genericArguments, root, counter);
+                buffer, source, nodes, genericArguments, root, counter, defers);
         }
         val rightRoot = collectionRoot - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
@@ -3345,12 +3414,15 @@ fn emitStatement(
         appendBlockLabel(buffer, counter, bodyBlock);
         val outerContinueBlock = counter.continueBlock;
         val outerBreakBlock = counter.breakBlock;
+        val outerLoopDeferDepth = counter.loopDeferDepth;
         counter.continueBlock = incrementBlock;
         counter.breakBlock = endBlock;
+        counter.loopDeferDepth = defers.length;
         val terminated = emitBlock(
-            buffer, source, nodes, genericArguments, bodyRoot, counter);
+            buffer, source, nodes, genericArguments, bodyRoot, counter, defers);
         counter.continueBlock = outerContinueBlock;
         counter.breakBlock = outerBreakBlock;
+        counter.loopDeferDepth = outerLoopDeferDepth;
         if (!terminated) appendBranch(buffer, incrementBlock);
         appendBlockLabel(buffer, counter, incrementBlock);
         val loaded = nextTemporary(counter);
@@ -3391,7 +3463,7 @@ fn emitStatement(
     }
     if (statement.kind == 39) {
         return emitWhen(
-            buffer, source, nodes, genericArguments, root, counter);
+            buffer, source, nodes, genericArguments, root, counter, defers);
     }
     if (statement.kind == 33) {
         val initializerRoot = root - 1;
@@ -3426,9 +3498,12 @@ fn emitStatement(
         return false;
     } else {
         if (statement.kind == 34) {
-            buffer.add(32);
-            buffer.add(32);
             if (statement.aux == 0) {
+                emitDeferRange(
+                    buffer, source, nodes, genericArguments,
+                    counter, defers, defers.length, 0);
+                buffer.add(32);
+                buffer.add(32);
                 buffer.add(114);
                 buffer.add(101);
                 buffer.add(116);
@@ -3535,6 +3610,11 @@ fn emitStatement(
                             statement.typeName, statement.typePointee);
                     }
                 }
+                emitDeferRange(
+                    buffer, source, nodes, genericArguments,
+                    counter, defers, defers.length, 0);
+                buffer.add(32);
+                buffer.add(32);
                 buffer.add(114);
                 buffer.add(101);
                 buffer.add(116);
@@ -3557,7 +3637,7 @@ fn emitStatement(
                 if (statement.kind == 30) {
                     return emitBlock(
                         buffer, source, nodes, genericArguments,
-                        root, counter);
+                        root, counter, defers);
                 }
                 if (statement.kind == 31) {
                     var elseRoot: u64 = 0;
@@ -3584,7 +3664,7 @@ fn emitStatement(
                     appendBlockLabel(buffer, counter, thenBlock);
                     val thenTerminated = emitBlock(
                         buffer, source, nodes, genericArguments,
-                        thenRoot, counter);
+                        thenRoot, counter, defers);
                     if (!thenTerminated) {
                         appendBranch(buffer, endBlock);
                     }
@@ -3593,7 +3673,7 @@ fn emitStatement(
                         appendBlockLabel(buffer, counter, elseBlock);
                         elseTerminated = emitBlock(
                             buffer, source, nodes, genericArguments,
-                            elseRoot, counter);
+                            elseRoot, counter, defers);
                         if (!elseTerminated) {
                             appendBranch(buffer, endBlock);
                         }
@@ -3629,13 +3709,16 @@ fn emitStatement(
                     appendBlockLabel(buffer, counter, bodyBlock);
                     val outerContinueBlock = counter.continueBlock;
                     val outerBreakBlock = counter.breakBlock;
+                    val outerLoopDeferDepth = counter.loopDeferDepth;
                     counter.continueBlock = conditionBlock;
                     counter.breakBlock = endBlock;
+                    counter.loopDeferDepth = defers.length;
                     val bodyTerminated = emitBlock(
                         buffer, source, nodes, genericArguments,
-                        bodyRoot, counter);
+                        bodyRoot, counter, defers);
                     counter.continueBlock = outerContinueBlock;
                     counter.breakBlock = outerBreakBlock;
+                    counter.loopDeferDepth = outerLoopDeferDepth;
                     if (!bodyTerminated) {
                         appendBranch(buffer, conditionBlock);
                     }
@@ -3985,7 +4068,7 @@ fn emitFunction(
 
     var counter = IrCounter(
         0, 0, 18446744073709551615,
-        18446744073709551615, 18446744073709551615);
+        18446744073709551615, 18446744073709551615, 0);
     for (parameterIndex in 0..<parameterCount) {
         val parameterPosition = parameterIndex + 1;
         val parameter = nodes.data[
@@ -4020,10 +4103,12 @@ fn emitFunction(
 
     val blockRoot = functionRoot - 1;
     emitBlockAllocas(buffer, genericArguments, nodes, blockRoot);
+    var defers = List<u64>.new();
     val terminated =
         emitBlock(
             buffer, source, nodes, genericArguments,
-            blockRoot, counter);
+            blockRoot, counter, defers);
+    defers.free();
     if (!terminated) {
         var returnsUnit = returnType.typeKind == 1;
         if (returnType.kind == 1 && returnType.aux == 49) returnsUnit = true;

@@ -1752,6 +1752,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
 }
 
 fn checkBlock(var semantic: Semantic, root: u64) {
+    if (semantic.nodes.data[root].kind != 30) {
+        checkStatement(semantic, root);
+        return;
+    }
     val savedLocals = semantic.locals.length;
     val savedScopeStart = semantic.scopeStart;
     semantic.scopeStart = savedLocals;
@@ -2015,6 +2019,10 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             semanticFail(semantic, 4, node);
         }
         k_boot_free(roots as unit*);
+        return;
+    }
+    if (node.kind == 41) {
+        checkStatement(semantic, root - 1);
         return;
     }
     if (node.kind == 36) {

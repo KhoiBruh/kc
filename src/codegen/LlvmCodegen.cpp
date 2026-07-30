@@ -517,7 +517,7 @@ private:
 
     void emitDeferredStatements(std::size_t targetDepth = 0) {
         for (std::size_t i = deferScopes_.size(); i > targetDepth; --i) {
-            const auto& scope = deferScopes_[i - 1];
+            const auto scope = deferScopes_[i - 1];
             for (auto it = scope.rbegin(); it != scope.rend(); ++it) {
                 emitStatement(**it);
                 if (builder_.GetInsertBlock()->getTerminator()) break;
