@@ -784,6 +784,10 @@ private:
             }
             return true;
         }
+        if (const auto* deferStatement = std::get_if<DeferStmt>(&statement.node)) {
+            analyzeStatement(*deferStatement->statement);
+            return false;
+        }
         const auto& expression = std::get<ExpressionStmt>(statement.node).expression;
         const auto* previousMutationRoot = postfixMutationRoot_;
         postfixMutationRoot_ = expression.get();

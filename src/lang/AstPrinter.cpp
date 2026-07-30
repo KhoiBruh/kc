@@ -134,6 +134,10 @@ private:
             printStmt(*statement, depth + 2);
     }
 
+    void printExpr(const Expr& expression, std::size_t depth) {
+        std::visit([&](const auto& node) { printExprNode(node, depth); }, expression.node);
+    }
+
     void printType(const Type& type, std::size_t depth) {
         std::visit([&](const auto& node) { printTypeNode(node, depth); }, type.node);
     }
@@ -258,8 +262,9 @@ private:
         printExpr(*statement.expression, depth + 1);
     }
 
-    void printExpr(const Expr& expression, std::size_t depth) {
-        std::visit([&](const auto& node) { printExprNode(node, depth); }, expression.node);
+    void printStmtNode(const DeferStmt& statement, std::size_t depth) {
+        line(depth, "Defer");
+        printStmt(*statement.statement, depth + 1);
     }
 
     void printExprNode(const IdentifierExpr& expression, std::size_t depth) {

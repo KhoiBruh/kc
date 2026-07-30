@@ -455,6 +455,8 @@ private:
         auto* entry = llvm::BasicBlock::Create(context_, "entry", function);
         builder_.SetInsertPoint(entry);
         locals_.clear();
+        deferScopes_.clear();
+        deferScopes_.emplace_back();
 
         std::size_t parameterIndex = 0;
         for (auto& argument : function->args()) {
@@ -493,10 +495,13 @@ private:
                 if (builder_.GetInsertBlock()->getTerminator()) break;
             }
         }
-        if (!builder_.GetInsertBlock()->getTerminator() &&
-            function->getReturnType()->isVoidTy()) {
-            builder_.CreateRetVoid();
+        if (!builder_.GetInsertBlock()->getTerminator()) {
+            emitDeferredStatements(0);
+            if (function->getReturnType()->isVoidTy()) {
+                builder_.CreateRetVoid();
+            }
         }
+        deferScopes_.pop_back();
         activeTypeArguments_ = outerTypeArguments;
         current_ = outerCurrent;
     }
@@ -508,6 +513,17 @@ private:
         llvm::IRBuilder<> entryBuilder{
             &function.getEntryBlock(), function.getEntryBlock().begin()};
         return entryBuilder.CreateAlloca(type, nullptr, name);
+    }
+
+    void emitDeferredStatements(std::size_t targetDepth = 0) {
+        for (std::size_t i = deferScopes_.size(); i > targetDepth; --i) {
+            const auto& scope = deferScopes_[i - 1];
+            for (auto it = scope.rbegin(); it != scope.rend(); ++it) {
+                emitStatement(**it);
+                if (builder_.GetInsertBlock()->getTerminator()) break;
+            }
+            if (builder_.GetInsertBlock()->getTerminator()) break;
+        }
     }
 
     void emitStatement(const Stmt& statement) {
@@ -531,12 +547,22 @@ private:
             emitWhen(*whenStatement);
             return;
         }
+        if (const auto* deferStatement = std::get_if<DeferStmt>(&statement.node)) {
+            if (!deferScopes_.empty()) {
+                deferScopes_.back().push_back(deferStatement->statement.get());
+            }
+            return;
+        }
         if (std::holds_alternative<BreakStmt>(statement.node)) {
-            builder_.CreateBr(loopTargets_.back().second);
+            const auto targetDepth = loopTargets_.empty() ? 0 : loopTargets_.back().deferDepth;
+            emitDeferredStatements(targetDepth);
+            builder_.CreateBr(loopTargets_.back().breakBlock);
             return;
         }
         if (std::holds_alternative<ContinueStmt>(statement.node)) {
-            builder_.CreateBr(loopTargets_.back().first);
+            const auto targetDepth = loopTargets_.empty() ? 0 : loopTargets_.back().deferDepth;
+            emitDeferredStatements(targetDepth);
+            builder_.CreateBr(loopTargets_.back().continueBlock);
             return;
         }
         if (const auto* variable = std::get_if<VariableDecl>(&statement.node)) {
@@ -564,9 +590,11 @@ private:
         if (const auto* returnStatement = std::get_if<ReturnStmt>(&statement.node)) {
             if (returnStatement->value) {
                 if (auto* value = emitExpr(*returnStatement->value)) {
+                    emitDeferredStatements(0);
                     builder_.CreateRet(value);
                 }
             } else {
+                emitDeferredStatements(0);
                 builder_.CreateRetVoid();
             }
             return;
@@ -580,10 +608,15 @@ private:
 
     void emitScopedBlock(const BlockStmt& block) {
         const auto outerLocals = locals_;
+        deferScopes_.emplace_back();
         for (const auto& statement : block.statements) {
             emitStatement(*statement);
             if (builder_.GetInsertBlock()->getTerminator()) break;
         }
+        if (!builder_.GetInsertBlock()->getTerminator()) {
+            emitDeferredStatements(deferScopes_.size() - 1);
+        }
+        deferScopes_.pop_back();
         locals_ = outerLocals;
     }
 
@@ -632,7 +665,7 @@ private:
         builder_.CreateCondBr(condition, bodyBlock, exitBlock);
 
         builder_.SetInsertPoint(bodyBlock);
-        loopTargets_.push_back({conditionBlock, exitBlock});
+        loopTargets_.push_back({conditionBlock, exitBlock, deferScopes_.size()});
         emitScopedBlock(*statement.body);
         loopTargets_.pop_back();
         if (!builder_.GetInsertBlock()->getTerminator())
@@ -763,7 +796,7 @@ private:
         if (statement.indexName)
             locals_[spelling(source(), *statement.indexName)] = {
                 indexSlot, builder_.getInt64Ty()};
-        loopTargets_.push_back({incrementBlock, exitBlock});
+        loopTargets_.push_back({incrementBlock, exitBlock, deferScopes_.size()});
         emitScopedBlock(*statement.body);
         loopTargets_.pop_back();
         locals_ = outerLocals;
@@ -831,7 +864,7 @@ private:
         builder_.SetInsertPoint(bodyBlock);
         const auto outerLocals = locals_;
         locals_[name] = {valueSlot, start->getType()};
-        loopTargets_.push_back({incrementBlock, exitBlock});
+        loopTargets_.push_back({incrementBlock, exitBlock, deferScopes_.size()});
         emitScopedBlock(*statement.body);
         loopTargets_.pop_back();
         locals_ = outerLocals;
@@ -1921,7 +1954,13 @@ private:
     std::unordered_map<std::string, llvm::StructType*> structs_;
     std::unordered_map<std::string, llvm::StructType*> specializedStructs_;
     std::unordered_map<std::string, LocalSlot> locals_;
-    std::vector<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>> loopTargets_;
+    struct LoopTarget {
+        llvm::BasicBlock* continueBlock;
+        llvm::BasicBlock* breakBlock;
+        std::size_t deferDepth;
+    };
+    std::vector<LoopTarget> loopTargets_;
+    std::vector<std::vector<const Stmt*>> deferScopes_;
 };
 
 }

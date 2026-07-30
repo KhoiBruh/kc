@@ -120,11 +120,12 @@ struct VariableDecl {
 };
 struct ReturnStmt { ExprPtr value; };
 struct ExpressionStmt { ExprPtr expression; };
+struct DeferStmt { StmtPtr statement; };
 
 struct Stmt {
     using Node = std::variant<BlockStmt, IfStmt, WhileStmt, ForStmt, WhenStmt,
                               BreakStmt, ContinueStmt, VariableDecl,
-                              ReturnStmt, ExpressionStmt>;
+                              ReturnStmt, DeferStmt, ExpressionStmt>;
     SourceSpan span;
     Node node;
 };

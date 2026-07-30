@@ -825,6 +825,25 @@ TEST(codegen_lowers_statement_like_arrow_bodies_as_unit) {
     EXPECT_TRUE(ir.find("define void @assign") != std::string::npos);
 }
 
+TEST(codegen_lowers_defer_statements_in_lifo_order) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "extern fn cleanup1();"
+        "extern fn cleanup2();"
+        "fn main(): i32 {"
+        "    defer cleanup1();"
+        "    defer cleanup2();"
+        "    return 0;"
+        "}",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    const auto call2Pos = ir.find("call void @cleanup2");
+    const auto call1Pos = ir.find("call void @cleanup1");
+    EXPECT_TRUE(call2Pos != std::string::npos);
+    EXPECT_TRUE(call1Pos != std::string::npos);
+    EXPECT_TRUE(call2Pos < call1Pos);
+}
+
 int main() {
     return test::runAll();
 }

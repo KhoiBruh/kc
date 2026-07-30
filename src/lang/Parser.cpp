@@ -457,6 +457,7 @@ StmtPtr Parser::parseStatement() {
     }
     if (check(TokenKind::KwVal) || check(TokenKind::KwVar)) return parseVariable();
     if (check(TokenKind::KwReturn)) return parseReturn();
+    if (check(TokenKind::KwDefer)) return parseDefer();
     if (check(TokenKind::LeftBrace)) {
         SourceSpan span{};
         auto block = parseBlock(span);
@@ -464,6 +465,14 @@ StmtPtr Parser::parseStatement() {
         return makeStmt(span, std::move(*block));
     }
     return parseExpressionStatement();
+}
+
+StmtPtr Parser::parseDefer() {
+    const auto start = advance().span;
+    auto statement = parseStatement();
+    if (!statement) return nullptr;
+    const auto span = spanFrom(start, statement->span);
+    return makeStmt(span, DeferStmt{std::move(statement)});
 }
 
 StmtPtr Parser::parseIf() {
@@ -955,10 +964,11 @@ ExprPtr Parser::parseIfExpression() {
             while (!check(TokenKind::RightBrace) && !atEnd()) {
                 const bool statementStart =
                     check(TokenKind::KwVal) || check(TokenKind::KwVar) ||
-                    check(TokenKind::KwReturn) || check(TokenKind::KwIf) ||
-                    check(TokenKind::KwWhile) || check(TokenKind::KwFor) ||
-                    check(TokenKind::KwWhen) || check(TokenKind::KwBreak) ||
-                    check(TokenKind::KwContinue) || check(TokenKind::LeftBrace);
+                    check(TokenKind::KwReturn) || check(TokenKind::KwDefer) ||
+                    check(TokenKind::KwIf) || check(TokenKind::KwWhile) ||
+                    check(TokenKind::KwFor) || check(TokenKind::KwWhen) ||
+                    check(TokenKind::KwBreak) || check(TokenKind::KwContinue) ||
+                    check(TokenKind::LeftBrace);
                 if (statementStart) {
                     auto statement = parseStatement();
                     if (!statement) return std::nullopt;

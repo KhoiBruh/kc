@@ -313,6 +313,11 @@ private:
         if (item.value) expression(*item.value);
         add(34, value.span, subtree, item.value ? 1 : 0);
     }
+    void stmtNode(const k::DeferStmt& item, const k::Stmt& value,
+                  std::size_t subtree) {
+        statement(*item.statement);
+        add(41, value.span, subtree);
+    }
     void stmtNode(const k::ExpressionStmt& item, const k::Stmt& value,
                   std::size_t subtree) {
         expression(*item.expression);

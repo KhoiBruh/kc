@@ -607,6 +607,24 @@ TEST(parser_accepts_expression_bodied_functions) {
     EXPECT_TRUE(fixture.parsed.program.functions[1].infersReturnType);
 }
 
+TEST(parser_accepts_defer_statement) {
+    ParseFixture fixture{"fn main() { defer list.free(); }"};
+    EXPECT_TRUE(fixture.parsed.diagnostics.empty());
+    EXPECT_EQ(
+        k::printAst(fixture.source, fixture.parsed.program),
+        "Program\n"
+        "  Function main\n"
+        "    ReturnType\n"
+        "      Type unit\n"
+        "    Parameters\n"
+        "    Block\n"
+        "      Defer\n"
+        "        ExpressionStatement\n"
+        "          Call\n"
+        "            Member free\n"
+        "              Identifier list\n");
+}
+
 int main() {
     return test::runAll();
 }
