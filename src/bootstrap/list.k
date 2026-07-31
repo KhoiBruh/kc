@@ -24,5 +24,9 @@ struct List<T>(data: T*, length: u64, capacity: u64, size: u64) {
         self.capacity = capacity;
     }
 
-    fn free(val self) => k_boot_free(self.data as unit*);
+    fn free(self) => k_boot_free(self.data as unit*);
+
+    fn setLength(var self, value: u64) {
+        self.length = value;
+    }
 }

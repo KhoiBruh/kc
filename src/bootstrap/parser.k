@@ -38,14 +38,12 @@ fn parserAdd(
     end: u64,
     subtreeStart: u64,
     aux: u32): u64 {
-    var nodes = parser.nodes;
-    val index = nodes.add(
+    val index = parser.nodes.add(
         AstNode(
             kind, start, end, subtreeStart, aux,
             0, 0, 0, 0, 0, 0, 0
 		)
     );
-    parser.nodes = nodes;
     return index;
 }
 
@@ -1084,37 +1082,35 @@ fn parse(val tokens: List<Token>): ParseResult {
         declarationCount++;
     }
     while (parser.ok) {
-        if (parserCheck(parser, 0)) {
-            val end = parserPeek(parser).end;
-            parserAdd(parser, 44, start, end, 0, declarationCount);
-            return ParseResult(parser.nodes, true, 0, 0);
-        }
+        if (parserCheck(parser, 0)) break;
         if (parserCheck(parser, 25)) {
             parseModule(parser);
+        } else if (parserCheck(parser, 26)) {
+            parseImport(parser);
+        } else if (parserCheck(parser, 24)) {
+            parseEnum(parser);
+        } else if (parserCheck(parser, 8)) {
+            parseConstant(parser);
+        } else if (parserCheck(parser, 11)) {
+            parseStruct(parser);
         } else {
-            if (parserCheck(parser, 26)) {
-                parseImport(parser);
-            } else {
-                if (parserCheck(parser, 24)) {
-                    parseEnum(parser);
-                } else {
-                if (parserCheck(parser, 8)) {
-                    parseConstant(parser);
-                } else {
-                if (parserCheck(parser, 11)) {
-                    parseStruct(parser);
-                } else {
-                    var isExtern = false;
-                    val declarationStart = parserPeek(parser).start;
-                    if (parserMatch(parser, 9)) isExtern = true;
-                    parseFunction(parser, isExtern, declarationStart, 0, 0);
-                }
-                }
-                }
-            }
+            var isExtern = false;
+            val declarationStart = parserPeek(parser).start;
+            if (parserMatch(parser, 9)) isExtern = true;
+            parseFunction(parser, isExtern, declarationStart, 0, 0);
         }
         declarationCount++;
     }
-    return ParseResult(
-        parser.nodes, false, parserPeek(parser).start, parser.expectedKind);
+    var ok = false;
+    var errorStart: u64 = 0;
+    var expectedKind: u32 = 0;
+    if (parserCheck(parser, 0)) {
+        val end = parserPeek(parser).end;
+        parserAdd(parser, 44, start, end, 0, declarationCount);
+        ok = true;
+    } else {
+        errorStart = parserPeek(parser).start;
+        expectedKind = parser.expectedKind;
+    }
+    return ParseResult(parser.nodes, ok, errorStart, expectedKind);
 }

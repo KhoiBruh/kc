@@ -164,11 +164,12 @@ fn main(): i32 {
 
     val loaded = loadModules(input.data, input.length);
     if (!loaded.ok) {
-        sourceMapFree(loaded.sourceMap);
-        if (loaded.failureKind == 1) mainError(2);
+        val failureKind = loaded.failureKind;
+        k_boot_free(loaded.sourceMap.data as unit*);
+        if (failureKind == 1) mainError(2);
         freeArguments(
             input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
-        return loaded.failureKind;
+        return failureKind;
     }
 
     var result = compileToLl(

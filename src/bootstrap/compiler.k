@@ -149,7 +149,6 @@ fn compileToLl(
     }
 
     var checked = analyze(source, parsed.nodes);
-    defer checked.genericArguments.free();
     if (!checked.ok) {
         printDiagnostic(
             source, sourceMap, checked.category,
@@ -158,8 +157,8 @@ fn compileToLl(
         return 2;
     }
     var resolvedArguments = checked.genericArguments;
+    defer resolvedArguments.free();
     val output = emitModule(source, parsed.nodes, resolvedArguments);
-    checked.genericArguments = resolvedArguments;
     defer output.free();
 
     var temporaryPath = ByteBuffer.new();
@@ -245,15 +244,16 @@ fn stderrWrite(data: u8*, length: u64) => k_boot_stderr(data, length);
 
 fn stderrNumber(value: u64): ByteBuffer {
     var buf = ByteBuffer.new();
-    if (value == 0) {
-        buf.add(48);
-        return buf;
-    }
     var v = value;
-    while (v > 0) {
-        buf.add(48 + (v % 10) as u8);
-        v /= 10;
+    if (v == 0) {
+        buf.add(48);
+    } else {
+        while (v > 0) {
+            buf.add(48 + (v % 10) as u8);
+            v /= 10;
+        }
     }
+    
     val half = buf.length / 2;
     for (i in 0..<half) {
         val j = buf.length - i - 1;
@@ -261,6 +261,7 @@ fn stderrNumber(value: u64): ByteBuffer {
         buf.data[i] = buf.data[j];
         buf.data[j] = tmp;
     }
+
     return buf;
 }
 

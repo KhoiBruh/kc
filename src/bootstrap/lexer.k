@@ -381,6 +381,9 @@ fn doublePunctuationKind(first: u8, second: u8): u32 {
 fn lex(source: Source): LexResult {
     var tokens = List<Token>.new();
     var offset: u64 = 0;
+    var failed = false;
+    var errorStart: u64 = 0;
+    var errorKind: u32 = 0;
     while (offset < source.length) {
         val value = source.data[offset];
         if (isWhitespace(value)) offset++;
@@ -410,9 +413,14 @@ fn lex(source: Source): LexResult {
                 }
                 value == 34 -> {
                     val end = scanString(source, offset + 1);
-                    if (end == offset + 1) return LexResult(tokens, false, start, 1);
-                    offset = end;
-                    tokens.add(Token(5, start, offset));
+                    if (end == offset + 1) {
+                        failed = true;
+                        errorStart = start;
+                        errorKind = 1;
+                    } else {
+                        offset = end;
+                        tokens.add(Token(5, start, offset));
+                    }
                 }
                 isIdentifierStart(value) -> {
                     offset = scanIdentifier(source, offset + 1);
@@ -461,14 +469,24 @@ fn lex(source: Source): LexResult {
                 		    }
                 	    }
                 	}
-                    if (kind == 0) return LexResult(tokens, false, start, 2);
-                    offset++;
-                    tokens.add(Token(kind, start, offset));
+                    if (kind == 0) {
+                        failed = true;
+                        errorStart = start;
+                        errorKind = 2;
+                    } else {
+                        offset++;
+                        tokens.add(Token(kind, start, offset));
+                    }
                 }
             }
+            if (failed) break;
         }
     }
-
-    tokens.add(Token(0, source.length, source.length));
-    return LexResult(tokens, true, 0, 0);
+    var ok = true;
+    if (failed) {
+        ok = false;
+    } else {
+        tokens.add(Token(0, source.length, source.length));
+    }
+    return LexResult(tokens, ok, errorStart, errorKind);
 }

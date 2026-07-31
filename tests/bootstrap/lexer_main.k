@@ -44,13 +44,13 @@ fn main(): i32 {
     } else {
         print("error:");
         print(result.errorStart as i32);
-        result.tokens.free();
+        k_boot_free(result.tokens.data as unit*);
         k_boot_free(sourceData as unit*);
         k_boot_free(path as unit*);
         return 2;
     }
 
-    result.tokens.free();
+    k_boot_free(result.tokens.data as unit*);
     k_boot_free(sourceData as unit*);
     k_boot_free(path as unit*);
     return 0;

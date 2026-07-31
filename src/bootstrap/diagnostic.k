@@ -9,9 +9,9 @@ struct SemanticResult(
     genericArguments: List<TypeValue>
 )
 
-fn semanticSuccess(genericArguments: List<TypeValue>) => SemanticResult(true, 0, 0, 0, genericArguments);
+fn semanticSuccess() => SemanticResult(true, 0, 0, 0, List<TypeValue>.new());
 
 fn semanticError(
     category: u32, node: AstNode,
-    genericArguments: List<TypeValue>
+    val genericArguments: List<TypeValue>
 ) => SemanticResult(false, category, node.start, node.end, genericArguments);

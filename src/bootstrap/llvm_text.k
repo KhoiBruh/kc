@@ -514,7 +514,7 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
 
 fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, root: u64) {
     var decoded = decodeStringLiteral(source, node);
-    decoded.free();
+    defer decoded.free();
     buffer.add(64); buffer.add(46); buffer.add(107);
     buffer.add(115); appendDecimal(buffer, root);
     appendPrivateStringPrefix(buffer);
@@ -826,7 +826,7 @@ struct IrCounter(
     loopDeferDepth: u64)
 
 fn appendStructSpecializationSuffix(
-    var buffer: ByteBuffer, arguments: List<TypeValue>,
+    var buffer: ByteBuffer, val arguments: List<TypeValue>,
     start: u64, count: u32) {
     buffer.add(95);
     buffer.add(95);
@@ -844,7 +844,7 @@ fn appendStructSpecializationSuffix(
 }
 
 fn appendType(
-    var buffer: ByteBuffer, genericArguments: List<TypeValue>,
+    var buffer: ByteBuffer, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32) {
     if (kind == 1) {
         buffer.add(118);
@@ -937,7 +937,7 @@ fn appendType(
     }
 }
 
-fn appendNodeType(var buffer: ByteBuffer, val genericArguments: List<TypeValue>, node: AstNode) {
+fn appendNodeType(var buffer: ByteBuffer, var genericArguments: List<TypeValue>, node: AstNode) {
     appendType(
         buffer, genericArguments, node.typeKind, node.typeName, node.typePointee);
 }
@@ -1020,7 +1020,7 @@ fn appendUnreachable(var buffer: ByteBuffer) {
 }
 
 fn appendSpecializationSuffix(
-    var buffer: ByteBuffer, arguments: List<TypeValue>,
+    var buffer: ByteBuffer, val arguments: List<TypeValue>,
     start: u64, count: u32) {
     buffer.add(95);
     buffer.add(95);
@@ -1158,7 +1158,7 @@ fn emitterStructTypeParameterPosition(
 
 fn substituteStructEmitterType(
     source: Source, val nodes: List<AstNode>, structureRoot: u64,
-    pattern: TypeValue, arguments: List<TypeValue>,
+    pattern: TypeValue, val arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
     if (pattern.kind == 14) {
         val position = emitterStructTypeParameterPosition(
@@ -1191,7 +1191,7 @@ fn substituteStructEmitterType(
 }
 
 fn emitterFieldRootAt(
-    nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
+    val nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
     val structure = nodes.data[structureRoot];
     var roots =
         k_boot_alloc((emitterStructFieldCount(structure) as u64) * sizeof(u64)) as u64*;
@@ -1207,7 +1207,7 @@ fn emitterFieldRootAt(
 }
 
 fn fieldIndexByName(
-    source: Source, nodes: List<AstNode>, structureRoot: u64,
+    source: Source, val nodes: List<AstNode>, structureRoot: u64,
     nameNode: AstNode): u32 {
     val wanted = sourceHash(source, nameNode.start, nameNode.end);
     val structure = nodes.data[structureRoot];
@@ -1226,7 +1226,7 @@ fn alignUp(value: u64, alignment: u64) =>
     ((value + alignment - 1) / alignment) * alignment;
 
 fn typeAlignment(
-    source: Source, nodes: List<AstNode>, genericArguments: List<TypeValue>,
+    source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32): u64 {
     if (kind == 2) return 1;
     if (kind == 5) return 1;
@@ -1275,7 +1275,7 @@ fn typeAlignment(
 }
 
 fn typeSize(
-    source: Source, nodes: List<AstNode>, genericArguments: List<TypeValue>,
+    source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32): u64 {
     if (kind == 1) return 0;
     if (kind == 2) return 1;
@@ -1383,7 +1383,7 @@ fn nextTemporary(var counter: IrCounter): u64 {
 
 fn emitImplicitIntegerWiden(
     var buffer: ByteBuffer, source: Source,
-    genericArguments: List<TypeValue>, value: IrValue,
+    var genericArguments: List<TypeValue>, value: IrValue,
     targetKind: u32, targetName: u64, targetPointee: u32,
     var counter: IrCounter): IrValue {
     val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
@@ -1551,7 +1551,7 @@ fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
 fn emitAddress(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     root: u64,
     var counter: IrCounter): IrValue {
@@ -1634,7 +1634,7 @@ fn emitAddress(
 
 fn appendFloatRangeComparison(
     var buffer: ByteBuffer, source: Source,
-    genericArguments: List<TypeValue>, value: IrValue,
+    var genericArguments: List<TypeValue>, value: IrValue,
     targetKind: u32, temporary: u64, lower: bool) {
     appendValuePrefix(buffer); appendDecimal(buffer, temporary);
     appendEquals(buffer);
@@ -1666,7 +1666,7 @@ fn appendFloatRangeComparison(
 fn emitExpression(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     root: u64,
     var counter: IrCounter): IrValue {
@@ -2972,7 +2972,7 @@ fn blockStatementRoots(val nodes: List<AstNode>, blockRoot: u64): u64* {
 fn emitDeferRange(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     var counter: IrCounter,
     var defers: List<u64>,
@@ -2996,7 +2996,7 @@ fn emitDeferRange(
 fn emitBlock(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     root: u64,
     var counter: IrCounter,
@@ -3027,7 +3027,7 @@ fn emitBlock(
 }
 
 fn emitCollectionFor(
-    var buffer: ByteBuffer, source: Source, nodes: List<AstNode>,
+    var buffer: ByteBuffer, source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>, root: u64,
     var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
@@ -3156,7 +3156,7 @@ fn emitCollectionFor(
 }
 
 fn emitWhen(
-    var buffer: ByteBuffer, source: Source, nodes: List<AstNode>,
+    var buffer: ByteBuffer, source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>, root: u64,
     var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
@@ -3254,16 +3254,14 @@ fn emitWhen(
 fn emitStatement(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     root: u64,
     var counter: IrCounter,
     var defers: List<u64>): bool {
     val statement = nodes.data[root];
     if (statement.kind == 41) {
-        var mutableDefers = defers;
-        mutableDefers.add(root - 1);
-        defers = mutableDefers;
+        defers.add(root - 1);
         return false;
     }
     if (statement.kind == 36) {
@@ -3732,7 +3730,7 @@ fn emitStatement(
 }
 
 fn parameterRoot(
-    nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
+    val nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
     val function = nodes.data[functionRoot];
     var root = functionRoot - 1;
     if (!functionIsExtern(function)) {
@@ -3753,7 +3751,7 @@ fn returnTypeRoot(val nodes: List<AstNode>, functionRoot: u64): u64 {
 }
 
 fn emitterTypeParameterRoot(
-    nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
+    val nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
     var root = returnTypeRoot(nodes, functionRoot);
     val parameters =
         functionParameterCount(nodes.data[functionRoot]);
@@ -3769,7 +3767,7 @@ fn emitterTypeParameterRoot(
 }
 
 fn emitterTypeParameterPosition(
-    source: Source, nodes: List<AstNode>,
+    source: Source, val nodes: List<AstNode>,
     functionRoot: u64, name: u64): u32 {
     val count =
         functionTypeParameterCount(nodes.data[functionRoot]);
@@ -3807,7 +3805,7 @@ fn emitterTypeParameterPosition(
 }
 
 fn substituteEmitterType(
-    source: Source, nodes: List<AstNode>, functionRoot: u64,
+    source: Source, val nodes: List<AstNode>, functionRoot: u64,
     pattern: TypeValue, var arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
     if (pattern.kind == 8) {
@@ -3825,9 +3823,7 @@ fn substituteEmitterType(
         }
         val newStart = arguments.length;
         for (index in 0..<argumentCount) {
-            var resolved = arguments;
-            resolved.add(substituted[index as u64]);
-            arguments = resolved;
+            arguments.add(substituted[index as u64]);
         }
         k_boot_free(substituted as unit*);
         return TypeValue(
@@ -3863,7 +3859,7 @@ fn substituteEmitterType(
 }
 
 fn emitVariableAlloca(
-    var buffer: ByteBuffer, genericArguments: List<TypeValue>, nodes: List<AstNode>, root: u64) {
+    var buffer: ByteBuffer, var genericArguments: List<TypeValue>, val nodes: List<AstNode>, root: u64) {
     val statement = nodes.data[root];
     val initializerRoot = root - 1;
     val initializer = nodes.data[initializerRoot];
@@ -3890,7 +3886,7 @@ fn emitVariableAlloca(
 }
 
 fn emitBlockAllocas(
-    var buffer: ByteBuffer, genericArguments: List<TypeValue>, nodes: List<AstNode>, blockRoot: u64) {
+    var buffer: ByteBuffer, var genericArguments: List<TypeValue>, val nodes: List<AstNode>, blockRoot: u64) {
     val roots = blockStatementRoots(nodes, blockRoot);
     for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
@@ -3966,7 +3962,7 @@ fn emitBlockAllocas(
 fn emitFunction(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     functionRoot: u64,
     specializationArgumentStart: u64,
@@ -4134,7 +4130,7 @@ fn emitFunction(
 
 fn emitSpecializedFunction(
     var buffer: ByteBuffer, source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     functionRoot: u64,
     argumentStart: u64,
@@ -4173,9 +4169,7 @@ fn emitSpecializedFunction(
                 }
                 val concreteStart = genericArguments.length;
                 for (genericIndex in 0..<genericCount) {
-                    var resolved = genericArguments;
-                    resolved.add(substituted[genericIndex as u64]);
-                    genericArguments = resolved;
+                    genericArguments.add(substituted[genericIndex as u64]);
                 }
                 k_boot_free(substituted as unit*);
                 node.genericArgumentStart = concreteStart;
@@ -4223,7 +4217,7 @@ fn firstStatementRoot(val nodes: List<AstNode>, blockRoot: u64): u64 {
 fn emitSimpleFunction(
     var buffer: ByteBuffer,
     source: Source,
-    nodes: List<AstNode>,
+    val nodes: List<AstNode>,
     functionRoot: u64): bool {
     val function = nodes.data[functionRoot];
     if (functionParameterCount(function) != 0) return false;
@@ -4255,7 +4249,7 @@ fn emitSimpleFunction(
 
 fn emitStruct(
     var buffer: ByteBuffer, source: Source,
-    nodes: List<AstNode>, genericArguments: List<TypeValue>, structureRoot: u64) {
+    val nodes: List<AstNode>, var genericArguments: List<TypeValue>, structureRoot: u64) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
     buffer.add(37);
@@ -4288,8 +4282,8 @@ struct StructSpecializationRequest(
     structureRoot: u64, argumentStart: u64, argumentCount: u32)
 
 fn structSpecializationRequestExists(
-    requests: List<StructSpecializationRequest>,
-    arguments: List<TypeValue>,
+    val requests: List<StructSpecializationRequest>,
+    val arguments: List<TypeValue>,
     structureRoot: u64,
     argumentStart: u64,
     argumentCount: u32): bool {
@@ -4308,7 +4302,7 @@ fn structSpecializationRequestExists(
 }
 
 fn structArgumentsAreConcrete(
-    arguments: List<TypeValue>, start: u64, count: u32): bool {
+    val arguments: List<TypeValue>, start: u64, count: u32): bool {
     for (index in 0..<count) {
         if (arguments.data[start + index as u64].kind == 14) {
             return false;
@@ -4319,7 +4313,7 @@ fn structArgumentsAreConcrete(
 
 fn emitSpecializedStruct(
     var buffer: ByteBuffer, source: Source,
-    nodes: List<AstNode>, genericArguments: List<TypeValue>,
+    val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     structureRoot: u64, argumentStart: u64, argumentCount: u32) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
@@ -4361,7 +4355,7 @@ struct SpecializationRequest(
     functionRoot: u64, argumentStart: u64, argumentCount: u32)
 
 fn specializationArgumentsEqual(
-    arguments: List<TypeValue>,
+    val arguments: List<TypeValue>,
     leftStart: u64, leftCount: u32,
     rightStart: u64, rightCount: u32): bool {
     if (leftCount != rightCount) return false;
@@ -4379,8 +4373,8 @@ fn specializationArgumentsEqual(
 }
 
 fn specializationRequestExists(
-    requests: List<SpecializationRequest>,
-    arguments: List<TypeValue>,
+    val requests: List<SpecializationRequest>,
+    val arguments: List<TypeValue>,
     functionRoot: u64,
     argumentStart: u64,
     argumentCount: u32): bool {
@@ -4399,7 +4393,7 @@ fn specializationRequestExists(
 }
 
 fn callArgumentsAreConcrete(
-    call: AstNode, arguments: List<TypeValue>): bool {
+    call: AstNode, val arguments: List<TypeValue>): bool {
     if (call.genericArgumentCount == 0) return false;
     for (index in 0..<call.genericArgumentCount) {
         if (arguments.data[
@@ -4411,7 +4405,7 @@ fn callArgumentsAreConcrete(
 }
 
 fn emitModule(
-    source: Source, nodes: List<AstNode>,
+    source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>): ByteBuffer {
     var buffer = ByteBuffer.new();
     appendModuleHeader(buffer);
@@ -4566,9 +4560,7 @@ fn emitModule(
                     }
                     val concreteStart = genericArguments.length;
                     for (nestedArgument in 0..<nestedCount) {
-                        var resolved = genericArguments;
-                        resolved.add(substituted[nestedArgument as u64]);
-                        genericArguments = resolved;
+                        genericArguments.add(substituted[nestedArgument as u64]);
                     }
                     k_boot_free(substituted as unit*);
                     if (

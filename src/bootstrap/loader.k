@@ -164,7 +164,7 @@ fn loaderDirectory(path: u8*, length: u64): ByteBuffer {
     return result;
 }
 
-fn loaderCandidate(root: u8*, rootLength: u64, relative: ByteBuffer): ByteBuffer {
+fn loaderCandidate(root: u8*, rootLength: u64, val relative: ByteBuffer): ByteBuffer {
     var result = ByteBuffer.new();
     loaderAppend(result, root, rootLength);
     if (rootLength > 0) result.add(47);
@@ -200,7 +200,7 @@ fn loaderRelative(
     return result;
 }
 
-fn loaderReadCandidate(candidate: ByteBuffer, var data: u8*, var length: u64) =>
+fn loaderReadCandidate(val candidate: ByteBuffer, var data: u8*, var length: u64) =>
 k_boot_read_file(candidate.data, candidate.length, &data, &length);
 
 fn loaderResolveImport(
@@ -225,9 +225,7 @@ fn loaderResolveImport(
     val currentDirectory = loaderDirectory(currentPath.data, currentPath.length);
     defer currentDirectory.free();
     for (i in 0..<3) {
-        var candidate = ByteBuffer.new();
-        defer candidate.free();
-        candidate = when (i) {
+        val candidate = when (i) {
             0 -> loaderCandidate(
 				loader.workingDirectory.data,
 				loader.workingDirectory.length,
@@ -353,9 +351,7 @@ fn loaderLoadModule(
         if (hasSuppliedData) k_boot_free(suppliedData as unit*);
         return true;
     }
-    var visited = loader.visited;
-    visited.add(canonical);
-    loader.visited = visited;
+    loader.visited.add(canonical);
     var data = suppliedData;
     var length = suppliedLength;
     if (!hasSuppliedData) {
@@ -374,9 +370,7 @@ fn loaderLoadModule(
         k_boot_free(data as unit*);
         return false;
     }
-    var modules = loader.modules;
-    modules.add(LoadedModule(canonical, data, length));
-    loader.modules = modules;
+    loader.modules.add(LoadedModule(canonical, data, length));
     return true;
 }
 
@@ -417,15 +411,16 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     }
     else for (i in 0..<loader.visited.length) k_boot_free(loader.visited.data[i].data as unit*);
 
-    loader.modules.free();
-    loader.visited.free();
+    val failureKind = loader.failureKind;
+    k_boot_free(loader.modules.data as unit*);
+    k_boot_free(loader.visited.data as unit*);
     k_boot_free(loader.workingDirectory.data as unit*);
-    loader.entryDirectory.free();
+    k_boot_free(loader.entryDirectory.data as unit*);
 
     if (!loaded) {
-        combined.free();
-        sourceMapFree(sourceMap);
-        return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, loader.failureKind);
+        k_boot_free(sourceMap.data as unit*);
+        k_boot_free(combined.data as unit*);
+        return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, failureKind);
     }
 
     return LoadResult(Source(combined.data, combined.length), sourceMap, true, 0);

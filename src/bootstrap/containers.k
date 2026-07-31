@@ -25,7 +25,7 @@ struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
         self.length++;
     }
 
-    fn free(val self) => k_boot_free(self.data as unit*);
+    fn free(self) => k_boot_free(self.data as unit*);
 }
 
 struct StringRef(data: u8*, length: u64)
@@ -55,5 +55,5 @@ struct SymbolTable(data: SymbolEntry*, length: u64, capacity: u64) {
         return self.length;
     }
 
-    fn free(val self) => k_boot_free(self.data as unit*);
+    fn free(self) => k_boot_free(self.data as unit*);
 }
