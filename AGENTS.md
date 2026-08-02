@@ -232,7 +232,9 @@ Static move-ownership self-hosting is complete for the current contract.
   directly from K.
 - `src/bootstrap/list.k` provides generic `List<T>` through
   `List<T>.new()` and `add`/`free` methods; `ByteBuffer` and
-  `SymbolTable` remain dedicated containers.
+  `SymbolTable` remain dedicated containers. `StringBuilder` provides
+  `add(u8)`, raw-byte `append`, and deep-copy `toString()` with deterministic
+  drop for both the builder and resulting owned string.
 - Statement-form `when` is self-hosted with first-match semantics, an optional
   final `else`, and block or single-statement branch bodies.
 - Expression-valued `when` is self-hosted for return/initializer contexts; each
@@ -252,5 +254,5 @@ Static move-ownership self-hosting is complete for the current contract.
 
 ## Recommended next milestone
 
-Add explicit deep `.copy()` for owned strings without broadening into shared
-ownership, then extend drop glue to arrays and nullable owners.
+Migrate one bootstrap text-emission path from `ByteBuffer` to `StringBuilder`
+and preserve the `kc3`/`kc4` fixed point before expanding the migration.

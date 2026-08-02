@@ -217,6 +217,11 @@ fn keywordKind(source: Source, start: u64, end: u64): u32 {
                             if (source.data[start + 5] == 116) return 11;
                         }
                     }
+                    if (source.data[start + 3] == 105) {
+                        if (source.data[start + 4] == 110) {
+                            if (source.data[start + 5] == 103) return 48;
+                        }
+                    }
                 }
             }
         }

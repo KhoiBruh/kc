@@ -49,6 +49,27 @@ fn main(): i32 {
     }
     symbols.free();
     k_boot_free(symbolValue);
+
+    {
+        var builder = StringBuilder.new();
+        builder.add(65);
+        val suffix = k_boot_alloc(5) as u8*;
+        suffix[0] = 32;
+        suffix[1] = 240;
+        suffix[2] = 159;
+        suffix[3] = 152;
+        suffix[4] = 128;
+        builder.append(suffix, 5);
+        k_boot_free(suffix as unit*);
+        var built = builder.toString();
+        val view = (&built) as StringLayout*;
+        if ((*view).length != 6) {
+            return 9;
+        }
+        if ((*view).data[5] != 128) {
+            return 10;
+        }
+    }
     if (k_boot_live_allocations() != 0) {
         return 8;
     }

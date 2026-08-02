@@ -5,6 +5,10 @@
 extern "C" {
 
 void* k_boot_alloc(std::uint64_t size);
+void k_boot_string_copy(
+    const std::uint8_t* data,
+    std::uint64_t length,
+    void* output);
 void k_boot_free(void* pointer);
 std::uint64_t k_boot_live_allocations();
 std::int32_t k_boot_arg_count();

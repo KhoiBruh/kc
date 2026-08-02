@@ -4,6 +4,7 @@ import bootstrap.source.Source;
 import bootstrap.token.Token;
 import bootstrap.list.List;
 import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
 import bootstrap.lexer.lex;
 import bootstrap.ast.AstNode;
 import bootstrap.parser.parse;

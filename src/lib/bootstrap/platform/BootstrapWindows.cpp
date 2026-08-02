@@ -16,6 +16,12 @@ namespace {
 
 std::uint64_t liveAllocations = 0;
 
+struct StringLayout {
+    void* data;
+    std::uint64_t length;
+    std::uint64_t capacity;
+};
+
 std::vector<std::wstring> commandLineArguments() {
     std::vector<std::wstring> arguments;
     const wchar_t* cursor = GetCommandLineW();
@@ -115,6 +121,27 @@ extern "C" void* k_boot_alloc(std::uint64_t size) {
     void* pointer = HeapAlloc(GetProcessHeap(), 0, allocationSize);
     if (pointer) ++liveAllocations;
     return pointer;
+}
+
+extern "C" void k_boot_string_copy(
+    const std::uint8_t* data,
+    std::uint64_t length,
+    void* output) {
+    if (!output || (length != 0 && !data) ||
+        length > static_cast<std::uint64_t>(
+                     std::numeric_limits<SIZE_T>::max()))
+        return;
+    auto* value = static_cast<StringLayout*>(output);
+    if (value->data) HeapFree(GetProcessHeap(), 0, value->data);
+    const auto capacity = static_cast<SIZE_T>(length == 0 ? 1 : length);
+    auto* copy = static_cast<std::uint8_t*>(
+        HeapAlloc(GetProcessHeap(), 0, capacity));
+    if (!copy) {
+        *value = StringLayout{nullptr, 0, 0};
+        return;
+    }
+    if (length != 0) std::copy(data, data + length, copy);
+    *value = StringLayout{copy, length, capacity};
 }
 
 extern "C" void k_boot_free(void* pointer) {

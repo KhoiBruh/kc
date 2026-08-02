@@ -164,6 +164,8 @@ dụng và gọi `k_boot_panic` nếu ngoài miền.
 
 ABI của `string` gồm `{ pointer, byteLength, capacity }`. String literal dùng trực tiếp tại nơi chỉ đọc như `print("...")` vẫn nằm trong vùng nhớ tĩnh, có null terminator ẩn và `capacity = 0`. Khi literal đi vào local hoặc vị trí nhận ownership, backend cấp phát một buffer độc lập, đặt `capacity` khác 0 và tự giải phóng owner còn sống. Mutation và nối chuỗi chưa được hạ.
 
+Compiler bootstrap có `StringBuilder` move-only riêng cho việc dựng UTF-8 tuần tự. API hiện tại gồm `StringBuilder.new()`, `add(u8)`, `append(u8*, u64)` và `toString()`. `toString()` tạo một owned `string` deep-copy nên builder vẫn có thể được dùng tiếp; cả builder và string kết quả đều được auto-drop. Đây là builder dành cho compiler, không làm cho bản thân `string` trở thành mutable byte buffer.
+
 Thiết kế đích là một owned mutable buffer. Binding `val` chỉ cho phép đọc string, còn binding `var` có thể thay đổi nội dung:
 
 ```text
