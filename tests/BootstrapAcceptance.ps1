@@ -83,7 +83,8 @@ $validFixtures = @(
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
     "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
-    "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k"
+    "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
+    "ownership_control_flow.k"
 )
 Push-Location $moduleRoot
 try {
@@ -139,6 +140,17 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "associated_factories.k" -and $stage1Exit -ne 42) {
         Write-Error "associated factory fixture did not return 42"
+    }
+    if ($fixtureName -eq "ownership_control_flow.k") {
+        if ($stage1Exit -ne 42) {
+            Write-Error "ownership auto-drop fixture did not return 42"
+        }
+        foreach ($ll in @($stage1Ll, $stage2Ll, $stage3Ll, $stage4Ll)) {
+            $text = Get-Content -Raw $ll
+            if ($text -cnotmatch "call void @Resource\.free") {
+                Write-Error "ownership auto-drop call is missing from $ll"
+            }
+        }
     }
     if ($fixtureName -eq "compound_assignments.k" -and $stage1Exit -ne 42) {
         Write-Error "compound assignment fixture did not return 42"
@@ -487,7 +499,14 @@ $invalidFixtures = @(
     "bootstrap-semantic-return.k",
     "bootstrap-semantic-condition.k",
     "bootstrap-semantic-immutable.k",
-    "bootstrap-semantic-access.k"
+    "bootstrap-semantic-access.k",
+    "bootstrap-semantic-move-generic.k",
+    "bootstrap-semantic-move-associated.k",
+    "bootstrap-semantic-move-method.k",
+    "bootstrap-semantic-move-nullable.k",
+    "bootstrap-semantic-move-if-value.k",
+    "bootstrap-semantic-move-when-value.k",
+    "bootstrap-semantic-move-array.k"
 )
 foreach ($fixtureName in $invalidFixtures) {
     $fixture = Join-Path $InvalidFixtureDirectory $fixtureName

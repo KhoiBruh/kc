@@ -12,5 +12,6 @@ struct AstNode(
     storage: u64,
     genericArgumentStart: u64,
     genericArgumentCount: u32,
-    conversionKind: u32
+    conversionKind: u32,
+    ownership: u32
 )

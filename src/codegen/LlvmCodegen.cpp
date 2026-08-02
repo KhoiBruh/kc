@@ -132,7 +132,91 @@ private:
     struct LocalSlot {
         llvm::Value* address;
         llvm::Type* type;
+        llvm::Value* dropFlag = nullptr;
+        SemanticType semanticType;
     };
+
+    const FunctionDecl* dropFunction(const SemanticType& unresolved) const {
+        const auto type = substituteActive(unresolved);
+        if (type.kind != SemanticTypeKind::Struct) return nullptr;
+        const auto structure = semantic().structs.find(type.name);
+        if (structure == semantic().structs.end()) return nullptr;
+        for (const auto& method : structure->second.declaration->methods) {
+            const auto* owner = ownerModule(method);
+            if (owner && spelling(*owner->source, method.name) == "free" &&
+                !method.isAssociated && method.parameters.size() == 1 &&
+                method.parameters.front().mode == ParameterMode::Owned)
+                return &method;
+        }
+        return nullptr;
+    }
+
+    llvm::Function* dropTarget(
+        const FunctionDecl& declaration, const SemanticType& unresolved) {
+        const auto type = substituteActive(unresolved);
+        if (!type.typeArguments.empty())
+            return getOrDeclareSpecialization(
+                SpecializationKey{&declaration, type.typeArguments});
+        const auto found = functions_.find(&declaration);
+        return found == functions_.end() ? nullptr : found->second;
+    }
+
+    void emitDrop(LocalSlot& slot) {
+        if (!slot.dropFlag) return;
+        const auto* declaration = dropFunction(slot.semanticType);
+        auto* target = declaration
+            ? dropTarget(*declaration, slot.semanticType) : nullptr;
+        if (!target) return;
+        auto* function = builder_.GetInsertBlock()->getParent();
+        auto* dropBlock = llvm::BasicBlock::Create(context_, "drop.run", function);
+        auto* continueBlock = llvm::BasicBlock::Create(context_, "drop.end", function);
+        auto* live = builder_.CreateLoad(builder_.getInt1Ty(), slot.dropFlag);
+        builder_.CreateCondBr(live, dropBlock, continueBlock);
+        builder_.SetInsertPoint(dropBlock);
+        builder_.CreateStore(builder_.getFalse(), slot.dropFlag);
+        auto* value = builder_.CreateLoad(slot.type, slot.address);
+        builder_.CreateCall(target, {value});
+        builder_.CreateBr(continueBlock);
+        builder_.SetInsertPoint(continueBlock);
+    }
+
+    void emitDropScopes(std::size_t targetDepth = 0) {
+        for (std::size_t i = dropScopes_.size(); i > targetDepth; --i)
+            for (auto it = dropScopes_[i - 1].rbegin();
+                 it != dropScopes_[i - 1].rend(); ++it)
+                emitDrop(*it);
+    }
+
+    void clearDropFlag(const Expr& expression) {
+        const Expr* root = &expression;
+        while (true) {
+            if (const auto* member = std::get_if<MemberExpr>(&root->node)) {
+                root = member->object.get();
+                continue;
+            }
+            if (const auto* index = std::get_if<IndexExpr>(&root->node)) {
+                root = index->object.get();
+                continue;
+            }
+            if (const auto* postfix = std::get_if<PostfixExpr>(&root->node)) {
+                root = postfix->value.get();
+                continue;
+            }
+            break;
+        }
+        const auto* identifier = std::get_if<IdentifierExpr>(&root->node);
+        if (!identifier) return;
+        const auto local = locals_.find(spelling(source(), identifier->name));
+        if (local != locals_.end() && local->second.dropFlag)
+            builder_.CreateStore(builder_.getFalse(), local->second.dropFlag);
+    }
+
+    void clearOwnedDropFlag(const Expr& expression) {
+        const auto type = semantic().expressionTypes.find(&expression);
+        if (type != semantic().expressionTypes.end() &&
+            dropFunction(type->second))
+            clearDropFlag(expression);
+    }
 
     llvm::Type* lowerType(const SemanticType& type, SourceSpan span, bool returnType = false) {
         if (type.kind == SemanticTypeKind::TypeParameter) {
@@ -457,6 +541,8 @@ private:
         locals_.clear();
         deferScopes_.clear();
         deferScopes_.emplace_back();
+        dropScopes_.clear();
+        dropScopes_.emplace_back();
 
         std::size_t parameterIndex = 0;
         for (auto& argument : function->args()) {
@@ -475,8 +561,21 @@ private:
                 auto* slot =
                     createEntryAlloca(*function, argument.getType(), name);
                 builder_.CreateStore(&argument, slot);
-                locals_.emplace(
-                    name, LocalSlot{slot, argument.getType()});
+                LocalSlot local{slot, argument.getType()};
+                const auto* symbol = functionSymbol(declaration);
+                if (symbol && parameter.mode == ParameterMode::Owned &&
+                    !(declaration.ownerStruct && parameterIndex == 0 &&
+                      spelling(owner, declaration.name) == "free")) {
+                    local.semanticType = substituteActive(
+                        symbol->parameterTypes[parameterIndex]);
+                    if (dropFunction(local.semanticType)) {
+                        local.dropFlag = createEntryAlloca(
+                            *function, builder_.getInt1Ty(), name + ".drop.flag");
+                        builder_.CreateStore(builder_.getTrue(), local.dropFlag);
+                        dropScopes_.back().push_back(local);
+                    }
+                }
+                locals_.emplace(name, local);
             }
             ++parameterIndex;
         }
@@ -497,11 +596,13 @@ private:
         }
         if (!builder_.GetInsertBlock()->getTerminator()) {
             emitDeferredStatements(0);
+            emitDropScopes(0);
             if (function->getReturnType()->isVoidTy()) {
                 builder_.CreateRetVoid();
             }
         }
         deferScopes_.pop_back();
+        dropScopes_.pop_back();
         activeTypeArguments_ = outerTypeArguments;
         current_ = outerCurrent;
     }
@@ -556,12 +657,14 @@ private:
         if (std::holds_alternative<BreakStmt>(statement.node)) {
             const auto targetDepth = loopTargets_.empty() ? 0 : loopTargets_.back().deferDepth;
             emitDeferredStatements(targetDepth);
+            emitDropScopes(targetDepth);
             builder_.CreateBr(loopTargets_.back().breakBlock);
             return;
         }
         if (std::holds_alternative<ContinueStmt>(statement.node)) {
             const auto targetDepth = loopTargets_.empty() ? 0 : loopTargets_.back().deferDepth;
             emitDeferredStatements(targetDepth);
+            emitDropScopes(targetDepth);
             builder_.CreateBr(loopTargets_.back().continueBlock);
             return;
         }
@@ -584,17 +687,30 @@ private:
             auto* slot = createEntryAlloca(
                 *builder_.GetInsertBlock()->getParent(), value->getType(), name);
             builder_.CreateStore(value, slot);
-            locals_[name] = {slot, value->getType()};
+            LocalSlot local{slot, value->getType()};
+            if (declared != semantic().declarationTypes.end()) {
+                local.semanticType = substituteActive(declared->second);
+                if (dropFunction(local.semanticType)) {
+                    local.dropFlag = createEntryAlloca(
+                        *builder_.GetInsertBlock()->getParent(),
+                        builder_.getInt1Ty(), name + ".drop.flag");
+                    builder_.CreateStore(builder_.getTrue(), local.dropFlag);
+                    dropScopes_.back().push_back(local);
+                }
+            }
+            locals_[name] = local;
             return;
         }
         if (const auto* returnStatement = std::get_if<ReturnStmt>(&statement.node)) {
             if (returnStatement->value) {
                 if (auto* value = emitExpr(*returnStatement->value)) {
                     emitDeferredStatements(0);
+                    emitDropScopes(0);
                     builder_.CreateRet(value);
                 }
             } else {
                 emitDeferredStatements(0);
+                emitDropScopes(0);
                 builder_.CreateRetVoid();
             }
             return;
@@ -609,14 +725,17 @@ private:
     void emitScopedBlock(const BlockStmt& block) {
         const auto outerLocals = locals_;
         deferScopes_.emplace_back();
+        dropScopes_.emplace_back();
         for (const auto& statement : block.statements) {
             emitStatement(*statement);
             if (builder_.GetInsertBlock()->getTerminator()) break;
         }
         if (!builder_.GetInsertBlock()->getTerminator()) {
             emitDeferredStatements(deferScopes_.size() - 1);
+            emitDropScopes(dropScopes_.size() - 1);
         }
         deferScopes_.pop_back();
+        dropScopes_.pop_back();
         locals_ = outerLocals;
     }
 
@@ -886,6 +1005,8 @@ private:
     llvm::Value* emitExpr(const Expr& expression) {
         auto* value = emitExprRaw(expression);
         if (!value) return nullptr;
+        if (semantic().ownershipMoves.contains(&expression))
+            clearDropFlag(expression);
         const auto conversion = semantic().implicitConversions.find(&expression);
         if (conversion == semantic().implicitConversions.end()) return value;
         const auto source = semantic().expressionTypes.find(&expression);
@@ -1036,9 +1157,15 @@ private:
                                   const IfExprBranch& branch) -> bool {
                 builder_.SetInsertPoint(block);
                 const auto outerLocals = locals_;
+                deferScopes_.emplace_back();
+                dropScopes_.emplace_back();
                 for (const auto& statement : branch.body->statements)
                     emitStatement(*statement);
                 auto* value = emitExpr(*branch.value);
+                emitDeferredStatements(deferScopes_.size() - 1);
+                emitDropScopes(dropScopes_.size() - 1);
+                deferScopes_.pop_back();
+                dropScopes_.pop_back();
                 locals_ = outerLocals;
                 if (!value) return false;
                 auto* incoming = builder_.GetInsertBlock();
@@ -1086,9 +1213,15 @@ private:
                     }
                     builder_.SetInsertPoint(bodyBlock);
                     const auto outerLocals = locals_;
+                    deferScopes_.emplace_back();
+                    dropScopes_.emplace_back();
                     for (const auto& statement : branch.body->statements)
                         emitStatement(*statement);
                     auto* value = emitExpr(*branch.value);
+                    emitDeferredStatements(deferScopes_.size() - 1);
+                    emitDropScopes(dropScopes_.size() - 1);
+                    deferScopes_.pop_back();
+                    dropScopes_.pop_back();
                     locals_ = outerLocals;
                     if (!value) return nullptr;
                     auto* incoming = builder_.GetInsertBlock();
@@ -1100,9 +1233,15 @@ private:
                     builder_.CreateBr(bodyBlock);
                     builder_.SetInsertPoint(bodyBlock);
                     const auto outerLocals = locals_;
+                    deferScopes_.emplace_back();
+                    dropScopes_.emplace_back();
                     for (const auto& statement : branch.body->statements)
                         emitStatement(*statement);
                     auto* value = emitExpr(*branch.value);
+                    emitDeferredStatements(deferScopes_.size() - 1);
+                    emitDropScopes(dropScopes_.size() - 1);
+                    deferScopes_.pop_back();
+                    dropScopes_.pop_back();
                     locals_ = outerLocals;
                     if (!value) return nullptr;
                     auto* incoming = builder_.GetInsertBlock();
@@ -1218,6 +1357,9 @@ private:
                         : emitExpr(*member->object);
                     if (!receiver) return nullptr;
                     arguments.push_back(receiver);
+                    if (declaration.parameters.front().mode ==
+                        ParameterMode::Owned)
+                        clearOwnedDropFlag(*member->object);
                 }
                 for (std::size_t i = 0; i < call->arguments.size(); ++i) {
                     llvm::Value* value = nullptr;
@@ -1231,6 +1373,10 @@ private:
                         value = emitExpr(*call->arguments[i]);
                     if (!value) return nullptr;
                     arguments.push_back(value);
+                    if (parameterIndex < declaration.parameters.size() &&
+                        declaration.parameters[parameterIndex].mode ==
+                            ParameterMode::Owned)
+                        clearOwnedDropFlag(*call->arguments[i]);
                 }
                 return builder_.CreateCall(target, arguments);
             }
@@ -1307,6 +1453,10 @@ private:
                         }
                         if (!value) return nullptr;
                         arguments.push_back(value);
+                        if (i < resolved->second.declaration->parameters.size() &&
+                            resolved->second.declaration->parameters[i].mode ==
+                                ParameterMode::Owned)
+                            clearOwnedDropFlag(*call->arguments[i]);
                     }
                     return builder_.CreateCall(target, arguments);
                 }
@@ -1353,6 +1503,11 @@ private:
                     }
                     if (!value) return nullptr;
                     arguments.push_back(value);
+                    if (semanticFunction != semantic().functions.end() &&
+                        i < semanticFunction->second.declaration->parameters.size() &&
+                        semanticFunction->second.declaration->parameters[i].mode ==
+                            ParameterMode::Owned)
+                        clearOwnedDropFlag(*call->arguments[i]);
                 }
                 return builder_.CreateCall(found->second, arguments);
             }
@@ -1511,7 +1666,11 @@ private:
             }
             auto* value = emitAssignedValue(*assignment, found->second.address);
             if (!value) return nullptr;
+            if (assignment->op == TokenKind::Equal && found->second.dropFlag)
+                emitDrop(found->second);
             builder_.CreateStore(value, found->second.address);
+            if (assignment->op == TokenKind::Equal && found->second.dropFlag)
+                builder_.CreateStore(builder_.getTrue(), found->second.dropFlag);
             return value;
         }
         if (const auto* binary = std::get_if<BinaryExpr>(&expression.node)) {
@@ -1961,6 +2120,7 @@ private:
     };
     std::vector<LoopTarget> loopTargets_;
     std::vector<std::vector<const Stmt*>> deferScopes_;
+    std::vector<std::vector<LocalSlot>> dropScopes_;
 };
 
 }

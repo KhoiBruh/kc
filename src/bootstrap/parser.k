@@ -41,7 +41,7 @@ fn parserAdd(
     val index = parser.nodes.add(
         AstNode(
             kind, start, end, subtreeStart, aux,
-            0, 0, 0, 0, 0, 0, 0
+            0, 0, 0, 0, 0, 0, 0, 0
 		)
     );
     return index;

@@ -61,12 +61,25 @@ std::string_view constraintName(GenericConstraint constraint) {
     return "any";
 }
 
+enum class OwnershipState {
+    Available,
+    Moved,
+};
+
 struct VariableSymbol {
     SemanticType type;
     bool mutableBinding;
-    bool moved = false;
+    OwnershipState ownership = OwnershipState::Available;
     std::optional<SourceSpan> movedAt;
 };
+
+struct OwnershipStatus {
+    OwnershipState state = OwnershipState::Available;
+    std::optional<SourceSpan> movedAt;
+};
+
+using OwnershipSnapshot =
+    std::vector<std::unordered_map<std::string, OwnershipStatus>>;
 
 class Analysis {
 public:
@@ -572,6 +585,8 @@ private:
                 } else if (!compatible(currentReturn_, actual)) {
                     diagnose("return type does not match function return type",
                              value->value->span);
+                } else {
+                    markAsMoved(*value->value);
                 }
             } else {
                 analyzeStatement(bodyStatement);
@@ -624,16 +639,21 @@ private:
             const auto condition = analyzeExpr(*ifStatement->condition);
             if (condition.kind != SemanticTypeKind::Bool)
                 diagnose("if condition must be bool", ifStatement->condition->span);
-            auto preState = captureMovedState();
+            auto preState = captureOwnershipState();
             const bool thenTerminates = analyzeBlock(*ifStatement->thenBranch, true);
-            auto thenState = captureMovedState();
-            restoreMovedState(preState);
+            auto thenState = captureOwnershipState();
+            restoreOwnershipState(preState);
             bool elseTerminates = false;
             if (ifStatement->elseBranch) {
                 elseTerminates = analyzeBlock(*ifStatement->elseBranch, true);
             }
-            auto elseState = captureMovedState();
-            mergeMovedState(thenState, elseState);
+            auto elseState = captureOwnershipState();
+            if (thenTerminates && !elseTerminates)
+                restoreOwnershipState(elseState);
+            else if (elseTerminates && !thenTerminates)
+                restoreOwnershipState(thenState);
+            else
+                mergeOwnershipState(thenState, elseState);
             return thenTerminates && elseTerminates;
         }
         if (const auto* whileStatement = std::get_if<WhileStmt>(&statement.node)) {
@@ -701,10 +721,10 @@ private:
             bool allTerminate = !whenStatement->branches.empty();
             bool hasElse = false;
             std::vector<const Expr*> patterns;
-            auto preState = captureMovedState();
-            std::optional<std::unordered_map<std::string, bool>> mergedState;
+            auto preState = captureOwnershipState();
+            std::optional<OwnershipSnapshot> mergedState;
             for (const auto& branch : whenStatement->branches) {
-                restoreMovedState(preState);
+                restoreOwnershipState(preState);
                 if (!branch.conditions.empty()) {
                     for (const auto& pattern : branch.conditions) {
                     const auto condition = analyzeExpr(*pattern, subject);
@@ -723,11 +743,13 @@ private:
                     hasElse = true;
                 }
                 allTerminate = analyzeBlock(*branch.body, true) && allTerminate;
-                auto branchState = captureMovedState();
+                auto branchState = captureOwnershipState();
                 if (!mergedState)
                     mergedState = std::move(branchState);
-                else
-                    mergeMovedState(*mergedState, branchState);
+                else {
+                    mergeOwnershipState(*mergedState, branchState);
+                    *mergedState = captureOwnershipState();
+                }
             }
             const bool exhaustive =
                 subject && enumWhenExhaustive(*subject, patterns, hasElse,
@@ -825,7 +847,7 @@ private:
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
             if (const auto* variable = findVariable(name)) {
-                if (variable->moved) {
+                if (variable->ownership == OwnershipState::Moved) {
                     auto msg = "use of moved value '" + name + "' of type '" +
                               semanticTypeName(variable->type) + "'";
                     diagnose(msg, identifier->name);
@@ -865,10 +887,15 @@ private:
                 scopes_.pop_back();
                 return value;
             };
+            const auto preState = captureOwnershipState();
             const auto thenType = analyzeBranch(conditional->thenBranch, expected);
+            const auto thenState = captureOwnershipState();
+            restoreOwnershipState(preState);
             const auto elseType = analyzeBranch(
                 conditional->elseBranch, expected ? expected
                                                   : std::optional{thenType});
+            const auto elseState = captureOwnershipState();
+            mergeOwnershipState(thenState, elseState);
             if (!compatible(thenType, elseType) &&
                 !(isNumeric(thenType) && isNumeric(elseType)))
                 diagnose("if branches must have a common type",
@@ -886,7 +913,10 @@ private:
             bool hasElse = false;
             std::vector<const Expr*> patterns;
             std::optional<SemanticType> branchType;
+            const auto preState = captureOwnershipState();
+            std::optional<OwnershipSnapshot> mergedState;
             for (const auto& branch : when->branches) {
+                restoreOwnershipState(preState);
                 if (!branch.conditions.empty()) {
                     for (const auto& pattern : branch.conditions) {
                     const auto condition = analyzeExpr(*pattern, subject);
@@ -913,6 +943,13 @@ private:
                 const auto value = analyzeExpr(
                     *branch.value, expected ? expected : branchType);
                 scopes_.pop_back();
+                const auto branchState = captureOwnershipState();
+                if (!mergedState)
+                    mergedState = branchState;
+                else {
+                    mergeOwnershipState(*mergedState, branchState);
+                    *mergedState = captureOwnershipState();
+                }
                 if (!branchType) branchType = value;
                 else if (!compatible(*branchType, value) &&
                          !(isNumeric(*branchType) && isNumeric(value)))
@@ -925,6 +962,7 @@ private:
             if (!hasElse && (!subject ||
                              subject->kind != SemanticTypeKind::Enum))
                 diagnose("when expression requires else", expression.span);
+            if (mergedState) restoreOwnershipState(*mergedState);
             type = expected ? *expected : branchType.value_or(SemanticType{});
         } else if (const auto* call = std::get_if<CallExpr>(&expression.node)) {
             type = analyzeCall(*call);
@@ -1423,6 +1461,18 @@ private:
                 ResolvedCall{
                     symbol.declaration, typeArguments, parameterTypes, returnType});
             result_.expressionTypes[call.callee.get()] = returnType;
+            for (std::size_t i = 0;
+                 i < call.arguments.size() &&
+                 i < symbol.declaration->parameters.size();
+                 ++i) {
+                const auto mode = symbol.declaration->parameters[i].mode;
+                if (mode == ParameterMode::MutableBorrow &&
+                    !isMutableTarget(*call.arguments[i]))
+                    diagnose("var argument must be a mutable local",
+                             call.arguments[i]->span);
+                else if (mode == ParameterMode::Owned)
+                    markAsMoved(*call.arguments[i]);
+            }
             if (inferenceOk && typeParameters_.empty()) {
                 const SpecializationKey key{
                     symbol.declaration, typeArguments};
@@ -1528,6 +1578,17 @@ private:
             if (expected && !compatible(*expected, actual))
                 diagnose("method argument type does not match parameter type",
                          call.arguments[i]->span);
+            const auto parameterIndex = i + 1;
+            if (parameterIndex < symbol.declaration->parameters.size()) {
+                const auto mode =
+                    symbol.declaration->parameters[parameterIndex].mode;
+                if (mode == ParameterMode::MutableBorrow &&
+                    !isMutableTarget(*call.arguments[i]))
+                    diagnose("var argument must be a mutable local",
+                             call.arguments[i]->span);
+                else if (mode == ParameterMode::Owned)
+                    markAsMoved(*call.arguments[i]);
+            }
         }
         result_.resolvedCalls[&call] = ResolvedCall{
             symbol.declaration, typeArguments, parameterTypes, returnType};
@@ -1590,10 +1651,15 @@ private:
                          call.arguments[i]->span);
             if (i < symbol.declaration->parameters.size() &&
                 symbol.declaration->parameters[i].mode ==
-                    ParameterMode::MutableBorrow &&
-                !isMutableTarget(*call.arguments[i]))
-                diagnose("var argument must be a mutable local",
-                         call.arguments[i]->span);
+                    ParameterMode::MutableBorrow) {
+                if (!isMutableTarget(*call.arguments[i]))
+                    diagnose("var argument must be a mutable local",
+                             call.arguments[i]->span);
+            } else if (i < symbol.declaration->parameters.size() &&
+                       symbol.declaration->parameters[i].mode ==
+                           ParameterMode::Owned) {
+                markAsMoved(*call.arguments[i]);
+            }
         }
         result_.resolvedCalls[&call] = ResolvedCall{
             symbol.declaration, typeArguments, parameterTypes, returnType};
@@ -1797,25 +1863,26 @@ private:
             analyzeExpr(*assignment.value);
             return {};
         }
-        result_.expressionTypes[assignment.target.get()] = variable->type;
+        const auto targetType = variable->type;
+        result_.expressionTypes[assignment.target.get()] = targetType;
         if (!variable->mutableBinding) diagnose("cannot assign to immutable binding", identifier->name);
-        auto value = analyzeExpr(*assignment.value, variable->type);
+        auto value = analyzeExpr(*assignment.value, targetType);
         if (assignment.op == TokenKind::Equal) {
-            if (!compatible(variable->type, value))
+            if (!compatible(targetType, value))
                 diagnose("assigned value has the wrong type", assignment.value->span);
             else {
-                if (!variable->moved && isMoveOnlyType(variable->type))
-                    diagnose("assigning to '" + name + "' discards a value of type '" +
-                            semanticTypeName(variable->type) + "' that requires explicit free",
-                            assignment.target->span);
                 markAsMoved(*assignment.value);
+                if (auto* reassigned = findVariable(name)) {
+                    reassigned->ownership = OwnershipState::Available;
+                    reassigned->movedAt.reset();
+                }
             }
         } else {
-            const auto combined = promote(variable->type, value, span);
-            if (!(combined == variable->type))
+            const auto combined = promote(targetType, value, span);
+            if (!(combined == targetType))
                 diagnose("compound assignment changes the target type", span);
         }
-        return variable->type;
+        return targetType;
     }
 
     SemanticType promote(const SemanticType& left, const SemanticType& right, SourceSpan span) {
@@ -2056,36 +2123,63 @@ private:
         result_.diagnostics.push_back({std::move(message), span});
     }
 
-    std::unordered_map<std::string, bool> captureMovedState() const {
-        std::unordered_map<std::string, bool> snapshot;
-        for (const auto& scope : scopes_)
+    OwnershipSnapshot captureOwnershipState() const {
+        OwnershipSnapshot snapshot;
+        snapshot.reserve(scopes_.size());
+        for (const auto& scope : scopes_) {
+            auto& saved = snapshot.emplace_back();
             for (const auto& [name, symbol] : scope)
-                snapshot[name] = symbol.moved;
+                saved.emplace(name, OwnershipStatus{
+                    symbol.ownership, symbol.movedAt});
+        }
         return snapshot;
     }
 
-    void restoreMovedState(
-        const std::unordered_map<std::string, bool>& snapshot) {
-        for (auto& scope : scopes_)
-            for (auto& [name, symbol] : scope)
-                if (const auto it = snapshot.find(name); it != snapshot.end())
-                    symbol.moved = it->second;
+    void restoreOwnershipState(const OwnershipSnapshot& snapshot) {
+        const auto count = std::min(scopes_.size(), snapshot.size());
+        for (std::size_t i = 0; i < count; ++i)
+            for (auto& [name, symbol] : scopes_[i])
+                if (const auto it = snapshot[i].find(name);
+                    it != snapshot[i].end()) {
+                    symbol.ownership = it->second.state;
+                    symbol.movedAt = it->second.movedAt;
+                }
     }
 
-    void mergeMovedState(
-        const std::unordered_map<std::string, bool>& left,
-        const std::unordered_map<std::string, bool>& right) {
-        for (auto& scope : scopes_)
-            for (auto& [name, symbol] : scope) {
-                const auto inLeft = left.find(name);
-                const auto inRight = right.find(name);
-                symbol.moved = (inLeft != left.end() && inLeft->second) ||
-                              (inRight != right.end() && inRight->second);
+    void mergeOwnershipState(
+        const OwnershipSnapshot& left,
+        const OwnershipSnapshot& right) {
+        const auto count = std::min(
+            scopes_.size(), std::min(left.size(), right.size()));
+        for (std::size_t i = 0; i < count; ++i)
+            for (auto& [name, symbol] : scopes_[i]) {
+                const auto inLeft = left[i].find(name);
+                const auto inRight = right[i].find(name);
+                const bool leftMoved =
+                    inLeft != left[i].end() &&
+                    inLeft->second.state == OwnershipState::Moved;
+                const bool rightMoved =
+                    inRight != right[i].end() &&
+                    inRight->second.state == OwnershipState::Moved;
+                symbol.ownership = leftMoved || rightMoved
+                    ? OwnershipState::Moved
+                    : OwnershipState::Available;
+                if (leftMoved && inLeft->second.movedAt)
+                    symbol.movedAt = inLeft->second.movedAt;
+                else if (rightMoved && inRight->second.movedAt)
+                    symbol.movedAt = inRight->second.movedAt;
+                else
+                    symbol.movedAt.reset();
             }
     }
 
     bool isMoveOnlyType(const SemanticType& type) const {
-        if (type.kind == SemanticTypeKind::String) return true;
+        if (type.kind == SemanticTypeKind::String ||
+            type.kind == SemanticTypeKind::Array ||
+            type.kind == SemanticTypeKind::TypeParameter)
+            return true;
+        if (type.kind == SemanticTypeKind::Nullable && type.element)
+            return isMoveOnlyType(*type.element);
         if (type.kind == SemanticTypeKind::Struct) {
             const auto found = result_.structs.find(type.name);
             if (found != result_.structs.end()) {
@@ -2106,6 +2200,30 @@ private:
         if (typeIter == result_.expressionTypes.end()) return;
         if (!isMoveOnlyType(typeIter->second)) return;
 
+        if (const auto* conditional = std::get_if<IfExpr>(&expression.node)) {
+            markAsMoved(*conditional->thenBranch.value);
+            markAsMoved(*conditional->elseBranch.value);
+            return;
+        }
+        if (const auto* when = std::get_if<WhenExpr>(&expression.node)) {
+            for (const auto& branch : when->branches)
+                markAsMoved(*branch.value);
+            return;
+        }
+        if (const auto* array = std::get_if<ArrayLiteralExpr>(&expression.node)) {
+            for (const auto& element : array->elements) markAsMoved(*element);
+            return;
+        }
+        if (const auto* postfix = std::get_if<PostfixExpr>(&expression.node)) {
+            if (postfix->op == TokenKind::Bang)
+                markAsMoved(*postfix->value);
+            return;
+        }
+        if (const auto* index = std::get_if<IndexExpr>(&expression.node)) {
+            markAsMoved(*index->object);
+            return;
+        }
+
         if (const auto* member = std::get_if<MemberExpr>(&expression.node)) {
             const Expr* root = member->object.get();
             while (const auto* inner = std::get_if<MemberExpr>(&root->node))
@@ -2113,8 +2231,10 @@ private:
             if (const auto* identifier = std::get_if<IdentifierExpr>(&root->node)) {
                 const auto name = spelling(source_, identifier->name);
                 auto* variable = findVariable(name);
-                if (variable && !variable->moved) {
-                    variable->moved = true;
+                if (variable &&
+                    variable->ownership == OwnershipState::Available) {
+                    result_.ownershipMoves.insert(&expression);
+                    variable->ownership = OwnershipState::Moved;
                     variable->movedAt = expression.span;
                 }
             }
@@ -2123,8 +2243,10 @@ private:
         if (const auto* identifier = std::get_if<IdentifierExpr>(&expression.node)) {
             const auto name = spelling(source_, identifier->name);
             auto* variable = findVariable(name);
-            if (variable && !variable->moved) {
-                variable->moved = true;
+            if (variable &&
+                variable->ownership == OwnershipState::Available) {
+                result_.ownershipMoves.insert(&expression);
+                variable->ownership = OwnershipState::Moved;
                 variable->movedAt = expression.span;
             }
         }

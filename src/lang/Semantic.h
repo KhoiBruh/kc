@@ -6,6 +6,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace k {
@@ -119,6 +120,7 @@ struct SemanticResult {
     std::unordered_map<const MemberExpr*, std::uint32_t> enumValues;
     std::vector<SpecializationKey> requestedSpecializations;
     std::unordered_map<const VariableDecl*, SemanticType> declarationTypes;
+    std::unordered_set<const Expr*> ownershipMoves;
     std::vector<RuntimeArraySizeCheck> runtimeArraySizeChecks;
 };
 

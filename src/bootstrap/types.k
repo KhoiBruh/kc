@@ -115,7 +115,9 @@ fn primitiveType(tokenKind: u32) => when (tokenKind) {
     else -> invalidType();
 };
 
-struct LocalInfo(name: u64, valueType: TypeValue, mutable: bool, storage: u64)
+struct LocalInfo(
+    name: u64, valueType: TypeValue, mutable: bool, storage: u64,
+    moved: bool, autoDrop: bool)
 fn localFind(val locals: List<LocalInfo>, name: u64): u64 {
     for (index in locals.length>..0)
         if (locals.data[index].name == name) return index;

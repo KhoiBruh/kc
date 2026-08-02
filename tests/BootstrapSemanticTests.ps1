@@ -52,6 +52,16 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "K semantic analyzer rejected the valid multiple generic fixture"
 }
 
+foreach ($validOwnershipCase in @(
+    "bootstrap-semantic-move-reinitialize-valid.k",
+    "bootstrap-semantic-move-borrow-valid.k"
+)) {
+    $null = & $Output (Join-Path $FixtureDirectory $validOwnershipCase)
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "K semantic analyzer rejected $validOwnershipCase"
+    }
+}
+
 $cases = @(
     @("bootstrap-semantic-duplicate.k", 1),
     @("bootstrap-semantic-unknown.k", 2),
@@ -84,7 +94,14 @@ $cases = @(
     @("bootstrap-semantic-cast-float-u32-range.k", 4),
     @("bootstrap-semantic-cast-float-i64-range.k", 4),
     @("bootstrap-semantic-cast-float-u64-range.k", 4),
-    @("bootstrap-semantic-generic-multiple-unresolved.k", 4)
+    @("bootstrap-semantic-generic-multiple-unresolved.k", 4),
+    @("bootstrap-semantic-move-generic.k", 4),
+    @("bootstrap-semantic-move-associated.k", 4),
+    @("bootstrap-semantic-move-method.k", 4),
+    @("bootstrap-semantic-move-nullable.k", 4),
+    @("bootstrap-semantic-move-if-value.k", 4),
+    @("bootstrap-semantic-move-when-value.k", 4),
+    @("bootstrap-semantic-move-array.k", 4)
 )
 foreach ($case in $cases) {
     $path = Join-Path $FixtureDirectory $case[0]

@@ -844,6 +844,39 @@ TEST(codegen_lowers_defer_statements_in_lifo_order) {
     EXPECT_TRUE(call2Pos < call1Pos);
 }
 
+TEST(codegen_automatically_drops_owned_struct_locals) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main(): i32 { val resource = Resource(1); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("call void @Resource.free") != std::string::npos);
+}
+
+TEST(codegen_does_not_drop_a_moved_struct_local_twice) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn consume(resource: Resource) {}"
+        "fn main(): i32 { val resource = Resource(1); consume(resource); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("resource.drop.flag") != std::string::npos);
+}
+
+TEST(codegen_drops_live_owner_before_overwrite) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Resource(id: i32) { fn free(self) {} }"
+        "fn main(): i32 { var resource = Resource(1); resource = Resource(2); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    const auto first = ir.find("call void @Resource.free");
+    EXPECT_TRUE(first != std::string::npos);
+    EXPECT_TRUE(ir.find("call void @Resource.free", first + 1) != std::string::npos);
+}
+
 int main() {
     return test::runAll();
 }

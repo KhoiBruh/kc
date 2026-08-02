@@ -343,6 +343,29 @@ val c = b.copy()   // Tạo một deep copy độc lập; b vẫn hợp lệ
 * Borrow không được trả về, lưu vào struct hoặc sống lâu hơn owner. Các khả năng này chỉ được bổ sung khi K có hệ thống lifetime tường minh.
 * Phiên bản đầu tiên của K không hỗ trợ shared ownership hoặc reference counting.
 
+Frontend C++ và compiler bootstrap hiện tự kiểm tra trạng thái ownership
+`available`/`moved`. `string`, mảng, type parameter có thể sở hữu tài nguyên,
+nullable chứa kiểu move-only và struct có `free(self)` nhận ownership đều được
+theo dõi. Initializer, `return`, struct construction, owned receiver và owned
+parameter của hàm thường, hàm generic, method hoặc associated function đều
+chuyển ownership; unwrap nullable và giá trị từ nhánh `if`/`when` cũng chuyển
+owner gốc. Nếu bất kỳ nhánh control-flow tiếp tục nào move một binding thì
+binding được coi là moved sau điểm merge; nhánh đã `return` không làm mất owner
+trên đường còn lại. Gán giá trị mới vào một `var` đã moved làm binding available
+trở lại.
+
+Một struct khai báo instance method `fn free(self)` có drop glue xác định. Cả
+frontend C++ và compiler bootstrap tự chèn drop cho local và owned parameter
+còn sống khi thoát scope bằng `return`, fallthrough, `break` hoặc `continue`.
+Mỗi owner có drop flag runtime: move hoặc `free()` tường minh hạ cờ, khởi tạo hay
+gán lại bật cờ, nên control flow không double-free. Cleanup chạy theo thứ tự
+ngược và dùng chung đường unwind với `defer`; gán đè owner còn sống tự drop giá
+trị cũ sau khi RHS đã được tính.
+
+Auto-drop hiện áp dụng cho struct có `fn free(self)`. Drop glue cho `string`, mảng
+và nullable owner, `.copy()` tự động, lifetime và non-lexical lifetime vẫn chưa
+được triển khai.
+
 ---
 
 ## 4. Hướng đối tượng giả thủ tục (Procedural OOP)
@@ -888,5 +911,7 @@ type argument in declaration order; struct construction remains explicit (for
 example, `Pair<i32, bool>(40, true)`). Instance methods and associated
 functions on a generic struct capture its enclosing type parameters; the latter
 use explicit syntax such as `Pair<i32, bool>.new(...)`. Independently generic
-methods remain unsupported, as do type packs, overload resolution,
-ownership/moves, payload enums, and user-defined traits.
+methods remain unsupported, as do type packs, overload resolution, payload
+enums, and user-defined traits. Static move ownership and deterministic drop
+for resource structs are self-hosted; string/array drop glue and lifetime
+checking remain separate work.

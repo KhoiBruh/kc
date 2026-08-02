@@ -951,6 +951,13 @@ fn appendLocalPrefix(var buffer: ByteBuffer) {
     buffer.add(46);
 }
 
+fn appendDropFlagName(var buffer: ByteBuffer, storage: u64) {
+    appendLocalPrefix(buffer);
+    appendDecimal(buffer, storage);
+    buffer.add(46); buffer.add(100); buffer.add(114);
+    buffer.add(111); buffer.add(112);
+}
+
 fn appendI64(var buffer: ByteBuffer) {
     buffer.add(105);
     buffer.add(54);
@@ -1093,6 +1100,33 @@ fn emitterStructTypeParameterCount(structure: AstNode) => structure.aux / 65536;
 fn emitterStructFieldCount(structure: AstNode) => structure.aux % 65536;
 
 fn emitterStructMethodCount(structure: AstNode) => structure.storage;
+
+fn emitterDropFunctionRoot(
+    source: Source, val nodes: List<AstNode>, typeName: u64): u64 {
+    val structureRoot = structRootByName(source, nodes, typeName);
+    if (structureRoot == nodes.length) return nodes.length;
+    var methodRoot = structureRoot - 1;
+    for (index in 0..<emitterStructMethodCount(nodes.data[structureRoot])) {
+        val method = nodes.data[methodRoot];
+        val name = nodes.data[method.subtreeStart];
+        if (sourceHash(source, name.start, name.end) == 6385234055)
+            return methodRoot;
+        methodRoot = method.subtreeStart - 1;
+    }
+    return nodes.length;
+}
+
+fn emitterVariableRootByStorage(
+    val nodes: List<AstNode>, storage: u64): u64 {
+    for (root in 0..<nodes.length) {
+        val node = nodes.data[root];
+        if (node.kind == 33) {
+            val name = nodes.data[node.subtreeStart];
+            if (name.start == storage) return root;
+        }
+    }
+    return nodes.length;
+}
 
 fn emitterRootBeforeStructMethods(val nodes: List<AstNode>, structureRoot: u64): u64 {
     var root = structureRoot - 1;
@@ -1547,6 +1581,29 @@ fn appendComparison(
 
 fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
     nodes.data[root].subtreeStart - 1;
+
+fn emitClearAutomaticDrop(
+    var buffer: ByteBuffer, val nodes: List<AstNode>, root: u64) {
+    if (nodes.data[root].typeKind != 8) return;
+    var ownerRoot = root;
+    var owner = nodes.data[ownerRoot];
+    while (owner.kind == 17 || owner.kind == 19) {
+        ownerRoot--;
+        owner = nodes.data[ownerRoot];
+    }
+    if (owner.kind == 18) {
+        val indexRoot = ownerRoot - 1;
+        ownerRoot = nodes.data[indexRoot].subtreeStart - 1;
+        owner = nodes.data[ownerRoot];
+    }
+    if (owner.kind != 10 || (owner.ownership / 2) % 2 == 0) return;
+    appendStore(buffer);
+    buffer.add(105); buffer.add(49); buffer.add(32);
+    buffer.add(102); buffer.add(97); buffer.add(108);
+    buffer.add(115); buffer.add(101);
+    appendPtr(buffer); appendDropFlagName(buffer, owner.storage);
+    appendNewline(buffer);
+}
 
 fn emitAddress(
     var buffer: ByteBuffer,
@@ -2057,6 +2114,8 @@ fn emitExpression(
         appendLocalPrefix(buffer);
         appendDecimal(buffer, node.storage);
         appendNewline(buffer);
+        if (node.ownership % 2 == 1)
+            emitClearAutomaticDrop(buffer, nodes, root);
         return IrValue(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
@@ -2244,6 +2303,14 @@ fn emitExpression(
                 2, 0, 0, updated, targetNode.typeKind,
                 targetNode.typeName, targetNode.typePointee);
         }
+        if (node.aux == 65 && (targetNode.ownership / 2) % 2 == 1) {
+            val declarationRoot = emitterVariableRootByStorage(
+                nodes, targetNode.storage);
+            if (declarationRoot != nodes.length)
+                emitAutomaticDrop(
+                    buffer, source, nodes, genericArguments,
+                    declarationRoot, counter);
+        }
         appendStore(buffer);
         appendType(
             buffer, genericArguments, targetNode.typeKind,
@@ -2252,6 +2319,12 @@ fn emitExpression(
         appendIrValue(buffer, source, right);
         appendPointerValue(buffer, source, target);
         appendNewline(buffer);
+        if (node.aux == 65 && (targetNode.ownership / 2) % 2 == 1) {
+            appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
+            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            appendPtr(buffer); appendDropFlagName(buffer, targetNode.storage);
+            appendNewline(buffer);
+        }
         return right;
     }
     if (node.kind == 15) {
@@ -2765,6 +2838,13 @@ fn emitExpression(
                         concreteParameter.name, concreteParameter.pointee,
                         counter);
                 }
+                if (functionRoot != nodes.length) {
+                    val ownedParameter = nodes.data[
+                        parameterRoot(nodes, functionRoot, index + 1)];
+                    if (ownedParameter.aux == 0)
+                        emitClearAutomaticDrop(
+                            buffer, nodes, arguments[index as u64]);
+                }
             }
         }
         if (node.typeKind == 8) {
@@ -2969,6 +3049,83 @@ fn blockStatementRoots(val nodes: List<AstNode>, blockRoot: u64): u64* {
     return roots;
 }
 
+fn emitAutomaticDrop(
+    var buffer: ByteBuffer,
+    source: Source,
+    val nodes: List<AstNode>,
+    var genericArguments: List<TypeValue>,
+    root: u64,
+    var counter: IrCounter) {
+    val statement = nodes.data[root];
+    if ((statement.ownership / 2) % 2 == 0) return;
+    val name = nodes.data[statement.subtreeStart];
+    var valueType = TypeValue(0, 0, 0);
+    if (statement.kind == 33) {
+        val initializerRoot = root - 1;
+        valueType = TypeValue(
+            nodes.data[initializerRoot].typeKind,
+            nodes.data[initializerRoot].typeName,
+            nodes.data[initializerRoot].typePointee);
+        val afterName = statement.subtreeStart + 1;
+        if (afterName < nodes.data[initializerRoot].subtreeStart) {
+            val declared = nodes.data[nodes.data[initializerRoot].subtreeStart - 1];
+            valueType = TypeValue(
+                declared.typeKind, declared.typeName, declared.typePointee);
+        }
+    } else {
+        val declared = nodes.data[root - 1];
+        valueType = TypeValue(
+            declared.typeKind, declared.typeName, declared.typePointee);
+    }
+    val freeRoot = emitterDropFunctionRoot(source, nodes, valueType.name);
+    if (freeRoot == nodes.length) return;
+    val live = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, live); appendEquals(buffer);
+    appendLoad(buffer); buffer.add(105); buffer.add(49);
+    appendPtr(buffer); appendDropFlagName(buffer, name.start); appendNewline(buffer);
+    val runBlock = nextBlock(counter);
+    val endBlock = nextBlock(counter);
+    appendConditionalBranch(
+        buffer, source, IrValue(2, 0, 0, live, 2, 0, 0),
+        runBlock, endBlock);
+    appendBlockLabel(buffer, counter, runBlock);
+    appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
+    buffer.add(102); buffer.add(97); buffer.add(108);
+    buffer.add(115); buffer.add(101);
+    appendPtr(buffer); appendDropFlagName(buffer, name.start); appendNewline(buffer);
+    val loaded = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
+    appendLoad(buffer);
+    appendType(
+        buffer, genericArguments,
+        valueType.kind, valueType.name, valueType.pointee);
+    appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
+    appendNewline(buffer);
+    buffer.add(32); buffer.add(32); appendCall(buffer);
+    buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
+    appendFunctionOpen(buffer);
+    val structureRoot = structRootByName(source, nodes, valueType.name);
+    val structureName = nodes.data[nodes.data[structureRoot].subtreeStart];
+    appendSource(buffer, source, structureName.start, structureName.end);
+    buffer.add(46);
+    val freeName = nodes.data[nodes.data[freeRoot].subtreeStart];
+    appendSource(buffer, source, freeName.start, freeName.end);
+    val argumentCount = valueType.pointee / 65536;
+    if (argumentCount > 0) {
+        appendSpecializationSuffix(
+            buffer, genericArguments,
+            (valueType.pointee % 65536) as u64, argumentCount);
+    }
+    buffer.add(40);
+    appendType(
+        buffer, genericArguments,
+        valueType.kind, valueType.name, valueType.pointee);
+    buffer.add(32); buffer.add(37); appendDecimal(buffer, loaded);
+    buffer.add(41); appendNewline(buffer);
+    appendBranch(buffer, endBlock);
+    appendBlockLabel(buffer, counter, endBlock);
+}
+
 fn emitDeferRange(
     var buffer: ByteBuffer,
     source: Source,
@@ -2985,9 +3142,15 @@ fn emitDeferRange(
             saved[idx] = defers.data[fromLen - 1 - idx];
         }
         for (idx in 0..<count) {
-            emitStatement(
-                buffer, source, nodes, genericArguments,
-                saved[idx], counter, defers);
+            if (saved[idx] >= 9223372036854775808) {
+                emitAutomaticDrop(
+                    buffer, source, nodes, genericArguments,
+                    saved[idx] - 9223372036854775808, counter);
+            } else {
+                emitStatement(
+                    buffer, source, nodes, genericArguments,
+                    saved[idx], counter, defers);
+            }
         }
         k_boot_free(saved as unit*);
     }
@@ -3493,6 +3656,13 @@ fn emitStatement(
         appendLocalPrefix(buffer);
         appendDecimal(buffer, name.start);
         appendNewline(buffer);
+        if ((statement.ownership / 2) % 2 == 1) {
+            appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
+            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            appendPtr(buffer); appendDropFlagName(buffer, name.start);
+            appendNewline(buffer);
+            defers.add(root + 9223372036854775808);
+        }
         return false;
     } else {
         if (statement.kind == 34) {
@@ -3883,6 +4053,11 @@ fn emitVariableAlloca(
     appendType(
         buffer, genericArguments, storageKind, storageName, storagePointee);
     appendNewline(buffer);
+    if ((statement.ownership / 2) % 2 == 1) {
+        appendValuePrefix(buffer); appendDropFlagName(buffer, name.start);
+        appendEquals(buffer); appendAlloca(buffer);
+        buffer.add(105); buffer.add(49); appendNewline(buffer);
+    }
 }
 
 fn emitBlockAllocas(
@@ -4065,6 +4240,8 @@ fn emitFunction(
     var counter = IrCounter(
         0, 0, 18446744073709551615,
         18446744073709551615, 18446744073709551615, 0);
+    var defers = List<u64>.new();
+    defer defers.free();
     for (parameterIndex in 0..<parameterCount) {
         val parameterPosition = parameterIndex + 1;
         val parameter = nodes.data[
@@ -4094,13 +4271,23 @@ fn emitFunction(
         appendLocalPrefix(buffer);
         appendDecimal(buffer, parameterName.start);
         appendNewline(buffer);
+        if ((parameter.ownership / 2) % 2 == 1) {
+            appendValuePrefix(buffer); appendDropFlagName(buffer, parameterName.start);
+            appendEquals(buffer); appendAlloca(buffer);
+            buffer.add(105); buffer.add(49); appendNewline(buffer);
+            appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
+            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            appendPtr(buffer); appendDropFlagName(buffer, parameterName.start);
+            appendNewline(buffer);
+            defers.add(
+                parameterRoot(nodes, functionRoot, parameterPosition) +
+                9223372036854775808);
+        }
         }
     }
 
     val blockRoot = functionRoot - 1;
     emitBlockAllocas(buffer, genericArguments, nodes, blockRoot);
-    var defers = List<u64>.new();
-    defer defers.free();
     val terminated =
         emitBlock(
             buffer, source, nodes, genericArguments,

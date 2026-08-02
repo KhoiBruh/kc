@@ -173,7 +173,7 @@ fn loaderCandidate(root: u8*, rootLength: u64, val relative: ByteBuffer): ByteBu
 }
 
 fn loaderRelative(
-    source: Source, tokens: List<Token>,
+    source: Source, val tokens: List<Token>,
     first: u64, partCount: u64,
     wildcard: bool
 ): ByteBuffer {
@@ -205,7 +205,7 @@ k_boot_read_file(candidate.data, candidate.length, &data, &length);
 
 fn loaderResolveImport(
     var loader: ModuleLoader, currentPath: LoadedPath, source: Source,
-    tokens: List<Token>, first: u64, partCount: u64, wildcard: bool,
+    val tokens: List<Token>, first: u64, partCount: u64, wildcard: bool,
     start: u64, end: u64, depth: u64
 ): bool {
     loader.failureKind = 2;
@@ -276,29 +276,28 @@ fn loaderScanImports(
         loaderReport(path, source, lexed.errorStart, category);
         return false;
     }
-    val tokens = lexed.tokens;
     var current: u64 = 0;
-    if (tokens.data[current].kind == 25) {
-        while (tokens.data[current].kind != 58) {
-            if (tokens.data[current].kind == 0) {
+    if (lexed.tokens.data[current].kind == 25) {
+        while (lexed.tokens.data[current].kind != 58) {
+            if (lexed.tokens.data[current].kind == 0) {
                 return false;
             }
             current++;
         }
         current++;
     }
-    while (tokens.data[current].kind == 26) {
-        val start = tokens.data[current].start;
+    while (lexed.tokens.data[current].kind == 26) {
+        val start = lexed.tokens.data[current].start;
         current++;
         val first = current;
         var partCount: u64 = 0;
         var wildcard = false;
-        while (tokens.data[current].kind == 1) {
+        while (lexed.tokens.data[current].kind == 1) {
             partCount++;
             current++;
-            if (tokens.data[current].kind == 59) {
+            if (lexed.tokens.data[current].kind == 59) {
                 current++;
-                if (tokens.data[current].kind == 62) {
+                if (lexed.tokens.data[current].kind == 62) {
                     wildcard = true;
                     current++;
                     break;
@@ -307,15 +306,15 @@ fn loaderScanImports(
                 break;
             }
         }
-        val end = tokens.data[current].end;
-        if (tokens.data[current].kind != 58) {
+        val end = lexed.tokens.data[current].end;
+        if (lexed.tokens.data[current].kind != 58) {
             loader.failureKind = 2;
             return false;
         }
         current++;
         if (
             !loaderResolveImport(
-                loader, path, source, tokens, first, partCount, wildcard,
+                loader, path, source, lexed.tokens, first, partCount, wildcard,
                 start, end, depth + 1
             )
         ) {
@@ -418,10 +417,12 @@ fn loadModules(entryPath: u8*, entryPathLength: u64): LoadResult {
     k_boot_free(loader.entryDirectory.data as unit*);
 
     if (!loaded) {
-        k_boot_free(sourceMap.data as unit*);
-        k_boot_free(combined.data as unit*);
+        sourceMap.free();
+        combined.free();
         return LoadResult(Source(workingData, 0), List<SourceMapSegment>.new(), false, failureKind);
     }
 
-    return LoadResult(Source(combined.data, combined.length), sourceMap, true, 0);
+    val sourceData = k_boot_alloc(combined.length) as u8*;
+    for (i in 0..<combined.length) sourceData[i] = combined.data[i];
+    return LoadResult(Source(sourceData, combined.length), sourceMap, true, 0);
 }

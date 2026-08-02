@@ -63,8 +63,10 @@ source.k
   the equivalent `struct Player(name: string) {}` remains valid.
 - Locals use `val` or `var`. Owned and mutable-borrow parameters are assignable;
   `val` and immutable-borrow parameters are not.
-- Owned strings, arrays, and resource-owning structs are intended to be
-  move-only with explicit `.copy()`; this is not implemented yet.
+- Owned strings, arrays, nullable owners, generic type parameters, and structs
+  with owned `free(self)` are checked as move-only. Resource structs with exact
+  `fn free(self)` receive deterministic automatic drop for live locals and
+  owned parameters. Automatic `.copy()` is not implemented yet.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order
@@ -182,7 +184,8 @@ llvm-readobj --file-headers file.obj
 - Pattern destructuring is not lowered yet. Expression-valued `when` requires
   a final `else` unless its enum subject is exhaustively covered.
 - String variables, escape decoding in codegen, concatenation, other print
-  types, payload enums, and ownership are not lowered.
+  types, payload enums, string/array/nullable drop glue, and borrow lifetimes
+  are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
   type-parameter lists; instance methods and associated functions on generic
   structs capture those parameters. Type packs, independently generic methods,
@@ -200,6 +203,7 @@ Bootstrap diagnostics and CLI parity are complete for the current contract.
 Integer-cast self-hosting is complete for the approved integer matrix.
 Float-cast self-hosting is complete for the approved `f32`/`f64` matrix.
 Payload-free enum self-hosting is complete for the current contract.
+Static move-ownership self-hosting is complete for the current contract.
 
 - `src/bootstrap/` contains the K implementation of source loading, lexer,
   flat AST, parser, semantic checking, textual LLVM emission, and the driver.
@@ -238,10 +242,15 @@ Payload-free enum self-hosting is complete for the current contract.
   supplies the arm value.
 - Payload-free enum declarations, variant lookup, enum parameters/returns,
   `u32` tag emission, and exhaustive enum `when` are self-hosted.
+- Ownership state and use-after-move diagnostics are self-hosted for strings,
+  arrays, nullable owners, generic values, owned calls/returns, and structs with
+  owned `free(self)`. Resource-struct locals and owned parameters use runtime
+  drop flags and unwind through the existing defer paths; terminating branches
+  do not poison ownership on continuing paths.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Add payload enum declarations and construction as the next vertical slice;
-keep payload pattern matching and destructuring separate.
+Lower owned string variables using the deterministic drop machinery, then add
+explicit deep `.copy()` without broadening into shared ownership.

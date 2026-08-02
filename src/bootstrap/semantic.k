@@ -17,7 +17,8 @@ struct Semantic(
     currentFunction: u64,
     currentStruct: u64,
     loopDepth: u32,
-    mutationRoot: u64
+    mutationRoot: u64,
+    suppressMoves: bool
 ) {
 
 	fn free(var self) {
@@ -302,7 +303,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
             LocalInfo(
                 nodeHash(semantic, nameNode),
                 typeFromNode(semantic, parameterRoot - 1),
-                parameter.aux != 1, nameNode.start
+                parameter.aux != 1, nameNode.start, false, false
             )
 		);
     }
@@ -802,6 +803,117 @@ fn expressionType(var semantic: Semantic, root: u64): TypeValue {
     return value;
 }
 
+fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
+    if (value.kind == 10 || value.kind == 14 || value.kind == 19) return true;
+    if (value.kind == 15) {
+        return typeNeedsOwnership(
+            semantic, TypeValue(value.pointee, value.name, 0));
+    }
+    if (value.kind != 8) return false;
+    val method = declarationFind(
+        semantic.functions, methodHash(value.name, 6385234055));
+    if (method == semantic.functions.length) return false;
+    val functionRoot = semantic.functions.data[method].node;
+    val function = semantic.nodes.data[functionRoot];
+    if (functionParameterCount(function) == 0) return false;
+    return semantic.nodes.data[
+        functionParameterRoot(semantic, functionRoot, 1)].aux == 0;
+}
+
+fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
+    val node = semantic.nodes.data[root];
+    if (node.kind == 10) {
+        val local = localFind(semantic.locals, nodeHash(semantic, node));
+        if (local != semantic.locals.length) {
+            var value = semantic.locals.data[local];
+            value.moved = true;
+            semantic.locals.data[local] = value;
+            var movedNode = semantic.nodes.data[root];
+            if (movedNode.ownership % 2 == 0) movedNode.ownership++;
+            semantic.nodes.data[root] = movedNode;
+        }
+        return;
+    }
+    if (node.kind == 17 || node.kind == 19) {
+        markOwnerRootMoved(semantic, root - 1);
+        return;
+    }
+    if (node.kind == 18) {
+        val indexRoot = root - 1;
+        val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
+        if (semantic.nodes.data[objectRoot].typeKind == 19) {
+            markOwnerRootMoved(semantic, objectRoot);
+        }
+    }
+}
+
+fn markExpressionMoved(var semantic: Semantic, root: u64) {
+    if (semantic.suppressMoves) return;
+    val node = semantic.nodes.data[root];
+    val value = TypeValue(node.typeKind, node.typeName, node.typePointee);
+    if (!typeNeedsOwnership(semantic, value)) return;
+    if (node.kind == 25) {
+        val elseValueRoot = root - 1;
+        var thenValueRoot = semantic.nodes.data[elseValueRoot].subtreeStart - 1;
+        for (index in 0..<node.aux / 65536) {
+            thenValueRoot = semantic.nodes.data[thenValueRoot].subtreeStart - 1;
+        }
+        markExpressionMoved(semantic, thenValueRoot);
+        markExpressionMoved(semantic, elseValueRoot);
+        return;
+    }
+    if (node.kind == 23) {
+        var branchRoot = root - 1;
+        for (index in node.aux % 65536>..0) {
+            markExpressionMoved(semantic, branchRoot - 1);
+            branchRoot = semantic.nodes.data[branchRoot].subtreeStart - 1;
+        }
+        return;
+    }
+    if (node.kind == 22) {
+        var childRoot = root - 1;
+        for (index in 0..<node.aux) {
+            markExpressionMoved(semantic, childRoot);
+            childRoot = semantic.nodes.data[childRoot].subtreeStart - 1;
+        }
+        return;
+    }
+    markOwnerRootMoved(semantic, root);
+}
+
+fn captureOwnership(val semantic: Semantic, count: u64): u8* {
+    val states = k_boot_alloc(count) as u8*;
+    for (index in 0..<count) {
+        states[index] = if (semantic.locals.data[index].moved)
+            1 as u8 else 0 as u8;
+    }
+    return states;
+}
+
+fn restoreOwnership(var semantic: Semantic, states: u8*, count: u64) {
+    for (index in 0..<count) {
+        var local = semantic.locals.data[index];
+        local.moved = states[index] == 1;
+        semantic.locals.data[index] = local;
+    }
+}
+
+fn mergeOwnership(
+    var semantic: Semantic, left: u8*, right: u8*, count: u64) {
+    for (index in 0..<count) {
+        var local = semantic.locals.data[index];
+        local.moved = left[index] == 1 || right[index] == 1;
+        semantic.locals.data[index] = local;
+    }
+}
+
+fn includeCurrentOwnership(
+    val semantic: Semantic, states: u8*, count: u64) {
+    for (index in 0..<count) {
+        if (semantic.locals.data[index].moved) states[index] = 1 as u8;
+    }
+}
+
 fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (!semantic.result.ok) return invalidType();
     val node = semantic.nodes.data[root];
@@ -809,8 +921,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val name = nodeHash(semantic, node);
         val local = localFind(semantic.locals, name);
         if (local != semantic.locals.length) {
+            if (semantic.locals.data[local].moved) {
+                semanticFail(semantic, 4, node);
+                return semantic.locals.data[local].valueType;
+            }
             var resolved = semantic.nodes.data[root];
             resolved.storage = semantic.locals.data[local].storage;
+            if (semantic.locals.data[local].autoDrop)
+                resolved.ownership = 2;
             semantic.nodes.data[root] = resolved;
             return semantic.locals.data[local].valueType;
         }
@@ -945,21 +1063,46 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         val target = semantic.nodes.data[leftRoot];
+        var targetLocal = semantic.locals.length;
         if (target.kind == 10) {
-            val local = localFind(semantic.locals, nodeHash(semantic, target));
-            if (local == semantic.locals.length) {
+            targetLocal = localFind(semantic.locals, nodeHash(semantic, target));
+            if (targetLocal == semantic.locals.length) {
                 semanticFail(semantic, 2, target);
                 return invalidType();
             }
-            if (!semantic.locals.data[local].mutable) {
+            if (!semantic.locals.data[targetLocal].mutable) {
                 semanticFail(semantic, 7, target);
                 return invalidType();
             }
         }
-        val left = expressionType(semantic, leftRoot);
+        var left = invalidType();
+        if (targetLocal != semantic.locals.length) {
+            left = semantic.locals.data[targetLocal].valueType;
+            var resolvedTarget = target;
+            resolvedTarget.storage = semantic.locals.data[targetLocal].storage;
+            resolvedTarget.typeKind = left.kind;
+            resolvedTarget.typeName = left.name;
+            resolvedTarget.typePointee = left.pointee;
+            if (semantic.locals.data[targetLocal].autoDrop)
+                resolvedTarget.ownership = 2;
+            semantic.nodes.data[leftRoot] = resolvedTarget;
+            if (node.aux != 65 && semantic.locals.data[targetLocal].moved) {
+                semanticFail(semantic, 4, target);
+                return left;
+            }
+        } else {
+            left = expressionType(semantic, leftRoot);
+        }
         val right = expressionType(semantic, rightRoot);
         if (!typeAccepts(left, right, semantic.genericArguments)) {
             semanticFail(semantic, 4, node);
+        } else if (node.aux == 65) {
+            markExpressionMoved(semantic, rightRoot);
+            if (targetLocal != semantic.locals.length) {
+                var reassigned = semantic.locals.data[targetLocal];
+                reassigned.moved = false;
+                semantic.locals.data[targetLocal] = reassigned;
+            }
         }
         return left;
     }
@@ -1217,6 +1360,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         semantic.nodes.data[
                             argumentRoots[argument as u64]]);
                 }
+                markExpressionMoved(
+                    semantic, argumentRoots[argument as u64]);
             }
             for (explicit in 0..<typeCount) {
                 val parameterRoot = structTypeParameterRoot(
@@ -1397,6 +1542,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     semantic, 4,
                     semantic.nodes.data[
                         argumentRoots[argument as u64]]);
+            }
+            if (semantic.nodes.data[parameterRoot].aux == 0) {
+                markExpressionMoved(
+                    semantic, argumentRoots[argument as u64]);
             }
         }
         for (explicit in 0..<typeCount) {
@@ -1592,19 +1741,28 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val savedLocals = semantic.locals.length;
         val savedScopeStart = semantic.scopeStart;
+        val ownershipBefore = captureOwnership(semantic, savedLocals);
         semantic.scopeStart = savedLocals;
         for (index in 0..<thenCount) {
             checkStatement(semantic, thenRoots[index as u64]);
         }
         val thenType = expressionType(semantic, thenValueRoot);
         semantic.locals.setLength(savedLocals);
+        val thenOwnership = captureOwnership(semantic, savedLocals);
+        restoreOwnership(semantic, ownershipBefore, savedLocals);
         semantic.scopeStart = savedLocals;
         for (index in 0..<elseCount) {
             checkStatement(semantic, elseRoots[index as u64]);
         }
         val elseType = expressionType(semantic, elseValueRoot);
         semantic.locals.setLength(savedLocals);
+        val elseOwnership = captureOwnership(semantic, savedLocals);
+        mergeOwnership(
+            semantic, thenOwnership, elseOwnership, savedLocals);
         semantic.scopeStart = savedScopeStart;
+        k_boot_free(elseOwnership as unit*);
+        k_boot_free(thenOwnership as unit*);
+        k_boot_free(ownershipBefore as unit*);
         k_boot_free(thenRoots as unit*);
         k_boot_free(elseRoots as unit*);
         if (!typeAccepts(thenType, elseType, semantic.genericArguments)) {
@@ -1638,7 +1796,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         var result = invalidType();
         var hasElse = false;
+        val ownershipCount = semantic.locals.length;
+        val ownershipBefore = captureOwnership(semantic, ownershipCount);
+        val ownershipMerged = k_boot_alloc(ownershipCount) as u8*;
+        for (ownershipIndex in 0..<ownershipCount) {
+            ownershipMerged[ownershipIndex] = 0 as u8;
+        }
         for (index in 0..<branchCount) {
+            restoreOwnership(semantic, ownershipBefore, ownershipCount);
             val branch = semantic.nodes.data[roots[index as u64]];
             if (branch.aux % 2 == 1) hasElse = true;
             val valueRoot = roots[index as u64] - 1;
@@ -1682,6 +1847,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             var value = expressionType(semantic, valueRoot);
             semantic.locals.setLength(savedLocals);
             semantic.scopeStart = savedScopeStart;
+            includeCurrentOwnership(
+                semantic, ownershipMerged, ownershipCount);
             k_boot_free(statementRoots as unit*);
             if (result.kind == 0) {
                 result = value;
@@ -1697,6 +1864,9 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
             }
         }
+        restoreOwnership(semantic, ownershipMerged, ownershipCount);
+        k_boot_free(ownershipMerged as unit*);
+        k_boot_free(ownershipBefore as unit*);
         val exhaustive = enumWhenExhaustive(
             semantic, subject, roots, branchCount, true);
         if (!hasElse && !exhaustive) {
@@ -1763,6 +1933,22 @@ fn checkBlock(var semantic: Semantic, root: u64) {
     semantic.scopeStart = savedScopeStart;
 }
 
+fn statementTerminates(val nodes: List<AstNode>, root: u64): bool {
+    val node = nodes.data[root];
+    if (node.kind == 34 || node.kind == 36 || node.kind == 37) return true;
+    if (node.kind == 30) {
+        if (node.aux == 0) return false;
+        return statementTerminates(nodes, root - 1);
+    }
+    if (node.kind == 31 && node.aux == 1) {
+        val elseRoot = root - 1;
+        val thenRoot = nodes.data[elseRoot].subtreeStart - 1;
+        return statementTerminates(nodes, thenRoot) &&
+            statementTerminates(nodes, elseRoot);
+    }
+    return false;
+}
+
 fn resolveWhenResultType(
     var semantic: Semantic, root: u64, target: TypeValue) {
     var whenNode = semantic.nodes.data[root];
@@ -1824,19 +2010,38 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         return;
     }
     if (node.kind == 31) {
-        var branchRoot = root - 1;
+        var thenRoot = root - 1;
+        var elseRoot = semantic.nodes.length;
         if (node.aux == 1) {
-            checkBlock(semantic, branchRoot);
-            branchRoot =
-                semantic.nodes.data[branchRoot].subtreeStart - 1;
+            elseRoot = thenRoot;
+            thenRoot = semantic.nodes.data[elseRoot].subtreeStart - 1;
         }
-        checkBlock(semantic, branchRoot);
         val conditionRoot =
-            semantic.nodes.data[branchRoot].subtreeStart - 1;
+            semantic.nodes.data[thenRoot].subtreeStart - 1;
         if (expressionType(semantic, conditionRoot).kind != 2) {
             semanticFail(
                 semantic, 6, semantic.nodes.data[conditionRoot]);
         }
+        val count = semantic.locals.length;
+        val before = captureOwnership(semantic, count);
+        checkBlock(semantic, thenRoot);
+        val thenTerminates = statementTerminates(semantic.nodes, thenRoot);
+        val thenState = captureOwnership(semantic, count);
+        restoreOwnership(semantic, before, count);
+        if (elseRoot != semantic.nodes.length) checkBlock(semantic, elseRoot);
+        var elseTerminates = false;
+        if (elseRoot != semantic.nodes.length)
+            elseTerminates = statementTerminates(semantic.nodes, elseRoot);
+        val elseState = captureOwnership(semantic, count);
+        if (thenTerminates && !elseTerminates)
+            restoreOwnership(semantic, elseState, count);
+        else if (elseTerminates && !thenTerminates)
+            restoreOwnership(semantic, thenState, count);
+        else
+            mergeOwnership(semantic, thenState, elseState, count);
+        k_boot_free(elseState as unit*);
+        k_boot_free(thenState as unit*);
+        k_boot_free(before as unit*);
         return;
     }
     if (node.kind == 32) {
@@ -1908,13 +2113,15 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         val savedLocals = semantic.locals.length;
         val nameNode = semantic.nodes.data[node.subtreeStart];
-        semantic.locals.add(LocalInfo(nodeHash(semantic, nameNode), valueType, false, nameNode.start));
+        semantic.locals.add(LocalInfo(
+            nodeHash(semantic, nameNode), valueType, false, nameNode.start,
+            false, false));
         if (node.aux == 1) {
             val indexNode = semantic.nodes.data[node.subtreeStart + 1];
             semantic.locals.add(
                 LocalInfo(
                     nodeHash(semantic, indexNode),
-                    TypeValue(7, 0, 0), false, indexNode.start
+                    TypeValue(7, 0, 0), false, indexNode.start, false, false
 				)
 			);
         }
@@ -1956,7 +2163,14 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
         }
         var hasElse = false;
+        val ownershipCount = semantic.locals.length;
+        val ownershipBefore = captureOwnership(semantic, ownershipCount);
+        val ownershipMerged = k_boot_alloc(ownershipCount) as u8*;
+        for (ownershipIndex in 0..<ownershipCount) {
+            ownershipMerged[ownershipIndex] = 0 as u8;
+        }
         for (index in 0..<branchCount) {
+            restoreOwnership(semantic, ownershipBefore, ownershipCount);
             val current = semantic.nodes.data[roots[index as u64]];
             if (current.aux % 2 == 1) hasElse = true;
             val bodyRoot = roots[index as u64] - 1;
@@ -1993,7 +2207,12 @@ fn checkStatement(var semantic: Semantic, root: u64) {
               }
             }
             checkBlock(semantic, bodyRoot);
+            includeCurrentOwnership(
+                semantic, ownershipMerged, ownershipCount);
         }
+        restoreOwnership(semantic, ownershipMerged, ownershipCount);
+        k_boot_free(ownershipMerged as unit*);
+        k_boot_free(ownershipBefore as unit*);
         val exhaustive = enumWhenExhaustive(
             semantic, subject, roots, branchCount, false);
         if (subject.kind == 20 && !hasElse && !exhaustive) {
@@ -2003,7 +2222,10 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         return;
     }
     if (node.kind == 41) {
+        val savedSuppressMoves = semantic.suppressMoves;
+        semantic.suppressMoves = true;
         checkStatement(semantic, root - 1);
+        semantic.suppressMoves = savedSuppressMoves;
         return;
     }
     if (node.kind == 36) {
@@ -2058,7 +2280,15 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 }
             }
         }
-        semantic.locals.add(LocalInfo(name, valueType, node.aux == 7, nameNode.start));
+        markExpressionMoved(semantic, initializerRoot);
+        val automaticDrop =
+            valueType.kind == 8 && typeNeedsOwnership(semantic, valueType);
+        var declarationNode = semantic.nodes.data[root];
+        if (automaticDrop) declarationNode.ownership = 2;
+        semantic.nodes.data[root] = declarationNode;
+        semantic.locals.add(LocalInfo(
+            name, valueType, node.aux == 7, nameNode.start,
+            false, automaticDrop));
         return;
     }
     if (node.kind == 34) {
@@ -2115,6 +2345,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                     semantic, root - 1, semantic.returnType);
                 resolveIfResultType(
                     semantic, root - 1, semantic.returnType);
+                markExpressionMoved(semantic, root - 1);
             }
         }
         return;
@@ -2157,12 +2388,27 @@ fn checkFunction(var semantic: Semantic, root: u64) {
             semanticFail(semantic, 1, nameNode);
             return;
         }
+        val parameterType = typeFromNode(semantic, parameterRoot - 1);
+        var automaticDrop =
+            parameter.aux == 0 && parameterType.kind == 8 &&
+            typeNeedsOwnership(semantic, parameterType);
+        val functionName = semantic.nodes.data[function.subtreeStart];
+        if (function.conversionKind == 1 && position == 0 &&
+            nodeHash(semantic, functionName) == 6385234055)
+            automaticDrop = false;
+        if (automaticDrop) {
+            var parameterNode = semantic.nodes.data[parameterRoot];
+            parameterNode.ownership = 2;
+            semantic.nodes.data[parameterRoot] = parameterNode;
+        }
         semantic.locals.add(
             LocalInfo(
                 parameterName,
-                typeFromNode(semantic, parameterRoot - 1),
+                parameterType,
                 mutable,
-                nameNode.start)
+                nameNode.start,
+                false,
+                automaticDrop)
         );
     }
     checkBlock(semantic, root - 1);
@@ -2340,7 +2586,7 @@ fn analyze(source: Source, val nodes: List<AstNode>): SemanticResult {
         List<DeclarationInfo>.new(),
         List<LocalInfo>.new(), genericArguments,
         semanticSuccess(), unitType(), 0,
-        nodesLength, nodesLength, 0, nodesLength
+        nodesLength, nodesLength, 0, nodesLength, false
     );
     defer semantic.free();
     val programRoot = semantic.nodes.length - 1;
