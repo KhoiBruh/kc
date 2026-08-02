@@ -2282,7 +2282,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         markExpressionMoved(semantic, initializerRoot);
         val automaticDrop =
-            valueType.kind == 8 && typeNeedsOwnership(semantic, valueType);
+            (valueType.kind == 8 || valueType.kind == 10) &&
+            typeNeedsOwnership(semantic, valueType);
         var declarationNode = semantic.nodes.data[root];
         if (automaticDrop) declarationNode.ownership = 2;
         semantic.nodes.data[root] = declarationNode;

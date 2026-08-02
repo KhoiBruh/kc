@@ -64,9 +64,10 @@ source.k
 - Locals use `val` or `var`. Owned and mutable-borrow parameters are assignable;
   `val` and immutable-borrow parameters are not.
 - Owned strings, arrays, nullable owners, generic type parameters, and structs
-  with owned `free(self)` are checked as move-only. Resource structs with exact
-  `fn free(self)` receive deterministic automatic drop for live locals and
-  owned parameters. Automatic `.copy()` is not implemented yet.
+  with owned `free(self)` are checked as move-only. Owned-string locals and
+  resource structs with exact `fn free(self)` receive deterministic automatic
+  drop; resource owned parameters are also dropped. Automatic `.copy()` is not
+  implemented yet.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order
@@ -183,9 +184,8 @@ llvm-readobj --file-headers file.obj
 
 - Pattern destructuring is not lowered yet. Expression-valued `when` requires
   a final `else` unless its enum subject is exhaustively covered.
-- String variables, escape decoding in codegen, concatenation, other print
-  types, payload enums, string/array/nullable drop glue, and borrow lifetimes
-  are not lowered.
+- String mutation and concatenation, other print types, payload enums,
+  array/nullable drop glue, and borrow lifetimes are not lowered.
 - Bootstrap generic functions and structs support arbitrary ordered
   type-parameter lists; instance methods and associated functions on generic
   structs capture those parameters. Type packs, independently generic methods,
@@ -244,13 +244,13 @@ Static move-ownership self-hosting is complete for the current contract.
   `u32` tag emission, and exhaustive enum `when` are self-hosted.
 - Ownership state and use-after-move diagnostics are self-hosted for strings,
   arrays, nullable owners, generic values, owned calls/returns, and structs with
-  owned `free(self)`. Resource-struct locals and owned parameters use runtime
-  drop flags and unwind through the existing defer paths; terminating branches
-  do not poison ownership on continuing paths.
+  owned `free(self)`. Owned-string locals, resource-struct locals, and resource
+  owned parameters use runtime drop flags and unwind through the existing
+  defer paths; terminating branches do not poison ownership on continuing paths.
 - `kc0` seeds `kc1` only. `kc1` builds `kc2`, `kc2` builds `kc3`, and `kc3`
   builds `kc4` without invoking the C++ compiler.
 
 ## Recommended next milestone
 
-Lower owned string variables using the deterministic drop machinery, then add
-explicit deep `.copy()` without broadening into shared ownership.
+Add explicit deep `.copy()` for owned strings without broadening into shared
+ownership, then extend drop glue to arrays and nullable owners.

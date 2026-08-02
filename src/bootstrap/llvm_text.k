@@ -951,6 +951,25 @@ fn appendLocalPrefix(var buffer: ByteBuffer) {
     buffer.add(46);
 }
 
+fn appendOwnedStringDeclarations(var buffer: ByteBuffer) {
+    buffer.add(100); buffer.add(101); buffer.add(99); buffer.add(108);
+    buffer.add(97); buffer.add(114); buffer.add(101); buffer.add(32);
+    buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
+    buffer.add(64); buffer.add(107); buffer.add(95); buffer.add(115);
+    buffer.add(116); buffer.add(100); buffer.add(95); buffer.add(97);
+    buffer.add(108); buffer.add(108); buffer.add(111); buffer.add(99);
+    buffer.add(40); buffer.add(105); buffer.add(54); buffer.add(52);
+    buffer.add(41); buffer.add(10);
+    buffer.add(100); buffer.add(101); buffer.add(99); buffer.add(108);
+    buffer.add(97); buffer.add(114); buffer.add(101); buffer.add(32);
+    buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
+    buffer.add(32); buffer.add(64); buffer.add(107); buffer.add(95);
+    buffer.add(115); buffer.add(116); buffer.add(100); buffer.add(95);
+    buffer.add(102); buffer.add(114); buffer.add(101); buffer.add(101);
+    buffer.add(40); buffer.add(112); buffer.add(116); buffer.add(114);
+    buffer.add(41); buffer.add(10); buffer.add(10);
+}
+
 fn appendDropFlagName(var buffer: ByteBuffer, storage: u64) {
     appendLocalPrefix(buffer);
     appendDecimal(buffer, storage);
@@ -1718,6 +1737,60 @@ fn appendFloatRangeComparison(
     appendFloatCastBound(
         buffer, value.typeKind, targetKind, lower);
     appendNewline(buffer);
+}
+
+fn emitOwnedStringLiteral(
+    var buffer: ByteBuffer,
+    source: Source,
+    node: AstNode,
+    var counter: IrCounter): IrValue {
+    var decoded = decodeStringLiteral(source, node);
+    defer decoded.free();
+    var capacity = decoded.length;
+    if (capacity == 0) capacity = 1;
+    val data = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, data); appendEquals(buffer);
+    appendCall(buffer); buffer.add(112); buffer.add(116); buffer.add(114);
+    appendFunctionOpen(buffer);
+    buffer.add(107); buffer.add(95); buffer.add(115); buffer.add(116);
+    buffer.add(100); buffer.add(95); buffer.add(97); buffer.add(108);
+    buffer.add(108); buffer.add(111); buffer.add(99); buffer.add(40);
+    appendI64(buffer); buffer.add(32); appendDecimal(buffer, capacity);
+    buffer.add(41); appendNewline(buffer);
+    for (index in 0..<decoded.length) {
+        val address = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, address); appendEquals(buffer);
+        appendGetElementPtr(buffer); buffer.add(32);
+        buffer.add(105); buffer.add(56); buffer.add(44); buffer.add(32);
+        buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
+        buffer.add(37); appendDecimal(buffer, data); buffer.add(44); buffer.add(32);
+        appendI64(buffer); buffer.add(32); appendDecimal(buffer, index);
+        appendNewline(buffer);
+        appendStore(buffer); buffer.add(105); buffer.add(56); buffer.add(32);
+        appendDecimal(buffer, decoded.data[index]);
+        appendPtr(buffer); appendDecimal(buffer, address);
+        appendNewline(buffer);
+    }
+    var temporary = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
+    appendInsertValue(buffer); appendSpacedStringType(buffer);
+    buffer.add(117); buffer.add(110); buffer.add(100); buffer.add(101);
+    buffer.add(102); buffer.add(44); buffer.add(32);
+    buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
+    buffer.add(37); appendDecimal(buffer, data); appendIndexZero(buffer);
+    temporary = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
+    appendInsertValue(buffer); appendSpacedStringType(buffer);
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
+    appendI64Prefix(buffer); appendDecimal(buffer, decoded.length);
+    appendIndexOne(buffer);
+    temporary = nextTemporary(counter);
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
+    appendInsertValue(buffer); appendSpacedStringType(buffer);
+    appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
+    appendI64Prefix(buffer); appendDecimal(buffer, capacity);
+    buffer.add(44); buffer.add(32); buffer.add(50); appendNewline(buffer);
+    return IrValue(2, 0, 0, temporary, 10, 0, 0);
 }
 
 fn emitExpression(
@@ -3077,8 +3150,11 @@ fn emitAutomaticDrop(
         valueType = TypeValue(
             declared.typeKind, declared.typeName, declared.typePointee);
     }
-    val freeRoot = emitterDropFunctionRoot(source, nodes, valueType.name);
-    if (freeRoot == nodes.length) return;
+    var freeRoot = nodes.length;
+    if (valueType.kind != 10) {
+        freeRoot = emitterDropFunctionRoot(source, nodes, valueType.name);
+        if (freeRoot == nodes.length) return;
+    }
     val live = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, live); appendEquals(buffer);
     appendLoad(buffer); buffer.add(105); buffer.add(49);
@@ -3101,27 +3177,46 @@ fn emitAutomaticDrop(
         valueType.kind, valueType.name, valueType.pointee);
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
     appendNewline(buffer);
-    buffer.add(32); buffer.add(32); appendCall(buffer);
-    buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
-    appendFunctionOpen(buffer);
-    val structureRoot = structRootByName(source, nodes, valueType.name);
-    val structureName = nodes.data[nodes.data[structureRoot].subtreeStart];
-    appendSource(buffer, source, structureName.start, structureName.end);
-    buffer.add(46);
-    val freeName = nodes.data[nodes.data[freeRoot].subtreeStart];
-    appendSource(buffer, source, freeName.start, freeName.end);
-    val argumentCount = valueType.pointee / 65536;
-    if (argumentCount > 0) {
-        appendSpecializationSuffix(
+    if (valueType.kind == 10) {
+        val pointer = nextTemporary(counter);
+        appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
+        buffer.add(101); buffer.add(120); buffer.add(116); buffer.add(114);
+        buffer.add(97); buffer.add(99); buffer.add(116); buffer.add(118);
+        buffer.add(97); buffer.add(108); buffer.add(117); buffer.add(101);
+        appendSpacedStringType(buffer); buffer.add(37); appendDecimal(buffer, loaded);
+        buffer.add(44); buffer.add(32); buffer.add(48); appendNewline(buffer);
+        buffer.add(32); buffer.add(32); appendCall(buffer);
+        buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
+        appendFunctionOpen(buffer);
+        buffer.add(107); buffer.add(95); buffer.add(115); buffer.add(116);
+        buffer.add(100); buffer.add(95); buffer.add(102); buffer.add(114);
+        buffer.add(101); buffer.add(101); buffer.add(40);
+        buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
+        buffer.add(37); appendDecimal(buffer, pointer);
+        buffer.add(41); appendNewline(buffer);
+    } else {
+        buffer.add(32); buffer.add(32); appendCall(buffer);
+        buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
+        appendFunctionOpen(buffer);
+        val structureRoot = structRootByName(source, nodes, valueType.name);
+        val structureName = nodes.data[nodes.data[structureRoot].subtreeStart];
+        appendSource(buffer, source, structureName.start, structureName.end);
+        buffer.add(46);
+        val freeName = nodes.data[nodes.data[freeRoot].subtreeStart];
+        appendSource(buffer, source, freeName.start, freeName.end);
+        val argumentCount = valueType.pointee / 65536;
+        if (argumentCount > 0) {
+            appendSpecializationSuffix(
+                buffer, genericArguments,
+                (valueType.pointee % 65536) as u64, argumentCount);
+        }
+        buffer.add(40);
+        appendType(
             buffer, genericArguments,
-            (valueType.pointee % 65536) as u64, argumentCount);
+            valueType.kind, valueType.name, valueType.pointee);
+        buffer.add(32); buffer.add(37); appendDecimal(buffer, loaded);
+        buffer.add(41); appendNewline(buffer);
     }
-    buffer.add(40);
-    appendType(
-        buffer, genericArguments,
-        valueType.kind, valueType.name, valueType.pointee);
-    buffer.add(32); buffer.add(37); appendDecimal(buffer, loaded);
-    buffer.add(41); appendNewline(buffer);
     appendBranch(buffer, endBlock);
     appendBlockLabel(buffer, counter, endBlock);
 }
@@ -3628,9 +3723,16 @@ fn emitStatement(
     }
     if (statement.kind == 33) {
         val initializerRoot = root - 1;
-        var initializer = emitExpression(
-            buffer, source, nodes, genericArguments,
-            initializerRoot, counter);
+        val initializerNode = nodes.data[initializerRoot];
+        var initializer = IrValue(0, 0, 0, 0, 0, 0, 0);
+        if (initializerNode.kind == 11 && initializerNode.typeKind == 10) {
+            initializer = emitOwnedStringLiteral(
+                buffer, source, initializerNode, counter);
+        } else {
+            initializer = emitExpression(
+                buffer, source, nodes, genericArguments,
+                initializerRoot, counter);
+        }
         val name = nodes.data[statement.subtreeStart];
         var storageKind = initializer.typeKind;
         var storageName = initializer.typeName;
@@ -4598,6 +4700,7 @@ fn emitModule(
     appendModuleHeader(buffer);
     appendPrintDeclaration(buffer);
     appendPanicDeclaration(buffer);
+    appendOwnedStringDeclarations(buffer);
     for (literalIndex in 0..<nodes.length) {
         val literal = nodes.data[literalIndex];
         if (literal.kind == 11 && literal.typeKind == 10) appendStringGlobal(buffer, source, literal, literalIndex);

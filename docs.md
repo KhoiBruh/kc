@@ -162,7 +162,7 @@ dụng và gọi `k_boot_panic` nếu ngoài miền.
 
 #### Mutability và lưu trữ
 
-ABI của `string` gồm `{ pointer, byteLength, capacity }`. String literal dùng vùng nhớ tĩnh chỉ đọc, có null terminator ẩn, `byteLength` không tính terminator và `capacity = 0`. Cấp phát, mutation và ownership của string động chưa được hạ trong milestone hiện tại.
+ABI của `string` gồm `{ pointer, byteLength, capacity }`. String literal dùng trực tiếp tại nơi chỉ đọc như `print("...")` vẫn nằm trong vùng nhớ tĩnh, có null terminator ẩn và `capacity = 0`. Khi literal đi vào local hoặc vị trí nhận ownership, backend cấp phát một buffer độc lập, đặt `capacity` khác 0 và tự giải phóng owner còn sống. Mutation và nối chuỗi chưa được hạ.
 
 Thiết kế đích là một owned mutable buffer. Binding `val` chỉ cho phép đọc string, còn binding `var` có thể thay đổi nội dung:
 
@@ -354,16 +354,17 @@ binding được coi là moved sau điểm merge; nhánh đã `return` không l�
 trên đường còn lại. Gán giá trị mới vào một `var` đã moved làm binding available
 trở lại.
 
-Một struct khai báo instance method `fn free(self)` có drop glue xác định. Cả
-frontend C++ và compiler bootstrap tự chèn drop cho local và owned parameter
-còn sống khi thoát scope bằng `return`, fallthrough, `break` hoặc `continue`.
+Một `string` sở hữu hoặc struct khai báo instance method `fn free(self)` có drop glue xác định.
+Cả frontend C++ và compiler bootstrap tự chèn drop cho local còn sống khi thoát scope
+bằng `return`, fallthrough, `break` hoặc `continue`. Owned parameter `string` đã được
+hạ ở backend C++; compiler bootstrap hiện chỉ tự drop owned parameter của resource struct.
 Mỗi owner có drop flag runtime: move hoặc `free()` tường minh hạ cờ, khởi tạo hay
 gán lại bật cờ, nên control flow không double-free. Cleanup chạy theo thứ tự
 ngược và dùng chung đường unwind với `defer`; gán đè owner còn sống tự drop giá
 trị cũ sau khi RHS đã được tính.
 
-Auto-drop hiện áp dụng cho struct có `fn free(self)`. Drop glue cho `string`, mảng
-và nullable owner, `.copy()` tự động, lifetime và non-lexical lifetime vẫn chưa
+Auto-drop hiện áp dụng cho owned `string` và struct có `fn free(self)`. Drop glue cho mảng
+và nullable owner, `.copy()`, lifetime và non-lexical lifetime vẫn chưa
 được triển khai.
 
 ---
@@ -913,5 +914,5 @@ functions on a generic struct capture its enclosing type parameters; the latter
 use explicit syntax such as `Pair<i32, bool>.new(...)`. Independently generic
 methods remain unsupported, as do type packs, overload resolution, payload
 enums, and user-defined traits. Static move ownership and deterministic drop
-for resource structs are self-hosted; string/array drop glue and lifetime
+for owned strings and resource structs are self-hosted; array drop glue and lifetime
 checking remain separate work.

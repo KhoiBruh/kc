@@ -506,7 +506,7 @@ TEST(codegen_lowers_integer_range_membership) {
     EXPECT_TRUE(ir.find("icmp ult i8") != std::string::npos);
 }
 
-TEST(codegen_lowers_string_literals_as_static_string_values) {
+TEST(codegen_lowers_owned_string_literal_values) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
         "fn identity(value: string): string { return value; }"
@@ -515,7 +515,7 @@ TEST(codegen_lowers_string_literals_as_static_string_values) {
         diagnostics);
     EXPECT_TRUE(diagnostics.empty());
     EXPECT_TRUE(ir.find("{ ptr, i64, i64 }") != std::string::npos);
-    EXPECT_TRUE(ir.find("i64 6, i64 0") != std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_std_alloc(i64 6)") != std::string::npos);
     EXPECT_TRUE(ir.find("extractvalue { ptr, i64, i64 }") != std::string::npos);
     EXPECT_TRUE(ir.find("call void @k_std_print_bytes") != std::string::npos);
 }
@@ -875,6 +875,50 @@ TEST(codegen_drops_live_owner_before_overwrite) {
     const auto first = ir.find("call void @Resource.free");
     EXPECT_TRUE(first != std::string::npos);
     EXPECT_TRUE(ir.find("call void @Resource.free", first + 1) != std::string::npos);
+}
+
+TEST(codegen_allocates_and_automatically_drops_owned_string_locals) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn main(): i32 { val text = \"hello\"; print(text); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("call ptr @k_std_alloc") != std::string::npos);
+    EXPECT_TRUE(ir.find("text.drop.flag") != std::string::npos);
+    EXPECT_TRUE(ir.find("call void @k_std_free") != std::string::npos);
+}
+
+TEST(codegen_keeps_directly_printed_string_literals_static) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn main(): i32 { print(\"hello\"); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("call void @k_std_print_bytes") != std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_std_alloc") == std::string::npos);
+}
+
+TEST(codegen_drops_owned_string_before_overwrite) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn main(): i32 { var text = \"first\"; text = \"second\"; return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    const auto first = ir.find("call void @k_std_free");
+    EXPECT_TRUE(first != std::string::npos);
+    EXPECT_TRUE(ir.find("call void @k_std_free", first + 1) != std::string::npos);
+}
+
+TEST(codegen_allocates_string_literals_passed_to_owned_parameters) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn consume(text: string) { print(text); }"
+        "fn main(): i32 { consume(\"hello\"); return 0; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("text.drop.flag") != std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_std_alloc") != std::string::npos);
+    EXPECT_TRUE(ir.find("call void @k_std_free") != std::string::npos);
 }
 
 int main() {

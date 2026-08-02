@@ -151,6 +151,11 @@ private:
         return nullptr;
     }
 
+    bool needsAutomaticDrop(const SemanticType& unresolved) const {
+        const auto type = substituteActive(unresolved);
+        return type.kind == SemanticTypeKind::String || dropFunction(type);
+    }
+
     llvm::Function* dropTarget(
         const FunctionDecl& declaration, const SemanticType& unresolved) {
         const auto type = substituteActive(unresolved);
@@ -163,10 +168,10 @@ private:
 
     void emitDrop(LocalSlot& slot) {
         if (!slot.dropFlag) return;
-        const auto* declaration = dropFunction(slot.semanticType);
-        auto* target = declaration
-            ? dropTarget(*declaration, slot.semanticType) : nullptr;
-        if (!target) return;
+        const auto type = substituteActive(slot.semanticType);
+        const auto* declaration = dropFunction(type);
+        auto* target = declaration ? dropTarget(*declaration, type) : nullptr;
+        if (type.kind != SemanticTypeKind::String && !target) return;
         auto* function = builder_.GetInsertBlock()->getParent();
         auto* dropBlock = llvm::BasicBlock::Create(context_, "drop.run", function);
         auto* continueBlock = llvm::BasicBlock::Create(context_, "drop.end", function);
@@ -175,7 +180,16 @@ private:
         builder_.SetInsertPoint(dropBlock);
         builder_.CreateStore(builder_.getFalse(), slot.dropFlag);
         auto* value = builder_.CreateLoad(slot.type, slot.address);
-        builder_.CreateCall(target, {value});
+        if (type.kind == SemanticTypeKind::String) {
+            auto free = result_.module->getOrInsertFunction(
+                "k_std_free",
+                llvm::FunctionType::get(
+                    llvm::Type::getVoidTy(context_),
+                    {builder_.getPtrTy()}, false));
+            builder_.CreateCall(free, {builder_.CreateExtractValue(value, 0)});
+        } else {
+            builder_.CreateCall(target, {value});
+        }
         builder_.CreateBr(continueBlock);
         builder_.SetInsertPoint(continueBlock);
     }
@@ -214,7 +228,7 @@ private:
     void clearOwnedDropFlag(const Expr& expression) {
         const auto type = semantic().expressionTypes.find(&expression);
         if (type != semantic().expressionTypes.end() &&
-            dropFunction(type->second))
+            needsAutomaticDrop(type->second))
             clearDropFlag(expression);
     }
 
@@ -568,7 +582,7 @@ private:
                       spelling(owner, declaration.name) == "free")) {
                     local.semanticType = substituteActive(
                         symbol->parameterTypes[parameterIndex]);
-                    if (dropFunction(local.semanticType)) {
+                    if (needsAutomaticDrop(local.semanticType)) {
                         local.dropFlag = createEntryAlloca(
                             *function, builder_.getInt1Ty(), name + ".drop.flag");
                         builder_.CreateStore(builder_.getTrue(), local.dropFlag);
@@ -680,7 +694,7 @@ private:
                 value = emitArrayToSlice(
                     *variable->initializer, declared->second);
             } else {
-                value = emitExpr(*variable->initializer);
+                value = emitOwnedExpr(*variable->initializer);
             }
             if (!value) return;
             const auto name = spelling(source(), variable->name);
@@ -690,7 +704,7 @@ private:
             LocalSlot local{slot, value->getType()};
             if (declared != semantic().declarationTypes.end()) {
                 local.semanticType = substituteActive(declared->second);
-                if (dropFunction(local.semanticType)) {
+                if (needsAutomaticDrop(local.semanticType)) {
                     local.dropFlag = createEntryAlloca(
                         *builder_.GetInsertBlock()->getParent(),
                         builder_.getInt1Ty(), name + ".drop.flag");
@@ -703,7 +717,7 @@ private:
         }
         if (const auto* returnStatement = std::get_if<ReturnStmt>(&statement.node)) {
             if (returnStatement->value) {
-                if (auto* value = emitExpr(*returnStatement->value)) {
+                if (auto* value = emitOwnedExpr(*returnStatement->value)) {
                     emitDeferredStatements(0);
                     emitDropScopes(0);
                     builder_.CreateRet(value);
@@ -1002,6 +1016,41 @@ private:
         builder_.SetInsertPoint(exitBlock);
     }
 
+    llvm::Value* emitOwnedExpr(const Expr& expression) {
+        const auto type = semantic().expressionTypes.find(&expression);
+        const auto* literal = std::get_if<LiteralExpr>(&expression.node);
+        if (type == semantic().expressionTypes.end() || !literal ||
+            type->second.kind != SemanticTypeKind::String)
+            return emitExpr(expression);
+
+        const auto decoded = decodeStringLiteral(
+            spelling(source(), literal->spelling));
+        const auto capacity = std::max<std::size_t>(decoded.size(), 1);
+        auto allocate = result_.module->getOrInsertFunction(
+            "k_std_alloc",
+            llvm::FunctionType::get(
+                builder_.getPtrTy(), {builder_.getInt64Ty()}, false));
+        auto* data = builder_.CreateCall(
+            allocate,
+            {llvm::ConstantInt::get(builder_.getInt64Ty(), capacity)});
+        if (!decoded.empty()) {
+            auto* source = builder_.CreateGlobalString(decoded);
+            builder_.CreateMemCpy(
+                data, llvm::MaybeAlign(1), source, llvm::MaybeAlign(1),
+                decoded.size());
+        }
+        auto* llvmType = lowerType(type->second, expression.span);
+        if (!llvmType) return nullptr;
+        llvm::Value* value = llvm::UndefValue::get(llvmType);
+        value = builder_.CreateInsertValue(value, data, 0);
+        value = builder_.CreateInsertValue(
+            value,
+            llvm::ConstantInt::get(builder_.getInt64Ty(), decoded.size()), 1);
+        return builder_.CreateInsertValue(
+            value,
+            llvm::ConstantInt::get(builder_.getInt64Ty(), capacity), 2);
+    }
+
     llvm::Value* emitExpr(const Expr& expression) {
         auto* value = emitExprRaw(expression);
         if (!value) return nullptr;
@@ -1025,7 +1074,9 @@ private:
 
     llvm::Value* emitAssignedValue(
         const AssignmentExpr& assignment, llvm::Value* pointer) {
-        auto* value = emitExpr(*assignment.value);
+        auto* value = assignment.op == TokenKind::Equal
+            ? emitOwnedExpr(*assignment.value)
+            : emitExpr(*assignment.value);
         if (!value || assignment.op == TokenKind::Equal) return value;
         const auto target = semantic().expressionTypes.find(assignment.target.get());
         if (target == semantic().expressionTypes.end()) return nullptr;
@@ -1369,6 +1420,10 @@ private:
                         declaration.parameters[parameterIndex].mode ==
                             ParameterMode::MutableBorrow)
                         value = emitMutationPointer(*call->arguments[i]);
+                    else if (parameterIndex < declaration.parameters.size() &&
+                             declaration.parameters[parameterIndex].mode ==
+                                 ParameterMode::Owned)
+                        value = emitOwnedExpr(*call->arguments[i]);
                     else
                         value = emitExpr(*call->arguments[i]);
                     if (!value) return nullptr;
@@ -1448,6 +1503,12 @@ private:
                                 if (local != locals_.end())
                                     value = local->second.address;
                             }
+                        } else if (i < resolved->second.declaration
+                                           ->parameters.size() &&
+                                   resolved->second.declaration
+                                           ->parameters[i].mode ==
+                                       ParameterMode::Owned) {
+                            value = emitOwnedExpr(*call->arguments[i]);
                         } else {
                             value = emitExpr(*call->arguments[i]);
                         }
@@ -1498,6 +1559,13 @@ private:
                             if (local != locals_.end())
                                 value = local->second.address;
                         }
+                    } else if (semanticFunction != semantic().functions.end() &&
+                               i < semanticFunction->second.declaration
+                                       ->parameters.size() &&
+                               semanticFunction->second.declaration
+                                       ->parameters[i].mode ==
+                                   ParameterMode::Owned) {
+                        value = emitOwnedExpr(*call->arguments[i]);
                     } else {
                         value = emitExpr(*call->arguments[i]);
                     }
