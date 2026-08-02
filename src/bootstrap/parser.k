@@ -3,7 +3,6 @@ module bootstrap.parser;
 import bootstrap.token.Token;
 import bootstrap.list.List;
 import bootstrap.ast.AstNode;
-import bootstrap.containers.ByteBuffer;
 
 struct ParseResult(nodes: List<AstNode>, ok: bool, errorStart: u64, expectedKind: u32)
 struct Parser(

@@ -231,10 +231,11 @@ Static move-ownership self-hosting is complete for the current contract.
   associated functions), and minimal nullable values emit typed LLVM text
   directly from K.
 - `src/bootstrap/list.k` provides generic `List<T>` through
-  `List<T>.new()` and `add`/`free` methods; `ByteBuffer` and
+  `List<T>.new()` and `add`/`free` methods; loader-only `ByteBuffer` and
   `SymbolTable` remain dedicated containers. `StringBuilder` provides
   `add(u8)`, raw-byte `append`, and deep-copy `toString()` with deterministic
-  drop for both the builder and resulting owned string.
+  drop for both the builder and resulting owned string; LLVM text, compiler
+  command/diagnostic construction, and main CLI messages use it.
 - Statement-form `when` is self-hosted with first-match semantics, an optional
   final `else`, and block or single-statement branch bodies.
 - Expression-valued `when` is self-hosted for return/initializer contexts; each
@@ -254,5 +255,5 @@ Static move-ownership self-hosting is complete for the current contract.
 
 ## Recommended next milestone
 
-Migrate one bootstrap text-emission path from `ByteBuffer` to `StringBuilder`
-and preserve the `kc3`/`kc4` fixed point before expanding the migration.
+Add a safe borrowed string-view operation so `StringBuilder` can append a
+`string` directly, then replace numeric ASCII runs incrementally.

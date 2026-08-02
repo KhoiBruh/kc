@@ -1,13 +1,13 @@
 module bootstrap.main;
 
 import bootstrap.compiler.compileToLl;
-import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
 import bootstrap.loader.loadModules;
 
 struct Argument(data: u8*, length: u64, ok: bool)
 
 fn mainError(kind: u32) {
-    var message = ByteBuffer.new();
+    var message = StringBuilder.new();
     defer message.free();
     message.add(101); message.add(114);
     message.add(114); message.add(111);
@@ -42,7 +42,7 @@ fn mainError(kind: u32) {
 }
 
 fn mainPathError(kind: u32) {
-    var message = ByteBuffer.new();
+    var message = StringBuilder.new();
     defer message.free();
     message.add(101); message.add(114);
     message.add(114); message.add(111);

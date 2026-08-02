@@ -1,6 +1,5 @@
 module bootstrap.diagnostic;
 
-import bootstrap.containers.ByteBuffer;
 import bootstrap.types.TypeValue;
 import bootstrap.list.List;
 

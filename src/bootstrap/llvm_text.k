@@ -2,7 +2,7 @@ module bootstrap.llvm_text;
 
 import bootstrap.*;
 
-fn appendDecimal(var buffer: ByteBuffer, value: u64) {
+fn appendDecimal(var buffer: StringBuilder, value: u64) {
     val digits = k_boot_alloc(20) as u8*;
     var remaining = value;
     var length: u64 = 0;
@@ -20,13 +20,13 @@ fn appendDecimal(var buffer: ByteBuffer, value: u64) {
 }
 
 fn appendSource(
-    var buffer: ByteBuffer, source: Source, start: u64, end: u64) {
+    var buffer: StringBuilder, source: Source, start: u64, end: u64) {
     for (offset in start..<end) {
         buffer.add(source.data[offset]);
     }
 }
 
-fn appendDefine(var buffer: ByteBuffer) {
+fn appendDefine(var buffer: StringBuilder) {
     buffer.add(100);
     buffer.add(101);
     buffer.add(102);
@@ -36,18 +36,18 @@ fn appendDefine(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendI32(var buffer: ByteBuffer) {
+fn appendI32(var buffer: StringBuilder) {
     buffer.add(105);
     buffer.add(51);
     buffer.add(50);
 }
 
-fn appendFunctionOpen(var buffer: ByteBuffer) {
+fn appendFunctionOpen(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(64);
 }
 
-fn appendEmptyParameters(var buffer: ByteBuffer) {
+fn appendEmptyParameters(var buffer: StringBuilder) {
     buffer.add(40);
     buffer.add(41);
     buffer.add(32);
@@ -55,7 +55,7 @@ fn appendEmptyParameters(var buffer: ByteBuffer) {
     buffer.add(10);
 }
 
-fn appendEntry(var buffer: ByteBuffer) {
+fn appendEntry(var buffer: StringBuilder) {
     buffer.add(101);
     buffer.add(110);
     buffer.add(116);
@@ -67,7 +67,7 @@ fn appendEntry(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendReturnI32(var buffer: ByteBuffer) {
+fn appendReturnI32(var buffer: StringBuilder) {
     buffer.add(114);
     buffer.add(101);
     buffer.add(116);
@@ -76,25 +76,25 @@ fn appendReturnI32(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendFunctionClose(var buffer: ByteBuffer) {
+fn appendFunctionClose(var buffer: StringBuilder) {
     buffer.add(10);
     buffer.add(125);
     buffer.add(10);
 }
 
-fn appendValuePrefix(var buffer: ByteBuffer) {
+fn appendValuePrefix(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(32);
     buffer.add(37);
 }
 
-fn appendEquals(var buffer: ByteBuffer) {
+fn appendEquals(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(61);
     buffer.add(32);
 }
 
-fn appendLoad(var buffer: ByteBuffer) {
+fn appendLoad(var buffer: StringBuilder) {
     buffer.add(108);
     buffer.add(111);
     buffer.add(97);
@@ -102,7 +102,7 @@ fn appendLoad(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendStore(var buffer: ByteBuffer) {
+fn appendStore(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(32);
     buffer.add(115);
@@ -113,7 +113,7 @@ fn appendStore(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendPtr(var buffer: ByteBuffer) {
+fn appendPtr(var buffer: StringBuilder) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(112);
@@ -123,7 +123,7 @@ fn appendPtr(var buffer: ByteBuffer) {
     buffer.add(37);
 }
 
-fn appendAlloca(var buffer: ByteBuffer) {
+fn appendAlloca(var buffer: StringBuilder) {
     buffer.add(97);
     buffer.add(108);
     buffer.add(108);
@@ -133,7 +133,7 @@ fn appendAlloca(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendCall(var buffer: ByteBuffer) {
+fn appendCall(var buffer: StringBuilder) {
     buffer.add(99);
     buffer.add(97);
     buffer.add(108);
@@ -141,7 +141,7 @@ fn appendCall(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendPrintDeclaration(var buffer: ByteBuffer) {
+fn appendPrintDeclaration(var buffer: StringBuilder) {
     buffer.add(100);
     buffer.add(101);
     buffer.add(99);
@@ -180,7 +180,7 @@ fn appendPrintDeclaration(var buffer: ByteBuffer) {
     buffer.add(10);
     appendPrintBytesDeclaration(buffer);
 }
-fn appendPrintBytesDeclaration(var buffer: ByteBuffer) {
+fn appendPrintBytesDeclaration(var buffer: StringBuilder) {
     buffer.add(100);
     buffer.add(101);
     buffer.add(99);
@@ -226,7 +226,7 @@ fn appendPrintBytesDeclaration(var buffer: ByteBuffer) {
     buffer.add(10);
 }
 
-fn appendPrivateStringPrefix(var buffer: ByteBuffer) {
+fn appendPrivateStringPrefix(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(61);
     buffer.add(32);
@@ -263,7 +263,7 @@ fn appendPrivateStringPrefix(var buffer: ByteBuffer) {
     buffer.add(91);
 }
 
-fn appendStringArrayPrefix(var buffer: ByteBuffer) {
+fn appendStringArrayPrefix(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(120);
     buffer.add(32);
@@ -275,7 +275,7 @@ fn appendStringArrayPrefix(var buffer: ByteBuffer) {
     buffer.add(34);
 }
 
-fn appendStringTerminator(var buffer: ByteBuffer) {
+fn appendStringTerminator(var buffer: StringBuilder) {
     buffer.add(92);
     buffer.add(48);
     buffer.add(48);
@@ -283,7 +283,7 @@ fn appendStringTerminator(var buffer: ByteBuffer) {
     buffer.add(10);
 }
 
-fn appendStringType(var buffer: ByteBuffer) {
+fn appendStringType(var buffer: StringBuilder) {
     buffer.add(123);
     buffer.add(32);
     buffer.add(112);
@@ -303,7 +303,7 @@ fn appendStringType(var buffer: ByteBuffer) {
     buffer.add(125);
 }
 
-fn appendStringInsertPointer(var buffer: ByteBuffer) {
+fn appendStringInsertPointer(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(123);
     buffer.add(32);
@@ -340,14 +340,14 @@ fn appendStringInsertPointer(var buffer: ByteBuffer) {
     buffer.add(115);
 }
 
-fn appendIndexZero(var buffer: ByteBuffer) {
+fn appendIndexZero(var buffer: StringBuilder) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(48);
     buffer.add(10);
 }
 
-fn appendSpacedStringType(var buffer: ByteBuffer) {
+fn appendSpacedStringType(var buffer: StringBuilder) {
     buffer.add(32);
     buffer.add(123);
     buffer.add(32);
@@ -369,7 +369,7 @@ fn appendSpacedStringType(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendI64Prefix(var buffer: ByteBuffer) {
+fn appendI64Prefix(var buffer: StringBuilder) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(105);
@@ -378,14 +378,14 @@ fn appendI64Prefix(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendIndexOne(var buffer: ByteBuffer) {
+fn appendIndexOne(var buffer: StringBuilder) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(49);
     buffer.add(10);
 }
 
-fn appendStringCapacity(var buffer: ByteBuffer) {
+fn appendStringCapacity(var buffer: StringBuilder) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(105);
@@ -399,7 +399,7 @@ fn appendStringCapacity(var buffer: ByteBuffer) {
     buffer.add(10);
 }
 
-fn appendExtractLengthAndPrint(var buffer: ByteBuffer) {
+fn appendExtractLengthAndPrint(var buffer: StringBuilder) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(49);
@@ -441,7 +441,7 @@ fn appendExtractLengthAndPrint(var buffer: ByteBuffer) {
     buffer.add(32);
 }
 
-fn appendCloseLine(var buffer: ByteBuffer) {
+fn appendCloseLine(var buffer: StringBuilder) {
     buffer.add(41);
     buffer.add(10);
 }
@@ -453,7 +453,7 @@ fn hexDigit(value: u8): u8 {
     return 55 + value;
 }
 
-fn appendEscapedByte(var buffer: ByteBuffer, value: u8) {
+fn appendEscapedByte(var buffer: StringBuilder, value: u8) {
     if (value >= 32 && value <= 126 && value != 34 && value != 92) {
         buffer.add(value);
         return;
@@ -463,7 +463,7 @@ fn appendEscapedByte(var buffer: ByteBuffer, value: u8) {
     buffer.add(hexDigit(value % 16));
 }
 
-fn appendUtf8(var buffer: ByteBuffer, codepoint: u32) {
+fn appendUtf8(var buffer: StringBuilder, codepoint: u32) {
     if (codepoint <= 127) { buffer.add(codepoint as u8); return; }
     if (codepoint <= 2047) {
         buffer.add((192 + codepoint / 64) as u8);
@@ -482,8 +482,8 @@ fn appendUtf8(var buffer: ByteBuffer, codepoint: u32) {
     buffer.add((128 + codepoint % 64) as u8);
 }
 
-fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
-    var result = ByteBuffer.new();
+fn decodeStringLiteral(source: Source, node: AstNode): StringBuilder {
+    var result = StringBuilder.new();
     var offset = node.start + 1;
     while (offset + 1 < node.end) {
         var value = source.data[offset];
@@ -512,7 +512,7 @@ fn decodeStringLiteral(source: Source, node: AstNode): ByteBuffer {
     return result;
 }
 
-fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, root: u64) {
+fn appendStringGlobal(var buffer: StringBuilder, source: Source, node: AstNode, root: u64) {
     var decoded = decodeStringLiteral(source, node);
     defer decoded.free();
     buffer.add(64); buffer.add(46); buffer.add(107);
@@ -524,7 +524,7 @@ fn appendStringGlobal(var buffer: ByteBuffer, source: Source, node: AstNode, roo
     appendStringTerminator(buffer);
 }
 
-fn appendPanicDeclaration(var buffer: ByteBuffer) {
+fn appendPanicDeclaration(var buffer: StringBuilder) {
     buffer.add(100); buffer.add(101);
     buffer.add(99); buffer.add(108);
     buffer.add(97); buffer.add(114);
@@ -546,7 +546,7 @@ fn appendPanicDeclaration(var buffer: ByteBuffer) {
     buffer.add(10); buffer.add(10);
 }
 
-fn appendModuleHeader(var buffer: ByteBuffer) {
+fn appendModuleHeader(var buffer: StringBuilder) {
     buffer.add(116); buffer.add(97);
     buffer.add(114); buffer.add(103);
     buffer.add(101); buffer.add(116);
@@ -630,7 +630,7 @@ fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
     return source.data[node.start + 4] == 116;
 }
 
-fn appendOperator(var buffer: ByteBuffer, kind: u32, typeKind: u32) {
+fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
     var floating = typeKind == 17;
     if (typeKind == 18) floating = true;
     if (floating) buffer.add(102);
@@ -685,9 +685,9 @@ fn appendOperator(var buffer: ByteBuffer, kind: u32, typeKind: u32) {
     }
 }
 
-fn appendNewline(var buffer: ByteBuffer) => buffer.add(10);
+fn appendNewline(var buffer: StringBuilder) => buffer.add(10);
 
-fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
+fn appendCastOpcode(var buffer: StringBuilder, kind: u32) {
     when (kind) {
         1 -> buffer.add(115);
         2 -> buffer.add(122);
@@ -702,7 +702,7 @@ fn appendCastOpcode(var buffer: ByteBuffer, kind: u32) {
     buffer.add(116);
 }
 
-fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
+fn appendFloatCastOpcode(var buffer: StringBuilder, kind: u32) {
     if (kind == 1) {
         buffer.add(102); buffer.add(112);
         buffer.add(101); buffer.add(120);
@@ -733,7 +733,7 @@ fn appendFloatCastOpcode(var buffer: ByteBuffer, kind: u32) {
 }
 
 fn appendFloatIntegerConstant(
-    var buffer: ByteBuffer, negative: bool, magnitude: u64,
+    var buffer: StringBuilder, negative: bool, magnitude: u64,
     appendSix: bool
 ) {
     if (negative) buffer.add(45);
@@ -743,7 +743,7 @@ fn appendFloatIntegerConstant(
 }
 
 fn appendFloatCastBound(
-    var buffer: ByteBuffer, sourceKind: u32, targetKind: u32,
+    var buffer: StringBuilder, sourceKind: u32, targetKind: u32,
     lower: bool
 ) {
     if (lower) {
@@ -782,7 +782,7 @@ fn appendFloatCastBound(
     }
 }
 
-fn appendCastPanic(var buffer: ByteBuffer) {
+fn appendCastPanic(var buffer: StringBuilder) {
     buffer.add(32); buffer.add(32);
     buffer.add(99); buffer.add(97);
     buffer.add(108); buffer.add(108);
@@ -826,7 +826,7 @@ struct IrCounter(
     loopDeferDepth: u64)
 
 fn appendStructSpecializationSuffix(
-    var buffer: ByteBuffer, val arguments: List<TypeValue>,
+    var buffer: StringBuilder, val arguments: List<TypeValue>,
     start: u64, count: u32) {
     buffer.add(95);
     buffer.add(95);
@@ -844,7 +844,7 @@ fn appendStructSpecializationSuffix(
 }
 
 fn appendType(
-    var buffer: ByteBuffer, var genericArguments: List<TypeValue>,
+    var buffer: StringBuilder, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32) {
     if (kind == 1) {
         buffer.add(118);
@@ -937,12 +937,12 @@ fn appendType(
     }
 }
 
-fn appendNodeType(var buffer: ByteBuffer, var genericArguments: List<TypeValue>, node: AstNode) {
+fn appendNodeType(var buffer: StringBuilder, var genericArguments: List<TypeValue>, node: AstNode) {
     appendType(
         buffer, genericArguments, node.typeKind, node.typeName, node.typePointee);
 }
 
-fn appendLocalPrefix(var buffer: ByteBuffer) {
+fn appendLocalPrefix(var buffer: StringBuilder) {
     buffer.add(108);
     buffer.add(111);
     buffer.add(99);
@@ -951,7 +951,7 @@ fn appendLocalPrefix(var buffer: ByteBuffer) {
     buffer.add(46);
 }
 
-fn appendOwnedStringDeclarations(var buffer: ByteBuffer) {
+fn appendOwnedStringDeclarations(var buffer: StringBuilder) {
     buffer.add(100); buffer.add(101); buffer.add(99); buffer.add(108);
     buffer.add(97); buffer.add(114); buffer.add(101); buffer.add(32);
     buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
@@ -970,20 +970,20 @@ fn appendOwnedStringDeclarations(var buffer: ByteBuffer) {
     buffer.add(41); buffer.add(10); buffer.add(10);
 }
 
-fn appendDropFlagName(var buffer: ByteBuffer, storage: u64) {
+fn appendDropFlagName(var buffer: StringBuilder, storage: u64) {
     appendLocalPrefix(buffer);
     appendDecimal(buffer, storage);
     buffer.add(46); buffer.add(100); buffer.add(114);
     buffer.add(111); buffer.add(112);
 }
 
-fn appendI64(var buffer: ByteBuffer) {
+fn appendI64(var buffer: StringBuilder) {
     buffer.add(105);
     buffer.add(54);
     buffer.add(52);
 }
 
-fn appendGetElementPtr(var buffer: ByteBuffer) {
+fn appendGetElementPtr(var buffer: StringBuilder) {
     buffer.add(103);
     buffer.add(101);
     buffer.add(116);
@@ -999,7 +999,7 @@ fn appendGetElementPtr(var buffer: ByteBuffer) {
     buffer.add(114);
 }
 
-fn appendInsertValue(var buffer: ByteBuffer) {
+fn appendInsertValue(var buffer: StringBuilder) {
     buffer.add(105);
     buffer.add(110);
     buffer.add(115);
@@ -1013,7 +1013,7 @@ fn appendInsertValue(var buffer: ByteBuffer) {
     buffer.add(101);
 }
 
-fn appendExtractValue(var buffer: ByteBuffer) {
+fn appendExtractValue(var buffer: StringBuilder) {
     buffer.add(101);
     buffer.add(120);
     buffer.add(116);
@@ -1028,7 +1028,7 @@ fn appendExtractValue(var buffer: ByteBuffer) {
     buffer.add(101);
 }
 
-fn appendUndef(var buffer: ByteBuffer) {
+fn appendUndef(var buffer: StringBuilder) {
     buffer.add(117);
     buffer.add(110);
     buffer.add(100);
@@ -1036,7 +1036,7 @@ fn appendUndef(var buffer: ByteBuffer) {
     buffer.add(102);
 }
 
-fn appendUnreachable(var buffer: ByteBuffer) {
+fn appendUnreachable(var buffer: StringBuilder) {
     buffer.add(117); buffer.add(110);
     buffer.add(114); buffer.add(101);
     buffer.add(97); buffer.add(99);
@@ -1046,7 +1046,7 @@ fn appendUnreachable(var buffer: ByteBuffer) {
 }
 
 fn appendSpecializationSuffix(
-    var buffer: ByteBuffer, val arguments: List<TypeValue>,
+    var buffer: StringBuilder, val arguments: List<TypeValue>,
     start: u64, count: u32) {
     buffer.add(95);
     buffer.add(95);
@@ -1382,7 +1382,7 @@ fn typeSize(
 }
 
 fn appendIrValue(
-    var buffer: ByteBuffer, source: Source, value: IrValue) {
+    var buffer: StringBuilder, source: Source, value: IrValue) {
     if (value.kind == 1) {
         appendSource(buffer, source, value.start, value.end);
     } else {
@@ -1413,7 +1413,7 @@ fn appendIrValue(
 }
 
 fn appendPointerValue(
-    var buffer: ByteBuffer, source: Source, value: IrValue) {
+    var buffer: StringBuilder, source: Source, value: IrValue) {
     buffer.add(44);
     buffer.add(32);
     buffer.add(112);
@@ -1435,7 +1435,7 @@ fn nextTemporary(var counter: IrCounter): u64 {
 }
 
 fn emitImplicitIntegerWiden(
-    var buffer: ByteBuffer, source: Source,
+    var buffer: StringBuilder, source: Source,
     var genericArguments: List<TypeValue>, value: IrValue,
     targetKind: u32, targetName: u64, targetPointee: u32,
     var counter: IrCounter): IrValue {
@@ -1465,20 +1465,20 @@ fn nextBlock(var counter: IrCounter): u64 {
     return value;
 }
 
-fn appendBlockName(var buffer: ByteBuffer, block: u64) {
+fn appendBlockName(var buffer: StringBuilder, block: u64) {
     buffer.add(98);
     appendDecimal(buffer, block);
 }
 
 fn appendBlockLabel(
-    var buffer: ByteBuffer, var counter: IrCounter, block: u64) {
+    var buffer: StringBuilder, var counter: IrCounter, block: u64) {
     appendBlockName(buffer, block);
     buffer.add(58);
     appendNewline(buffer);
     counter.currentBlock = block;
 }
 
-fn appendBlockReference(var buffer: ByteBuffer, block: u64) {
+fn appendBlockReference(var buffer: StringBuilder, block: u64) {
     buffer.add(37);
     if (block == 18446744073709551615) {
         buffer.add(101); buffer.add(110);
@@ -1489,7 +1489,7 @@ fn appendBlockReference(var buffer: ByteBuffer, block: u64) {
     }
 }
 
-fn appendBranch(var buffer: ByteBuffer, block: u64) {
+fn appendBranch(var buffer: StringBuilder, block: u64) {
     buffer.add(32);
     buffer.add(32);
     buffer.add(98);
@@ -1507,7 +1507,7 @@ fn appendBranch(var buffer: ByteBuffer, block: u64) {
 }
 
 fn appendConditionalBranch(
-    var buffer: ByteBuffer, source: Source, condition: IrValue,
+    var buffer: StringBuilder, source: Source, condition: IrValue,
     trueBlock: u64, falseBlock: u64) {
     buffer.add(32);
     buffer.add(32);
@@ -1542,7 +1542,7 @@ fn appendConditionalBranch(
 }
 
 fn appendComparison(
-    var buffer: ByteBuffer, kind: u32, typeKind: u32) {
+    var buffer: StringBuilder, kind: u32, typeKind: u32) {
     buffer.add(105);
     buffer.add(99);
     buffer.add(109);
@@ -1602,7 +1602,7 @@ fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
     nodes.data[root].subtreeStart - 1;
 
 fn emitClearAutomaticDrop(
-    var buffer: ByteBuffer, val nodes: List<AstNode>, root: u64) {
+    var buffer: StringBuilder, val nodes: List<AstNode>, root: u64) {
     if (nodes.data[root].typeKind != 8) return;
     var ownerRoot = root;
     var owner = nodes.data[ownerRoot];
@@ -1625,7 +1625,7 @@ fn emitClearAutomaticDrop(
 }
 
 fn emitAddress(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -1709,7 +1709,7 @@ fn emitAddress(
 }
 
 fn appendFloatRangeComparison(
-    var buffer: ByteBuffer, source: Source,
+    var buffer: StringBuilder, source: Source,
     var genericArguments: List<TypeValue>, value: IrValue,
     targetKind: u32, temporary: u64, lower: bool) {
     appendValuePrefix(buffer); appendDecimal(buffer, temporary);
@@ -1740,7 +1740,7 @@ fn appendFloatRangeComparison(
 }
 
 fn emitOwnedStringLiteral(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     node: AstNode,
     var counter: IrCounter): IrValue {
@@ -1794,7 +1794,7 @@ fn emitOwnedStringLiteral(
 }
 
 fn emitExpression(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -3123,7 +3123,7 @@ fn blockStatementRoots(val nodes: List<AstNode>, blockRoot: u64): u64* {
 }
 
 fn emitAutomaticDrop(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -3222,7 +3222,7 @@ fn emitAutomaticDrop(
 }
 
 fn emitDeferRange(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -3252,7 +3252,7 @@ fn emitDeferRange(
 }
 
 fn emitBlock(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -3285,7 +3285,7 @@ fn emitBlock(
 }
 
 fn emitCollectionFor(
-    var buffer: ByteBuffer, source: Source, val nodes: List<AstNode>,
+    var buffer: StringBuilder, source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>, root: u64,
     var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
@@ -3414,7 +3414,7 @@ fn emitCollectionFor(
 }
 
 fn emitWhen(
-    var buffer: ByteBuffer, source: Source, val nodes: List<AstNode>,
+    var buffer: StringBuilder, source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>, root: u64,
     var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
@@ -3510,7 +3510,7 @@ fn emitWhen(
 }
 
 fn emitStatement(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -4131,7 +4131,7 @@ fn substituteEmitterType(
 }
 
 fn emitVariableAlloca(
-    var buffer: ByteBuffer, var genericArguments: List<TypeValue>, val nodes: List<AstNode>, root: u64) {
+    var buffer: StringBuilder, var genericArguments: List<TypeValue>, val nodes: List<AstNode>, root: u64) {
     val statement = nodes.data[root];
     val initializerRoot = root - 1;
     val initializer = nodes.data[initializerRoot];
@@ -4163,7 +4163,7 @@ fn emitVariableAlloca(
 }
 
 fn emitBlockAllocas(
-    var buffer: ByteBuffer, var genericArguments: List<TypeValue>, val nodes: List<AstNode>, blockRoot: u64) {
+    var buffer: StringBuilder, var genericArguments: List<TypeValue>, val nodes: List<AstNode>, blockRoot: u64) {
     val roots = blockStatementRoots(nodes, blockRoot);
     for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
@@ -4237,7 +4237,7 @@ fn emitBlockAllocas(
 }
 
 fn emitFunction(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
@@ -4418,7 +4418,7 @@ fn emitFunction(
 }
 
 fn emitSpecializedFunction(
-    var buffer: ByteBuffer, source: Source,
+    var buffer: StringBuilder, source: Source,
     val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>,
     functionRoot: u64,
@@ -4504,7 +4504,7 @@ fn firstStatementRoot(val nodes: List<AstNode>, blockRoot: u64): u64 {
 }
 
 fn emitSimpleFunction(
-    var buffer: ByteBuffer,
+    var buffer: StringBuilder,
     source: Source,
     val nodes: List<AstNode>,
     functionRoot: u64): bool {
@@ -4537,7 +4537,7 @@ fn emitSimpleFunction(
 }
 
 fn emitStruct(
-    var buffer: ByteBuffer, source: Source,
+    var buffer: StringBuilder, source: Source,
     val nodes: List<AstNode>, var genericArguments: List<TypeValue>, structureRoot: u64) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
@@ -4601,7 +4601,7 @@ fn structArgumentsAreConcrete(
 }
 
 fn emitSpecializedStruct(
-    var buffer: ByteBuffer, source: Source,
+    var buffer: StringBuilder, source: Source,
     val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     structureRoot: u64, argumentStart: u64, argumentCount: u32) {
     val structure = nodes.data[structureRoot];
@@ -4695,8 +4695,8 @@ fn callArgumentsAreConcrete(
 
 fn emitModule(
     source: Source, val nodes: List<AstNode>,
-    var genericArguments: List<TypeValue>): ByteBuffer {
-    var buffer = ByteBuffer.new();
+    var genericArguments: List<TypeValue>): StringBuilder {
+    var buffer = StringBuilder.new();
     appendModuleHeader(buffer);
     appendPrintDeclaration(buffer);
     appendPanicDeclaration(buffer);

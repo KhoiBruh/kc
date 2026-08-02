@@ -3,7 +3,6 @@ module bootstrap.lexer;
 import bootstrap.source.Source;
 import bootstrap.token.Token;
 import bootstrap.list.List;
-import bootstrap.containers.ByteBuffer;
 
 extern fn k_boot_arg_count(): i32;
 extern fn k_boot_arg(index: i32, data: u8**, length: u64*): bool;

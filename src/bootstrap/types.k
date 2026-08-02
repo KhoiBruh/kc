@@ -1,6 +1,5 @@
 module bootstrap.types;
 
-import bootstrap.containers.ByteBuffer;
 import bootstrap.ast.AstNode;
 import bootstrap.list.List;
 
