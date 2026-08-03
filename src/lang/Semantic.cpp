@@ -1693,6 +1693,13 @@ private:
             }
         }
         const auto objectType = analyzeExpr(*member.object);
+        if (objectType.kind == SemanticTypeKind::String) {
+            const auto name = spelling(source_, member.name);
+            if (name == "bytes")
+                return sliceType(SemanticType{SemanticTypeKind::U8});
+            diagnose("unknown string member '" + name + "'", member.name);
+            return {};
+        }
         if (objectType.kind != SemanticTypeKind::Struct) {
             diagnose("member access requires a struct value", member.object->span);
             return {};

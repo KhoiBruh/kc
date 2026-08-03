@@ -52,15 +52,8 @@ fn main(): i32 {
 
     {
         var builder = StringBuilder.new();
-        builder.add(65);
-        val suffix = k_boot_alloc(5) as u8*;
-        suffix[0] = 32;
-        suffix[1] = 240;
-        suffix[2] = 159;
-        suffix[3] = 152;
-        suffix[4] = 128;
-        builder.append(suffix, 5);
-        k_boot_free(suffix as unit*);
+        builder.append("A ");
+        builder.append("😀");
         var built = builder.toString();
         val view = (&built) as StringLayout*;
         if ((*view).length != 6) {

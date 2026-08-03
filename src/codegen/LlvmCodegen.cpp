@@ -1637,6 +1637,17 @@ private:
                 return llvm::ConstantInt::get(builder_.getInt32Ty(), value->second);
             const auto objectType =
                 semantic().expressionTypes.find(member->object.get());
+            if (objectType != semantic().expressionTypes.end() &&
+                objectType->second.kind == SemanticTypeKind::String) {
+                auto* object = emitExpr(*member->object);
+                if (!object) return nullptr;
+                auto* data = builder_.CreateExtractValue(object, 0);
+                auto* length = builder_.CreateExtractValue(object, 1);
+                auto* sliceType = lowerType(semanticType, expression.span);
+                llvm::Value* slice = llvm::UndefValue::get(sliceType);
+                slice = builder_.CreateInsertValue(slice, data, 0);
+                return builder_.CreateInsertValue(slice, length, 1);
+            }
             if (objectType == semantic().expressionTypes.end() ||
                 objectType->second.kind != SemanticTypeKind::Struct) {
                 diagnose("member object has no struct type during LLVM codegen",

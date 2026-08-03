@@ -8,111 +8,36 @@ extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64):
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
 
 fn appendRaw(var buffer: StringBuilder, data: u8*, length: u64) {
-    buffer.append(data, length);
+    buffer.appendBytes(data, length);
 }
 
 fn appendQuoted(var buffer: StringBuilder, data: u8*, length: u64) {
-    buffer.add(34);
+    buffer.append("\"");
     appendRaw(buffer, data, length);
-    buffer.add(34);
+    buffer.append("\"");
 }
 
 fn appendVerifyFlags(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(45);
-    buffer.add(112);
-    buffer.add(97);
-    buffer.add(115);
-    buffer.add(115);
-    buffer.add(101);
-    buffer.add(115);
-    buffer.add(61);
-    buffer.add(118);
-    buffer.add(101);
-    buffer.add(114);
-    buffer.add(105);
-    buffer.add(102);
-    buffer.add(121);
-    buffer.add(32);
-    buffer.add(45);
-    buffer.add(100);
-    buffer.add(105);
-    buffer.add(115);
-    buffer.add(97);
-    buffer.add(98);
-    buffer.add(108);
-    buffer.add(101);
-    buffer.add(45);
-    buffer.add(111);
-    buffer.add(117);
-    buffer.add(116);
-    buffer.add(112);
-    buffer.add(117);
-    buffer.add(116);
-    buffer.add(32);
+    buffer.append(" -passes=verify -disable-output ");
 }
 
 fn appendOutputFlag(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(45);
-    buffer.add(111);
-    buffer.add(32);
+    buffer.append(" -o ");
 }
 
 fn appendEmitLlFlag(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(45);
-    buffer.add(45);
-    buffer.add(101);
-    buffer.add(109);
-    buffer.add(105);
-    buffer.add(116);
-    buffer.add(45);
-    buffer.add(108);
-    buffer.add(108);
-    buffer.add(118);
-    buffer.add(109);
-    buffer.add(32);
+    buffer.append(" --emit-llvm ");
 }
 
 fn compilerFailure(kind: u32) {
     var message = StringBuilder.new();
     defer message.free();
 
-    message.add(101); message.add(114);
-    message.add(114); message.add(111);
-    message.add(114); message.add(58);
-    message.add(32); message.add(99);
-    message.add(97); message.add(110);
-    message.add(110); message.add(111);
-    message.add(116); message.add(32);
+    message.append("error: cannot ");
     when (kind) {
-        1 -> {
-            message.add(119); message.add(114);
-            message.add(105); message.add(116);
-            message.add(101); message.add(32);
-            message.add(76); message.add(76);
-            message.add(86); message.add(77);
-            message.add(32); message.add(111);
-            message.add(117); message.add(116);
-            message.add(112); message.add(117);
-            message.add(116);
-        }
-        2 -> {
-            message.add(108); message.add(97);
-            message.add(117); message.add(110);
-            message.add(99); message.add(104);
-            message.add(32); message.add(111);
-            message.add(112); message.add(116);
-        }
-        else -> {
-            message.add(108); message.add(97);
-            message.add(117); message.add(110);
-            message.add(99); message.add(104);
-            message.add(32); message.add(99);
-            message.add(108); message.add(97);
-            message.add(110); message.add(103);
-        }
+        1 -> message.append("write LLVM output");
+        2 -> message.append("launch opt");
+        else -> message.append("launch clang");
     }
     message.add(10);
     k_boot_stderr(message.data, message.length);
@@ -164,13 +89,7 @@ fn compileToLl(
     var temporaryPath = StringBuilder.new();
     defer temporaryPath.free();
     appendRaw(temporaryPath, outputPath, outputPathLength);
-    temporaryPath.add(46);
-    temporaryPath.add(116);
-    temporaryPath.add(109);
-    temporaryPath.add(112);
-    temporaryPath.add(46);
-    temporaryPath.add(108);
-    temporaryPath.add(108);
+    temporaryPath.append(".tmp.ll");
     val written = k_boot_write_file(
         temporaryPath.data, temporaryPath.length, output.data, output.length);
     if (!written) {
@@ -208,11 +127,11 @@ fn linkLl(
     var command = StringBuilder.new();
     defer command.free();
     appendQuoted(command, clangPath, clangPathLength);
-    command.add(32);
+    command.append(" ");
     appendQuoted(command, llPath, llPathLength);
-    command.add(32);
+    command.append(" ");
     appendQuoted(command, stdRuntime, stdRuntimeLength);
-    command.add(32);
+    command.append(" ");
     appendQuoted(command, bootstrapRuntime, bootstrapRuntimeLength);
     appendOutputFlag(command);
     appendQuoted(command, executablePath, executablePathLength);

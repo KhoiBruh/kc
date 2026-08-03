@@ -1108,6 +1108,12 @@ TEST(semantic_move_only_allows_overwrite_for_automatic_drop) {
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 
+TEST(semantic_exposes_borrowed_string_bytes) {
+    SemanticFixture fixture{
+        "fn second(val text: string): u8 { val bytes = text.bytes; return bytes[1]; }"};
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
 TEST(semantic_move_only_allows_overwrite_after_free) {
     SemanticFixture fixture{
         "struct Resource(id: i32) { fn free(self) {} }"

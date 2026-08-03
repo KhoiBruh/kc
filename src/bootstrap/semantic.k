@@ -1636,6 +1636,13 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         val object = expressionType(semantic, objectRoot);
+        if (object.kind == 10) {
+            if (nodeHash(semantic, node) == 210708248140) {
+                return TypeValue(13, 0, 5);
+            }
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
         if (object.kind != 8) {
             semanticFail(semantic, 8, node);
             return invalidType();

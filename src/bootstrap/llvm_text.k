@@ -27,80 +27,30 @@ fn appendSource(
 }
 
 fn appendDefine(var buffer: StringBuilder) {
-    buffer.add(100);
-    buffer.add(101);
-    buffer.add(102);
-    buffer.add(105);
-    buffer.add(110);
-    buffer.add(101);
-    buffer.add(32);
+    buffer.append("define ");
 }
 
-fn appendI32(var buffer: StringBuilder) {
-    buffer.add(105);
-    buffer.add(51);
-    buffer.add(50);
-}
+fn appendI32(var buffer: StringBuilder) => buffer.append("i32");
 
-fn appendFunctionOpen(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(64);
-}
+fn appendFunctionOpen(var buffer: StringBuilder) => buffer.append(" @");
 
-fn appendEmptyParameters(var buffer: StringBuilder) {
-    buffer.add(40);
-    buffer.add(41);
-    buffer.add(32);
-    buffer.add(123);
-    buffer.add(10);
-}
+fn appendEmptyParameters(var buffer: StringBuilder) => buffer.append("() {\n");
 
-fn appendEntry(var buffer: StringBuilder) {
-    buffer.add(101);
-    buffer.add(110);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(121);
-    buffer.add(58);
-    buffer.add(10);
-    buffer.add(32);
-    buffer.add(32);
-}
+fn appendEntry(var buffer: StringBuilder) => buffer.append("entry:\n  ");
 
 fn appendReturnI32(var buffer: StringBuilder) {
-    buffer.add(114);
-    buffer.add(101);
-    buffer.add(116);
-    buffer.add(32);
+    buffer.append("ret ");
     appendI32(buffer);
-    buffer.add(32);
+    buffer.append(" ");
 }
 
-fn appendFunctionClose(var buffer: StringBuilder) {
-    buffer.add(10);
-    buffer.add(125);
-    buffer.add(10);
-}
+fn appendFunctionClose(var buffer: StringBuilder) => buffer.append("\n}\n");
 
-fn appendValuePrefix(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(32);
-    buffer.add(37);
-}
+fn appendValuePrefix(var buffer: StringBuilder) => buffer.append("  %");
 
-fn appendEquals(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(61);
-    buffer.add(32);
-}
+fn appendEquals(var buffer: StringBuilder) => buffer.append(" = ");
 
-fn appendLoad(var buffer: StringBuilder) {
-    buffer.add(108);
-    buffer.add(111);
-    buffer.add(97);
-    buffer.add(100);
-    buffer.add(32);
-}
+fn appendLoad(var buffer: StringBuilder) => buffer.append("load ");
 
 fn appendStore(var buffer: StringBuilder) {
     buffer.add(32);
@@ -123,23 +73,9 @@ fn appendPtr(var buffer: StringBuilder) {
     buffer.add(37);
 }
 
-fn appendAlloca(var buffer: StringBuilder) {
-    buffer.add(97);
-    buffer.add(108);
-    buffer.add(108);
-    buffer.add(111);
-    buffer.add(99);
-    buffer.add(97);
-    buffer.add(32);
-}
+fn appendAlloca(var buffer: StringBuilder) => buffer.append("alloca ");
 
-fn appendCall(var buffer: StringBuilder) {
-    buffer.add(99);
-    buffer.add(97);
-    buffer.add(108);
-    buffer.add(108);
-    buffer.add(32);
-}
+fn appendCall(var buffer: StringBuilder) => buffer.append("call ");
 
 fn appendPrintDeclaration(var buffer: StringBuilder) {
     buffer.add(100);
@@ -2580,6 +2516,36 @@ fn emitExpression(
         }
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
+        if (objectNode.typeKind == 10) {
+            val object = emitExpression(
+                buffer, source, nodes, genericArguments,
+                objectRoot, counter);
+            val data = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, data); appendEquals(buffer);
+            appendExtractValue(buffer); appendSpacedStringType(buffer);
+            appendIrValue(buffer, source, object); buffer.add(44); buffer.add(32);
+            buffer.add(48); appendNewline(buffer);
+            val length = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, length); appendEquals(buffer);
+            appendExtractValue(buffer); appendSpacedStringType(buffer);
+            appendIrValue(buffer, source, object); buffer.add(44); buffer.add(32);
+            buffer.add(49); appendNewline(buffer);
+            val withData = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, withData); appendEquals(buffer);
+            appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
+            buffer.add(32); appendUndef(buffer); buffer.add(44); buffer.add(32);
+            buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
+            appendValuePrefix(buffer); appendDecimal(buffer, data);
+            buffer.add(44); buffer.add(32); buffer.add(48); appendNewline(buffer);
+            val slice = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, slice); appendEquals(buffer);
+            appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
+            buffer.add(32); appendValuePrefix(buffer); appendDecimal(buffer, withData);
+            buffer.add(44); buffer.add(32); appendI64(buffer); buffer.add(32);
+            appendValuePrefix(buffer); appendDecimal(buffer, length);
+            buffer.add(44); buffer.add(32); buffer.add(49); appendNewline(buffer);
+            return IrValue(2, 0, 0, slice, 13, 0, 5);
+        }
         val structureRoot =
             structRootByName(
                 source, nodes, objectNode.typeName);

@@ -385,6 +385,20 @@ TEST(codegen_lowers_integer_width_casts) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_borrowed_string_bytes) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn second(val text: string): u8 {"
+        "val bytes = text.bytes;"
+        "return bytes[1];"
+        "}",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("extractvalue { ptr, i64, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("insertvalue { ptr, i64 }") != std::string::npos);
+}
+
 TEST(codegen_lowers_lossless_implicit_integer_widening) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
