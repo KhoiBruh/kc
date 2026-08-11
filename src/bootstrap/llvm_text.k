@@ -7,7 +7,7 @@ fn appendDecimal(var buffer: StringBuilder, value: u64) {
     var remaining = value;
     var length: u64 = 0;
     if (remaining == 0) {
-        buffer.add(48);
+        buffer.append("0");
     } else {
         while (remaining > 0) {
             digits[length] = (remaining % 10) as u8 + 48;
@@ -53,24 +53,11 @@ fn appendEquals(var buffer: StringBuilder) => buffer.append(" = ");
 fn appendLoad(var buffer: StringBuilder) => buffer.append("load ");
 
 fn appendStore(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(32);
-    buffer.add(115);
-    buffer.add(116);
-    buffer.add(111);
-    buffer.add(114);
-    buffer.add(101);
-    buffer.add(32);
+    buffer.append("  store ");
 }
 
 fn appendPtr(var buffer: StringBuilder) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(32);
-    buffer.add(37);
+    buffer.append(", ptr %");
 }
 
 fn appendAlloca(var buffer: StringBuilder) => buffer.append("alloca ");
@@ -78,308 +65,59 @@ fn appendAlloca(var buffer: StringBuilder) => buffer.append("alloca ");
 fn appendCall(var buffer: StringBuilder) => buffer.append("call ");
 
 fn appendPrintDeclaration(var buffer: StringBuilder) {
-    buffer.add(100);
-    buffer.add(101);
-    buffer.add(99);
-    buffer.add(108);
-    buffer.add(97);
-    buffer.add(114);
-    buffer.add(101);
-    buffer.add(32);
-    buffer.add(118);
-    buffer.add(111);
-    buffer.add(105);
-    buffer.add(100);
-    buffer.add(32);
-    buffer.add(64);
-    buffer.add(107);
-    buffer.add(95);
-    buffer.add(115);
-    buffer.add(116);
-    buffer.add(100);
-    buffer.add(95);
-    buffer.add(112);
-    buffer.add(114);
-    buffer.add(105);
-    buffer.add(110);
-    buffer.add(116);
-    buffer.add(95);
-    buffer.add(105);
-    buffer.add(51);
-    buffer.add(50);
-    buffer.add(40);
-    buffer.add(105);
-    buffer.add(51);
-    buffer.add(50);
-    buffer.add(41);
-    buffer.add(10);
-    buffer.add(10);
+    buffer.append("declare void @k_std_print_i32(i32)\n\n");
     appendPrintBytesDeclaration(buffer);
 }
 fn appendPrintBytesDeclaration(var buffer: StringBuilder) {
-    buffer.add(100);
-    buffer.add(101);
-    buffer.add(99);
-    buffer.add(108);
-    buffer.add(97);
-    buffer.add(114);
-    buffer.add(101);
-    buffer.add(32);
-    buffer.add(118);
-    buffer.add(111);
-    buffer.add(105);
-    buffer.add(100);
-    buffer.add(32);
-    buffer.add(64);
-    buffer.add(107);
-    buffer.add(95);
-    buffer.add(115);
-    buffer.add(116);
-    buffer.add(100);
-    buffer.add(95);
-    buffer.add(112);
-    buffer.add(114);
-    buffer.add(105);
-    buffer.add(110);
-    buffer.add(116);
-    buffer.add(95);
-    buffer.add(98);
-    buffer.add(121);
-    buffer.add(116);
-    buffer.add(101);
-    buffer.add(115);
-    buffer.add(40);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(41);
-    buffer.add(10);
-    buffer.add(10);
+    buffer.append("declare void @k_std_print_bytes(ptr, i64)\n\n");
 }
 
 fn appendPrivateStringPrefix(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(61);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(114);
-    buffer.add(105);
-    buffer.add(118);
-    buffer.add(97);
-    buffer.add(116);
-    buffer.add(101);
-    buffer.add(32);
-    buffer.add(117);
-    buffer.add(110);
-    buffer.add(110);
-    buffer.add(97);
-    buffer.add(109);
-    buffer.add(101);
-    buffer.add(100);
-    buffer.add(95);
-    buffer.add(97);
-    buffer.add(100);
-    buffer.add(100);
-    buffer.add(114);
-    buffer.add(32);
-    buffer.add(99);
-    buffer.add(111);
-    buffer.add(110);
-    buffer.add(115);
-    buffer.add(116);
-    buffer.add(97);
-    buffer.add(110);
-    buffer.add(116);
-    buffer.add(32);
-    buffer.add(91);
+    buffer.append(" = private unnamed_addr constant [");
 }
 
 fn appendStringArrayPrefix(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(120);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(56);
-    buffer.add(93);
-    buffer.add(32);
-    buffer.add(99);
-    buffer.add(34);
+    buffer.append(" x i8] c\"");
 }
 
 fn appendStringTerminator(var buffer: StringBuilder) {
-    buffer.add(92);
-    buffer.add(48);
-    buffer.add(48);
-    buffer.add(34);
-    buffer.add(10);
+    buffer.append("\\00\"\n");
 }
 
 fn appendStringType(var buffer: StringBuilder) {
-    buffer.add(123);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(32);
-    buffer.add(125);
+    buffer.append("{ ptr, i64, i64 }");
 }
 
 fn appendStringInsertPointer(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(123);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(32);
-    buffer.add(125);
-    buffer.add(32);
-    buffer.add(117);
-    buffer.add(110);
-    buffer.add(100);
-    buffer.add(101);
-    buffer.add(102);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(32);
-    buffer.add(64);
-    buffer.add(46);
-    buffer.add(107);
-    buffer.add(115);
+    buffer.append(" { ptr, i64, i64 } undef, ptr @.ks");
 }
 
 fn appendIndexZero(var buffer: StringBuilder) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(48);
-    buffer.add(10);
+    buffer.append(", 0\n");
 }
 
 fn appendSpacedStringType(var buffer: StringBuilder) {
-    buffer.add(32);
-    buffer.add(123);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(32);
-    buffer.add(125);
-    buffer.add(32);
+    buffer.append(" { ptr, i64, i64 } ");
 }
 
 fn appendI64Prefix(var buffer: StringBuilder) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(32);
+    buffer.append(", i64 ");
 }
 
 fn appendIndexOne(var buffer: StringBuilder) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(49);
-    buffer.add(10);
+    buffer.append(", 1\n");
 }
 
 fn appendStringCapacity(var buffer: StringBuilder) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
-    buffer.add(32);
-    buffer.add(48);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(50);
-    buffer.add(10);
+    buffer.append(", i64 0, 2\n");
 }
 
 fn appendExtractLengthAndPrint(var buffer: StringBuilder) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(49);
-    buffer.add(10);
-    buffer.add(32);
-    buffer.add(32);
-    buffer.add(99);
-    buffer.add(97);
-    buffer.add(108);
-    buffer.add(108);
-    buffer.add(32);
-    buffer.add(118);
-    buffer.add(111);
-    buffer.add(105);
-    buffer.add(100);
-    buffer.add(32);
-    buffer.add(64);
-    buffer.add(107);
-    buffer.add(95);
-    buffer.add(115);
-    buffer.add(116);
-    buffer.add(100);
-    buffer.add(95);
-    buffer.add(112);
-    buffer.add(114);
-    buffer.add(105);
-    buffer.add(110);
-    buffer.add(116);
-    buffer.add(95);
-    buffer.add(98);
-    buffer.add(121);
-    buffer.add(116);
-    buffer.add(101);
-    buffer.add(115);
-    buffer.add(40);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(32);
+    buffer.append(", 1\n  call void @k_std_print_bytes(ptr ");
 }
 
 fn appendCloseLine(var buffer: StringBuilder) {
-    buffer.add(41);
-    buffer.add(10);
+    buffer.append(")\n");
 }
 
 
@@ -394,7 +132,7 @@ fn appendEscapedByte(var buffer: StringBuilder, value: u8) {
         buffer.add(value);
         return;
     }
-    buffer.add(92);
+    buffer.append("\\");
     buffer.add(hexDigit(value / 16));
     buffer.add(hexDigit(value % 16));
 }
@@ -451,8 +189,8 @@ fn decodeStringLiteral(source: Source, node: AstNode): StringBuilder {
 fn appendStringGlobal(var buffer: StringBuilder, source: Source, node: AstNode, root: u64) {
     var decoded = decodeStringLiteral(source, node);
     defer decoded.free();
-    buffer.add(64); buffer.add(46); buffer.add(107);
-    buffer.add(115); appendDecimal(buffer, root);
+    buffer.append("@.k");
+    buffer.append("s"); appendDecimal(buffer, root);
     appendPrivateStringPrefix(buffer);
     appendDecimal(buffer, decoded.length + 1);
     appendStringArrayPrefix(buffer);
@@ -461,100 +199,11 @@ fn appendStringGlobal(var buffer: StringBuilder, source: Source, node: AstNode, 
 }
 
 fn appendPanicDeclaration(var buffer: StringBuilder) {
-    buffer.add(100); buffer.add(101);
-    buffer.add(99); buffer.add(108);
-    buffer.add(97); buffer.add(114);
-    buffer.add(101); buffer.add(32);
-    buffer.add(118); buffer.add(111);
-    buffer.add(105); buffer.add(100);
-    buffer.add(32); buffer.add(64);
-    buffer.add(107); buffer.add(95);
-    buffer.add(98); buffer.add(111);
-    buffer.add(111); buffer.add(116);
-    buffer.add(95); buffer.add(112);
-    buffer.add(97); buffer.add(110);
-    buffer.add(105); buffer.add(99);
-    buffer.add(40); buffer.add(112);
-    buffer.add(116); buffer.add(114);
-    buffer.add(44); buffer.add(32);
-    buffer.add(105); buffer.add(54);
-    buffer.add(52); buffer.add(41);
-    buffer.add(10); buffer.add(10);
+    buffer.append("declare void @k_boot_panic(ptr, i64)\n\n");
 }
 
 fn appendModuleHeader(var buffer: StringBuilder) {
-    buffer.add(116); buffer.add(97);
-    buffer.add(114); buffer.add(103);
-    buffer.add(101); buffer.add(116);
-    buffer.add(32); buffer.add(100);
-    buffer.add(97); buffer.add(116);
-    buffer.add(97); buffer.add(108);
-    buffer.add(97); buffer.add(121);
-    buffer.add(111); buffer.add(117);
-    buffer.add(116); buffer.add(32);
-    buffer.add(61); buffer.add(32);
-    buffer.add(34); buffer.add(101);
-    buffer.add(45); buffer.add(109);
-    buffer.add(58); buffer.add(119);
-    buffer.add(45); buffer.add(112);
-    buffer.add(50); buffer.add(55);
-    buffer.add(48); buffer.add(58);
-    buffer.add(51); buffer.add(50);
-    buffer.add(58); buffer.add(51);
-    buffer.add(50); buffer.add(45);
-    buffer.add(112); buffer.add(50);
-    buffer.add(55); buffer.add(49);
-    buffer.add(58); buffer.add(51);
-    buffer.add(50); buffer.add(58);
-    buffer.add(51); buffer.add(50);
-    buffer.add(45); buffer.add(112);
-    buffer.add(50); buffer.add(55);
-    buffer.add(50); buffer.add(58);
-    buffer.add(54); buffer.add(52);
-    buffer.add(58); buffer.add(54);
-    buffer.add(52); buffer.add(45);
-    buffer.add(105); buffer.add(54);
-    buffer.add(52); buffer.add(58);
-    buffer.add(54); buffer.add(52);
-    buffer.add(45); buffer.add(105);
-    buffer.add(49); buffer.add(50);
-    buffer.add(56); buffer.add(58);
-    buffer.add(49); buffer.add(50);
-    buffer.add(56); buffer.add(45);
-    buffer.add(102); buffer.add(56);
-    buffer.add(48); buffer.add(58);
-    buffer.add(49); buffer.add(50);
-    buffer.add(56); buffer.add(45);
-    buffer.add(110); buffer.add(56);
-    buffer.add(58); buffer.add(49);
-    buffer.add(54); buffer.add(58);
-    buffer.add(51); buffer.add(50);
-    buffer.add(58); buffer.add(54);
-    buffer.add(52); buffer.add(45);
-    buffer.add(83); buffer.add(49);
-    buffer.add(50); buffer.add(56);
-    buffer.add(34); buffer.add(10);
-    buffer.add(116); buffer.add(97);
-    buffer.add(114); buffer.add(103);
-    buffer.add(101); buffer.add(116);
-    buffer.add(32); buffer.add(116);
-    buffer.add(114); buffer.add(105);
-    buffer.add(112); buffer.add(108);
-    buffer.add(101); buffer.add(32);
-    buffer.add(61); buffer.add(32);
-    buffer.add(34); buffer.add(120);
-    buffer.add(56); buffer.add(54);
-    buffer.add(95); buffer.add(54);
-    buffer.add(52); buffer.add(45);
-    buffer.add(112); buffer.add(99);
-    buffer.add(45); buffer.add(119);
-    buffer.add(105); buffer.add(110);
-    buffer.add(100); buffer.add(111);
-    buffer.add(119); buffer.add(115);
-    buffer.add(45); buffer.add(109);
-    buffer.add(115); buffer.add(118);
-    buffer.add(99); buffer.add(34);
-    buffer.add(10); buffer.add(10);
+    buffer.append("target datalayout = \"e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128\"\ntarget triple = \"x86_64-pc-windows-msvc\"\n\n");
 }
 
 fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
@@ -569,102 +218,84 @@ fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
 fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
     var floating = typeKind == 17;
     if (typeKind == 18) floating = true;
-    if (floating) buffer.add(102);
+    if (floating) buffer.append("f");
     if (kind == 60) {
-        buffer.add(97);
-        buffer.add(100);
-        buffer.add(100);
+        buffer.append("add");
     }
     if (kind == 61) {
-        buffer.add(115);
-        buffer.add(117);
-        buffer.add(98);
+        buffer.append("sub");
     }
     if (kind == 62) {
-        buffer.add(109);
-        buffer.add(117);
-        buffer.add(108);
+        buffer.append("mul");
     }
     if (kind == 63) {
         if (floating) {
-            buffer.add(100); buffer.add(105);
-            buffer.add(118); return;
+            buffer.append("di");
+            buffer.append("v"); return;
         }
         var unsigned = typeKind == 5;
         if (typeKind == 6) unsigned = true;
         if (typeKind == 7) unsigned = true;
         if (unsigned) {
-            buffer.add(117);
+            buffer.append("u");
         } else {
-            buffer.add(115);
+            buffer.append("s");
         }
-        buffer.add(100);
-        buffer.add(105);
-        buffer.add(118);
+        buffer.append("div");
     }
     if (kind == 64) {
         if (floating) {
-            buffer.add(114); buffer.add(101);
-            buffer.add(109); return;
+            buffer.append("re");
+            buffer.append("m"); return;
         }
         var unsigned = typeKind == 5;
         if (typeKind == 6) unsigned = true;
         if (typeKind == 7) unsigned = true;
         if (unsigned) {
-            buffer.add(117);
+            buffer.append("u");
         } else {
-            buffer.add(115);
+            buffer.append("s");
         }
-        buffer.add(114);
-        buffer.add(101);
-        buffer.add(109);
+        buffer.append("rem");
     }
 }
 
-fn appendNewline(var buffer: StringBuilder) => buffer.add(10);
+fn appendNewline(var buffer: StringBuilder) => buffer.append("\n");
 
 fn appendCastOpcode(var buffer: StringBuilder, kind: u32) {
     when (kind) {
-        1 -> buffer.add(115);
-        2 -> buffer.add(122);
+        1 -> buffer.append("s");
+        2 -> buffer.append("z");
         else -> {
-            buffer.add(116); buffer.add(114);
-            buffer.add(117); buffer.add(110);
-            buffer.add(99);
+            buffer.append("trunc");
             return;
         }
     }
-    buffer.add(101); buffer.add(120);
-    buffer.add(116);
+    buffer.append("ext");
 }
 
 fn appendFloatCastOpcode(var buffer: StringBuilder, kind: u32) {
     if (kind == 1) {
-        buffer.add(102); buffer.add(112);
-        buffer.add(101); buffer.add(120);
-        buffer.add(116); return;
+        buffer.append("fpex");
+        buffer.append("t"); return;
     }
     if (kind == 2) {
-        buffer.add(102); buffer.add(112);
-        buffer.add(116); buffer.add(114);
-        buffer.add(117); buffer.add(110);
-        buffer.add(99); return;
+        buffer.append("fptrun");
+        buffer.append("c"); return;
     }
-    if (kind == 3) buffer.add(115);
-    if (kind == 4) buffer.add(117);
+    if (kind == 3) buffer.append("s");
+    if (kind == 4) buffer.append("u");
     var integerToFloat = kind == 3;
     if (kind == 4) integerToFloat = true;
     if (integerToFloat) {
-        buffer.add(105); buffer.add(116);
-        buffer.add(111); buffer.add(102);
-        buffer.add(112); return;
+        buffer.append("itof");
+        buffer.append("p"); return;
     }
-    buffer.add(102); buffer.add(112);
-    buffer.add(116); buffer.add(111);
+    buffer.append("fpto");
     if (kind == 5) {
-        buffer.add(115); buffer.add(105);
+        buffer.append("si");
     } else {
-        buffer.add(117); buffer.add(105);
+        buffer.append("ui");
     }
 }
 
@@ -672,10 +303,10 @@ fn appendFloatIntegerConstant(
     var buffer: StringBuilder, negative: bool, magnitude: u64,
     appendSix: bool
 ) {
-    if (negative) buffer.add(45);
+    if (negative) buffer.append("-");
     appendDecimal(buffer, magnitude);
-    if (appendSix) buffer.add(54);
-    buffer.add(46); buffer.add(48);
+    if (appendSix) buffer.append("6");
+    buffer.append(".0");
 }
 
 fn appendFloatCastBound(
@@ -719,35 +350,10 @@ fn appendFloatCastBound(
 }
 
 fn appendCastPanic(var buffer: StringBuilder) {
-    buffer.add(32); buffer.add(32);
-    buffer.add(99); buffer.add(97);
-    buffer.add(108); buffer.add(108);
-    buffer.add(32); buffer.add(118);
-    buffer.add(111); buffer.add(105);
-    buffer.add(100); buffer.add(32);
-    buffer.add(64); buffer.add(107);
-    buffer.add(95); buffer.add(98);
-    buffer.add(111); buffer.add(111);
-    buffer.add(116); buffer.add(95);
-    buffer.add(112); buffer.add(97);
-    buffer.add(110); buffer.add(105);
-    buffer.add(99); buffer.add(40);
-    buffer.add(112); buffer.add(116);
-    buffer.add(114); buffer.add(32);
-    buffer.add(110); buffer.add(117);
-    buffer.add(108); buffer.add(108);
-    buffer.add(44); buffer.add(32);
-    buffer.add(105); buffer.add(54);
-    buffer.add(52); buffer.add(32);
-    buffer.add(48); buffer.add(41);
+    buffer.append("  call void @k_boot_panic(ptr null, i64 0)");
     appendNewline(buffer);
-    buffer.add(32); buffer.add(32);
-    buffer.add(117); buffer.add(110);
-    buffer.add(114); buffer.add(101);
-    buffer.add(97); buffer.add(99);
-    buffer.add(104); buffer.add(97);
-    buffer.add(98); buffer.add(108);
-    buffer.add(101); appendNewline(buffer);
+    buffer.append("  unreachabl");
+    buffer.append("e"); appendNewline(buffer);
 }
 
 struct IrValue(
@@ -764,17 +370,15 @@ struct IrCounter(
 fn appendStructSpecializationSuffix(
     var buffer: StringBuilder, val arguments: List<TypeValue>,
     start: u64, count: u32) {
-    buffer.add(95);
-    buffer.add(95);
-    buffer.add(115);
+    buffer.append("__s");
     appendDecimal(buffer, count as u64);
     for (index in 0..<count) {
         val type = arguments.data[start + index as u64];
-        buffer.add(95);
+        buffer.append("_");
         appendDecimal(buffer, type.kind as u64);
-        buffer.add(95);
+        buffer.append("_");
         appendDecimal(buffer, type.name);
-        buffer.add(95);
+        buffer.append("_");
         appendDecimal(buffer, type.pointee as u64);
     }
 }
@@ -783,34 +387,24 @@ fn appendType(
     var buffer: StringBuilder, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32) {
     if (kind == 1) {
-        buffer.add(118);
-        buffer.add(111);
-        buffer.add(105);
-        buffer.add(100);
+        buffer.append("void");
     }
     if (kind == 2) {
-        buffer.add(105);
-        buffer.add(49);
+        buffer.append("i1");
     }
     if (kind == 3) appendI32(buffer);
     if (kind == 4) {
-        buffer.add(105);
-        buffer.add(54);
-        buffer.add(52);
+        buffer.append("i64");
     }
     if (kind == 5) {
-        buffer.add(105);
-        buffer.add(56);
+        buffer.append("i8");
     }
     if (kind == 6) appendI32(buffer);
     if (kind == 7) {
-        buffer.add(105);
-        buffer.add(54);
-        buffer.add(52);
+        buffer.append("i64");
     }
     if (kind == 8) {
-        buffer.add(37);
-        buffer.add(115);
+        buffer.append("%s");
         appendDecimal(buffer, name);
         val start = pointee % 65536;
         val count = pointee / 65536;
@@ -819,57 +413,33 @@ fn appendType(
         }
     }
     if (kind == 9) {
-        buffer.add(112);
-        buffer.add(116);
-        buffer.add(114);
+        buffer.append("ptr");
     }
     if (kind == 10) {
         appendStringType(buffer);
     }
     if (kind == 17) {
-        buffer.add(102); buffer.add(108);
-        buffer.add(111); buffer.add(97);
-        buffer.add(116);
+        buffer.append("float");
     }
     if (kind == 18) {
-        buffer.add(100); buffer.add(111);
-        buffer.add(117); buffer.add(98);
-        buffer.add(108); buffer.add(101);
+        buffer.append("double");
     }
     if (kind == 11) appendI32(buffer);
     if (kind == 20) appendI32(buffer);
     if (kind == 13) {
-        buffer.add(123);
-        buffer.add(32);
-        buffer.add(112);
-        buffer.add(116);
-        buffer.add(114);
-        buffer.add(44);
-        buffer.add(32);
-        buffer.add(105);
-        buffer.add(54);
-        buffer.add(52);
-        buffer.add(32);
-        buffer.add(125);
+        buffer.append("{ ptr, i64 }");
     }
     if (kind == 15) {
-        buffer.add(123);
-        buffer.add(32);
-        buffer.add(105);
-        buffer.add(49);
-        buffer.add(44);
-        buffer.add(32);
+        buffer.append("{ i1, ");
         appendType(buffer, genericArguments, pointee, name, 0);
-        buffer.add(32);
-        buffer.add(125);
+        buffer.append(" }");
     }
     if (kind == 19) {
-        buffer.add(91);
+        buffer.append("[");
         appendDecimal(buffer, (pointee / 256) as u64);
-        buffer.add(32); buffer.add(120);
-        buffer.add(32);
+        buffer.append(" x ");
         appendType(buffer, genericArguments, pointee % 256, name, 0);
-        buffer.add(93);
+        buffer.append("]");
     }
 }
 
@@ -879,122 +449,55 @@ fn appendNodeType(var buffer: StringBuilder, var genericArguments: List<TypeValu
 }
 
 fn appendLocalPrefix(var buffer: StringBuilder) {
-    buffer.add(108);
-    buffer.add(111);
-    buffer.add(99);
-    buffer.add(97);
-    buffer.add(108);
-    buffer.add(46);
+    buffer.append("local.");
 }
 
 fn appendOwnedStringDeclarations(var buffer: StringBuilder) {
-    buffer.add(100); buffer.add(101); buffer.add(99); buffer.add(108);
-    buffer.add(97); buffer.add(114); buffer.add(101); buffer.add(32);
-    buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
-    buffer.add(64); buffer.add(107); buffer.add(95); buffer.add(115);
-    buffer.add(116); buffer.add(100); buffer.add(95); buffer.add(97);
-    buffer.add(108); buffer.add(108); buffer.add(111); buffer.add(99);
-    buffer.add(40); buffer.add(105); buffer.add(54); buffer.add(52);
-    buffer.add(41); buffer.add(10);
-    buffer.add(100); buffer.add(101); buffer.add(99); buffer.add(108);
-    buffer.add(97); buffer.add(114); buffer.add(101); buffer.add(32);
-    buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
-    buffer.add(32); buffer.add(64); buffer.add(107); buffer.add(95);
-    buffer.add(115); buffer.add(116); buffer.add(100); buffer.add(95);
-    buffer.add(102); buffer.add(114); buffer.add(101); buffer.add(101);
-    buffer.add(40); buffer.add(112); buffer.add(116); buffer.add(114);
-    buffer.add(41); buffer.add(10); buffer.add(10);
+    buffer.append("declare ptr @k_std_alloc(i64)\ndeclare void @k_std_free(ptr)\n\n");
 }
 
 fn appendDropFlagName(var buffer: StringBuilder, storage: u64) {
     appendLocalPrefix(buffer);
     appendDecimal(buffer, storage);
-    buffer.add(46); buffer.add(100); buffer.add(114);
-    buffer.add(111); buffer.add(112);
+    buffer.append(".drop");
 }
 
 fn appendI64(var buffer: StringBuilder) {
-    buffer.add(105);
-    buffer.add(54);
-    buffer.add(52);
+    buffer.append("i64");
 }
 
 fn appendGetElementPtr(var buffer: StringBuilder) {
-    buffer.add(103);
-    buffer.add(101);
-    buffer.add(116);
-    buffer.add(101);
-    buffer.add(108);
-    buffer.add(101);
-    buffer.add(109);
-    buffer.add(101);
-    buffer.add(110);
-    buffer.add(116);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
+    buffer.append("getelementptr");
 }
 
 fn appendInsertValue(var buffer: StringBuilder) {
-    buffer.add(105);
-    buffer.add(110);
-    buffer.add(115);
-    buffer.add(101);
-    buffer.add(114);
-    buffer.add(116);
-    buffer.add(118);
-    buffer.add(97);
-    buffer.add(108);
-    buffer.add(117);
-    buffer.add(101);
+    buffer.append("insertvalue");
 }
 
 fn appendExtractValue(var buffer: StringBuilder) {
-    buffer.add(101);
-    buffer.add(120);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(97);
-    buffer.add(99);
-    buffer.add(116);
-    buffer.add(118);
-    buffer.add(97);
-    buffer.add(108);
-    buffer.add(117);
-    buffer.add(101);
+    buffer.append("extractvalue");
 }
 
 fn appendUndef(var buffer: StringBuilder) {
-    buffer.add(117);
-    buffer.add(110);
-    buffer.add(100);
-    buffer.add(101);
-    buffer.add(102);
+    buffer.append("undef");
 }
 
 fn appendUnreachable(var buffer: StringBuilder) {
-    buffer.add(117); buffer.add(110);
-    buffer.add(114); buffer.add(101);
-    buffer.add(97); buffer.add(99);
-    buffer.add(104); buffer.add(97);
-    buffer.add(98); buffer.add(108);
-    buffer.add(101);
+    buffer.append("unreachable");
 }
 
 fn appendSpecializationSuffix(
     var buffer: StringBuilder, val arguments: List<TypeValue>,
     start: u64, count: u32) {
-    buffer.add(95);
-    buffer.add(95);
-    buffer.add(103);
+    buffer.append("__g");
     appendDecimal(buffer, count as u64);
     for (index in 0..<count) {
         val type = arguments.data[start + index as u64];
-        buffer.add(95);
+        buffer.append("_");
         appendDecimal(buffer, type.kind as u64);
-        buffer.add(95);
+        buffer.append("_");
         appendDecimal(buffer, type.name);
-        buffer.add(95);
+        buffer.append("_");
         appendDecimal(buffer, type.pointee as u64);
     }
 }
@@ -1323,7 +826,7 @@ fn appendIrValue(
         appendSource(buffer, source, value.start, value.end);
     } else {
         if (value.kind == 4) {
-            buffer.add(37);
+            buffer.append("%");
             appendLocalPrefix(buffer);
             appendDecimal(buffer, value.temporary);
             return;
@@ -1333,31 +836,19 @@ fn appendIrValue(
             return;
         }
         if (value.kind == 5) {
-            buffer.add(122); buffer.add(101);
-            buffer.add(114); buffer.add(111);
-            buffer.add(105); buffer.add(110);
-            buffer.add(105); buffer.add(116);
-            buffer.add(105); buffer.add(97);
-            buffer.add(108); buffer.add(105);
-            buffer.add(122); buffer.add(101);
-            buffer.add(114);
+            buffer.append("zeroinitializer");
             return;
         }
-        buffer.add(37);
+        buffer.append("%");
         appendDecimal(buffer, value.temporary);
     }
 }
 
 fn appendPointerValue(
     var buffer: StringBuilder, source: Source, value: IrValue) {
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(112);
-    buffer.add(116);
-    buffer.add(114);
-    buffer.add(32);
+    buffer.append(", ptr ");
     if (value.kind == 1) {
-        buffer.add(37);
+        buffer.append("%");
         appendSource(buffer, source, value.start, value.end);
     } else {
         appendIrValue(buffer, source, value);
@@ -1382,13 +873,12 @@ fn emitImplicitIntegerWiden(
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     var opcode: u32 = 2;
     if (sourceType.isSigned()) opcode = 1;
-    appendCastOpcode(buffer, opcode); buffer.add(32);
+    appendCastOpcode(buffer, opcode); buffer.append(" ");
     appendType(
         buffer, genericArguments,
         value.typeKind, value.typeName, value.typePointee);
-    buffer.add(32); appendIrValue(buffer, source, value);
-    buffer.add(32); buffer.add(116);
-    buffer.add(111); buffer.add(32);
+    buffer.append(" "); appendIrValue(buffer, source, value);
+    buffer.append(" to ");
     appendType(buffer, genericArguments, targetKind, targetName, targetPointee);
     appendNewline(buffer);
     return IrValue(
@@ -1402,42 +892,29 @@ fn nextBlock(var counter: IrCounter): u64 {
 }
 
 fn appendBlockName(var buffer: StringBuilder, block: u64) {
-    buffer.add(98);
+    buffer.append("b");
     appendDecimal(buffer, block);
 }
 
 fn appendBlockLabel(
     var buffer: StringBuilder, var counter: IrCounter, block: u64) {
     appendBlockName(buffer, block);
-    buffer.add(58);
+    buffer.append(":");
     appendNewline(buffer);
     counter.currentBlock = block;
 }
 
 fn appendBlockReference(var buffer: StringBuilder, block: u64) {
-    buffer.add(37);
+    buffer.append("%");
     if (block == 18446744073709551615) {
-        buffer.add(101); buffer.add(110);
-        buffer.add(116); buffer.add(114);
-        buffer.add(121);
+        buffer.append("entry");
     } else {
         appendBlockName(buffer, block);
     }
 }
 
 fn appendBranch(var buffer: StringBuilder, block: u64) {
-    buffer.add(32);
-    buffer.add(32);
-    buffer.add(98);
-    buffer.add(114);
-    buffer.add(32);
-    buffer.add(108);
-    buffer.add(97);
-    buffer.add(98);
-    buffer.add(101);
-    buffer.add(108);
-    buffer.add(32);
-    buffer.add(37);
+    buffer.append("  br label %");
     appendBlockName(buffer, block);
     appendNewline(buffer);
 }
@@ -1445,52 +922,23 @@ fn appendBranch(var buffer: StringBuilder, block: u64) {
 fn appendConditionalBranch(
     var buffer: StringBuilder, source: Source, condition: IrValue,
     trueBlock: u64, falseBlock: u64) {
-    buffer.add(32);
-    buffer.add(32);
-    buffer.add(98);
-    buffer.add(114);
-    buffer.add(32);
-    buffer.add(105);
-    buffer.add(49);
-    buffer.add(32);
+    buffer.append("  br i1 ");
     appendIrValue(buffer, source, condition);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(108);
-    buffer.add(97);
-    buffer.add(98);
-    buffer.add(101);
-    buffer.add(108);
-    buffer.add(32);
-    buffer.add(37);
+    buffer.append(", label %");
     appendBlockName(buffer, trueBlock);
-    buffer.add(44);
-    buffer.add(32);
-    buffer.add(108);
-    buffer.add(97);
-    buffer.add(98);
-    buffer.add(101);
-    buffer.add(108);
-    buffer.add(32);
-    buffer.add(37);
+    buffer.append(", label %");
     appendBlockName(buffer, falseBlock);
     appendNewline(buffer);
 }
 
 fn appendComparison(
     var buffer: StringBuilder, kind: u32, typeKind: u32) {
-    buffer.add(105);
-    buffer.add(99);
-    buffer.add(109);
-    buffer.add(112);
-    buffer.add(32);
+    buffer.append("icmp ");
     if (kind == 79) {
-        buffer.add(101);
-        buffer.add(113);
+        buffer.append("eq");
     }
     if (kind == 80) {
-        buffer.add(110);
-        buffer.add(101);
+        buffer.append("ne");
     }
     var unsigned = typeKind == 5;
     if (typeKind == 6) unsigned = true;
@@ -1498,39 +946,35 @@ fn appendComparison(
     if (typeKind == 20) unsigned = true;
     if (kind == 66) {
         if (unsigned) {
-            buffer.add(117);
+            buffer.append("u");
         } else {
-            buffer.add(115);
+            buffer.append("s");
         }
-        buffer.add(108);
-        buffer.add(116);
+        buffer.append("lt");
     }
     if (kind == 81) {
         if (unsigned) {
-            buffer.add(117);
+            buffer.append("u");
         } else {
-            buffer.add(115);
+            buffer.append("s");
         }
-        buffer.add(108);
-        buffer.add(101);
+        buffer.append("le");
     }
     if (kind == 67) {
         if (unsigned) {
-            buffer.add(117);
+            buffer.append("u");
         } else {
-            buffer.add(115);
+            buffer.append("s");
         }
-        buffer.add(103);
-        buffer.add(116);
+        buffer.append("gt");
     }
     if (kind == 82) {
         if (unsigned) {
-            buffer.add(117);
+            buffer.append("u");
         } else {
-            buffer.add(115);
+            buffer.append("s");
         }
-        buffer.add(103);
-        buffer.add(101);
+        buffer.append("ge");
     }
 }
 
@@ -1553,9 +997,7 @@ fn emitClearAutomaticDrop(
     }
     if (owner.kind != 10 || (owner.ownership / 2) % 2 == 0) return;
     appendStore(buffer);
-    buffer.add(105); buffer.add(49); buffer.add(32);
-    buffer.add(102); buffer.add(97); buffer.add(108);
-    buffer.add(115); buffer.add(101);
+    buffer.append("i1 false");
     appendPtr(buffer); appendDropFlagName(buffer, owner.storage);
     appendNewline(buffer);
 }
@@ -1595,18 +1037,14 @@ fn emitAddress(
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
         appendGetElementPtr(buffer);
-        buffer.add(32);
+        buffer.append(" ");
         appendType(buffer, genericArguments, 8, objectNode.typeName, objectNode.typePointee);
         appendPointerValue(buffer, source, objectAddress);
-        buffer.add(44);
-        buffer.add(32);
+        buffer.append(", ");
         appendI32(buffer);
-        buffer.add(32);
-        buffer.add(48);
-        buffer.add(44);
-        buffer.add(32);
+        buffer.append(" 0, ");
         appendI32(buffer);
-        buffer.add(32);
+        buffer.append(" ");
         appendDecimal(buffer, fieldIndex as u64);
         appendNewline(buffer);
         return IrValue(
@@ -1627,14 +1065,13 @@ fn emitAddress(
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
         appendGetElementPtr(buffer);
-        buffer.add(32);
+        buffer.append(" ");
         appendNodeType(buffer, genericArguments, node);
         appendPointerValue(buffer, source, object);
-        buffer.add(44);
-        buffer.add(32);
+        buffer.append(", ");
         appendType(
             buffer, genericArguments, index.typeKind, index.typeName, index.typePointee);
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, index);
         appendNewline(buffer);
         return IrValue(
@@ -1650,26 +1087,24 @@ fn appendFloatRangeComparison(
     targetKind: u32, temporary: u64, lower: bool) {
     appendValuePrefix(buffer); appendDecimal(buffer, temporary);
     appendEquals(buffer);
-    buffer.add(102); buffer.add(99);
-    buffer.add(109); buffer.add(112);
-    buffer.add(32); buffer.add(111);
+    buffer.append("fcmp o");
     if (lower) {
         var inclusive = targetKind == 4;
         if (targetKind == 3) {
             if (value.typeKind == 17) inclusive = true;
         }
-        buffer.add(103);
-        if (inclusive) buffer.add(101);
-        else buffer.add(116);
+        buffer.append("g");
+        if (inclusive) buffer.append("e");
+        else buffer.append("t");
     } else {
-        buffer.add(108); buffer.add(116);
+        buffer.append("lt");
     }
-    buffer.add(32);
+    buffer.append(" ");
     appendType(
         buffer, genericArguments,
         value.typeKind, value.typeName, value.typePointee);
-    buffer.add(32); appendIrValue(buffer, source, value);
-    buffer.add(44); buffer.add(32);
+    buffer.append(" "); appendIrValue(buffer, source, value);
+    buffer.append(", ");
     appendFloatCastBound(
         buffer, value.typeKind, targetKind, lower);
     appendNewline(buffer);
@@ -1686,23 +1121,20 @@ fn emitOwnedStringLiteral(
     if (capacity == 0) capacity = 1;
     val data = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, data); appendEquals(buffer);
-    appendCall(buffer); buffer.add(112); buffer.add(116); buffer.add(114);
+    appendCall(buffer); buffer.append("ptr");
     appendFunctionOpen(buffer);
-    buffer.add(107); buffer.add(95); buffer.add(115); buffer.add(116);
-    buffer.add(100); buffer.add(95); buffer.add(97); buffer.add(108);
-    buffer.add(108); buffer.add(111); buffer.add(99); buffer.add(40);
-    appendI64(buffer); buffer.add(32); appendDecimal(buffer, capacity);
-    buffer.add(41); appendNewline(buffer);
+    buffer.append("k_std_alloc(");
+    appendI64(buffer); buffer.append(" "); appendDecimal(buffer, capacity);
+    buffer.append(")"); appendNewline(buffer);
     for (index in 0..<decoded.length) {
         val address = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, address); appendEquals(buffer);
-        appendGetElementPtr(buffer); buffer.add(32);
-        buffer.add(105); buffer.add(56); buffer.add(44); buffer.add(32);
-        buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
-        buffer.add(37); appendDecimal(buffer, data); buffer.add(44); buffer.add(32);
-        appendI64(buffer); buffer.add(32); appendDecimal(buffer, index);
+        appendGetElementPtr(buffer); buffer.append(" ");
+        buffer.append("i8, ptr ");
+        buffer.append("%"); appendDecimal(buffer, data); buffer.append(", ");
+        appendI64(buffer); buffer.append(" "); appendDecimal(buffer, index);
         appendNewline(buffer);
-        appendStore(buffer); buffer.add(105); buffer.add(56); buffer.add(32);
+        appendStore(buffer); buffer.append("i8 ");
         appendDecimal(buffer, decoded.data[index]);
         appendPtr(buffer); appendDecimal(buffer, address);
         appendNewline(buffer);
@@ -1710,10 +1142,8 @@ fn emitOwnedStringLiteral(
     var temporary = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     appendInsertValue(buffer); appendSpacedStringType(buffer);
-    buffer.add(117); buffer.add(110); buffer.add(100); buffer.add(101);
-    buffer.add(102); buffer.add(44); buffer.add(32);
-    buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
-    buffer.add(37); appendDecimal(buffer, data); appendIndexZero(buffer);
+    buffer.append("undef, ptr ");
+    buffer.append("%"); appendDecimal(buffer, data); appendIndexZero(buffer);
     temporary = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     appendInsertValue(buffer); appendSpacedStringType(buffer);
@@ -1725,7 +1155,7 @@ fn emitOwnedStringLiteral(
     appendInsertValue(buffer); appendSpacedStringType(buffer);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
     appendI64Prefix(buffer); appendDecimal(buffer, capacity);
-    buffer.add(44); buffer.add(32); buffer.add(50); appendNewline(buffer);
+    buffer.append(", 2"); appendNewline(buffer);
     return IrValue(2, 0, 0, temporary, 10, 0, 0);
 }
 
@@ -1841,20 +1271,17 @@ fn emitExpression(
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
         appendEquals(buffer);
-        buffer.add(112); buffer.add(104);
-        buffer.add(105); buffer.add(32);
+        buffer.append("phi ");
         appendNodeType(buffer, genericArguments, node);
-        buffer.add(32); buffer.add(91);
-        buffer.add(32); appendIrValue(buffer, source, thenValue);
-        buffer.add(44); buffer.add(32);
+        buffer.append(" [");
+        buffer.append(" "); appendIrValue(buffer, source, thenValue);
+        buffer.append(", ");
         appendBlockReference(buffer, thenValueBlock);
-        buffer.add(32); buffer.add(93);
-        buffer.add(44); buffer.add(32);
-        buffer.add(91); buffer.add(32);
+        buffer.append(" ], [ ");
         appendIrValue(buffer, source, elseValue);
-        buffer.add(44); buffer.add(32);
+        buffer.append(", ");
         appendBlockReference(buffer, elseValueBlock);
-        buffer.add(32); buffer.add(93);
+        buffer.append(" ]");
         appendNewline(buffer);
         k_boot_free(thenRoots as unit*);
         k_boot_free(elseRoots as unit*);
@@ -1920,12 +1347,12 @@ fn emitExpression(
                         val compared = nextTemporary(counter);
                         appendValuePrefix(buffer); appendDecimal(buffer, compared);
                         appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                        buffer.add(32);
+                        buffer.append(" ");
                         appendType(
                             buffer, genericArguments,
                             subject.typeKind, subject.typeName, subject.typePointee);
-                        buffer.add(32); appendIrValue(buffer, source, subject);
-                        buffer.add(44); buffer.add(32);
+                        buffer.append(" "); appendIrValue(buffer, source, subject);
+                        buffer.append(", ");
                         appendIrValue(buffer, source, condition); appendNewline(buffer);
                         condition = IrValue(2, 0, 0, compared, 2, 0, 0);
                     }
@@ -1971,19 +1398,18 @@ fn emitExpression(
         val temporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
         appendEquals(buffer);
-        buffer.add(112); buffer.add(104);
-        buffer.add(105); buffer.add(32);
+        buffer.append("phi ");
         appendNodeType(buffer, genericArguments, node);
-        buffer.add(32);
+        buffer.append(" ");
         for (index in 0..<branchCount) {
             if (index > 0) {
-                buffer.add(44); buffer.add(32);
+                buffer.append(", ");
             }
-            buffer.add(91); buffer.add(32);
+            buffer.append("[ ");
             appendIrValue(buffer, source, values[index as u64]);
-            buffer.add(44); buffer.add(32);
+            buffer.append(", ");
             appendBlockReference(buffer, blocks[index as u64]);
-            buffer.add(32); buffer.add(93);
+            buffer.append(" ]");
         }
         appendNewline(buffer);
         k_boot_free(blocks as unit*);
@@ -2016,20 +1442,18 @@ fn emitExpression(
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer); appendInsertValue(buffer);
             appendNodeType(buffer, genericArguments, node);
-            buffer.add(32);
+            buffer.append(" ");
             if (index == 0) {
-                buffer.add(117); buffer.add(110);
-                buffer.add(100); buffer.add(101);
-                buffer.add(102);
+                buffer.append("undef");
             } else {
                 appendIrValue(buffer, source, aggregate);
             }
-            buffer.add(44); buffer.add(32);
+            buffer.append(", ");
             appendType(
                 buffer, genericArguments,
                 node.typePointee % 256, node.typeName, 0);
-            buffer.add(32); appendIrValue(buffer, source, element);
-            buffer.add(44); buffer.add(32);
+            buffer.append(" "); appendIrValue(buffer, source, element);
+            buffer.append(", ");
             appendDecimal(buffer, index as u64); appendNewline(buffer);
             aggregate = IrValue(
                 2, 0, 0, temporary,
@@ -2067,17 +1491,13 @@ fn emitExpression(
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
             if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
-                buffer.add(102); buffer.add(110);
-                buffer.add(101); buffer.add(103);
-                buffer.add(32);
+                buffer.append("fneg ");
                 appendNodeType(buffer, genericArguments, node);
-                buffer.add(32);
+                buffer.append(" ");
             } else {
-                buffer.add(115); buffer.add(117);
-                buffer.add(98); buffer.add(32);
+                buffer.append("sub ");
                 appendNodeType(buffer, genericArguments, node);
-                buffer.add(32); buffer.add(48);
-                buffer.add(44); buffer.add(32);
+                buffer.append(" 0, ");
             }
             appendIrValue(buffer, source, operand);
             appendNewline(buffer);
@@ -2090,12 +1510,11 @@ fn emitExpression(
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            buffer.add(120); buffer.add(111); buffer.add(114); buffer.add(32);
+            buffer.append("xor ");
             appendNodeType(buffer, genericArguments, node);
-            buffer.add(32);
+            buffer.append(" ");
             appendIrValue(buffer, source, operand);
-            buffer.add(44); buffer.add(32);
-            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            buffer.append(", true");
             appendNewline(buffer);
             return IrValue(
                 2, 0, 0, temporary,
@@ -2149,31 +1568,28 @@ fn emitExpression(
             val lowerCheck = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, lowerCheck); appendEquals(buffer);
             appendComparison(buffer, lowerOperator, subject.typeKind);
-            buffer.add(32);
+            buffer.append(" ");
             appendType(
                 buffer, genericArguments,
                 subject.typeKind, subject.typeName, subject.typePointee);
-            buffer.add(32); appendIrValue(buffer, source, subject);
-            buffer.add(44); buffer.add(32);
+            buffer.append(" "); appendIrValue(buffer, source, subject);
+            buffer.append(", ");
             appendIrValue(buffer, source, lower); appendNewline(buffer);
             val upperCheck = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, upperCheck); appendEquals(buffer);
             appendComparison(buffer, upperOperator, subject.typeKind);
-            buffer.add(32);
+            buffer.append(" ");
             appendType(
                 buffer, genericArguments,
                 subject.typeKind, subject.typeName, subject.typePointee);
-            buffer.add(32); appendIrValue(buffer, source, subject);
-            buffer.add(44); buffer.add(32);
+            buffer.append(" "); appendIrValue(buffer, source, subject);
+            buffer.append(", ");
             appendIrValue(buffer, source, upper); appendNewline(buffer);
             val result = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, result); appendEquals(buffer);
-            buffer.add(97); buffer.add(110);
-            buffer.add(100); buffer.add(32);
-            buffer.add(105); buffer.add(49);
-            buffer.add(32); buffer.add(37);
-            appendDecimal(buffer, lowerCheck); buffer.add(44);
-            buffer.add(32); buffer.add(37);
+            buffer.append("and i1 %");
+            appendDecimal(buffer, lowerCheck); buffer.append(",");
+            buffer.append(" %");
             appendDecimal(buffer, upperCheck); appendNewline(buffer);
             return IrValue(2, 0, 0, result, 2, 0, 0);
         }
@@ -2203,21 +1619,16 @@ fn emitExpression(
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            buffer.add(112); buffer.add(104);
-            buffer.add(105); buffer.add(32);
-            buffer.add(105); buffer.add(49);
-            buffer.add(32); buffer.add(91);
-            if (node.aux == 83) buffer.add(48);
-            else buffer.add(49);
-            buffer.add(44); buffer.add(32);
+            buffer.append("phi i1 [");
+            if (node.aux == 83) buffer.append("0");
+            else buffer.append("1");
+            buffer.append(", ");
             appendBlockReference(buffer, leftBlock);
-            buffer.add(32); buffer.add(93);
-            buffer.add(44); buffer.add(32);
-            buffer.add(91);
+            buffer.append(" ], [");
             appendIrValue(buffer, source, right);
-            buffer.add(44); buffer.add(32);
+            buffer.append(", ");
             appendBlockReference(buffer, rightBlock);
-            buffer.add(32); buffer.add(93);
+            buffer.append(" ]");
             appendNewline(buffer);
             return IrValue(2, 0, 0, temporary, 2, 0, 0);
         }
@@ -2258,17 +1669,16 @@ fn emitExpression(
         appendEquals(buffer);
         if (comparison) appendComparison(buffer, node.aux, left.typeKind);
         else appendOperator(buffer, node.aux, node.typeKind);
-        buffer.add(32);
+        buffer.append(" ");
         if (comparison) {
             appendType(
                 buffer, genericArguments, left.typeKind, left.typeName, left.typePointee);
         } else {
             appendNodeType(buffer, genericArguments, node);
         }
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, left);
-        buffer.add(44);
-        buffer.add(32);
+        buffer.append(", ");
         appendIrValue(buffer, source, right);
         appendNewline(buffer);
         return IrValue(
@@ -2300,13 +1710,13 @@ fn emitExpression(
             val updated = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
             appendOperator(buffer, node.aux - 14, targetNode.typeKind);
-            buffer.add(32);
+            buffer.append(" ");
             appendType(
                 buffer, genericArguments, targetNode.typeKind,
                 targetNode.typeName, targetNode.typePointee);
-            buffer.add(32); buffer.add(37);
-            appendDecimal(buffer, loaded); buffer.add(44);
-            buffer.add(32); appendIrValue(buffer, source, right);
+            buffer.append(" %");
+            appendDecimal(buffer, loaded); buffer.append(",");
+            buffer.append(" "); appendIrValue(buffer, source, right);
             appendNewline(buffer);
             right = IrValue(
                 2, 0, 0, updated, targetNode.typeKind,
@@ -2324,13 +1734,13 @@ fn emitExpression(
         appendType(
             buffer, genericArguments, targetNode.typeKind,
             targetNode.typeName, targetNode.typePointee);
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, right);
         appendPointerValue(buffer, source, target);
         appendNewline(buffer);
         if (node.aux == 65 && (targetNode.ownership / 2) % 2 == 1) {
-            appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
-            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            appendStore(buffer); buffer.append("i1 ");
+            buffer.append("true");
             appendPtr(buffer); appendDropFlagName(buffer, targetNode.storage);
             appendNewline(buffer);
         }
@@ -2360,12 +1770,9 @@ fn emitExpression(
                     targetType.kind, upper, false);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
-                buffer.add(97); buffer.add(110);
-                buffer.add(100); buffer.add(32);
-                buffer.add(105); buffer.add(49);
-                buffer.add(32); buffer.add(37);
-                appendDecimal(buffer, lower); buffer.add(44);
-                buffer.add(32); buffer.add(37);
+                buffer.append("and i1 %");
+                appendDecimal(buffer, lower); buffer.append(",");
+                buffer.append(" %");
                 appendDecimal(buffer, upper); appendNewline(buffer);
                 val validBlock = nextBlock(counter);
                 val panicBlock = nextBlock(counter);
@@ -2392,13 +1799,12 @@ fn emitExpression(
                 }
             }
             appendFloatCastOpcode(buffer, opcode);
-            buffer.add(32);
+            buffer.append(" ");
             appendType(
                 buffer, genericArguments,
                 value.typeKind, value.typeName, value.typePointee);
-            buffer.add(32); appendIrValue(buffer, source, value);
-            buffer.add(32); buffer.add(116);
-            buffer.add(111); buffer.add(32);
+            buffer.append(" "); appendIrValue(buffer, source, value);
+            buffer.append(" to ");
             appendNodeType(buffer, genericArguments, node);
             appendNewline(buffer);
             return IrValue(
@@ -2421,16 +1827,13 @@ fn emitExpression(
                 if (sourceType.isSigned()) opcode = 1;
             }
             appendCastOpcode(buffer, opcode);
-            buffer.add(32);
+            buffer.append(" ");
             appendType(
                 buffer, genericArguments, value.typeKind,
                 value.typeName, value.typePointee);
-            buffer.add(32);
+            buffer.append(" ");
             appendIrValue(buffer, source, value);
-            buffer.add(32);
-            buffer.add(116);
-            buffer.add(111);
-            buffer.add(32);
+            buffer.append(" to ");
             appendNodeType(buffer, genericArguments, node);
             appendNewline(buffer);
             converted = IrValue(
@@ -2447,52 +1850,44 @@ fn emitExpression(
                 var reverseOpcode: u32 = 2;
                 if (targetType.isSigned()) reverseOpcode = 1;
                 appendCastOpcode(buffer, reverseOpcode);
-                buffer.add(32);
+                buffer.append(" ");
                 appendNodeType(buffer, genericArguments, node);
-                buffer.add(32);
+                buffer.append(" ");
                 appendIrValue(buffer, source, converted);
-                buffer.add(32); buffer.add(116);
-                buffer.add(111); buffer.add(32);
+                buffer.append(" to ");
                 appendType(
                     buffer, genericArguments, value.typeKind,
                     value.typeName, value.typePointee);
                 appendNewline(buffer);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
-                buffer.add(105); buffer.add(99);
-                buffer.add(109); buffer.add(112);
-                buffer.add(32); buffer.add(101);
-                buffer.add(113); buffer.add(32);
+                buffer.append("icmp eq ");
                 appendType(
                     buffer, genericArguments, value.typeKind,
                     value.typeName, value.typePointee);
-                buffer.add(32); appendIrValue(buffer, source, value);
-                buffer.add(44); buffer.add(32);
-                buffer.add(37); appendDecimal(buffer, roundTrip);
+                buffer.append(" "); appendIrValue(buffer, source, value);
+                buffer.append(", ");
+                buffer.append("%"); appendDecimal(buffer, roundTrip);
                 appendNewline(buffer);
             } else {
                 check = nextTemporary(counter);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
-                buffer.add(105); buffer.add(99);
-                buffer.add(109); buffer.add(112);
-                buffer.add(32);
+                buffer.append("icmp ");
                 var sourceSigned = sourceType.isSigned();
                 if (sourceSigned) {
-                    buffer.add(115); buffer.add(103);
-                    buffer.add(101);
+                    buffer.append("sge");
                 } else {
-                    buffer.add(117); buffer.add(108);
-                    buffer.add(101);
+                    buffer.append("ule");
                 }
-                buffer.add(32);
+                buffer.append(" ");
                 appendType(
                     buffer, genericArguments, value.typeKind,
                     value.typeName, value.typePointee);
-                buffer.add(32); appendIrValue(buffer, source, value);
-                buffer.add(44); buffer.add(32);
+                buffer.append(" "); appendIrValue(buffer, source, value);
+                buffer.append(", ");
                 if (sourceSigned) {
-                    buffer.add(48);
+                    buffer.append("0");
                 } else {
                     if (sourceWidth == 32) appendDecimal(buffer, 2147483647);
                     else appendDecimal(buffer, 9223372036854775807);
@@ -2523,27 +1918,27 @@ fn emitExpression(
             val data = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, data); appendEquals(buffer);
             appendExtractValue(buffer); appendSpacedStringType(buffer);
-            appendIrValue(buffer, source, object); buffer.add(44); buffer.add(32);
-            buffer.add(48); appendNewline(buffer);
+            appendIrValue(buffer, source, object); buffer.append(", ");
+            buffer.append("0"); appendNewline(buffer);
             val length = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, length); appendEquals(buffer);
             appendExtractValue(buffer); appendSpacedStringType(buffer);
-            appendIrValue(buffer, source, object); buffer.add(44); buffer.add(32);
-            buffer.add(49); appendNewline(buffer);
+            appendIrValue(buffer, source, object); buffer.append(", ");
+            buffer.append("1"); appendNewline(buffer);
             val withData = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, withData); appendEquals(buffer);
             appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
-            buffer.add(32); appendUndef(buffer); buffer.add(44); buffer.add(32);
-            buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
+            buffer.append(" "); appendUndef(buffer); buffer.append(", ");
+            buffer.append("ptr ");
             appendValuePrefix(buffer); appendDecimal(buffer, data);
-            buffer.add(44); buffer.add(32); buffer.add(48); appendNewline(buffer);
+            buffer.append(", 0"); appendNewline(buffer);
             val slice = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, slice); appendEquals(buffer);
             appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
-            buffer.add(32); appendValuePrefix(buffer); appendDecimal(buffer, withData);
-            buffer.add(44); buffer.add(32); appendI64(buffer); buffer.add(32);
+            buffer.append(" "); appendValuePrefix(buffer); appendDecimal(buffer, withData);
+            buffer.append(", "); appendI64(buffer); buffer.append(" ");
             appendValuePrefix(buffer); appendDecimal(buffer, length);
-            buffer.add(44); buffer.add(32); buffer.add(49); appendNewline(buffer);
+            buffer.append(", 1"); appendNewline(buffer);
             return IrValue(2, 0, 0, slice, 13, 0, 5);
         }
         val structureRoot =
@@ -2570,12 +1965,11 @@ fn emitExpression(
             appendDecimal(buffer, extracted);
             appendEquals(buffer);
             appendExtractValue(buffer);
-            buffer.add(32);
+            buffer.append(" ");
             appendType(buffer, genericArguments, 8, objectNode.typeName, objectNode.typePointee);
-            buffer.add(32);
+            buffer.append(" ");
             appendIrValue(buffer, source, object);
-            buffer.add(44);
-            buffer.add(32);
+            buffer.append(", ");
             appendDecimal(buffer, fieldIndex as u64);
             appendNewline(buffer);
             return IrValue(
@@ -2618,8 +2012,8 @@ fn emitExpression(
             appendType(
                 buffer, genericArguments,
                 object.typeKind, object.typeName, object.typePointee);
-            buffer.add(32); appendIrValue(buffer, source, object);
-            buffer.add(44); buffer.add(32);
+            buffer.append(" "); appendIrValue(buffer, source, object);
+            buffer.append(", ");
             appendSource(
                 buffer, source,
                 nodes.data[indexRoot].start, nodes.data[indexRoot].end);
@@ -2656,21 +2050,16 @@ fn emitExpression(
             var operatorKind: u32 = 60;
             if (node.aux == 92) operatorKind = 61;
             appendOperator(buffer, operatorKind, node.typeKind);
-            buffer.add(32); appendNodeType(buffer, genericArguments, node);
-            buffer.add(32); buffer.add(37);
-            appendDecimal(buffer, loaded); buffer.add(44);
-            buffer.add(32); buffer.add(49);
+            buffer.append(" "); appendNodeType(buffer, genericArguments, node);
+            buffer.append(" %");
+            appendDecimal(buffer, loaded); buffer.append(",");
+            buffer.append(" 1");
             if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
-                buffer.add(46);
-                buffer.add(48); buffer.add(48);
-                buffer.add(48); buffer.add(48);
-                buffer.add(48); buffer.add(48);
-                buffer.add(101); buffer.add(43);
-                buffer.add(48); buffer.add(48);
+                buffer.append(".000000e+00");
             }
             appendNewline(buffer);
             appendStore(buffer); appendNodeType(buffer, genericArguments, node);
-            buffer.add(32); buffer.add(37);
+            buffer.append(" %");
             appendDecimal(buffer, updated); appendPointerValue(buffer, source, address);
             appendNewline(buffer);
             return IrValue(
@@ -2684,26 +2073,12 @@ fn emitExpression(
         appendValuePrefix(buffer);
         appendDecimal(buffer, hasValue);
         appendEquals(buffer);
-        buffer.add(101);
-        buffer.add(120);
-        buffer.add(116);
-        buffer.add(114);
-        buffer.add(97);
-        buffer.add(99);
-        buffer.add(116);
-        buffer.add(118);
-        buffer.add(97);
-        buffer.add(108);
-        buffer.add(117);
-        buffer.add(101);
-        buffer.add(32);
+        buffer.append("extractvalue ");
         appendType(
             buffer, genericArguments, operand.typeKind, operand.typeName, operand.typePointee);
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, operand);
-        buffer.add(44);
-        buffer.add(32);
-        buffer.add(48);
+        buffer.append(", 0");
         appendNewline(buffer);
         val validBlock = nextBlock(counter);
         val panicBlock = nextBlock(counter);
@@ -2712,88 +2087,21 @@ fn emitExpression(
             IrValue(2, 0, 0, hasValue, 2, 0, 0),
             validBlock, panicBlock);
         appendBlockLabel(buffer, counter, panicBlock);
-        buffer.add(32);
-        buffer.add(32);
-        buffer.add(99);
-        buffer.add(97);
-        buffer.add(108);
-        buffer.add(108);
-        buffer.add(32);
-        buffer.add(118);
-        buffer.add(111);
-        buffer.add(105);
-        buffer.add(100);
-        buffer.add(32);
-        buffer.add(64);
-        buffer.add(107);
-        buffer.add(95);
-        buffer.add(98);
-        buffer.add(111);
-        buffer.add(111);
-        buffer.add(116);
-        buffer.add(95);
-        buffer.add(112);
-        buffer.add(97);
-        buffer.add(110);
-        buffer.add(105);
-        buffer.add(99);
-        buffer.add(40);
-        buffer.add(112);
-        buffer.add(116);
-        buffer.add(114);
-        buffer.add(32);
-        buffer.add(110);
-        buffer.add(117);
-        buffer.add(108);
-        buffer.add(108);
-        buffer.add(44);
-        buffer.add(32);
-        buffer.add(105);
-        buffer.add(54);
-        buffer.add(52);
-        buffer.add(32);
-        buffer.add(48);
-        buffer.add(41);
+        buffer.append("  call void @k_boot_panic(ptr null, i64 0)");
         appendNewline(buffer);
-        buffer.add(32);
-        buffer.add(32);
-        buffer.add(117);
-        buffer.add(110);
-        buffer.add(114);
-        buffer.add(101);
-        buffer.add(97);
-        buffer.add(99);
-        buffer.add(104);
-        buffer.add(97);
-        buffer.add(98);
-        buffer.add(108);
-        buffer.add(101);
+        buffer.append("  unreachable");
         appendNewline(buffer);
         appendBlockLabel(buffer, counter, validBlock);
         val value = nextTemporary(counter);
         appendValuePrefix(buffer);
         appendDecimal(buffer, value);
         appendEquals(buffer);
-        buffer.add(101);
-        buffer.add(120);
-        buffer.add(116);
-        buffer.add(114);
-        buffer.add(97);
-        buffer.add(99);
-        buffer.add(116);
-        buffer.add(118);
-        buffer.add(97);
-        buffer.add(108);
-        buffer.add(117);
-        buffer.add(101);
-        buffer.add(32);
+        buffer.append("extractvalue ");
         appendType(
             buffer, genericArguments, operand.typeKind, operand.typeName, operand.typePointee);
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, operand);
-        buffer.add(44);
-        buffer.add(32);
-        buffer.add(49);
+        buffer.append(", 1");
         appendNewline(buffer);
         return IrValue(
             2, 0, 0, value,
@@ -2900,17 +2208,16 @@ fn emitExpression(
                 appendDecimal(buffer, aggregateTemporary);
                 appendEquals(buffer);
                 appendInsertValue(buffer);
-                buffer.add(32);
+                buffer.append(" ");
                 appendNodeType(buffer, genericArguments, node);
-                buffer.add(32);
+                buffer.append(" ");
                 if (index == 0) {
                     appendUndef(buffer);
                 } else {
-                    buffer.add(37);
+                    buffer.append("%");
                     appendDecimal(buffer, aggregateTemporary - 1);
                 }
-                buffer.add(44);
-                buffer.add(32);
+                buffer.append(", ");
                 
                 val fieldRoot = fieldRootAt(nodes, structureRoot, index);
                 val fieldTypeNode = nodes.data[fieldRoot - 1];
@@ -2924,11 +2231,10 @@ fn emitExpression(
                     buffer, genericArguments,
                     fieldType.kind, fieldType.name, fieldType.pointee);
                 
-                buffer.add(32);
+                buffer.append(" ");
                 appendIrValue(
                     buffer, source, values[index as u64]);
-                buffer.add(44);
-                buffer.add(32);
+                buffer.append(", ");
                 appendDecimal(buffer, index as u64);
                 appendNewline(buffer);
             }
@@ -2957,30 +2263,9 @@ fn emitExpression(
         }
         var temporary: u64 = 0;
         if (isPrint) {
-            buffer.add(32);
-            buffer.add(32);
+            buffer.append("  ");
             appendCall(buffer);
-            buffer.add(118);
-            buffer.add(111);
-            buffer.add(105);
-            buffer.add(100);
-            buffer.add(32);
-            buffer.add(64);
-            buffer.add(107);
-            buffer.add(95);
-            buffer.add(115);
-            buffer.add(116);
-            buffer.add(100);
-            buffer.add(95);
-            buffer.add(112);
-            buffer.add(114);
-            buffer.add(105);
-            buffer.add(110);
-            buffer.add(116);
-            buffer.add(95);
-            buffer.add(105);
-            buffer.add(51);
-            buffer.add(50);
+            buffer.append("void @k_std_print_i32");
         } else {
             if (node.typeKind != 1) {
                 temporary = nextTemporary(counter);
@@ -2988,8 +2273,7 @@ fn emitExpression(
                 appendDecimal(buffer, temporary);
                 appendEquals(buffer);
             } else {
-                buffer.add(32);
-                buffer.add(32);
+                buffer.append("  ");
             }
             appendCall(buffer);
             appendNodeType(buffer, genericArguments, node);
@@ -3000,13 +2284,13 @@ fn emitExpression(
                     val ownerRoot = structRootByName(source, nodes, ownerType);
                     val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
                     appendSource(buffer, source, ownerName.start, ownerName.end);
-                    buffer.add(46);
+                    buffer.append(".");
                 } else {
                     val ownerRoot = emitterAssociatedOwnerStructRoot(
                         nodes, functionRoot);
                     val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
                     appendSource(buffer, source, ownerName.start, ownerName.end);
-                    buffer.add(46);
+                    buffer.append(".");
                 }
             }
             appendSource(buffer, source, callee.start, callee.end);
@@ -3019,11 +2303,10 @@ fn emitExpression(
                 }
             }
         }
-        buffer.add(40);
+        buffer.append("(");
         for (index in 0..<argumentCount) {
             if (index > 0) {
-                buffer.add(44);
-                buffer.add(32);
+                buffer.append(", ");
             }
             if (functionRoot != nodes.length) {
                 val callParameter = nodes.data[
@@ -3058,10 +2341,10 @@ fn emitExpression(
                     values[index as u64].typeName,
                     values[index as u64].typePointee);
             }
-            buffer.add(32);
+            buffer.append(" ");
             appendIrValue(buffer, source, values[index as u64]);
         }
-        buffer.add(41);
+        buffer.append(")");
         appendNewline(buffer);
         k_boot_free(values as unit*);
         k_boot_free(arguments as unit*);
@@ -3123,7 +2406,7 @@ fn emitAutomaticDrop(
     }
     val live = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, live); appendEquals(buffer);
-    appendLoad(buffer); buffer.add(105); buffer.add(49);
+    appendLoad(buffer); buffer.append("i1");
     appendPtr(buffer); appendDropFlagName(buffer, name.start); appendNewline(buffer);
     val runBlock = nextBlock(counter);
     val endBlock = nextBlock(counter);
@@ -3131,9 +2414,8 @@ fn emitAutomaticDrop(
         buffer, source, IrValue(2, 0, 0, live, 2, 0, 0),
         runBlock, endBlock);
     appendBlockLabel(buffer, counter, runBlock);
-    appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
-    buffer.add(102); buffer.add(97); buffer.add(108);
-    buffer.add(115); buffer.add(101);
+    appendStore(buffer); buffer.append("i1 ");
+    buffer.append("false");
     appendPtr(buffer); appendDropFlagName(buffer, name.start); appendNewline(buffer);
     val loaded = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
@@ -3146,28 +2428,23 @@ fn emitAutomaticDrop(
     if (valueType.kind == 10) {
         val pointer = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
-        buffer.add(101); buffer.add(120); buffer.add(116); buffer.add(114);
-        buffer.add(97); buffer.add(99); buffer.add(116); buffer.add(118);
-        buffer.add(97); buffer.add(108); buffer.add(117); buffer.add(101);
-        appendSpacedStringType(buffer); buffer.add(37); appendDecimal(buffer, loaded);
-        buffer.add(44); buffer.add(32); buffer.add(48); appendNewline(buffer);
-        buffer.add(32); buffer.add(32); appendCall(buffer);
-        buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
+        buffer.append("extractvalue");
+        appendSpacedStringType(buffer); buffer.append("%"); appendDecimal(buffer, loaded);
+        buffer.append(", 0"); appendNewline(buffer);
+        buffer.append("  "); appendCall(buffer);
+        buffer.append("void");
         appendFunctionOpen(buffer);
-        buffer.add(107); buffer.add(95); buffer.add(115); buffer.add(116);
-        buffer.add(100); buffer.add(95); buffer.add(102); buffer.add(114);
-        buffer.add(101); buffer.add(101); buffer.add(40);
-        buffer.add(112); buffer.add(116); buffer.add(114); buffer.add(32);
-        buffer.add(37); appendDecimal(buffer, pointer);
-        buffer.add(41); appendNewline(buffer);
+        buffer.append("k_std_free(ptr ");
+        buffer.append("%"); appendDecimal(buffer, pointer);
+        buffer.append(")"); appendNewline(buffer);
     } else {
-        buffer.add(32); buffer.add(32); appendCall(buffer);
-        buffer.add(118); buffer.add(111); buffer.add(105); buffer.add(100);
+        buffer.append("  "); appendCall(buffer);
+        buffer.append("void");
         appendFunctionOpen(buffer);
         val structureRoot = structRootByName(source, nodes, valueType.name);
         val structureName = nodes.data[nodes.data[structureRoot].subtreeStart];
         appendSource(buffer, source, structureName.start, structureName.end);
-        buffer.add(46);
+        buffer.append(".");
         val freeName = nodes.data[nodes.data[freeRoot].subtreeStart];
         appendSource(buffer, source, freeName.start, freeName.end);
         val argumentCount = valueType.pointee / 65536;
@@ -3176,12 +2453,12 @@ fn emitAutomaticDrop(
                 buffer, genericArguments,
                 (valueType.pointee % 65536) as u64, argumentCount);
         }
-        buffer.add(40);
+        buffer.append("(");
         appendType(
             buffer, genericArguments,
             valueType.kind, valueType.name, valueType.pointee);
-        buffer.add(32); buffer.add(37); appendDecimal(buffer, loaded);
-        buffer.add(41); appendNewline(buffer);
+        buffer.append(" %"); appendDecimal(buffer, loaded);
+        buffer.append(")"); appendNewline(buffer);
     }
     appendBranch(buffer, endBlock);
     appendBlockLabel(buffer, counter, endBlock);
@@ -3273,14 +2550,14 @@ fn emitCollectionFor(
         elementKind = collectionNode.typePointee % 256;
         val pointer = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
-        appendGetElementPtr(buffer); buffer.add(32);
+        appendGetElementPtr(buffer); buffer.append(" ");
         appendNodeType(buffer, genericArguments, collectionNode);
         appendPtr(buffer); appendLocalPrefix(buffer);
         appendDecimal(buffer, nodes.data[collectionRoot].storage);
-        buffer.add(44); buffer.add(32);
-        appendI32(buffer); buffer.add(32); buffer.add(48);
-        buffer.add(44); buffer.add(32);
-        appendI32(buffer); buffer.add(32); buffer.add(48);
+        buffer.append(", ");
+        appendI32(buffer); buffer.append(" 0");
+        buffer.append(", ");
+        appendI32(buffer); buffer.append(" 0");
         appendNewline(buffer);
         data = IrValue(2, 0, 0, pointer, 9, elementName, elementKind);
         length = IrValue(
@@ -3291,21 +2568,21 @@ fn emitCollectionFor(
         appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
         appendNodeType(buffer, genericArguments, collectionNode);
-        buffer.add(32); appendIrValue(buffer, source, collectionValue);
-        buffer.add(44); buffer.add(32); buffer.add(48);
+        buffer.append(" "); appendIrValue(buffer, source, collectionValue);
+        buffer.append(", 0");
         appendNewline(buffer);
         data = IrValue(2, 0, 0, dataTemporary, 9, elementName, elementKind);
         val lengthTemporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
         appendNodeType(buffer, genericArguments, collectionNode);
-        buffer.add(32); appendIrValue(buffer, source, collectionValue);
-        buffer.add(44); buffer.add(32); buffer.add(49);
+        buffer.append(" "); appendIrValue(buffer, source, collectionValue);
+        buffer.append(", 1");
         appendNewline(buffer);
         length = IrValue(2, 0, 0, lengthTemporary, 7, 0, 0);
     }
-    appendStore(buffer); appendI64(buffer); buffer.add(32);
-    buffer.add(48); appendPtr(buffer); appendLocalPrefix(buffer);
+    appendStore(buffer); appendI64(buffer); buffer.append(" ");
+    buffer.append("0"); appendPtr(buffer); appendLocalPrefix(buffer);
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
     val conditionBlock = nextBlock(counter);
     val bodyBlock = nextBlock(counter);
@@ -3319,10 +2596,10 @@ fn emitCollectionFor(
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
     val compared = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
-    appendComparison(buffer, 66, 7); buffer.add(32);
-    appendI64(buffer); buffer.add(32);
+    appendComparison(buffer, 66, 7); buffer.append(" ");
+    appendI64(buffer); buffer.append(" ");
     appendIrValue(buffer, source, IrValue(2, 0, 0, index, 7, 0, 0));
-    buffer.add(44); buffer.add(32);
+    buffer.append(", ");
     appendIrValue(buffer, source, length); appendNewline(buffer);
     appendConditionalBranch(
         buffer, source, IrValue(2, 0, 0, compared, 2, 0, 0),
@@ -3330,11 +2607,11 @@ fn emitCollectionFor(
     appendBlockLabel(buffer, counter, bodyBlock);
     val elementPointer = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, elementPointer); appendEquals(buffer);
-    appendGetElementPtr(buffer); buffer.add(32);
+    appendGetElementPtr(buffer); buffer.append(" ");
     appendType(buffer, genericArguments, elementKind, elementName, 0);
     appendPointerValue(buffer, source, data);
-    buffer.add(44); buffer.add(32); appendI64(buffer);
-    buffer.add(32);
+    buffer.append(", "); appendI64(buffer);
+    buffer.append(" ");
     appendIrValue(buffer, source, IrValue(2, 0, 0, index, 7, 0, 0));
     appendNewline(buffer);
     val element = nextTemporary(counter);
@@ -3345,7 +2622,7 @@ fn emitCollectionFor(
         IrValue(2, 0, 0, elementPointer, 9, elementName, elementKind));
     appendNewline(buffer);
     appendStore(buffer); appendType(buffer, genericArguments, elementKind, elementName, 0);
-    buffer.add(32);
+    buffer.append(" ");
     appendIrValue(buffer, source, IrValue(2, 0, 0, element, elementKind, elementName, 0));
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, valueName.start);
     appendNewline(buffer);
@@ -3366,12 +2643,12 @@ fn emitCollectionFor(
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
     val advanced = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
-    appendOperator(buffer, 60, 7); buffer.add(32); appendI64(buffer);
-    buffer.add(32);
+    appendOperator(buffer, 60, 7); buffer.append(" "); appendI64(buffer);
+    buffer.append(" ");
     appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, 7, 0, 0));
-    buffer.add(44); buffer.add(32); buffer.add(49);
+    buffer.append(", 1");
     appendNewline(buffer);
-    appendStore(buffer); appendI64(buffer); buffer.add(32);
+    appendStore(buffer); appendI64(buffer); buffer.append(" ");
     appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, 7, 0, 0));
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, indexStorage);
     appendNewline(buffer); appendBranch(buffer, conditionBlock);
@@ -3426,12 +2703,12 @@ fn emitWhen(
                     val compared = nextTemporary(counter);
                     appendValuePrefix(buffer); appendDecimal(buffer, compared);
                     appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                    buffer.add(32);
+                    buffer.append(" ");
                     appendType(
                         buffer, genericArguments,
                         subject.typeKind, subject.typeName, subject.typePointee);
-                    buffer.add(32); appendIrValue(buffer, source, subject);
-                    buffer.add(44); buffer.add(32);
+                    buffer.append(" "); appendIrValue(buffer, source, subject);
+                    buffer.append(", ");
                     appendIrValue(buffer, source, condition); appendNewline(buffer);
                     condition = IrValue(2, 0, 0, compared, 2, 0, 0);
                 }
@@ -3525,48 +2802,43 @@ fn emitStatement(
             buffer, source, nodes, genericArguments, rightRoot, counter);
         val ascending = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, ascending); appendEquals(buffer);
-        appendComparison(buffer, 81, start.typeKind); buffer.add(32);
+        appendComparison(buffer, 81, start.typeKind); buffer.append(" ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32); appendIrValue(buffer, source, start);
-        buffer.add(44); buffer.add(32);
+        buffer.append(" "); appendIrValue(buffer, source, start);
+        buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val different = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, different); appendEquals(buffer);
-        appendComparison(buffer, 80, start.typeKind); buffer.add(32);
+        appendComparison(buffer, 80, start.typeKind); buffer.append(" ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32); appendIrValue(buffer, source, start);
-        buffer.add(44); buffer.add(32);
+        buffer.append(" "); appendIrValue(buffer, source, start);
+        buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val step = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, step); appendEquals(buffer);
-        buffer.add(115); buffer.add(101);
-        buffer.add(108); buffer.add(101);
-        buffer.add(99); buffer.add(116);
-        buffer.add(32); buffer.add(105);
-        buffer.add(49); buffer.add(32);
-        buffer.add(37); appendDecimal(buffer, ascending);
-        buffer.add(44); buffer.add(32);
+        buffer.append("select i1 ");
+        buffer.append("%"); appendDecimal(buffer, ascending);
+        buffer.append(", ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32); buffer.add(49);
-        buffer.add(44); buffer.add(32);
+        buffer.append(" 1, ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32); buffer.add(45);
-        buffer.add(49); appendNewline(buffer);
+        buffer.append(" -");
+        buffer.append("1"); appendNewline(buffer);
         var initial = start;
         if (collectionNode.aux == 93 || collectionNode.aux == 94) {
             val shifted = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, shifted); appendEquals(buffer);
-            appendOperator(buffer, 60, start.typeKind); buffer.add(32);
+            appendOperator(buffer, 60, start.typeKind); buffer.append(" ");
             appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-            buffer.add(32); appendIrValue(buffer, source, start);
-            buffer.add(44); buffer.add(32);
-            buffer.add(37); appendDecimal(buffer, step); appendNewline(buffer);
+            buffer.append(" "); appendIrValue(buffer, source, start);
+            buffer.append(", ");
+            buffer.append("%"); appendDecimal(buffer, step); appendNewline(buffer);
             initial = IrValue(
                 2, 0, 0, shifted, start.typeKind, start.typeName, start.typePointee);
         }
         val name = nodes.data[statement.subtreeStart];
         appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32); appendIrValue(buffer, source, initial);
+        buffer.append(" "); appendIrValue(buffer, source, initial);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
         val conditionBlock = nextBlock(counter);
@@ -3586,10 +2858,10 @@ fn emitStatement(
         if (collectionNode.aux == 88 || collectionNode.aux == 94)
             ascendingOperator = 66;
         appendComparison(buffer, ascendingOperator, start.typeKind);
-        buffer.add(32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32);
+        buffer.append(" "); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        buffer.append(" ");
         appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
-        buffer.add(44); buffer.add(32);
+        buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val descendingCompared = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, descendingCompared); appendEquals(buffer);
@@ -3597,37 +2869,27 @@ fn emitStatement(
         if (collectionNode.aux == 88 || collectionNode.aux == 94)
             descendingOperator = 67;
         appendComparison(buffer, descendingOperator, start.typeKind);
-        buffer.add(32); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32);
+        buffer.append(" "); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
+        buffer.append(" ");
         appendIrValue(buffer, source, IrValue(2, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
-        buffer.add(44); buffer.add(32);
+        buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
         val compared = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
-        buffer.add(115); buffer.add(101);
-        buffer.add(108); buffer.add(101);
-        buffer.add(99); buffer.add(116);
-        buffer.add(32); buffer.add(105);
-        buffer.add(49); buffer.add(32);
-        buffer.add(37); appendDecimal(buffer, ascending);
-        buffer.add(44); buffer.add(32);
-        buffer.add(105); buffer.add(49);
-        buffer.add(32); buffer.add(37);
-        appendDecimal(buffer, ascendingCompared); buffer.add(44);
-        buffer.add(32); buffer.add(105);
-        buffer.add(49); buffer.add(32);
-        buffer.add(37); appendDecimal(buffer, descendingCompared);
+        buffer.append("select i1 ");
+        buffer.append("%"); appendDecimal(buffer, ascending);
+        buffer.append(", i1 %");
+        appendDecimal(buffer, ascendingCompared); buffer.append(",");
+        buffer.append(" i1 ");
+        buffer.append("%"); appendDecimal(buffer, descendingCompared);
         appendNewline(buffer);
         var conditionValue = IrValue(2, 0, 0, compared, 2, 0, 0);
         if (collectionNode.aux != 87) {
             val nonempty = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, nonempty); appendEquals(buffer);
-            buffer.add(97); buffer.add(110);
-            buffer.add(100); buffer.add(32);
-            buffer.add(105); buffer.add(49);
-            buffer.add(32); buffer.add(37);
-            appendDecimal(buffer, compared); buffer.add(44);
-            buffer.add(32); buffer.add(37);
+            buffer.append("and i1 %");
+            appendDecimal(buffer, compared); buffer.append(",");
+            buffer.append(" %");
             appendDecimal(buffer, different); appendNewline(buffer);
             conditionValue = IrValue(2, 0, 0, nonempty, 2, 0, 0);
         }
@@ -3655,11 +2917,11 @@ fn emitStatement(
         if (collectionNode.aux == 87 || collectionNode.aux == 93) {
             val terminal = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, terminal); appendEquals(buffer);
-            appendComparison(buffer, 79, start.typeKind); buffer.add(32);
+            appendComparison(buffer, 79, start.typeKind); buffer.append(" ");
             appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-            buffer.add(32); buffer.add(37);
-            appendDecimal(buffer, loaded); buffer.add(44);
-            buffer.add(32); appendIrValue(buffer, source, finish);
+            buffer.append(" %");
+            appendDecimal(buffer, loaded); buffer.append(",");
+            buffer.append(" "); appendIrValue(buffer, source, finish);
             appendNewline(buffer);
             val advanceBlock = nextBlock(counter);
             appendConditionalBranch(
@@ -3669,14 +2931,14 @@ fn emitStatement(
         }
         val advanced = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
-        appendOperator(buffer, 60, start.typeKind); buffer.add(32);
-        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); buffer.add(32);
+        appendOperator(buffer, 60, start.typeKind); buffer.append(" ");
+        appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); buffer.append(" ");
         appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, start.typeKind, start.typeName, start.typePointee));
-        buffer.add(44); buffer.add(32);
-        buffer.add(37); appendDecimal(buffer, step);
+        buffer.append(", ");
+        buffer.append("%"); appendDecimal(buffer, step);
         appendNewline(buffer);
         appendStore(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, start.typeKind, start.typeName, start.typePointee));
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer); appendBranch(buffer, conditionBlock);
@@ -3718,15 +2980,15 @@ fn emitStatement(
         appendStore(buffer);
         appendType(
             buffer, genericArguments, storageKind, storageName, storagePointee);
-        buffer.add(32);
+        buffer.append(" ");
         appendIrValue(buffer, source, initializer);
         appendPtr(buffer);
         appendLocalPrefix(buffer);
         appendDecimal(buffer, name.start);
         appendNewline(buffer);
         if ((statement.ownership / 2) % 2 == 1) {
-            appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
-            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            appendStore(buffer); buffer.append("i1 ");
+            buffer.append("true");
             appendPtr(buffer); appendDropFlagName(buffer, name.start);
             appendNewline(buffer);
             defers.add(root + 9223372036854775808);
@@ -3738,16 +3000,7 @@ fn emitStatement(
                 emitDeferRange(
                     buffer, source, nodes, genericArguments,
                     counter, defers, defers.length, 0);
-                buffer.add(32);
-                buffer.add(32);
-                buffer.add(114);
-                buffer.add(101);
-                buffer.add(116);
-                buffer.add(32);
-                buffer.add(118);
-                buffer.add(111);
-                buffer.add(105);
-                buffer.add(100);
+                buffer.append("  ret void");
             } else {
                 val value = emitExpression(
                     buffer, source, nodes, genericArguments,
@@ -3761,47 +3014,17 @@ fn emitStatement(
                     appendValuePrefix(buffer);
                     appendDecimal(buffer, tagged);
                     appendEquals(buffer);
-                    buffer.add(105);
-                    buffer.add(110);
-                    buffer.add(115);
-                    buffer.add(101);
-                    buffer.add(114);
-                    buffer.add(116);
-                    buffer.add(118);
-                    buffer.add(97);
-                    buffer.add(108);
-                    buffer.add(117);
-                    buffer.add(101);
-                    buffer.add(32);
+                    buffer.append("insertvalue ");
                     appendType(
                         buffer, genericArguments, statement.typeKind,
                         statement.typeName, statement.typePointee);
-                    buffer.add(32);
-                    buffer.add(117);
-                    buffer.add(110);
-                    buffer.add(100);
-                    buffer.add(101);
-                    buffer.add(102);
-                    buffer.add(44);
-                    buffer.add(32);
-                    buffer.add(105);
-                    buffer.add(49);
-                    buffer.add(32);
+                    buffer.append(" undef, i1 ");
                     if (statement.conversionKind == 1) {
-                        buffer.add(116);
-                        buffer.add(114);
-                        buffer.add(117);
-                        buffer.add(101);
+                        buffer.append("true");
                     } else {
-                        buffer.add(102);
-                        buffer.add(97);
-                        buffer.add(108);
-                        buffer.add(115);
-                        buffer.add(101);
+                        buffer.append("false");
                     }
-                    buffer.add(44);
-                    buffer.add(32);
-                    buffer.add(48);
+                    buffer.append(", 0");
                     appendNewline(buffer);
                     returned = IrValue(
                         2, 0, 0, tagged,
@@ -3812,32 +3035,19 @@ fn emitStatement(
                         appendValuePrefix(buffer);
                         appendDecimal(buffer, withPayload);
                         appendEquals(buffer);
-                        buffer.add(105);
-                        buffer.add(110);
-                        buffer.add(115);
-                        buffer.add(101);
-                        buffer.add(114);
-                        buffer.add(116);
-                        buffer.add(118);
-                        buffer.add(97);
-                        buffer.add(108);
-                        buffer.add(117);
-                        buffer.add(101);
-                        buffer.add(32);
+                        buffer.append("insertvalue ");
                         appendType(
                             buffer, genericArguments, statement.typeKind,
                             statement.typeName, statement.typePointee);
-                        buffer.add(32);
+                        buffer.append(" ");
                         appendIrValue(buffer, source, returned);
-                        buffer.add(44);
-                        buffer.add(32);
+                        buffer.append(", ");
                         appendType(
                             buffer, genericArguments, statement.typePointee,
                             statement.typeName, 0);
-                        buffer.add(32);
+                        buffer.append(" ");
                         appendIrValue(buffer, source, value);
-                        buffer.add(44);
-                        buffer.add(32);
+                        buffer.append(", ");
                         appendDecimal(buffer, 1);
                         appendNewline(buffer);
                         returned = IrValue(
@@ -3849,16 +3059,11 @@ fn emitStatement(
                 emitDeferRange(
                     buffer, source, nodes, genericArguments,
                     counter, defers, defers.length, 0);
-                buffer.add(32);
-                buffer.add(32);
-                buffer.add(114);
-                buffer.add(101);
-                buffer.add(116);
-                buffer.add(32);
+                buffer.append("  ret ");
                 appendType(
                     buffer, genericArguments, returned.typeKind,
                     returned.typeName, returned.typePointee);
-                buffer.add(32);
+                buffer.append(" ");
                 appendIrValue(buffer, source, returned);
             }
             appendNewline(buffer);
@@ -4124,7 +3329,7 @@ fn emitVariableAlloca(
     if ((statement.ownership / 2) % 2 == 1) {
         appendValuePrefix(buffer); appendDropFlagName(buffer, name.start);
         appendEquals(buffer); appendAlloca(buffer);
-        buffer.add(105); buffer.add(49); appendNewline(buffer);
+        buffer.append("i1"); appendNewline(buffer);
     }
 }
 
@@ -4215,14 +3420,7 @@ fn emitFunction(
     val returnType = nodes.data[returnTypeRoot(nodes, functionRoot)];
     val parameterCount = functionParameterCount(function);
     if (functionIsExtern(function)) {
-        buffer.add(100);
-        buffer.add(101);
-        buffer.add(99);
-        buffer.add(108);
-        buffer.add(97);
-        buffer.add(114);
-        buffer.add(101);
-        buffer.add(32);
+        buffer.append("declare ");
     } else {
         appendDefine(buffer);
     }
@@ -4246,13 +3444,13 @@ fn emitFunction(
         val ownerRoot = structRootByName(source, nodes, receiverType.typeName);
         val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
         appendSource(buffer, source, ownerName.start, ownerName.end);
-        buffer.add(46);
+        buffer.append(".");
     } else if (function.conversionKind == 2) {
         val ownerRoot = emitterAssociatedOwnerStructRoot(
             nodes, functionRoot);
         val ownerName = nodes.data[nodes.data[ownerRoot].subtreeStart];
         appendSource(buffer, source, ownerName.start, ownerName.end);
-        buffer.add(46);
+        buffer.append(".");
     }
     appendSource(buffer, source, name.start, name.end);
     if (specializationCount > 0) {
@@ -4260,12 +3458,11 @@ fn emitFunction(
             buffer, genericArguments,
             specializationArgumentStart, specializationCount);
     }
-    buffer.add(40);
+    buffer.append("(");
     for (parameterIndex in 0..<parameterCount) {
         val parameterPosition = parameterIndex + 1;
         if (parameterIndex > 0) {
-            buffer.add(44);
-            buffer.add(32);
+            buffer.append(", ");
         }
         val parameter = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition)];
@@ -4277,13 +3474,9 @@ fn emitFunction(
         } else {
             appendNodeType(buffer, genericArguments, parameterType);
         }
-        buffer.add(32);
-        buffer.add(37);
+        buffer.append(" %");
         if (parameter.aux != 2) {
-            buffer.add(97);
-            buffer.add(114);
-            buffer.add(103);
-            buffer.add(46);
+            buffer.append("arg.");
         } else {
             appendLocalPrefix(buffer);
         }
@@ -4294,13 +3487,12 @@ fn emitFunction(
                 buffer, source, parameterName.start, parameterName.end);
         }
     }
-    buffer.add(41);
+    buffer.append(")");
     if (functionIsExtern(function)) {
         appendNewline(buffer);
         return true;
     }
-    buffer.add(32);
-    buffer.add(123);
+    buffer.append(" {");
     appendNewline(buffer);
     appendEntry(buffer);
     appendNewline(buffer);
@@ -4327,12 +3519,7 @@ fn emitFunction(
         appendNewline(buffer);
         appendStore(buffer);
         appendNodeType(buffer, genericArguments, parameterType);
-        buffer.add(32);
-        buffer.add(37);
-        buffer.add(97);
-        buffer.add(114);
-        buffer.add(103);
-        buffer.add(46);
+        buffer.append(" %arg.");
         appendSource(
             buffer, source, parameterName.start, parameterName.end);
         appendPtr(buffer);
@@ -4342,9 +3529,9 @@ fn emitFunction(
         if ((parameter.ownership / 2) % 2 == 1) {
             appendValuePrefix(buffer); appendDropFlagName(buffer, parameterName.start);
             appendEquals(buffer); appendAlloca(buffer);
-            buffer.add(105); buffer.add(49); appendNewline(buffer);
-            appendStore(buffer); buffer.add(105); buffer.add(49); buffer.add(32);
-            buffer.add(116); buffer.add(114); buffer.add(117); buffer.add(101);
+            buffer.append("i1"); appendNewline(buffer);
+            appendStore(buffer); buffer.append("i1 ");
+            buffer.append("true");
             appendPtr(buffer); appendDropFlagName(buffer, parameterName.start);
             appendNewline(buffer);
             defers.add(
@@ -4366,16 +3553,7 @@ fn emitFunction(
         if (functionInfersReturn(function) && function.typeKind == 1)
             returnsUnit = true;
         if (returnsUnit) {
-            buffer.add(32);
-            buffer.add(32);
-            buffer.add(114);
-            buffer.add(101);
-            buffer.add(116);
-            buffer.add(32);
-            buffer.add(118);
-            buffer.add(111);
-            buffer.add(105);
-            buffer.add(100);
+            buffer.append("  ret void");
             appendNewline(buffer);
         }
     }
@@ -4507,29 +3685,23 @@ fn emitStruct(
     val nodes: List<AstNode>, var genericArguments: List<TypeValue>, structureRoot: u64) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
-    buffer.add(37);
-    buffer.add(115);
+    buffer.append("%s");
     appendDecimal(
         buffer, sourceHash(source, name.start, name.end));
     appendEquals(buffer);
-    buffer.add(116);
-    buffer.add(121);
-    buffer.add(112);
-    buffer.add(101);
-    buffer.add(32);
-    buffer.add(123);
+    buffer.append("type {");
     val fieldCount = structFieldCount(structure);
     for (index in 0..<fieldCount) {
         if (index > 0) {
-            buffer.add(44);
+            buffer.append(",");
         }
-        buffer.add(32);
+        buffer.append(" ");
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         appendNodeType(buffer, genericArguments, nodes.data[fieldRoot - 1]);
     }
-    if (fieldCount > 0) buffer.add(32);
-    buffer.add(125);
+    if (fieldCount > 0) buffer.append(" ");
+    buffer.append("}");
     appendNewline(buffer);
 }
 
@@ -4572,24 +3744,18 @@ fn emitSpecializedStruct(
     structureRoot: u64, argumentStart: u64, argumentCount: u32) {
     val structure = nodes.data[structureRoot];
     val name = nodes.data[structure.subtreeStart];
-    buffer.add(37);
-    buffer.add(115);
+    buffer.append("%s");
     appendDecimal(
         buffer, sourceHash(source, name.start, name.end));
     appendStructSpecializationSuffix(buffer, genericArguments, argumentStart, argumentCount);
     appendEquals(buffer);
-    buffer.add(116);
-    buffer.add(121);
-    buffer.add(112);
-    buffer.add(101);
-    buffer.add(32);
-    buffer.add(123);
+    buffer.append("type {");
     val fieldCount = structFieldCount(structure);
     for (index in 0..<fieldCount) {
         if (index > 0) {
-            buffer.add(44);
+            buffer.append(",");
         }
-        buffer.add(32);
+        buffer.append(" ");
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         val fieldTypeNode = nodes.data[fieldRoot - 1];
@@ -4601,8 +3767,8 @@ fn emitSpecializedStruct(
             buffer, genericArguments,
             fieldType.kind, fieldType.name, fieldType.pointee);
     }
-    if (fieldCount > 0) buffer.add(32);
-    buffer.add(125);
+    if (fieldCount > 0) buffer.append(" ");
+    buffer.append("}");
     appendNewline(buffer);
 }
 
