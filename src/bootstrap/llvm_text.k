@@ -218,8 +218,8 @@ fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
 }
 
 fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
-    var floating = typeKind == 17;
-    if (typeKind == 18) floating = true;
+    var floating = typeKind == typeKindValue(TypeKind.F32);
+    if (typeKind == typeKindValue(TypeKind.F64)) floating = true;
     if (floating) buffer.append("f");
     if (kind == tokenKindValue(TokenKind.Plus)) {
         buffer.append("add");
@@ -235,9 +235,9 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
             buffer.append("di");
             buffer.append("v"); return;
         }
-        var unsigned = typeKind == 5;
-        if (typeKind == 6) unsigned = true;
-        if (typeKind == 7) unsigned = true;
+        var unsigned = typeKind == typeKindValue(TypeKind.U8);
+        if (typeKind == typeKindValue(TypeKind.U32)) unsigned = true;
+        if (typeKind == typeKindValue(TypeKind.U64)) unsigned = true;
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -250,9 +250,9 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
             buffer.append("re");
             buffer.append("m"); return;
         }
-        var unsigned = typeKind == 5;
-        if (typeKind == 6) unsigned = true;
-        if (typeKind == 7) unsigned = true;
+        var unsigned = typeKind == typeKindValue(TypeKind.U8);
+        if (typeKind == typeKindValue(TypeKind.U32)) unsigned = true;
+        if (typeKind == typeKindValue(TypeKind.U64)) unsigned = true;
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -316,13 +316,13 @@ fn appendFloatCastBound(
     lower: bool
 ) {
     if (lower) {
-        if (targetKind == 3) {
+        if (targetKind == typeKindValue(TypeKind.I32)) {
             var magnitude: u64 = 2147483649;
-            if (sourceKind == 17) magnitude = 2147483648;
+            if (sourceKind == typeKindValue(TypeKind.F32)) magnitude = 2147483648;
             appendFloatIntegerConstant(buffer, true, magnitude, false);
             return;
         }
-        if (targetKind == 4) {
+        if (targetKind == typeKindValue(TypeKind.I64)) {
             appendFloatIntegerConstant(
                 buffer, true, 9223372036854775808, false);
             return;
@@ -330,20 +330,20 @@ fn appendFloatCastBound(
         appendFloatIntegerConstant(buffer, true, 1, false);
         return;
     }
-    if (targetKind == 3) {
+    if (targetKind == typeKindValue(TypeKind.I32)) {
         appendFloatIntegerConstant(buffer, false, 2147483648, false);
     } else {
-        if (targetKind == 4) {
+        if (targetKind == typeKindValue(TypeKind.I64)) {
             appendFloatIntegerConstant(
                 buffer, false, 9223372036854775808, false);
         } else {
-            if (targetKind == 5) {
+            if (targetKind == typeKindValue(TypeKind.U8)) {
                 appendFloatIntegerConstant(buffer, false, 256, false);
             }
-            if (targetKind == 6) {
+            if (targetKind == typeKindValue(TypeKind.U32)) {
                 appendFloatIntegerConstant(buffer, false, 4294967296, false);
             }
-            if (targetKind == 7) {
+            if (targetKind == typeKindValue(TypeKind.U64)) {
                 appendFloatIntegerConstant(
                     buffer, false, 1844674407370955161, true);
             }
@@ -377,7 +377,7 @@ fn appendStructSpecializationSuffix(
     for (index in 0..<count) {
         val type = arguments.data[start + index as u64];
         buffer.append("_");
-        appendDecimal(buffer, type.kind as u64);
+        appendDecimal(buffer, typeKindValue(type.kind) as u64);
         buffer.append("_");
         appendDecimal(buffer, type.name);
         buffer.append("_");
@@ -388,24 +388,24 @@ fn appendStructSpecializationSuffix(
 fn appendType(
     var buffer: StringBuilder, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32) {
-    if (kind == 1) {
+    if (kind == typeKindValue(TypeKind.Unit)) {
         buffer.append("void");
     }
-    if (kind == 2) {
+    if (kind == typeKindValue(TypeKind.Bool)) {
         buffer.append("i1");
     }
-    if (kind == 3) appendI32(buffer);
-    if (kind == 4) {
+    if (kind == typeKindValue(TypeKind.I32)) appendI32(buffer);
+    if (kind == typeKindValue(TypeKind.I64)) {
         buffer.append("i64");
     }
-    if (kind == 5) {
+    if (kind == typeKindValue(TypeKind.U8)) {
         buffer.append("i8");
     }
-    if (kind == 6) appendI32(buffer);
-    if (kind == 7) {
+    if (kind == typeKindValue(TypeKind.U32)) appendI32(buffer);
+    if (kind == typeKindValue(TypeKind.U64)) {
         buffer.append("i64");
     }
-    if (kind == 8) {
+    if (kind == typeKindValue(TypeKind.Struct)) {
         buffer.append("%s");
         appendDecimal(buffer, name);
         val start = pointee % 65536;
@@ -414,29 +414,29 @@ fn appendType(
             appendStructSpecializationSuffix(buffer, genericArguments, start as u64, count);
         }
     }
-    if (kind == 9) {
+    if (kind == typeKindValue(TypeKind.Pointer)) {
         buffer.append("ptr");
     }
-    if (kind == 10) {
+    if (kind == typeKindValue(TypeKind.String)) {
         appendStringType(buffer);
     }
-    if (kind == 17) {
+    if (kind == typeKindValue(TypeKind.F32)) {
         buffer.append("float");
     }
-    if (kind == 18) {
+    if (kind == typeKindValue(TypeKind.F64)) {
         buffer.append("double");
     }
-    if (kind == 11) appendI32(buffer);
-    if (kind == 20) appendI32(buffer);
-    if (kind == 13) {
+    if (kind == typeKindValue(TypeKind.IntegerLiteral)) appendI32(buffer);
+    if (kind == typeKindValue(TypeKind.Enum)) appendI32(buffer);
+    if (kind == typeKindValue(TypeKind.Slice)) {
         buffer.append("{ ptr, i64 }");
     }
-    if (kind == 15) {
+    if (kind == typeKindValue(TypeKind.Nullable)) {
         buffer.append("{ i1, ");
         appendType(buffer, genericArguments, pointee, name, 0);
         buffer.append(" }");
     }
-    if (kind == 19) {
+    if (kind == typeKindValue(TypeKind.Array)) {
         buffer.append("[");
         appendDecimal(buffer, (pointee / 256) as u64);
         buffer.append(" x ");
@@ -496,7 +496,7 @@ fn appendSpecializationSuffix(
     for (index in 0..<count) {
         val type = arguments.data[start + index as u64];
         buffer.append("_");
-        appendDecimal(buffer, type.kind as u64);
+        appendDecimal(buffer, typeKindValue(type.kind) as u64);
         buffer.append("_");
         appendDecimal(buffer, type.name);
         buffer.append("_");
@@ -654,32 +654,32 @@ fn substituteStructEmitterType(
     source: Source, val nodes: List<AstNode>, structureRoot: u64,
     pattern: TypeValue, val arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
-    if (pattern.kind == 14) {
+    if (pattern.kind == TypeKind.TypeParameter) {
         val position = emitterStructTypeParameterPosition(
             source, nodes, structureRoot, pattern.name);
         if (position >= count) return invalidType();
         return arguments.data[argumentStart + position as u64];
     }
-    if (pattern.kind == 15) {
+    if (pattern.kind == TypeKind.Nullable) {
         val inner = substituteStructEmitterType(
             source, nodes, structureRoot,
-            TypeValue(pattern.pointee, pattern.name, 0),
+            TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(15, inner.name, inner.kind);
+        return TypeValue(TypeKind.Nullable, inner.name, typeKindValue(inner.kind));
     }
-    if (pattern.kind == 9) {
+    if (pattern.kind == TypeKind.Pointer) {
         val inner = substituteStructEmitterType(
             source, nodes, structureRoot,
-            TypeValue(pattern.pointee, pattern.name, 0),
+            TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(9, inner.name, inner.kind);
+        return TypeValue(TypeKind.Pointer, inner.name, typeKindValue(inner.kind));
     }
-    if (pattern.kind == 13) {
+    if (pattern.kind == TypeKind.Slice) {
         val inner = substituteStructEmitterType(
             source, nodes, structureRoot,
-            TypeValue(pattern.pointee, pattern.name, 0),
+            TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(13, inner.name, inner.kind);
+        return TypeValue(TypeKind.Slice, inner.name, typeKindValue(inner.kind));
     }
     return pattern;
 }
@@ -722,25 +722,25 @@ fn alignUp(value: u64, alignment: u64) =>
 fn typeAlignment(
     source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32): u64 {
-    if (kind == 2) return 1;
-    if (kind == 5) return 1;
-    if (kind == 3) return 4;
-    if (kind == 6) return 4;
-    if (kind == 11) return 4;
-    if (kind == 20) return 4;
-    if (kind == 17) return 4;
-    if (kind == 4) return 8;
-    if (kind == 7) return 8;
-    if (kind == 9) return 8;
-    if (kind == 10) return 24;
-    if (kind == 18) return 8;
-    if (kind == 13) return 8;
-    if (kind == 19) {
+    if (kind == typeKindValue(TypeKind.Bool)) return 1;
+    if (kind == typeKindValue(TypeKind.U8)) return 1;
+    if (kind == typeKindValue(TypeKind.I32)) return 4;
+    if (kind == typeKindValue(TypeKind.U32)) return 4;
+    if (kind == typeKindValue(TypeKind.IntegerLiteral)) return 4;
+    if (kind == typeKindValue(TypeKind.Enum)) return 4;
+    if (kind == typeKindValue(TypeKind.F32)) return 4;
+    if (kind == typeKindValue(TypeKind.I64)) return 8;
+    if (kind == typeKindValue(TypeKind.U64)) return 8;
+    if (kind == typeKindValue(TypeKind.Pointer)) return 8;
+    if (kind == typeKindValue(TypeKind.String)) return 24;
+    if (kind == typeKindValue(TypeKind.F64)) return 8;
+    if (kind == typeKindValue(TypeKind.Slice)) return 8;
+    if (kind == typeKindValue(TypeKind.Array)) {
         return typeAlignment(
             source, nodes, genericArguments,
             pointee % 256, name, 0);
     }
-    if (kind == 8) {
+    if (kind == typeKindValue(TypeKind.Struct)) {
         val structureRoot = structRootByName(source, nodes, name);
         val structure = nodes.data[structureRoot];
         val fieldCount = emitterStructFieldCount(structure);
@@ -750,14 +750,14 @@ fn typeAlignment(
         for (index in 0..<fieldCount) {
             val typeNode = nodes.data[
                 emitterFieldRootAt(nodes, structureRoot, index) - 1];
-            var fieldType = TypeValue(typeNode.typeKind, typeNode.typeName, typeNode.typePointee);
+            var fieldType = TypeValue(typeKindFromValue(typeNode.typeKind), typeNode.typeName, typeNode.typePointee);
             if (count > 0) {
                 fieldType = substituteStructEmitterType(
                     source, nodes, structureRoot, fieldType,
                     genericArguments, start as u64, count);
             }
             val fieldAlignment = typeAlignment(
-                source, nodes, genericArguments, fieldType.kind,
+                source, nodes, genericArguments, typeKindValue(fieldType.kind),
                 fieldType.name, fieldType.pointee);
             if (fieldAlignment > alignment) {
                 alignment = fieldAlignment;
@@ -771,28 +771,28 @@ fn typeAlignment(
 fn typeSize(
     source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32): u64 {
-    if (kind == 1) return 0;
-    if (kind == 2) return 1;
-    if (kind == 5) return 1;
-    if (kind == 3) return 4;
-    if (kind == 6) return 4;
-    if (kind == 11) return 4;
-    if (kind == 20) return 4;
-    if (kind == 17) return 4;
-    if (kind == 4) return 8;
-    if (kind == 7) return 8;
-    if (kind == 9) return 8;
-    if (kind == 10) return 8;
-    if (kind == 18) return 8;
-    if (kind == 13) return 16;
-    if (kind == 19) {
+    if (kind == typeKindValue(TypeKind.Unit)) return 0;
+    if (kind == typeKindValue(TypeKind.Bool)) return 1;
+    if (kind == typeKindValue(TypeKind.U8)) return 1;
+    if (kind == typeKindValue(TypeKind.I32)) return 4;
+    if (kind == typeKindValue(TypeKind.U32)) return 4;
+    if (kind == typeKindValue(TypeKind.IntegerLiteral)) return 4;
+    if (kind == typeKindValue(TypeKind.Enum)) return 4;
+    if (kind == typeKindValue(TypeKind.F32)) return 4;
+    if (kind == typeKindValue(TypeKind.I64)) return 8;
+    if (kind == typeKindValue(TypeKind.U64)) return 8;
+    if (kind == typeKindValue(TypeKind.Pointer)) return 8;
+    if (kind == typeKindValue(TypeKind.String)) return 8;
+    if (kind == typeKindValue(TypeKind.F64)) return 8;
+    if (kind == typeKindValue(TypeKind.Slice)) return 16;
+    if (kind == typeKindValue(TypeKind.Array)) {
         val elementSize = typeSize(
             source, nodes, genericArguments,
             pointee % 256, name, 0);
         val count = (pointee / 256) as u64;
         return count * elementSize;
     }
-    if (kind == 8) {
+    if (kind == typeKindValue(TypeKind.Struct)) {
         val structureRoot = structRootByName(source, nodes, name);
         val structure = nodes.data[structureRoot];
         val fieldCount = emitterStructFieldCount(structure);
@@ -802,18 +802,18 @@ fn typeSize(
         for (index in 0..<fieldCount) {
             val typeNode = nodes.data[
                 emitterFieldRootAt(nodes, structureRoot, index) - 1];
-            var fieldType = TypeValue(typeNode.typeKind, typeNode.typeName, typeNode.typePointee);
+            var fieldType = TypeValue(typeKindFromValue(typeNode.typeKind), typeNode.typeName, typeNode.typePointee);
             if (count > 0) {
                 fieldType = substituteStructEmitterType(
                     source, nodes, structureRoot, fieldType,
                     genericArguments, start as u64, count);
             }
             val alignment = typeAlignment(
-                source, nodes, genericArguments, fieldType.kind,
+                source, nodes, genericArguments, typeKindValue(fieldType.kind),
                 fieldType.name, fieldType.pointee);
             size = alignUp(size, alignment);
             size += typeSize(
-                source, nodes, genericArguments, fieldType.kind,
+                source, nodes, genericArguments, typeKindValue(fieldType.kind),
                 fieldType.name, fieldType.pointee);
         }
         return alignUp(
@@ -868,8 +868,8 @@ fn emitImplicitIntegerWiden(
     var genericArguments: List<TypeValue>, value: IrValue,
     targetKind: u32, targetName: u64, targetPointee: u32,
     var counter: IrCounter): IrValue {
-    val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
-    val targetType = TypeValue(targetKind, targetName, targetPointee);
+    val sourceType = TypeValue(typeKindFromValue(value.typeKind), value.typeName, value.typePointee);
+    val targetType = TypeValue(typeKindFromValue(targetKind), targetName, targetPointee);
     if (!integerImplicitlyWidens(sourceType, targetType)) return value;
     val temporary = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
@@ -942,10 +942,10 @@ fn appendComparison(
     if (kind == tokenKindValue(TokenKind.BangEqual)) {
         buffer.append("ne");
     }
-    var unsigned = typeKind == 5;
-    if (typeKind == 6) unsigned = true;
-    if (typeKind == 7) unsigned = true;
-    if (typeKind == 20) unsigned = true;
+    var unsigned = typeKind == typeKindValue(TypeKind.U8);
+    if (typeKind == typeKindValue(TypeKind.U32)) unsigned = true;
+    if (typeKind == typeKindValue(TypeKind.U64)) unsigned = true;
+    if (typeKind == typeKindValue(TypeKind.Enum)) unsigned = true;
     if (kind == tokenKindValue(TokenKind.Less)) {
         if (unsigned) {
             buffer.append("u");
@@ -985,7 +985,7 @@ fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
 
 fn emitClearAutomaticDrop(
     var buffer: StringBuilder, val nodes: List<AstNode>, root: u64) {
-    if (nodes.data[root].typeKind != 8) return;
+    if (nodes.data[root].typeKind != typeKindValue(TypeKind.Struct)) return;
     var ownerRoot = root;
     var owner = nodes.data[ownerRoot];
     while (owner.kind == AstKind.Member || owner.kind == AstKind.Postfix) {
@@ -1016,7 +1016,7 @@ fn emitAddress(
     if (node.kind == AstKind.Identifier) {
         return IrValue(
             4, node.start, node.end, node.storage,
-            9, node.typeName, node.typeKind);
+            typeKindValue(TypeKind.Pointer), node.typeName, node.typeKind);
     }
     if (node.kind == AstKind.Unary) {
         if (node.aux == tokenKindValue(TokenKind.Star)) {
@@ -1051,7 +1051,7 @@ fn emitAddress(
         appendDecimal(buffer, fieldIndex as u64);
         appendNewline(buffer);
         return IrValue(
-            2, 0, 0, temporary, 9,
+            2, 0, 0, temporary, typeKindValue(TypeKind.Pointer),
             node.typeName, node.typeKind);
     }
     if (node.kind == AstKind.Index) {
@@ -1061,7 +1061,7 @@ fn emitAddress(
             buffer, source, nodes, genericArguments,
             objectRoot, counter);
         var data = object;
-        if (object.typeKind == 13) {
+        if (object.typeKind == typeKindValue(TypeKind.Slice)) {
             val extracted = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, extracted);
             appendEquals(buffer); appendExtractValue(buffer);
@@ -1070,7 +1070,7 @@ fn emitAddress(
                 object.typeKind, object.typeName, object.typePointee);
             buffer.append(" "); appendIrValue(buffer, source, object);
             buffer.append(", 0"); appendNewline(buffer);
-            data = IrValue(2, 0, 0, extracted, 9, 0, 5);
+            data = IrValue(2, 0, 0, extracted, typeKindValue(TypeKind.Pointer), 0, typeKindValue(TypeKind.U8));
         }
         val index = emitExpression(
             buffer, source, nodes, genericArguments,
@@ -1090,10 +1090,10 @@ fn emitAddress(
         appendIrValue(buffer, source, index);
         appendNewline(buffer);
         return IrValue(
-            2, 0, 0, temporary, 9,
+            2, 0, 0, temporary, typeKindValue(TypeKind.Pointer),
             node.typeName, node.typeKind);
     }
-    return IrValue(0, 0, 0, 0, 0, 0, 0);
+    return IrValue(0, 0, 0, 0, typeKindValue(TypeKind.Invalid), 0, 0);
 }
 
 fn appendFloatRangeComparison(
@@ -1104,9 +1104,9 @@ fn appendFloatRangeComparison(
     appendEquals(buffer);
     buffer.append("fcmp o");
     if (lower) {
-        var inclusive = targetKind == 4;
-        if (targetKind == 3) {
-            if (value.typeKind == 17) inclusive = true;
+        var inclusive = targetKind == typeKindValue(TypeKind.I64);
+        if (targetKind == typeKindValue(TypeKind.I32)) {
+            if (value.typeKind == typeKindValue(TypeKind.F32)) inclusive = true;
         }
         buffer.append("g");
         if (inclusive) buffer.append("e");
@@ -1171,7 +1171,7 @@ fn emitOwnedStringLiteral(
     appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
     appendI64Prefix(buffer); appendDecimal(buffer, capacity);
     buffer.append(", 2"); appendNewline(buffer);
-    return IrValue(2, 0, 0, temporary, 10, 0, 0);
+    return IrValue(2, 0, 0, temporary, typeKindValue(TypeKind.String), 0, 0);
 }
 
 fn emitExpression(
@@ -1183,10 +1183,10 @@ fn emitExpression(
     var counter: IrCounter): IrValue {
     val node = nodes.data[root];
     if (node.kind == AstKind.Literal) {
-        if (node.typeKind == 16) {
-            return IrValue(3, 0, 0, 0, 16, 0, 0);
+        if (node.typeKind == typeKindValue(TypeKind.NullLiteral)) {
+            return IrValue(3, 0, 0, 0, typeKindValue(TypeKind.NullLiteral), 0, 0);
         }
-        if (node.typeKind == 13 && node.typePointee == 5) {
+        if (node.typeKind == typeKindValue(TypeKind.Slice) && node.typePointee == typeKindValue(TypeKind.U8)) {
             var decoded = decodeStringLiteral(source, node);
             defer decoded.free();
             var temporary = nextTemporary(counter);
@@ -1200,9 +1200,9 @@ fn emitExpression(
             buffer.append(" "); appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
             buffer.append(", i64 "); appendDecimal(buffer, decoded.length);
             buffer.append(", 1"); appendNewline(buffer);
-            return IrValue(2, 0, 0, temporary, 13, 0, 5);
+            return IrValue(2, 0, 0, temporary, typeKindValue(TypeKind.Slice), 0, typeKindValue(TypeKind.U8));
         }
-        if (node.typeKind == 10) {
+        if (node.typeKind == typeKindValue(TypeKind.String)) {
             var decoded = decodeStringLiteral(source, node);
             defer decoded.free();
             var temporary = nextTemporary(counter);
@@ -1220,7 +1220,7 @@ fn emitExpression(
             appendSpacedStringType(buffer);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
             appendStringCapacity(buffer);
-            return IrValue(2, 0, 0, temporary, 10, 0, 0);
+            return IrValue(2, 0, 0, temporary, typeKindValue(TypeKind.String), 0, 0);
         }
         return IrValue(
             1, node.start, node.end, 0,
@@ -1332,7 +1332,7 @@ fn emitExpression(
             roots[index as u64] = branchRoot;
             branchRoot = nodes.data[branchRoot].subtreeStart - 1;
         }
-        var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
+        var subject = IrValue(0, 0, 0, 0, typeKindValue(TypeKind.Invalid), 0, 0);
         if (hasSubject == 1) {
             subject = emitExpression(
                 buffer, source, nodes, genericArguments, branchRoot, counter);
@@ -1385,7 +1385,7 @@ fn emitExpression(
                         buffer.append(" "); appendIrValue(buffer, source, subject);
                         buffer.append(", ");
                         appendIrValue(buffer, source, condition); appendNewline(buffer);
-                        condition = IrValue(2, 0, 0, compared, 2, 0, 0);
+                        condition = IrValue(2, 0, 0, compared, typeKindValue(TypeKind.Bool), 0, 0);
                     }
                     var missBlock = nextBlockValue;
                     val hasNextPattern = patternIndex + 1 < patternCount;
@@ -1521,7 +1521,7 @@ fn emitExpression(
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
-            if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
+            if (TypeValue(typeKindFromValue(node.typeKind), node.typeName, node.typePointee).isFloat()) {
                 buffer.append("fneg ");
                 appendNodeType(buffer, genericArguments, node);
                 buffer.append(" ");
@@ -1627,7 +1627,7 @@ fn emitExpression(
             appendDecimal(buffer, lowerCheck); buffer.append(",");
             buffer.append(" %");
             appendDecimal(buffer, upperCheck); appendNewline(buffer);
-            return IrValue(2, 0, 0, result, 2, 0, 0);
+            return IrValue(2, 0, 0, result, typeKindValue(TypeKind.Bool), 0, 0);
         }
         var left = emitExpression(
             buffer, source, nodes, genericArguments,
@@ -1666,7 +1666,7 @@ fn emitExpression(
             appendBlockReference(buffer, rightBlock);
             buffer.append(" ]");
             appendNewline(buffer);
-            return IrValue(2, 0, 0, temporary, 2, 0, 0);
+            return IrValue(2, 0, 0, temporary, typeKindValue(TypeKind.Bool), 0, 0);
         }
         var right = emitExpression(
             buffer, source, nodes, genericArguments,
@@ -1679,8 +1679,8 @@ fn emitExpression(
         if (node.aux == tokenKindValue(TokenKind.LessEqual)) comparison = true;
         if (node.aux == tokenKindValue(TokenKind.GreaterEqual)) comparison = true;
         if (comparison) {
-            val leftType = TypeValue(left.typeKind, left.typeName, left.typePointee);
-            val rightType = TypeValue(right.typeKind, right.typeName, right.typePointee);
+            val leftType = TypeValue(typeKindFromValue(left.typeKind), left.typeName, left.typePointee);
+            val rightType = TypeValue(typeKindFromValue(right.typeKind), right.typeName, right.typePointee);
             if (integerImplicitlyWidens(leftType, rightType)) {
                 left = emitImplicitIntegerWiden(
                     buffer, source, genericArguments, left,
@@ -1792,10 +1792,10 @@ fn emitExpression(
             buffer, source, nodes, genericArguments,
             valueRoot, counter);
         if (node.typeKind == value.typeKind) return value;
-        if (node.typeKind == 9) return value;
-        if (value.typeKind == 9) return value;
-        val sourceType = TypeValue(value.typeKind, value.typeName, value.typePointee);
-        val targetType = TypeValue(node.typeKind, node.typeName, node.typePointee);
+        if (node.typeKind == typeKindValue(TypeKind.Pointer)) return value;
+        if (value.typeKind == typeKindValue(TypeKind.Pointer)) return value;
+        val sourceType = TypeValue(typeKindFromValue(value.typeKind), value.typeName, value.typePointee);
+        val targetType = TypeValue(typeKindFromValue(node.typeKind), node.typeName, node.typePointee);
         if (node.conversionKind >= 5) {
             if (node.conversionKind == 6) {
                 val lower = nextTemporary(counter);
@@ -1803,10 +1803,10 @@ fn emitExpression(
                 val check = nextTemporary(counter);
                 appendFloatRangeComparison(
                     buffer, source, genericArguments, value,
-                    targetType.kind, lower, true);
+                    typeKindValue(targetType.kind), lower, true);
                 appendFloatRangeComparison(
                     buffer, source, genericArguments, value,
-                    targetType.kind, upper, false);
+                    typeKindValue(targetType.kind), upper, false);
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
                 buffer.append("and i1 %");
@@ -1816,7 +1816,7 @@ fn emitExpression(
                 val validBlock = nextBlock(counter);
                 val panicBlock = nextBlock(counter);
                 appendConditionalBranch(
-                    buffer, source, IrValue(2, 0, 0, check, 2, 0, 0),
+                    buffer, source, IrValue(2, 0, 0, check, typeKindValue(TypeKind.Bool), 0, 0),
                     validBlock, panicBlock);
                 appendBlockLabel(buffer, counter, panicBlock);
                 appendCastPanic(buffer);
@@ -1834,7 +1834,7 @@ fn emitExpression(
                     opcode = 6;
                     if (targetType.isSigned()) opcode = 5;
                 } else {
-                    if (node.typeKind == 17) opcode = 2;
+                    if (node.typeKind == typeKindValue(TypeKind.F32)) opcode = 2;
                 }
             }
             appendFloatCastOpcode(buffer, opcode);
@@ -1936,7 +1936,7 @@ fn emitExpression(
             val validBlock = nextBlock(counter);
             val panicBlock = nextBlock(counter);
             appendConditionalBranch(
-                buffer, source, IrValue(2, 0, 0, check, 2, 0, 0),
+                buffer, source, IrValue(2, 0, 0, check, typeKindValue(TypeKind.Bool), 0, 0),
                 validBlock, panicBlock);
             appendBlockLabel(buffer, counter, panicBlock);
             appendCastPanic(buffer);
@@ -1947,10 +1947,10 @@ fn emitExpression(
     if (node.kind == AstKind.Member) {
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
-        if (node.typeKind == 20 && objectNode.typeKind == 20) {
-            return IrValue(3, 0, 0, node.storage, 20, node.typeName, 0);
+        if (node.typeKind == typeKindValue(TypeKind.Enum) && objectNode.typeKind == typeKindValue(TypeKind.Enum)) {
+            return IrValue(3, 0, 0, node.storage, typeKindValue(TypeKind.Enum), node.typeName, 0);
         }
-        if (objectNode.typeKind == 10) {
+        if (objectNode.typeKind == typeKindValue(TypeKind.String)) {
             val object = emitExpression(
                 buffer, source, nodes, genericArguments,
                 objectRoot, counter);
@@ -1978,7 +1978,7 @@ fn emitExpression(
             buffer.append(", "); appendI64(buffer); buffer.append(" ");
             appendValuePrefix(buffer); appendDecimal(buffer, length);
             buffer.append(", 1"); appendNewline(buffer);
-            return IrValue(2, 0, 0, slice, 13, 0, 5);
+            return IrValue(2, 0, 0, slice, typeKindValue(TypeKind.Slice), 0, typeKindValue(TypeKind.U8));
         }
         val structureRoot =
             structRootByName(
@@ -2034,7 +2034,7 @@ fn emitExpression(
         val objectRoot = expressionChildBefore(nodes, indexRoot);
         val objectNode = nodes.data[objectRoot];
         var constantArray = false;
-        if (objectNode.kind == AstKind.Identifier && objectNode.typeKind == 19) {
+        if (objectNode.kind == AstKind.Identifier && objectNode.typeKind == typeKindValue(TypeKind.Array)) {
             if (objectNode.storage < nodes.length) {
                 if (nodes.data[objectNode.storage].kind ==
                     AstKind.ConstantDeclaration) constantArray = true;
@@ -2097,7 +2097,7 @@ fn emitExpression(
             buffer.append(" %");
             appendDecimal(buffer, loaded); buffer.append(",");
             buffer.append(" 1");
-            if (TypeValue(node.typeKind, node.typeName, node.typePointee).isFloat()) {
+            if (TypeValue(typeKindFromValue(node.typeKind), node.typeName, node.typePointee).isFloat()) {
                 buffer.append(".000000e+00");
             }
             appendNewline(buffer);
@@ -2127,7 +2127,7 @@ fn emitExpression(
         val panicBlock = nextBlock(counter);
         appendConditionalBranch(
             buffer, source,
-            IrValue(2, 0, 0, hasValue, 2, 0, 0),
+            IrValue(2, 0, 0, hasValue, typeKindValue(TypeKind.Bool), 0, 0),
             validBlock, panicBlock);
         appendBlockLabel(buffer, counter, panicBlock);
         buffer.append("  call void @k_boot_panic(ptr null, i64 0)");
@@ -2216,7 +2216,7 @@ fn emitExpression(
                     val concreteParameter = substituteEmitterType(
                         source, nodes, functionRoot,
                         TypeValue(
-                            parameterType.typeKind,
+                            typeKindFromValue(parameterType.typeKind),
                             parameterType.typeName,
                             parameterType.typePointee),
                         genericArguments,
@@ -2224,7 +2224,7 @@ fn emitExpression(
                         node.genericArgumentCount);
                     values[index as u64] = emitImplicitIntegerWiden(
                         buffer, source, genericArguments,
-                        values[index as u64], concreteParameter.kind,
+                        values[index as u64], typeKindValue(concreteParameter.kind),
                         concreteParameter.name, concreteParameter.pointee,
                         counter);
                 }
@@ -2276,7 +2276,7 @@ fn emitExpression(
                 2, 0, 0, lengthTemporary,
                 node.typeKind, node.typeName, node.typePointee);
         }
-        if (node.typeKind == 8) {
+        if (node.typeKind == typeKindValue(TypeKind.Struct)) {
         if (functionRoot == nodes.length) {
             val structureRoot =
                 structRootByName(source, nodes, node.typeName);
@@ -2303,7 +2303,7 @@ fn emitExpression(
                 
                 val fieldRoot = fieldRootAt(nodes, structureRoot, index);
                 val fieldTypeNode = nodes.data[fieldRoot - 1];
-                var fieldType = TypeValue(fieldTypeNode.typeKind, fieldTypeNode.typeName, fieldTypeNode.typePointee);
+                var fieldType = TypeValue(typeKindFromValue(fieldTypeNode.typeKind), fieldTypeNode.typeName, fieldTypeNode.typePointee);
                 if (count > 0) {
                     fieldType = substituteStructEmitterType(
                         source, nodes, structureRoot, fieldType,
@@ -2311,7 +2311,7 @@ fn emitExpression(
                 }
                 appendType(
                     buffer, genericArguments,
-                    fieldType.kind, fieldType.name, fieldType.pointee);
+                    typeKindValue(fieldType.kind), fieldType.name, fieldType.pointee);
                 
                 buffer.append(" ");
                 appendIrValue(
@@ -2328,7 +2328,7 @@ fn emitExpression(
         }
         }
         val isPrint = sourceNodeIsPrint(source, callee);
-        if (isPrint && values[0].typeKind == 10) {
+        if (isPrint && values[0].typeKind == typeKindValue(TypeKind.String)) {
             val dataTemporary = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary); appendEquals(buffer); appendExtractValue(buffer);
             appendSpacedStringType(buffer); appendIrValue(buffer, source, values[0]);
@@ -2341,7 +2341,7 @@ fn emitExpression(
             appendI64Prefix(buffer); appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary);
             appendCloseLine(buffer);
             k_boot_free(values as unit*); k_boot_free(arguments as unit*);
-            return IrValue(3, 0, 0, 0, 1, 0, 0);
+            return IrValue(3, 0, 0, 0, typeKindValue(TypeKind.Unit), 0, 0);
         }
         var temporary: u64 = 0;
         if (isPrint) {
@@ -2349,7 +2349,7 @@ fn emitExpression(
             appendCall(buffer);
             buffer.append("void @k_std_print_i32");
         } else {
-            if (node.typeKind != 1) {
+            if (node.typeKind != typeKindValue(TypeKind.Unit)) {
                 temporary = nextTemporary(counter);
                 appendValuePrefix(buffer);
                 appendDecimal(buffer, temporary);
@@ -2405,14 +2405,14 @@ fn emitExpression(
                     val concreteParameter = substituteEmitterType(
                         source, nodes, functionRoot,
                         TypeValue(
-                            parameterType.typeKind,
+                            typeKindFromValue(parameterType.typeKind),
                             parameterType.typeName,
                             parameterType.typePointee),
                         genericArguments,
                         node.genericArgumentStart,
                         node.genericArgumentCount);
                     appendType(
-                        buffer, genericArguments, concreteParameter.kind,
+                        buffer, genericArguments, typeKindValue(concreteParameter.kind),
                         concreteParameter.name,
                         concreteParameter.pointee);
                 }
@@ -2430,15 +2430,15 @@ fn emitExpression(
         appendNewline(buffer);
         k_boot_free(values as unit*);
         k_boot_free(arguments as unit*);
-        if (isPrint) return IrValue(3, 0, 0, 0, 1, 0, 0);
-        if (node.typeKind == 1) {
-            return IrValue(3, 0, 0, 0, 1, 0, 0);
+        if (isPrint) return IrValue(3, 0, 0, 0, typeKindValue(TypeKind.Unit), 0, 0);
+        if (node.typeKind == typeKindValue(TypeKind.Unit)) {
+            return IrValue(3, 0, 0, 0, typeKindValue(TypeKind.Unit), 0, 0);
         }
         return IrValue(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    return IrValue(0, 0, 0, 0, 0, 0, 0);
+    return IrValue(0, 0, 0, 0, typeKindValue(TypeKind.Invalid), 0, 0);
 }
 
 fn blockStatementRoots(val nodes: List<AstNode>, blockRoot: u64): u64* {
@@ -2463,26 +2463,26 @@ fn emitAutomaticDrop(
     val statement = nodes.data[root];
     if ((statement.ownership / 2) % 2 == 0) return;
     val name = nodes.data[statement.subtreeStart];
-    var valueType = TypeValue(0, 0, 0);
+    var valueType = TypeValue(TypeKind.Invalid, 0, 0);
     if (statement.kind == AstKind.VariableDeclaration) {
         val initializerRoot = root - 1;
         valueType = TypeValue(
-            nodes.data[initializerRoot].typeKind,
+            typeKindFromValue(nodes.data[initializerRoot].typeKind),
             nodes.data[initializerRoot].typeName,
             nodes.data[initializerRoot].typePointee);
         val afterName = statement.subtreeStart + 1;
         if (afterName < nodes.data[initializerRoot].subtreeStart) {
             val declared = nodes.data[nodes.data[initializerRoot].subtreeStart - 1];
             valueType = TypeValue(
-                declared.typeKind, declared.typeName, declared.typePointee);
+                typeKindFromValue(declared.typeKind), declared.typeName, declared.typePointee);
         }
     } else {
         val declared = nodes.data[root - 1];
         valueType = TypeValue(
-            declared.typeKind, declared.typeName, declared.typePointee);
+            typeKindFromValue(declared.typeKind), declared.typeName, declared.typePointee);
     }
     var freeRoot = nodes.length;
-    if (valueType.kind != 10) {
+    if (valueType.kind != TypeKind.String) {
         freeRoot = emitterDropFunctionRoot(source, nodes, valueType.name);
         if (freeRoot == nodes.length) return;
     }
@@ -2493,7 +2493,7 @@ fn emitAutomaticDrop(
     val runBlock = nextBlock(counter);
     val endBlock = nextBlock(counter);
     appendConditionalBranch(
-        buffer, source, IrValue(2, 0, 0, live, 2, 0, 0),
+        buffer, source, IrValue(2, 0, 0, live, typeKindValue(TypeKind.Bool), 0, 0),
         runBlock, endBlock);
     appendBlockLabel(buffer, counter, runBlock);
     appendStore(buffer); buffer.append("i1 ");
@@ -2504,10 +2504,10 @@ fn emitAutomaticDrop(
     appendLoad(buffer);
     appendType(
         buffer, genericArguments,
-        valueType.kind, valueType.name, valueType.pointee);
+        typeKindValue(valueType.kind), valueType.name, valueType.pointee);
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
     appendNewline(buffer);
-    if (valueType.kind == 10) {
+    if (valueType.kind == TypeKind.String) {
         val pointer = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
         buffer.append("extractvalue");
@@ -2538,7 +2538,7 @@ fn emitAutomaticDrop(
         buffer.append("(");
         appendType(
             buffer, genericArguments,
-            valueType.kind, valueType.name, valueType.pointee);
+            typeKindValue(valueType.kind), valueType.name, valueType.pointee);
         buffer.append(" %"); appendDecimal(buffer, loaded);
         buffer.append(")"); appendNewline(buffer);
     }
@@ -2626,9 +2626,9 @@ fn emitCollectionFor(
     }
     var elementKind = collectionNode.typePointee;
     var elementName = collectionNode.typeName;
-    var data = IrValue(0, 0, 0, 0, 9, elementName, elementKind);
-    var length = IrValue(3, 0, 0, 0, 7, 0, 0);
-    if (collectionNode.typeKind == 19) {
+    var data = IrValue(0, 0, 0, 0, typeKindValue(TypeKind.Pointer), elementName, elementKind);
+    var length = IrValue(3, 0, 0, 0, typeKindValue(TypeKind.U64), 0, 0);
+    if (collectionNode.typeKind == typeKindValue(TypeKind.Array)) {
         elementKind = collectionNode.typePointee % 256;
         val pointer = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
@@ -2641,7 +2641,7 @@ fn emitCollectionFor(
         buffer.append(", ");
         appendI32(buffer); buffer.append(" 0");
         appendNewline(buffer);
-        data = IrValue(2, 0, 0, pointer, 9, elementName, elementKind);
+        data = IrValue(2, 0, 0, pointer, typeKindValue(TypeKind.Pointer), elementName, elementKind);
         length = IrValue(
             3, 0, 0, (collectionNode.typePointee / 256) as u64,
             7, 0, 0);
@@ -2653,7 +2653,7 @@ fn emitCollectionFor(
         buffer.append(" "); appendIrValue(buffer, source, collectionValue);
         buffer.append(", 0");
         appendNewline(buffer);
-        data = IrValue(2, 0, 0, dataTemporary, 9, elementName, elementKind);
+        data = IrValue(2, 0, 0, dataTemporary, typeKindValue(TypeKind.Pointer), elementName, elementKind);
         val lengthTemporary = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
@@ -2661,7 +2661,7 @@ fn emitCollectionFor(
         buffer.append(" "); appendIrValue(buffer, source, collectionValue);
         buffer.append(", 1");
         appendNewline(buffer);
-        length = IrValue(2, 0, 0, lengthTemporary, 7, 0, 0);
+        length = IrValue(2, 0, 0, lengthTemporary, typeKindValue(TypeKind.U64), 0, 0);
     }
     appendStore(buffer); appendI64(buffer); buffer.append(" ");
     buffer.append("0"); appendPtr(buffer); appendLocalPrefix(buffer);
@@ -2680,11 +2680,11 @@ fn emitCollectionFor(
     appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
     appendComparison(buffer, 66, 7); buffer.append(" ");
     appendI64(buffer); buffer.append(" ");
-    appendIrValue(buffer, source, IrValue(2, 0, 0, index, 7, 0, 0));
+    appendIrValue(buffer, source, IrValue(2, 0, 0, index, typeKindValue(TypeKind.U64), 0, 0));
     buffer.append(", ");
     appendIrValue(buffer, source, length); appendNewline(buffer);
     appendConditionalBranch(
-        buffer, source, IrValue(2, 0, 0, compared, 2, 0, 0),
+        buffer, source, IrValue(2, 0, 0, compared, typeKindValue(TypeKind.Bool), 0, 0),
         bodyBlock, endBlock);
     appendBlockLabel(buffer, counter, bodyBlock);
     val elementPointer = nextTemporary(counter);
@@ -2694,14 +2694,14 @@ fn emitCollectionFor(
     appendPointerValue(buffer, source, data);
     buffer.append(", "); appendI64(buffer);
     buffer.append(" ");
-    appendIrValue(buffer, source, IrValue(2, 0, 0, index, 7, 0, 0));
+    appendIrValue(buffer, source, IrValue(2, 0, 0, index, typeKindValue(TypeKind.U64), 0, 0));
     appendNewline(buffer);
     val element = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, element); appendEquals(buffer);
     appendLoad(buffer); appendType(buffer, genericArguments, elementKind, elementName, 0);
     appendPointerValue(
         buffer, source,
-        IrValue(2, 0, 0, elementPointer, 9, elementName, elementKind));
+        IrValue(2, 0, 0, elementPointer, typeKindValue(TypeKind.Pointer), elementName, elementKind));
     appendNewline(buffer);
     appendStore(buffer); appendType(buffer, genericArguments, elementKind, elementName, 0);
     buffer.append(" ");
@@ -2727,11 +2727,11 @@ fn emitCollectionFor(
     appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
     appendOperator(buffer, 60, 7); buffer.append(" "); appendI64(buffer);
     buffer.append(" ");
-    appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, 7, 0, 0));
+    appendIrValue(buffer, source, IrValue(2, 0, 0, loaded, typeKindValue(TypeKind.U64), 0, 0));
     buffer.append(", 1");
     appendNewline(buffer);
     appendStore(buffer); appendI64(buffer); buffer.append(" ");
-    appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, 7, 0, 0));
+    appendIrValue(buffer, source, IrValue(2, 0, 0, advanced, typeKindValue(TypeKind.U64), 0, 0));
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, indexStorage);
     appendNewline(buffer); appendBranch(buffer, conditionBlock);
     appendBlockLabel(buffer, counter, endBlock);
@@ -2752,7 +2752,7 @@ fn emitWhen(
         roots[index as u64] = branchRoot;
         branchRoot = nodes.data[branchRoot].subtreeStart - 1;
     }
-    var subject = IrValue(0, 0, 0, 0, 0, 0, 0);
+    var subject = IrValue(0, 0, 0, 0, typeKindValue(TypeKind.Invalid), 0, 0);
     if (hasSubject == 1) {
         subject = emitExpression(
             buffer, source, nodes, genericArguments, branchRoot, counter);
@@ -2792,7 +2792,7 @@ fn emitWhen(
                     buffer.append(" "); appendIrValue(buffer, source, subject);
                     buffer.append(", ");
                     appendIrValue(buffer, source, condition); appendNewline(buffer);
-                    condition = IrValue(2, 0, 0, compared, 2, 0, 0);
+                    condition = IrValue(2, 0, 0, compared, typeKindValue(TypeKind.Bool), 0, 0);
                 }
                 var missBlock = nextBlockValue;
                 val hasNextPattern = patternIndex + 1 < patternCount;
@@ -2827,7 +2827,7 @@ fn emitWhen(
         if (allTerminate) return true;
     }
     appendBlockLabel(buffer, counter, mergeBlock);
-    if (!hasElse && allTerminate && subject.typeKind == 20) {
+    if (!hasElse && allTerminate && subject.typeKind == typeKindValue(TypeKind.Enum)) {
         appendUnreachable(buffer); appendNewline(buffer);
         return true;
     }
@@ -2968,7 +2968,7 @@ fn emitStatement(
         buffer.append(" i1 ");
         buffer.append("%"); appendDecimal(buffer, descendingCompared);
         appendNewline(buffer);
-        var conditionValue = IrValue(2, 0, 0, compared, 2, 0, 0);
+        var conditionValue = IrValue(2, 0, 0, compared, typeKindValue(TypeKind.Bool), 0, 0);
         if (collectionNode.aux != tokenKindValue(TokenKind.Range)) {
             val nonempty = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, nonempty); appendEquals(buffer);
@@ -2976,7 +2976,7 @@ fn emitStatement(
             appendDecimal(buffer, compared); buffer.append(",");
             buffer.append(" %");
             appendDecimal(buffer, different); appendNewline(buffer);
-            conditionValue = IrValue(2, 0, 0, nonempty, 2, 0, 0);
+            conditionValue = IrValue(2, 0, 0, nonempty, typeKindValue(TypeKind.Bool), 0, 0);
         }
         appendConditionalBranch(
             buffer, source, conditionValue, bodyBlock, endBlock);
@@ -3011,7 +3011,7 @@ fn emitStatement(
             appendNewline(buffer);
             val advanceBlock = nextBlock(counter);
             appendConditionalBranch(
-                buffer, source, IrValue(2, 0, 0, terminal, 2, 0, 0),
+                buffer, source, IrValue(2, 0, 0, terminal, typeKindValue(TypeKind.Bool), 0, 0),
                 endBlock, advanceBlock);
             appendBlockLabel(buffer, counter, advanceBlock);
         }
@@ -3038,9 +3038,9 @@ fn emitStatement(
     if (statement.kind == AstKind.VariableDeclaration) {
         val initializerRoot = root - 1;
         val initializerNode = nodes.data[initializerRoot];
-        var initializer = IrValue(0, 0, 0, 0, 0, 0, 0);
+        var initializer = IrValue(0, 0, 0, 0, typeKindValue(TypeKind.Invalid), 0, 0);
         if (initializerNode.kind == AstKind.Literal &&
-            initializerNode.typeKind == 10) {
+            initializerNode.typeKind == typeKindValue(TypeKind.String)) {
             initializer = emitOwnedStringLiteral(
                 buffer, source, initializerNode, counter);
         } else {
@@ -3338,7 +3338,7 @@ fn substituteEmitterType(
     source: Source, val nodes: List<AstNode>, functionRoot: u64,
     pattern: TypeValue, var arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
-    if (pattern.kind == 8) {
+    if (pattern.kind == TypeKind.Struct) {
         val start = pattern.pointee % 65536;
         val argumentCount = pattern.pointee / 65536;
         if (argumentCount == 0) return pattern;
@@ -3357,31 +3357,31 @@ fn substituteEmitterType(
         }
         k_boot_free(substituted as unit*);
         return TypeValue(
-            8, pattern.name,
+            TypeKind.Struct, pattern.name,
             newStart as u32 + argumentCount * 65536);
     }
-    if (pattern.kind == 15) {
+    if (pattern.kind == TypeKind.Nullable) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
-            TypeValue(pattern.pointee, pattern.name, 0),
+            TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(15, inner.name, inner.kind);
+        return TypeValue(TypeKind.Nullable, inner.name, typeKindValue(inner.kind));
     }
-    if (pattern.kind == 9) {
+    if (pattern.kind == TypeKind.Pointer) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
-            TypeValue(pattern.pointee, pattern.name, 0),
+            TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(9, inner.name, inner.kind);
+        return TypeValue(TypeKind.Pointer, inner.name, typeKindValue(inner.kind));
     }
-    if (pattern.kind == 13) {
+    if (pattern.kind == TypeKind.Slice) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
-            TypeValue(pattern.pointee, pattern.name, 0),
+            TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(13, inner.name, inner.kind);
+        return TypeValue(TypeKind.Slice, inner.name, typeKindValue(inner.kind));
     }
-    if (pattern.kind != 14) return pattern;
+    if (pattern.kind != TypeKind.TypeParameter) return pattern;
     val position = emitterTypeParameterPosition(
         source, nodes, functionRoot, pattern.name);
     if (position >= count) return invalidType();
@@ -3462,7 +3462,7 @@ fn emitBlockAllocas(
                 appendNodeType(buffer, genericArguments, collection);
             } else {
                 var elementKind = collection.typePointee;
-                if (collection.typeKind == 19) {
+                if (collection.typeKind == typeKindValue(TypeKind.Array)) {
                     elementKind = collection.typePointee % 256;
                 }
                 appendType(
@@ -3513,7 +3513,7 @@ fn emitFunction(
     }
     if (functionInfersReturn(function)) {
         var inferred = TypeValue(
-            function.typeKind, function.typeName, function.typePointee);
+            typeKindFromValue(function.typeKind), function.typeName, function.typePointee);
         if (specializationCount > 0) {
             inferred = substituteEmitterType(
                 source, nodes, functionRoot, inferred,
@@ -3522,7 +3522,7 @@ fn emitFunction(
         }
         appendType(
             buffer, genericArguments,
-            inferred.kind, inferred.name, inferred.pointee);
+            typeKindValue(inferred.kind), inferred.name, inferred.pointee);
     } else appendNodeType(buffer, genericArguments, returnType);
     appendFunctionOpen(buffer);
     if (function.conversionKind == 1) {
@@ -3635,10 +3635,10 @@ fn emitFunction(
             buffer, source, nodes, genericArguments,
             blockRoot, counter, defers);
     if (!terminated) {
-        var returnsUnit = returnType.typeKind == 1;
+        var returnsUnit = returnType.typeKind == typeKindValue(TypeKind.Unit);
         if (returnType.kind == AstKind.NamedType &&
             returnType.aux == tokenKindValue(TokenKind.KwUnit)) returnsUnit = true;
-        if (functionInfersReturn(function) && function.typeKind == 1)
+        if (functionInfersReturn(function) && function.typeKind == typeKindValue(TypeKind.Unit))
             returnsUnit = true;
         if (returnsUnit) {
             buffer.append("  ret void");
@@ -3663,15 +3663,15 @@ fn emitSpecializedFunction(
     for (offset in 0..<count) {
         saved[offset] = nodes.data[start + offset];
         var node = nodes.data[start + offset];
-        if (node.typeKind == 14 || node.typeKind == 8 ||
-                node.typeKind == 9 || node.typeKind == 13 ||
-                node.typeKind == 15) {
+        if (node.typeKind == typeKindValue(TypeKind.TypeParameter) || node.typeKind == typeKindValue(TypeKind.Struct) ||
+                node.typeKind == typeKindValue(TypeKind.Pointer) || node.typeKind == typeKindValue(TypeKind.Slice) ||
+                node.typeKind == typeKindValue(TypeKind.Nullable)) {
             val concrete = substituteEmitterType(
                 source, nodes, functionRoot,
                 TypeValue(
-                    node.typeKind, node.typeName, node.typePointee),
+                    typeKindFromValue(node.typeKind), node.typeName, node.typePointee),
                 genericArguments, argumentStart, argumentCount);
-            node.typeKind = concrete.kind;
+            node.typeKind = typeKindValue(concrete.kind);
             node.typeName = concrete.name;
             node.typePointee = concrete.pointee;
         }
@@ -3819,7 +3819,7 @@ fn structSpecializationRequestExists(
 fn structArgumentsAreConcrete(
     val arguments: List<TypeValue>, start: u64, count: u32): bool {
     for (index in 0..<count) {
-        if (arguments.data[start + index as u64].kind == 14) {
+        if (arguments.data[start + index as u64].kind == TypeKind.TypeParameter) {
             return false;
         }
     }
@@ -3847,13 +3847,13 @@ fn emitSpecializedStruct(
         val fieldRoot =
             fieldRootAt(nodes, structureRoot, index);
         val fieldTypeNode = nodes.data[fieldRoot - 1];
-        var fieldType = TypeValue(fieldTypeNode.typeKind, fieldTypeNode.typeName, fieldTypeNode.typePointee);
+        var fieldType = TypeValue(typeKindFromValue(fieldTypeNode.typeKind), fieldTypeNode.typeName, fieldTypeNode.typePointee);
         fieldType = substituteStructEmitterType(
             source, nodes, structureRoot, fieldType,
             genericArguments, argumentStart, argumentCount);
         appendType(
             buffer, genericArguments,
-            fieldType.kind, fieldType.name, fieldType.pointee);
+            typeKindValue(fieldType.kind), fieldType.name, fieldType.pointee);
     }
     if (fieldCount > 0) buffer.append(" ");
     buffer.append("}");
@@ -3906,7 +3906,7 @@ fn callArgumentsAreConcrete(
     if (call.genericArgumentCount == 0) return false;
     for (index in 0..<call.genericArgumentCount) {
         if (arguments.data[
-                call.genericArgumentStart + index as u64].kind == 14) {
+                call.genericArgumentStart + index as u64].kind == TypeKind.TypeParameter) {
             return false;
         }
     }
@@ -3925,7 +3925,7 @@ fn emitModule(
         val literal = nodes.data[literalIndex];
         if (literal.kind == AstKind.Literal &&
             literal.aux == tokenKindValue(TokenKind.StringLiteral) &&
-            (literal.typeKind == 10 || literal.typeKind == 13))
+            (literal.typeKind == typeKindValue(TypeKind.String) || literal.typeKind == typeKindValue(TypeKind.Slice)))
             appendStringGlobal(buffer, source, literal, literalIndex);
     }
     appendNewline(buffer);
@@ -3951,7 +3951,7 @@ fn emitModule(
     defer structRequests.free();
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
-        if (node.typeKind == 8) {
+        if (node.typeKind == typeKindValue(TypeKind.Struct)) {
             val start = node.typePointee % 65536;
             val count = node.typePointee / 65536;
             if (count > 0) {
