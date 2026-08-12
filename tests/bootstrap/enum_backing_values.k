@@ -2,6 +2,7 @@ enum Default { A, B, C }
 enum Explicit: u32 { A = 10, B, C = 20, D }
 enum Tiny: u8 { A = 254, B }
 enum Signed: i32 { Negative = -1, Zero = 0 }
+enum Positive: u32 { Value = +20 }
 enum NamedValue { value }
 
 fn score(value: Explicit): i32 {
@@ -24,6 +25,7 @@ fn main(): i32 {
     if (value.value != 21) return 7;
     if (Tiny.B.value != 255) return 8;
     if (Signed.Negative.value != -1) return 9;
+    if (Positive.Value.value != 20) return 12;
     if (NamedValue.value.value != 0) return 11;
     if (score(value) != 4) return 10;
     return 42;

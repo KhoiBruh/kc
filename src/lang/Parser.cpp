@@ -555,8 +555,21 @@ std::optional<EnumDecl> Parser::parseEnum() {
         const auto variantName = previous().span;
         ExprPtr value;
         if (match(TokenKind::Equal)) {
-            value = parseExpression();
-            if (!value) return std::nullopt;
+            std::optional<Token> sign;
+            if (match(TokenKind::Plus) || match(TokenKind::Minus))
+                sign = previous();
+            if (!expect(
+                    TokenKind::IntegerLiteral,
+                    "expected integer literal after '=' in enum variant"))
+                return std::nullopt;
+            const auto literal = previous();
+            value = makeExpr(
+                literal.span,
+                LiteralExpr{TokenKind::IntegerLiteral, literal.span});
+            if (sign)
+                value = makeExpr(
+                    spanFrom(sign->span, literal.span),
+                    UnaryExpr{sign->kind, std::move(value)});
         }
         variants.push_back({variantName, std::move(value), variantName});
         if (!match(TokenKind::Comma)) break;

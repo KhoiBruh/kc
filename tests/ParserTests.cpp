@@ -416,14 +416,27 @@ TEST(parser_parses_payload_free_enum_without_trailing_comma) {
 
 TEST(parser_parses_enum_backing_types_and_explicit_values) {
     ParseFixture fixture{
-        "enum Status: u32 { Ready = 10, Running, Done = 20 }"
+        "enum Status: u32 { Ready = 10, Running = +20, Done = 30 }"
+        "enum Signed: i32 { Negative = -1, Zero = 0 }"
         "fn main(): i32 { return 0; }"};
     EXPECT_TRUE(fixture.parsed.diagnostics.empty());
     const auto& enumeration = fixture.parsed.program.enums[0];
     EXPECT_TRUE(enumeration.backingType != nullptr);
     EXPECT_TRUE(enumeration.variants[0].value != nullptr);
-    EXPECT_TRUE(enumeration.variants[1].value == nullptr);
+    EXPECT_TRUE(enumeration.variants[1].value != nullptr);
     EXPECT_TRUE(enumeration.variants[2].value != nullptr);
+
+    ParseFixture binary{
+        "enum E: u32 { A = 1 + 2 } fn main(): i32 { return 0; }"};
+    EXPECT_TRUE(!binary.parsed.diagnostics.empty());
+
+    ParseFixture identifier{
+        "enum E: u32 { A = SOME_CONSTANT } fn main(): i32 { return 0; }"};
+    EXPECT_TRUE(!identifier.parsed.diagnostics.empty());
+
+    ParseFixture call{
+        "enum E: u32 { A = foo() } fn main(): i32 { return 0; }"};
+    EXPECT_TRUE(!call.parsed.diagnostics.empty());
 }
 
 TEST(parser_allows_when_expression_without_else_for_semantic_exhaustiveness) {
