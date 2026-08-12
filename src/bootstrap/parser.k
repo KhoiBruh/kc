@@ -2,7 +2,6 @@ module bootstrap.parser;
 
 import bootstrap.token.Token;
 import bootstrap.token.TokenKind;
-import bootstrap.token.tokenKindValue;
 import bootstrap.list.List;
 import bootstrap.ast.AstKind;
 import bootstrap.ast.AstNode;
@@ -29,7 +28,7 @@ fn parserMatch(var parser: Parser, kind: TokenKind): bool {
 fn parserExpect(var parser: Parser, kind: TokenKind): bool {
     if (parserMatch(parser, kind)) return true;
     parser.ok = false;
-    parser.expectedKind = tokenKindValue(kind);
+    parser.expectedKind = kind.value;
     return false;
 }
 
@@ -103,7 +102,7 @@ fn parseType(var parser: Parser): u64 {
     var end = parserPrevious(parser).end;
     var root = parserAdd(
         parser, AstKind.NamedType, typeToken.start, typeToken.end, subtreeStart,
-        tokenKindValue(typeToken.kind) + typeArgumentCount * 256);
+        typeToken.kind.value + typeArgumentCount * 256);
     while (parserMatch(parser, TokenKind.Star)) {
         end = parserPrevious(parser).end;
         root = parserAdd(parser, AstKind.PointerType, typeToken.start, end, subtreeStart, 0);
@@ -231,7 +230,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
             parser.current++;
             root = parserAdd(
                 parser, AstKind.Literal, first.start, first.end, subtreeStart,
-                tokenKindValue(first.kind));
+                first.kind.value);
         } else {
             val prefixPower = prefixBindingPower(first.kind);
             if (prefixPower != 0) {
@@ -240,7 +239,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 if (!parser.ok) return 0;
                 root = parserAdd(
                     parser, AstKind.Unary, first.start, parser.nodes.data[operand].end,
-                    subtreeStart, tokenKindValue(first.kind));
+                    subtreeStart, first.kind.value);
             } else {
                 if (parserMatch(parser, TokenKind.KwIf)) {
                     if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
@@ -440,7 +439,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     root = parserAdd(
                         parser, AstKind.Binary, first.start,
                         parser.nodes.data[right].end,
-                        subtreeStart, tokenKindValue(token.kind));
+                        subtreeStart, token.kind.value);
                 }
             }
         } else {
@@ -482,7 +481,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parser.current++;
                         root = parserAdd(
                             parser, AstKind.Postfix, first.start, token.end,
-                            subtreeStart, tokenKindValue(token.kind));
+                            subtreeStart, token.kind.value);
                     } else {
                         if (token.kind == TokenKind.KwAs) {
                             if (85 < minimumPower) {
@@ -512,7 +511,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                         if (leftKind == AstKind.Index) assignable = true;
                                         if (leftKind == AstKind.Unary) {
                                             if (parser.nodes.data[root].aux ==
-                                                tokenKindValue(TokenKind.Star)) {
+                                                TokenKind.Star.value) {
                                                 assignable = true;
                                             }
                                         }
@@ -531,7 +530,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                     root = parserAdd(
                                         parser, nodeKind, first.start,
                                         parser.nodes.data[right].end,
-                                        subtreeStart, tokenKindValue(token.kind));
+                                        subtreeStart, token.kind.value);
                                 }
                             }
                         }
@@ -722,7 +721,7 @@ fn parseStatement(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
         return parserAdd(
             parser, AstKind.VariableDeclaration, first.start, parserPrevious(parser).end,
-            subtreeStart, tokenKindValue(first.kind));
+            subtreeStart, first.kind.value);
     }
     if (parserMatch(parser, TokenKind.KwDefer)) {
         parseStatement(parser);

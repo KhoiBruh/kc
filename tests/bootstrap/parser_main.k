@@ -1,5 +1,5 @@
 fn printAstNode(node: AstNode) {
-    print(astKindValue(node.kind) as i32);
+    print(node.kind.value as i32);
     print(":");
     print(node.start as i32);
     print(":");
@@ -12,20 +12,20 @@ fn printAstNode(node: AstNode) {
 }
 
 fn main(): i32 {
-    if (astKindValue(AstKind.NamedType) != 1) return 20;
-    if (astKindValue(AstKind.ArrayType) != 5) return 21;
-    if (astKindValue(AstKind.Identifier) != 10) return 22;
-    if (astKindValue(AstKind.Literal) != 11) return 23;
-    if (astKindValue(AstKind.Unary) != 12) return 24;
-    if (astKindValue(AstKind.Binary) != 13) return 25;
-    if (astKindValue(AstKind.Assignment) != 14) return 26;
-    if (astKindValue(AstKind.Call) != 16) return 27;
-    if (astKindValue(AstKind.Member) != 17) return 28;
-    if (astKindValue(AstKind.Index) != 18) return 29;
-    if (astKindValue(AstKind.Block) != 30) return 30;
-    if (astKindValue(AstKind.WhenStatement) != 39) return 31;
-    if (astKindValue(AstKind.StructDeclaration) != 43) return 32;
-    if (astKindValue(AstKind.EnumDeclaration) != 49) return 33;
+    if (AstKind.NamedType.value != 1) return 20;
+    if (AstKind.ArrayType.value != 5) return 21;
+    if (AstKind.Identifier.value != 10) return 22;
+    if (AstKind.Literal.value != 11) return 23;
+    if (AstKind.Unary.value != 12) return 24;
+    if (AstKind.Binary.value != 13) return 25;
+    if (AstKind.Assignment.value != 14) return 26;
+    if (AstKind.Call.value != 16) return 27;
+    if (AstKind.Member.value != 17) return 28;
+    if (AstKind.Index.value != 18) return 29;
+    if (AstKind.Block.value != 30) return 30;
+    if (AstKind.WhenStatement.value != 39) return 31;
+    if (AstKind.StructDeclaration.value != 43) return 32;
+    if (AstKind.EnumDeclaration.value != 49) return 33;
     if (k_boot_arg_count() < 2) { return 1; }
 
     val pathPlaceholder = k_boot_alloc(1);

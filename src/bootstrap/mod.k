@@ -11,7 +11,6 @@ import bootstrap.ast.AstKind;
 import bootstrap.parser.parse;
 import bootstrap.types.TypeValue;
 import bootstrap.types.TypeKind;
-import bootstrap.types.typeKindValue;
 import bootstrap.types.typeKindFromValue;
 import bootstrap.diagnostic.SemanticResult;
 import bootstrap.semantic.analyze;

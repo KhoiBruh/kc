@@ -2,7 +2,6 @@ module bootstrap.semantic;
 
 import bootstrap.*;
 import bootstrap.token.TokenKind;
-import bootstrap.token.tokenKindValue;
 
 struct Semantic(
     source: Source,
@@ -64,16 +63,16 @@ fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
     if (node.kind == AstKind.Unary) {
-        if (node.aux != tokenKindValue(TokenKind.Plus)) {
-            if (node.aux != tokenKindValue(TokenKind.Minus)) {
+        if (node.aux != TokenKind.Plus.value) {
+            if (node.aux != TokenKind.Minus.value) {
                 return IntegerConstant(false, false, false, 0);
             }
         }
-        negative = node.aux == tokenKindValue(TokenKind.Minus);
+        negative = node.aux == TokenKind.Minus.value;
         node = semantic.nodes.data[root - 1];
     }
     if (node.kind != AstKind.Literal) return IntegerConstant(false, false, false, 0);
-    if (node.aux != tokenKindValue(TokenKind.IntegerLiteral))
+    if (node.aux != TokenKind.IntegerLiteral.value)
         return IntegerConstant(false, false, false, 0);
     var magnitude: u64 = 0;
     var overflow = false;
@@ -97,18 +96,18 @@ fn floatConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
     if (node.kind == AstKind.Unary) {
-        if (node.aux != tokenKindValue(TokenKind.Plus)) {
-            if (node.aux != tokenKindValue(TokenKind.Minus)) {
+        if (node.aux != TokenKind.Plus.value) {
+            if (node.aux != TokenKind.Minus.value) {
                 return IntegerConstant(false, false, false, 0);
             }
         }
-        negative = node.aux == tokenKindValue(TokenKind.Minus);
+        negative = node.aux == TokenKind.Minus.value;
         node = semantic.nodes.data[root - 1];
     }
     if (node.kind != AstKind.Literal) {
         return IntegerConstant(false, false, false, 0);
     }
-    if (node.aux != tokenKindValue(TokenKind.FloatLiteral))
+    if (node.aux != TokenKind.FloatLiteral.value)
         return IntegerConstant(false, false, false, 0);
     var exponentStart = node.end;
     var decimalDigits: i64 = 0;
@@ -262,7 +261,7 @@ fn enumWhenExhaustive(
             val conditionRoot = whenPatternRoot(
                 semantic, roots[index as u64], valueForm, patternIndex);
             val condition = semantic.nodes.data[conditionRoot];
-            if (condition.kind == AstKind.Member && condition.typeKind == typeKindValue(TypeKind.Enum) &&
+            if (condition.kind == AstKind.Member && condition.typeKind == TypeKind.Enum.value &&
                     condition.typeName == subject.name) {
                 for (prior in 0..index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
@@ -276,7 +275,7 @@ fn enumWhenExhaustive(
                             priorPattern);
                         val priorCondition = semantic.nodes.data[priorRoot];
                         if (priorCondition.kind == AstKind.Member &&
-                                priorCondition.typeKind == typeKindValue(TypeKind.Enum) &&
+                                priorCondition.typeKind == TypeKind.Enum.value &&
                                 priorCondition.typeName == subject.name &&
                                 priorCondition.conversionKind == condition.conversionKind) {
                             var diagnostic = condition;
@@ -346,7 +345,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
         checkStatement(semantic, statementRoot);
     }
     function = semantic.nodes.data[functionRoot];
-    function.typeKind = typeKindValue(inferred.kind);
+    function.typeKind = inferred.kind.value;
     function.typeName = inferred.name;
     function.typePointee = inferred.pointee;
     function.storage = function.storage - 4 + 8;
@@ -522,19 +521,19 @@ fn substituteStructType(
         val inner = substituteStructType(
             semantic, structureRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, argumentStart, count);
-        return TypeValue(TypeKind.Nullable, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
     }
     if (type.kind == TypeKind.Pointer) {
         val inner = substituteStructType(
             semantic, structureRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, argumentStart, count);
-        return TypeValue(TypeKind.Pointer, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Pointer, inner.name, inner.kind.value);
     }
     if (type.kind == TypeKind.Slice) {
         val inner = substituteStructType(
             semantic, structureRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, argumentStart, count);
-        return TypeValue(TypeKind.Slice, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Slice, inner.name, inner.kind.value);
     }
     return type;
 }
@@ -627,7 +626,7 @@ fn substituteGenericType(
             semantic, functionRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, count);
         if (inner.kind == TypeKind.Invalid) return inner;
-        return TypeValue(TypeKind.Nullable, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
     }
     if (type.kind != TypeKind.TypeParameter) return type;
     val position =
@@ -706,7 +705,7 @@ fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
     }
     if (value.kind == TypeKind.Invalid) value = inferTypeFromNode(semantic, root);
     var node = semantic.nodes.data[root];
-    node.typeKind = typeKindValue(value.kind);
+    node.typeKind = value.kind.value;
     node.typeName = value.name;
     node.typePointee = value.pointee;
     semantic.nodes.data[root] = node;
@@ -759,13 +758,13 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
     if (node.kind == AstKind.PointerType) {
         val inner = typeFromNode(semantic, root - 1);
         if (inner.kind == TypeKind.Pointer) {
-            return TypeValue(TypeKind.Pointer, inner.pointee as u64, typeKindValue(TypeKind.Pointer));
+            return TypeValue(TypeKind.Pointer, inner.pointee as u64, TypeKind.Pointer.value);
         }
-        return TypeValue(TypeKind.Pointer, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Pointer, inner.name, inner.kind.value);
     }
     if (node.kind == AstKind.SliceType) {
         val inner = typeFromNode(semantic, root - 1);
-        return TypeValue(TypeKind.Slice, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Slice, inner.name, inner.kind.value);
     }
     if (node.kind == AstKind.ArrayType) {
         var childRoot = root - 1;
@@ -784,7 +783,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
     }
     if (node.kind == AstKind.NullableType) {
         val inner = typeFromNode(semantic, root - 1);
-        return TypeValue(TypeKind.Nullable, inner.name, typeKindValue(inner.kind));
+        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
     }
     return invalidType();
 }
@@ -812,7 +811,7 @@ fn functionParameterCount(function: AstNode) => function.aux % 65536;
 fn expressionType(var semantic: Semantic, root: u64): TypeValue {
     val value = inferExpressionType(semantic, root);
     var node = semantic.nodes.data[root];
-    node.typeKind = typeKindValue(value.kind);
+    node.typeKind = value.kind.value;
     node.typeName = value.name;
     node.typePointee = value.pointee;
     semantic.nodes.data[root] = node;
@@ -824,10 +823,10 @@ fn contextualizeLiteralByteSlice(
     expected: TypeValue, actual: TypeValue): TypeValue {
     val node = semantic.nodes.data[root];
     if (node.kind != AstKind.Literal ||
-        node.aux != tokenKindValue(TokenKind.StringLiteral)) return actual;
-    if (expected.kind != TypeKind.Slice || expected.pointee != typeKindValue(TypeKind.U8)) return actual;
+        node.aux != TokenKind.StringLiteral.value) return actual;
+    if (expected.kind != TypeKind.Slice || expected.pointee != TypeKind.U8.value) return actual;
     var typed = node;
-    typed.typeKind = typeKindValue(expected.kind);
+    typed.typeKind = expected.kind.value;
     typed.typeName = expected.name;
     typed.typePointee = expected.pointee;
     semantic.nodes.data[root] = typed;
@@ -872,7 +871,7 @@ fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
     if (node.kind == AstKind.Index) {
         val indexRoot = root - 1;
         val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
-        if (semantic.nodes.data[objectRoot].typeKind == typeKindValue(TypeKind.Array)) {
+        if (semantic.nodes.data[objectRoot].typeKind == TypeKind.Array.value) {
             markOwnerRootMoved(semantic, objectRoot);
         }
     }
@@ -981,33 +980,33 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         return invalidType();
     }
     if (node.kind == AstKind.Literal) {
-        if (node.aux == tokenKindValue(TokenKind.IntegerLiteral)) return integerLiteralType();
-        if (node.aux == tokenKindValue(TokenKind.FloatLiteral)) return TypeValue(TypeKind.F64, 0, 0);
-        if (node.aux == tokenKindValue(TokenKind.StringLiteral)) return TypeValue(TypeKind.String, 0, 0);
-        if (node.aux == tokenKindValue(TokenKind.KwTrue)) return boolType();
-        if (node.aux == tokenKindValue(TokenKind.KwFalse)) return boolType();
-        if (node.aux == tokenKindValue(TokenKind.KwNull)) return TypeValue(TypeKind.NullLiteral, 0, 0);
+        if (node.aux == TokenKind.IntegerLiteral.value) return integerLiteralType();
+        if (node.aux == TokenKind.FloatLiteral.value) return TypeValue(TypeKind.F64, 0, 0);
+        if (node.aux == TokenKind.StringLiteral.value) return TypeValue(TypeKind.String, 0, 0);
+        if (node.aux == TokenKind.KwTrue.value) return boolType();
+        if (node.aux == TokenKind.KwFalse.value) return boolType();
+        if (node.aux == TokenKind.KwNull.value) return TypeValue(TypeKind.NullLiteral, 0, 0);
         return invalidType();
     }
     if (node.kind == AstKind.Unary) {
         val operand = expressionType(semantic, root - 1);
-        if (node.aux == tokenKindValue(TokenKind.Star)) {
+        if (node.aux == TokenKind.Star.value) {
             if (operand.kind != TypeKind.Pointer) {
                 semanticFail(semantic, 4, node);
                 return invalidType();
             }
-            if (operand.pointee == typeKindValue(TypeKind.Pointer)) {
+            if (operand.pointee == TypeKind.Pointer.value) {
                 return TypeValue(TypeKind.Pointer, 0, operand.name as u32);
             }
             return TypeValue(typeKindFromValue(operand.pointee), operand.name, 0);
         }
-        if (node.aux == tokenKindValue(TokenKind.Ampersand)) {
+        if (node.aux == TokenKind.Ampersand.value) {
             if (operand.kind == TypeKind.Pointer) {
-                return TypeValue(TypeKind.Pointer, operand.pointee as u64, typeKindValue(TypeKind.Pointer));
+                return TypeValue(TypeKind.Pointer, operand.pointee as u64, TypeKind.Pointer.value);
             }
-            return TypeValue(TypeKind.Pointer, operand.name, typeKindValue(operand.kind));
+            return TypeValue(TypeKind.Pointer, operand.name, operand.kind.value);
         }
-        if (node.aux == tokenKindValue(TokenKind.Bang)) {
+        if (node.aux == TokenKind.Bang.value) {
             if (operand.kind != TypeKind.Bool) {
                 semanticFail(semantic, 4, node);
                 return invalidType();
@@ -1019,14 +1018,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (node.kind == AstKind.Binary) {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
-        if (node.aux == tokenKindValue(TokenKind.KwIn)) {
+        if (node.aux == TokenKind.KwIn.value) {
             val range = semantic.nodes.data[rightRoot];
             var validRange = range.kind == AstKind.Binary;
             if (validRange) {
-                validRange = range.aux == tokenKindValue(TokenKind.Range) ||
-                    range.aux == tokenKindValue(TokenKind.RangeExclusive) ||
-                    range.aux == tokenKindValue(TokenKind.RangeExclusiveStart) ||
-                    range.aux == tokenKindValue(TokenKind.RangeExclusiveBoth);
+                validRange = range.aux == TokenKind.Range.value ||
+                    range.aux == TokenKind.RangeExclusive.value ||
+                    range.aux == TokenKind.RangeExclusiveStart.value ||
+                    range.aux == TokenKind.RangeExclusiveBoth.value;
             }
             if (!validRange) {
                 semanticFail(semantic, 4, node);
@@ -1040,13 +1039,13 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             if (lower.kind == TypeKind.IntegerLiteral) {
                 lower = subject;
                 var lowerNode = semantic.nodes.data[lowerRoot];
-                lowerNode.typeKind = typeKindValue(subject.kind);
+                lowerNode.typeKind = subject.kind.value;
                 semantic.nodes.data[lowerRoot] = lowerNode;
             }
             if (upper.kind == TypeKind.IntegerLiteral) {
                 upper = subject;
                 var upperNode = semantic.nodes.data[upperRoot];
-                upperNode.typeKind = typeKindValue(subject.kind);
+                upperNode.typeKind = subject.kind.value;
                 semantic.nodes.data[upperRoot] = upperNode;
             }
             if (!subject.isInteger() && !subject.isFloat())
@@ -1055,7 +1054,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 !typeAccepts(subject, upper, semantic.genericArguments))
                 semanticFail(semantic, 4, node);
             var typedRange = range;
-            typedRange.typeKind = typeKindValue(subject.kind);
+            typedRange.typeKind = subject.kind.value;
             typedRange.typeName = subject.name;
             typedRange.typePointee = subject.pointee;
             semantic.nodes.data[rightRoot] = typedRange;
@@ -1063,8 +1062,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val left = expressionType(semantic, leftRoot);
         val right = expressionType(semantic, rightRoot);
-        var logical = node.aux == tokenKindValue(TokenKind.AndAnd);
-        if (node.aux == tokenKindValue(TokenKind.OrOr)) logical = true;
+        var logical = node.aux == TokenKind.AndAnd.value;
+        if (node.aux == TokenKind.OrOr.value) logical = true;
         if (logical) {
             if (left.kind != TypeKind.Bool) semanticFail(semantic, 4, node);
             else {
@@ -1072,12 +1071,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             return boolType();
         }
-        var comparison = node.aux == tokenKindValue(TokenKind.Less);
-        if (node.aux == tokenKindValue(TokenKind.Greater)) comparison = true;
-        if (node.aux == tokenKindValue(TokenKind.EqualEqual)) comparison = true;
-        if (node.aux == tokenKindValue(TokenKind.BangEqual)) comparison = true;
-        if (node.aux == tokenKindValue(TokenKind.LessEqual)) comparison = true;
-        if (node.aux == tokenKindValue(TokenKind.GreaterEqual)) comparison = true;
+        var comparison = node.aux == TokenKind.Less.value;
+        if (node.aux == TokenKind.Greater.value) comparison = true;
+        if (node.aux == TokenKind.EqualEqual.value) comparison = true;
+        if (node.aux == TokenKind.BangEqual.value) comparison = true;
+        if (node.aux == TokenKind.LessEqual.value) comparison = true;
+        if (node.aux == TokenKind.GreaterEqual.value) comparison = true;
         if (comparison) {
             if (!typeAccepts(left, right, semantic.genericArguments)) {
                 if (!typeAccepts(right, left, semantic.genericArguments)) {
@@ -1112,13 +1111,13 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             left = semantic.locals.data[targetLocal].valueType;
             var resolvedTarget = target;
             resolvedTarget.storage = semantic.locals.data[targetLocal].storage;
-            resolvedTarget.typeKind = typeKindValue(left.kind);
+            resolvedTarget.typeKind = left.kind.value;
             resolvedTarget.typeName = left.name;
             resolvedTarget.typePointee = left.pointee;
             if (semantic.locals.data[targetLocal].autoDrop)
                 resolvedTarget.ownership = 2;
             semantic.nodes.data[leftRoot] = resolvedTarget;
-            if (node.aux != tokenKindValue(TokenKind.Equal) &&
+            if (node.aux != TokenKind.Equal.value &&
                 semantic.locals.data[targetLocal].moved) {
                 semanticFail(semantic, 4, target);
                 return left;
@@ -1131,7 +1130,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             semantic, rightRoot, left, right);
         if (!typeAccepts(left, right, semantic.genericArguments)) {
             semanticFail(semantic, 4, node);
-        } else if (node.aux == tokenKindValue(TokenKind.Equal)) {
+        } else if (node.aux == TokenKind.Equal.value) {
             markExpressionMoved(semantic, rightRoot);
             if (targetLocal != semantic.locals.length) {
                 var reassigned = semantic.locals.data[targetLocal];
@@ -1149,7 +1148,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (source.kind == TypeKind.IntegerLiteral) {
             source = TypeValue(TypeKind.I32, 0, 0);
             var valueNode = semantic.nodes.data[valueRoot];
-            valueNode.typeKind = typeKindValue(source.kind);
+            valueNode.typeKind = source.kind.value;
             semantic.nodes.data[valueRoot] = valueNode;
         }
         var pointerCast = false;
@@ -1303,7 +1302,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
                 val pointer = expressionType(semantic, argumentRoots[0]);
                 val length = expressionType(semantic, argumentRoots[1]);
-                if (pointer.kind != TypeKind.Pointer || pointer.pointee == typeKindValue(TypeKind.Unit)) {
+                if (pointer.kind != TypeKind.Pointer || pointer.pointee == TypeKind.Unit.value) {
                     semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[0]]);
                     k_boot_free(explicitTypeRoots as unit*);
                     k_boot_free(argumentRoots as unit*);
@@ -1684,14 +1683,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         enumVariantStart(enumeration) + position as u64];
                     if (nodeHash(semantic, variant) == wanted) {
                         var resolvedObject = objectNode;
-                        resolvedObject.typeKind = typeKindValue(TypeKind.Enum);
+                        resolvedObject.typeKind = TypeKind.Enum.value;
                         resolvedObject.typeName = semantic.enums.data[enumIndex].name;
                         resolvedObject.typePointee = enumeration.typePointee;
                         semantic.nodes.data[objectRoot] = resolvedObject;
                         var resolved = node;
                         resolved.storage = variant.storage;
                         resolved.conversionKind = position;
-                        resolved.typeKind = typeKindValue(TypeKind.Enum);
+                        resolved.typeKind = TypeKind.Enum.value;
                         resolved.typeName = semantic.enums.data[enumIndex].name;
                         resolved.typePointee = enumeration.typePointee;
                         semantic.nodes.data[root] = resolved;
@@ -1717,7 +1716,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         if (object.kind == TypeKind.String) {
             if (nodeHash(semantic, node) == 210708248140) {
-                return TypeValue(TypeKind.Slice, 0, typeKindValue(TypeKind.U8));
+                return TypeValue(TypeKind.Slice, 0, TypeKind.U8.value);
             }
             semanticFail(semantic, 8, node);
             return invalidType();
@@ -1774,15 +1773,15 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             semanticFail(semantic, 8, node);
             return invalidType();
         }
-        if (object.pointee == typeKindValue(TypeKind.Pointer)) {
+        if (object.pointee == TypeKind.Pointer.value) {
             return TypeValue(TypeKind.Pointer, 0, object.name as u32);
         }
         return TypeValue(typeKindFromValue(object.pointee), object.name, 0);
     }
     if (node.kind == AstKind.Postfix) {
         val operand = expressionType(semantic, root - 1);
-        if (node.aux == tokenKindValue(TokenKind.PlusPlus) ||
-            node.aux == tokenKindValue(TokenKind.MinusMinus)) {
+        if (node.aux == TokenKind.PlusPlus.value ||
+            node.aux == TokenKind.MinusMinus.value) {
             if (semantic.mutationRoot != root) semanticFail(semantic, 4, node);
             if (!operand.isFloat() && !operand.isInteger())
                 semanticFail(semantic, 4, node);
@@ -1856,7 +1855,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             semanticFail(semantic, 4, semantic.nodes.data[elseValueRoot]);
         }
         var resolved = semantic.nodes.data[root];
-        resolved.typeKind = typeKindValue(thenType.kind);
+        resolved.typeKind = thenType.kind.value;
         resolved.typeName = thenType.name;
         resolved.typePointee = thenType.pointee;
         semantic.nodes.data[root] = resolved;
@@ -1877,7 +1876,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             if (subject.kind == TypeKind.IntegerLiteral) {
                 subject = TypeValue(TypeKind.I32, 0, 0);
                 var subjectNode = semantic.nodes.data[branchRoot];
-                subjectNode.typeKind = typeKindValue(TypeKind.I32);
+                subjectNode.typeKind = TypeKind.I32.value;
                 semantic.nodes.data[branchRoot] = subjectNode;
             }
         }
@@ -1913,7 +1912,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         semanticFail(semantic, 4, semantic.nodes.data[conditionRoot]);
                     } else {
                         var conditionNode = semantic.nodes.data[conditionRoot];
-                        conditionNode.typeKind = typeKindValue(subject.kind);
+                        conditionNode.typeKind = subject.kind.value;
                         conditionNode.typeName = subject.name;
                         conditionNode.typePointee = subject.pointee;
                         semantic.nodes.data[conditionRoot] = conditionNode;
@@ -1944,7 +1943,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     semanticFail(semantic, 4, semantic.nodes.data[valueRoot]);
                 } else {
                     var valueNode = semantic.nodes.data[valueRoot];
-                    valueNode.typeKind = typeKindValue(result.kind);
+                    valueNode.typeKind = result.kind.value;
                     valueNode.typeName = result.name;
                     valueNode.typePointee = result.pointee;
                     semantic.nodes.data[valueRoot] = valueNode;
@@ -1960,7 +1959,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             semanticFail(semantic, 4, node);
         }
         var resolved = semantic.nodes.data[root];
-        resolved.typeKind = typeKindValue(result.kind);
+        resolved.typeKind = result.kind.value;
         resolved.typeName = result.name;
         resolved.typePointee = result.pointee;
         semantic.nodes.data[root] = resolved;
@@ -1979,7 +1978,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 return invalidType();
             }
             var childNode = semantic.nodes.data[childRoot];
-            childNode.typeKind = typeKindValue(element.kind);
+            childNode.typeKind = element.kind.value;
             childNode.typeName = element.name;
             childNode.typePointee = element.pointee;
             semantic.nodes.data[childRoot] = childNode;
@@ -2042,7 +2041,7 @@ fn resolveWhenResultType(
     var semantic: Semantic, root: u64, target: TypeValue) {
     var whenNode = semantic.nodes.data[root];
     if (whenNode.kind != AstKind.WhenExpression) return;
-    whenNode.typeKind = typeKindValue(target.kind);
+    whenNode.typeKind = target.kind.value;
     whenNode.typeName = target.name;
     whenNode.typePointee = target.pointee;
     semantic.nodes.data[root] = whenNode;
@@ -2051,8 +2050,8 @@ fn resolveWhenResultType(
     for (index in 0..<branchCount) {
         val valueRoot = branchRoot - 1;
         var valueNode = semantic.nodes.data[valueRoot];
-        if (valueNode.typeKind == typeKindValue(TypeKind.IntegerLiteral)) {
-            valueNode.typeKind = typeKindValue(target.kind);
+        if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+            valueNode.typeKind = target.kind.value;
             valueNode.typeName = target.name;
             valueNode.typePointee = target.pointee;
             semantic.nodes.data[valueRoot] = valueNode;
@@ -2065,7 +2064,7 @@ fn resolveIfResultType(
     var semantic: Semantic, root: u64, target: TypeValue) {
     var ifNode = semantic.nodes.data[root];
     if (ifNode.kind != AstKind.IfExpression) return;
-    ifNode.typeKind = typeKindValue(target.kind);
+    ifNode.typeKind = target.kind.value;
     ifNode.typeName = target.name;
     ifNode.typePointee = target.pointee;
     semantic.nodes.data[root] = ifNode;
@@ -2076,15 +2075,15 @@ fn resolveIfResultType(
         thenValueRoot = semantic.nodes.data[thenValueRoot].subtreeStart - 1;
     }
     var valueNode = semantic.nodes.data[thenValueRoot];
-    if (valueNode.typeKind == typeKindValue(TypeKind.IntegerLiteral)) {
-        valueNode.typeKind = typeKindValue(target.kind);
+    if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+        valueNode.typeKind = target.kind.value;
         valueNode.typeName = target.name;
         valueNode.typePointee = target.pointee;
         semantic.nodes.data[thenValueRoot] = valueNode;
     }
     valueNode = semantic.nodes.data[elseValueRoot];
-    if (valueNode.typeKind == typeKindValue(TypeKind.IntegerLiteral)) {
-        valueNode.typeKind = typeKindValue(target.kind);
+    if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+        valueNode.typeKind = target.kind.value;
         valueNode.typeName = target.name;
         valueNode.typePointee = target.pointee;
         semantic.nodes.data[elseValueRoot] = valueNode;
@@ -2154,10 +2153,10 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         var valueType = expressionType(semantic, collectionRoot);
         var range = collectionNode.kind == AstKind.Binary;
         if (range) {
-            range = collectionNode.aux == tokenKindValue(TokenKind.Range);
-            if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusive)) range = true;
-            if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveStart)) range = true;
-            if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveBoth)) range = true;
+            range = collectionNode.aux == TokenKind.Range.value;
+            if (collectionNode.aux == TokenKind.RangeExclusive.value) range = true;
+            if (collectionNode.aux == TokenKind.RangeExclusiveStart.value) range = true;
+            if (collectionNode.aux == TokenKind.RangeExclusiveBoth.value) range = true;
         }
         if (range) {
             if (node.aux == 1) {
@@ -2182,15 +2181,15 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         if (valueType.kind == TypeKind.IntegerLiteral) {
             valueType = TypeValue(TypeKind.I32, 0, 0);
-            collectionNode.typeKind = typeKindValue(TypeKind.I32);
+            collectionNode.typeKind = TypeKind.I32.value;
             semantic.nodes.data[collectionRoot] = collectionNode;
             val rightRoot = collectionRoot - 1;
             val leftRoot =
                 semantic.nodes.data[rightRoot].subtreeStart - 1;
             var rightNode = semantic.nodes.data[rightRoot];
             var leftNode = semantic.nodes.data[leftRoot];
-            rightNode.typeKind = typeKindValue(TypeKind.I32);
-            leftNode.typeKind = typeKindValue(TypeKind.I32);
+            rightNode.typeKind = TypeKind.I32.value;
+            leftNode.typeKind = TypeKind.I32.value;
             semantic.nodes.data[rightRoot] = rightNode;
             semantic.nodes.data[leftRoot] = leftNode;
         }
@@ -2241,7 +2240,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             if (subject.kind == TypeKind.IntegerLiteral) {
                 subject = TypeValue(TypeKind.I32, 0, 0);
                 var subjectNode = semantic.nodes.data[subjectRoot];
-                subjectNode.typeKind = typeKindValue(TypeKind.I32);
+                subjectNode.typeKind = TypeKind.I32.value;
                 semantic.nodes.data[subjectRoot] = subjectNode;
             }
             var comparable = subject.kind == TypeKind.Bool;
@@ -2281,7 +2280,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                             semantic.nodes.data[conditionRoot]);
                     } else {
                         var conditionNode = semantic.nodes.data[conditionRoot];
-                        conditionNode.typeKind = typeKindValue(subject.kind);
+                        conditionNode.typeKind = subject.kind.value;
                         conditionNode.typeName = subject.name;
                         conditionNode.typePointee = subject.pointee;
                         semantic.nodes.data[conditionRoot] = conditionNode;
@@ -2343,7 +2342,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (valueType.kind == TypeKind.IntegerLiteral) {
             valueType = TypeValue(TypeKind.I32, 0, 0);
             var initializerNode = semantic.nodes.data[initializerRoot];
-            initializerNode.typeKind = typeKindValue(TypeKind.I32);
+            initializerNode.typeKind = TypeKind.I32.value;
             semantic.nodes.data[initializerRoot] = initializerNode;
             resolveWhenResultType(semantic, initializerRoot, valueType);
             resolveIfResultType(semantic, initializerRoot, valueType);
@@ -2364,7 +2363,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             if (initializer.kind == TypeKind.Array) {
                 if (initializer.arrayElement().kind == TypeKind.Invalid) {
                     var initializerNode = semantic.nodes.data[initializerRoot];
-                    initializerNode.typeKind = typeKindValue(valueType.kind);
+                    initializerNode.typeKind = valueType.kind.value;
                     initializerNode.typeName = valueType.name;
                     initializerNode.typePointee = valueType.pointee;
                     semantic.nodes.data[initializerRoot] = initializerNode;
@@ -2379,7 +2378,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (automaticDrop) declarationNode.ownership = 2;
         semantic.nodes.data[root] = declarationNode;
         semantic.locals.add(LocalInfo(
-            name, valueType, node.aux == tokenKindValue(TokenKind.KwVar), nameNode.start,
+            name, valueType, node.aux == TokenKind.KwVar.value, nameNode.start,
             false, automaticDrop));
         return;
     }
@@ -2416,7 +2415,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         } else {
             if (node.aux == 1) {
                 var returnNode = semantic.nodes.data[root];
-                returnNode.typeKind = typeKindValue(semantic.returnType.kind);
+                returnNode.typeKind = semantic.returnType.kind.value;
                 returnNode.typeName = semantic.returnType.name;
                 returnNode.typePointee = semantic.returnType.pointee;
                 if (semantic.returnType.kind == TypeKind.Nullable) {
@@ -2430,8 +2429,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 }
                 semantic.nodes.data[root] = returnNode;
                 var valueNode = semantic.nodes.data[root - 1];
-                if (valueNode.typeKind == typeKindValue(TypeKind.IntegerLiteral)) {
-                    valueNode.typeKind = typeKindValue(semantic.returnType.kind);
+                if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+                    valueNode.typeKind = semantic.returnType.kind.value;
                     valueNode.typeName = semantic.returnType.name;
                     valueNode.typePointee = semantic.returnType.pointee;
                     semantic.nodes.data[root - 1] = valueNode;
@@ -2563,7 +2562,7 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
                     }
                 }
                 var typed = declaration;
-                typed.typePointee = typeKindValue(backing.kind);
+                typed.typePointee = backing.kind.value;
                 semantic.nodes.data[root] = typed;
             }
         }
@@ -2668,7 +2667,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     } else actual = expected;
                 }
                 var typed = declaration;
-                typed.typeKind = typeKindValue(actual.kind);
+                typed.typeKind = actual.kind.value;
                 typed.typeName = actual.name;
                 typed.typePointee = actual.pointee;
                 semantic.nodes.data[root] = typed;

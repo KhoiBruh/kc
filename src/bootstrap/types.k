@@ -3,9 +3,8 @@ module bootstrap.types;
 import bootstrap.ast.AstNode;
 import bootstrap.list.List;
 import bootstrap.token.TokenKind;
-import bootstrap.token.tokenKindValue;
 
-enum TypeKind {
+enum TypeKind: u32 {
     Invalid,
     Unit,
     Bool,
@@ -29,29 +28,6 @@ enum TypeKind {
     Enum
 }
 
-fn typeKindValue(kind: TypeKind): u32 => when (kind) {
-    TypeKind.Invalid -> 0;
-    TypeKind.Unit -> 1;
-    TypeKind.Bool -> 2;
-    TypeKind.I32 -> 3;
-    TypeKind.I64 -> 4;
-    TypeKind.U8 -> 5;
-    TypeKind.U32 -> 6;
-    TypeKind.U64 -> 7;
-    TypeKind.Struct -> 8;
-    TypeKind.Pointer -> 9;
-    TypeKind.String -> 10;
-    TypeKind.IntegerLiteral -> 11;
-    TypeKind.Function -> 12;
-    TypeKind.Slice -> 13;
-    TypeKind.TypeParameter -> 14;
-    TypeKind.Nullable -> 15;
-    TypeKind.NullLiteral -> 16;
-    TypeKind.F32 -> 17;
-    TypeKind.F64 -> 18;
-    TypeKind.Array -> 19;
-    TypeKind.Enum -> 20;
-};
 
 fn typeKindFromValue(value: u32): TypeKind => when (value) {
     1 -> TypeKind.Unit;
@@ -81,7 +57,7 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 
 	fn array(val self, size: u64) => TypeValue(
         TypeKind.Array, self.name,
-        typeKindValue(self.kind) + (size as u32) * 256);
+        self.kind.value + (size as u32) * 256);
 
 	fn arrayElement(val self) => TypeValue(
         typeKindFromValue(self.pointee % 256), self.name, 0);
@@ -181,16 +157,16 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, val genericArguments: Lis
 }
 
 fn primitiveType(tokenKind: u32): TypeValue {
-    if (tokenKind == tokenKindValue(TokenKind.KwUnit)) return unitType();
-    if (tokenKind == tokenKindValue(TokenKind.KwBool)) return boolType();
-    if (tokenKind == tokenKindValue(TokenKind.KwI32)) return TypeValue(TypeKind.I32, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwI64)) return TypeValue(TypeKind.I64, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwU8)) return TypeValue(TypeKind.U8, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwU32)) return TypeValue(TypeKind.U32, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwU64)) return TypeValue(TypeKind.U64, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwF32)) return TypeValue(TypeKind.F32, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwF64)) return TypeValue(TypeKind.F64, 0, 0);
-    if (tokenKind == tokenKindValue(TokenKind.KwString)) return TypeValue(TypeKind.String, 0, 0);
+    if (tokenKind == TokenKind.KwUnit.value) return unitType();
+    if (tokenKind == TokenKind.KwBool.value) return boolType();
+    if (tokenKind == TokenKind.KwI32.value) return TypeValue(TypeKind.I32, 0, 0);
+    if (tokenKind == TokenKind.KwI64.value) return TypeValue(TypeKind.I64, 0, 0);
+    if (tokenKind == TokenKind.KwU8.value) return TypeValue(TypeKind.U8, 0, 0);
+    if (tokenKind == TokenKind.KwU32.value) return TypeValue(TypeKind.U32, 0, 0);
+    if (tokenKind == TokenKind.KwU64.value) return TypeValue(TypeKind.U64, 0, 0);
+    if (tokenKind == TokenKind.KwF32.value) return TypeValue(TypeKind.F32, 0, 0);
+    if (tokenKind == TokenKind.KwF64.value) return TypeValue(TypeKind.F64, 0, 0);
+    if (tokenKind == TokenKind.KwString.value) return TypeValue(TypeKind.String, 0, 0);
     return invalidType();
 }
 

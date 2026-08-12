@@ -1,14 +1,14 @@
 fn main(): i32 {
-    if (tokenKindValue(TokenKind.EndOfFile) != 0) return 10;
-    if (tokenKindValue(TokenKind.Identifier) != 1) return 11;
-    if (tokenKindValue(TokenKind.StringLiteral) != 5) return 12;
-    if (tokenKindValue(TokenKind.KwFn) != 10) return 13;
-    if (tokenKindValue(TokenKind.LeftParen) != 50) return 14;
-    if (tokenKindValue(TokenKind.Equal) != 65) return 15;
-    if (tokenKindValue(TokenKind.Range) != 87) return 16;
-    if (tokenKindValue(TokenKind.RangeExclusive) != 88) return 17;
-    if (tokenKindValue(TokenKind.RangeExclusiveStart) != 93) return 18;
-    if (tokenKindValue(TokenKind.RangeExclusiveBoth) != 94) return 19;
+    if (TokenKind.EndOfFile.value != 0) return 10;
+    if (TokenKind.Identifier.value != 1) return 11;
+    if (TokenKind.StringLiteral.value != 5) return 12;
+    if (TokenKind.KwFn.value != 10) return 13;
+    if (TokenKind.LeftParen.value != 50) return 14;
+    if (TokenKind.Equal.value != 65) return 15;
+    if (TokenKind.Range.value != 87) return 16;
+    if (TokenKind.RangeExclusive.value != 88) return 17;
+    if (TokenKind.RangeExclusiveStart.value != 93) return 18;
+    if (TokenKind.RangeExclusiveBoth.value != 94) return 19;
 
     var bytes = ByteBuffer.new();
     bytes.append("");
