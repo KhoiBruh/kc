@@ -7,13 +7,9 @@ import bootstrap.loader.SourceMapSegment;
 extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
 
-fn appendRaw(var buffer: StringBuilder, data: u8*, length: u64) {
-    buffer.appendBytes(data, length);
-}
-
-fn appendQuoted(var buffer: StringBuilder, data: u8*, length: u64) {
+fn appendQuoted(var buffer: StringBuilder, val bytes: []u8) {
     buffer.append("\"");
-    appendRaw(buffer, data, length);
+    buffer.appendBytes(bytes);
     buffer.append("\"");
 }
 
@@ -88,7 +84,7 @@ fn compileToLl(
 
     var temporaryPath = StringBuilder.new();
     defer temporaryPath.free();
-    appendRaw(temporaryPath, outputPath, outputPathLength);
+    temporaryPath.appendBytes(slice(outputPath, outputPathLength));
     temporaryPath.append(".tmp.ll");
     val written = k_boot_write_file(
         temporaryPath.data, temporaryPath.length, output.data, output.length);
@@ -99,9 +95,10 @@ fn compileToLl(
     var verifyCommand = StringBuilder.new();
     defer verifyCommand.free();
 
-    appendQuoted(verifyCommand, optPath, optPathLength);
+    appendQuoted(verifyCommand, slice(optPath, optPathLength));
     appendVerifyFlags(verifyCommand);
-    appendQuoted(verifyCommand, temporaryPath.data, temporaryPath.length);
+    appendQuoted(
+        verifyCommand, slice(temporaryPath.data, temporaryPath.length));
     val verified = k_boot_run(verifyCommand.data, verifyCommand.length);
     if (verified != 0) {
         if (verified < 0) {
@@ -126,15 +123,15 @@ fn linkLl(
 ): i32 {
     var command = StringBuilder.new();
     defer command.free();
-    appendQuoted(command, clangPath, clangPathLength);
+    appendQuoted(command, slice(clangPath, clangPathLength));
     command.append(" ");
-    appendQuoted(command, llPath, llPathLength);
+    appendQuoted(command, slice(llPath, llPathLength));
     command.append(" ");
-    appendQuoted(command, stdRuntime, stdRuntimeLength);
+    appendQuoted(command, slice(stdRuntime, stdRuntimeLength));
     command.append(" ");
-    appendQuoted(command, bootstrapRuntime, bootstrapRuntimeLength);
+    appendQuoted(command, slice(bootstrapRuntime, bootstrapRuntimeLength));
     appendOutputFlag(command);
-    appendQuoted(command, executablePath, executablePathLength);
+    appendQuoted(command, slice(executablePath, executablePathLength));
     val result = k_boot_run(command.data, command.length);
     if (result == 0) return 0;
     if (result < 0) { 
@@ -158,8 +155,6 @@ fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
     }
     return col;
 }
-
-fn stderrWrite(data: u8*, length: u64) => k_boot_stderr(data, length);
 
 fn stderrNumber(value: u64): StringBuilder {
     var buf = StringBuilder.new();
@@ -364,7 +359,7 @@ fn printDiagnostic(
         val segment = sourceMap.data[i];
         val total = segment.sourceStart + segment.sourceLength;
         if (start in segment.sourceStart..total) {
-			appendRaw(buf, segment.path, segment.pathLength);
+			buf.appendBytes(slice(segment.path, segment.pathLength));
 			buf.add(58);
 			sourceStart = segment.sourceStart;
             break;
@@ -373,11 +368,11 @@ fn printDiagnostic(
     
     val lineNum = stderrNumber(findLine(source, sourceStart, start));
     defer lineNum.free();
-    appendRaw(buf, lineNum.data, lineNum.length);
+    buf.appendBytes(slice(lineNum.data, lineNum.length));
     buf.add(58);
     val colNum = stderrNumber(findColumn(source, sourceStart, start));
     defer colNum.free();
-    appendRaw(buf, colNum.data, colNum.length);
+    buf.appendBytes(slice(colNum.data, colNum.length));
     buf.add(58);
     buf.add(32);
     buf.add(101);

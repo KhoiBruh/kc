@@ -54,8 +54,8 @@ struct StringBuilder(data: u8*, length: u64, capacity: u64) {
         self.length++;
     }
 
-    fn appendBytes(var self, data: u8*, length: u64) {
-        for (i in 0..<length) self.add(data[i]);
+    fn appendBytes(var self, val bytes: []u8) {
+        for (byte in bytes) self.add(byte);
     }
 
     fn append(var self, val text: string) {

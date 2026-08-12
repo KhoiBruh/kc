@@ -62,14 +62,23 @@ fn main(): i32 {
 
     {
         var builder = StringBuilder.new();
+        val raw = k_boot_alloc(3) as u8*;
+        raw[0] = 1;
+        raw[1] = 2;
+        raw[2] = 3;
+        builder.appendBytes(slice(raw, 0));
+        builder.appendBytes(slice(raw, 3));
+        if (builder.length != 3) return 20;
+        if (builder.data[2] != 3) return 21;
+        k_boot_free(raw as unit*);
         builder.append("A ");
         builder.append("😀");
         var built = builder.toString();
         val view = (&built) as StringLayout*;
-        if ((*view).length != 6) {
+        if ((*view).length != 9) {
             return 9;
         }
-        if ((*view).data[5] != 128) {
+        if ((*view).data[8] != 128) {
             return 10;
         }
     }
