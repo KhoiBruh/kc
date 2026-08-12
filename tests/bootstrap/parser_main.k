@@ -1,5 +1,5 @@
 fn printAstNode(node: AstNode) {
-    print(node.kind as i32);
+    print(astKindValue(node.kind) as i32);
     print(":");
     print(node.start as i32);
     print(":");
@@ -12,6 +12,20 @@ fn printAstNode(node: AstNode) {
 }
 
 fn main(): i32 {
+    if (astKindValue(AstKind.NamedType) != 1) return 20;
+    if (astKindValue(AstKind.ArrayType) != 5) return 21;
+    if (astKindValue(AstKind.Identifier) != 10) return 22;
+    if (astKindValue(AstKind.Literal) != 11) return 23;
+    if (astKindValue(AstKind.Unary) != 12) return 24;
+    if (astKindValue(AstKind.Binary) != 13) return 25;
+    if (astKindValue(AstKind.Assignment) != 14) return 26;
+    if (astKindValue(AstKind.Call) != 16) return 27;
+    if (astKindValue(AstKind.Member) != 17) return 28;
+    if (astKindValue(AstKind.Index) != 18) return 29;
+    if (astKindValue(AstKind.Block) != 30) return 30;
+    if (astKindValue(AstKind.WhenStatement) != 39) return 31;
+    if (astKindValue(AstKind.StructDeclaration) != 43) return 32;
+    if (astKindValue(AstKind.EnumDeclaration) != 49) return 33;
     if (k_boot_arg_count() < 2) { return 1; }
 
     val pathPlaceholder = k_boot_alloc(1);

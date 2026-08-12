@@ -7,6 +7,7 @@ import bootstrap.containers.ByteBuffer;
 import bootstrap.containers.StringBuilder;
 import bootstrap.lexer.lex;
 import bootstrap.ast.AstNode;
+import bootstrap.ast.AstKind;
 import bootstrap.parser.parse;
 import bootstrap.types.TypeValue;
 import bootstrap.diagnostic.SemanticResult;

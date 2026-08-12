@@ -4,6 +4,7 @@ import bootstrap.token.Token;
 import bootstrap.token.TokenKind;
 import bootstrap.token.tokenKindValue;
 import bootstrap.list.List;
+import bootstrap.ast.AstKind;
 import bootstrap.ast.AstNode;
 
 struct ParseResult(nodes: List<AstNode>, ok: bool, errorStart: u64, expectedKind: u32)
@@ -34,7 +35,7 @@ fn parserExpect(var parser: Parser, kind: TokenKind): bool {
 
 fn parserAdd(
     var parser: Parser,
-    kind: u32,
+    kind: AstKind,
     start: u64,
     end: u64,
     subtreeStart: u64,
@@ -78,7 +79,7 @@ fn parseType(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.RightBracket)) return 0;
         val element = parseType(parser);
         return parserAdd(
-            parser, 4, first.start, parser.nodes.data[element].end,
+            parser, AstKind.SliceType, first.start, parser.nodes.data[element].end,
             subtreeStart, 0);
     }
     if (!isTypeStart(first.kind)) {
@@ -101,11 +102,11 @@ fn parseType(var parser: Parser): u64 {
     }
     var end = parserPrevious(parser).end;
     var root = parserAdd(
-        parser, 1, typeToken.start, typeToken.end, subtreeStart,
+        parser, AstKind.NamedType, typeToken.start, typeToken.end, subtreeStart,
         tokenKindValue(typeToken.kind) + typeArgumentCount * 256);
     while (parserMatch(parser, TokenKind.Star)) {
         end = parserPrevious(parser).end;
-        root = parserAdd(parser, 2, typeToken.start, end, subtreeStart, 0);
+        root = parserAdd(parser, AstKind.PointerType, typeToken.start, end, subtreeStart, 0);
     }
     while (parserMatch(parser, TokenKind.LeftBracket)) {
         var hasSize: u32 = 0;
@@ -116,15 +117,15 @@ fn parseType(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.RightBracket)) return 0;
         end = parserPrevious(parser).end;
         root = parserAdd(
-            parser, 5, typeToken.start, end, subtreeStart, hasSize);
+            parser, AstKind.ArrayType, typeToken.start, end, subtreeStart, hasSize);
     }
     if (parserMatch(parser, TokenKind.Question)) {
-        if (parser.nodes.data[root].kind == 3) {
+        if (parser.nodes.data[root].kind == AstKind.NullableType) {
             parser.ok = false;
             return 0;
         }
         end = parserPrevious(parser).end;
-        root = parserAdd(parser, 3, typeToken.start, end, subtreeStart, 0);
+        root = parserAdd(parser, AstKind.NullableType, typeToken.start, end, subtreeStart, 0);
     }
     return root;
 }
@@ -202,7 +203,7 @@ fn parseValueExpressionBranch(var parser: Parser): u32 {
                 parseExpression(parser, 0);
                 if (parserMatch(parser, TokenKind.Semicolon)) {
                     parserAdd(
-                        parser, 35, valueFirst.start,
+                        parser, AstKind.ExpressionStatement, valueFirst.start,
                         parserPrevious(parser).end, valueStart, 0);
                     statementCount++;
                 } else {
@@ -224,12 +225,12 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
     if (first.kind == TokenKind.Identifier) {
         parser.current++;
         root = parserAdd(
-            parser, 10, first.start, first.end, subtreeStart, 0);
+            parser, AstKind.Identifier, first.start, first.end, subtreeStart, 0);
     } else {
         if (isLiteralKind(first.kind)) {
             parser.current++;
             root = parserAdd(
-                parser, 11, first.start, first.end, subtreeStart,
+                parser, AstKind.Literal, first.start, first.end, subtreeStart,
                 tokenKindValue(first.kind));
         } else {
             val prefixPower = prefixBindingPower(first.kind);
@@ -238,7 +239,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 val operand = parseExpression(parser, prefixPower);
                 if (!parser.ok) return 0;
                 root = parserAdd(
-                    parser, 12, first.start, parser.nodes.data[operand].end,
+                    parser, AstKind.Unary, first.start, parser.nodes.data[operand].end,
                     subtreeStart, tokenKindValue(first.kind));
             } else {
                 if (parserMatch(parser, TokenKind.KwIf)) {
@@ -249,7 +250,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     if (!parserExpect(parser, TokenKind.KwElse)) return 0;
                     val elseCount = parseValueExpressionBranch(parser);
                     root = parserAdd(
-                        parser, 25, first.start, parserPrevious(parser).end,
+                        parser, AstKind.IfExpression, first.start, parserPrevious(parser).end,
                         subtreeStart, thenCount + elseCount * 65536);
                 } else {
                 if (parserMatch(parser, TokenKind.KwWhen)) {
@@ -314,7 +315,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                     parseExpression(parser, 0);
                                     if (parserMatch(parser, TokenKind.Semicolon)) {
                                         parserAdd(
-                                            parser, 35, valueFirst.start,
+                                            parser, AstKind.ExpressionStatement, valueFirst.start,
                                             parserPrevious(parser).end,
                                             valueStart, 0);
                                         statementCount++;
@@ -329,14 +330,14 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                             if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
                         }
                         parserAdd(
-                            parser, 24, first.start, parserPrevious(parser).end,
+                            parser, AstKind.WhenExpressionBranch, first.start, parserPrevious(parser).end,
                             branchStart,
                             isElse + statementCount * 2 + patternCount * 65536);
                         branchCount++;
                     }
                     if (!parserExpect(parser, TokenKind.RightBrace)) return 0;
                     root = parserAdd(
-                        parser, 23, first.start, parserPrevious(parser).end,
+                        parser, AstKind.WhenExpression, first.start, parserPrevious(parser).end,
                         subtreeStart, branchCount + hasSubject * 65536);
                 } else {
                 if (parserMatch(parser, TokenKind.LeftBracket)) {
@@ -353,13 +354,13 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     }
                     if (!parserExpect(parser, TokenKind.RightBracket)) return 0;
                     root = parserAdd(
-                        parser, 22, first.start, parserPrevious(parser).end,
+                        parser, AstKind.ArrayLiteral, first.start, parserPrevious(parser).end,
                         subtreeStart, count);
                 } else {
                 if (parserMatch(parser, TokenKind.LeftParen)) {
                     if (parserMatch(parser, TokenKind.RightParen)) {
                         root = parserAdd(
-                            parser, 20, first.start, parserPrevious(parser).end,
+                            parser, AstKind.UnitLiteral, first.start, parserPrevious(parser).end,
                             subtreeStart, 0);
                     } else {
                         root = parseExpression(parser, 0);
@@ -371,7 +372,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parseType(parser);
                         if (!parserExpect(parser, TokenKind.RightParen)) return 0;
                         root = parserAdd(
-                            parser, 21, first.start, parserPrevious(parser).end,
+                            parser, AstKind.Sizeof, first.start, parserPrevious(parser).end,
                             subtreeStart, 0);
                     } else {
                         parser.ok = false;
@@ -405,7 +406,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     val name = parserPeek(parser);
                     if (!parserExpect(parser, TokenKind.Identifier)) return 0;
                     root = parserAdd(
-                        parser, 17, name.start, name.end, subtreeStart,
+                        parser, AstKind.Member, name.start, name.end, subtreeStart,
                         typeArgumentCount);
                     associated = 1;
                 }
@@ -423,7 +424,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 }
                 if (!parserExpect(parser, TokenKind.RightParen)) return 0;
                 root = parserAdd(
-                    parser, 16, first.start, parserPrevious(parser).end,
+                    parser, AstKind.Call, first.start, parserPrevious(parser).end,
                     subtreeStart,
                     argumentCount +
                         (typeArgumentCount * 65536) * (1 - associated));
@@ -437,7 +438,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                         parser, rightBindingPower(token.kind));
                     if (!parser.ok) return 0;
                     root = parserAdd(
-                        parser, 13, first.start,
+                        parser, AstKind.Binary, first.start,
                         parser.nodes.data[right].end,
                         subtreeStart, tokenKindValue(token.kind));
                 }
@@ -456,7 +457,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
             }
             if (!parserExpect(parser, TokenKind.RightParen)) return 0;
             root = parserAdd(
-                parser, 16, first.start, parserPrevious(parser).end,
+                parser, AstKind.Call, first.start, parserPrevious(parser).end,
                 subtreeStart, argumentCount);
         } else {
             if (token.kind == TokenKind.Dot) {
@@ -464,14 +465,14 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                 val name = parserPeek(parser);
                 if (!parserExpect(parser, TokenKind.Identifier)) return 0;
                 root = parserAdd(
-                    parser, 17, name.start, name.end, subtreeStart, 0);
+                    parser, AstKind.Member, name.start, name.end, subtreeStart, 0);
             } else {
                 if (token.kind == TokenKind.LeftBracket) {
                     parser.current++;
                     parseExpression(parser, 0);
                     if (!parserExpect(parser, TokenKind.RightBracket)) return 0;
                     root = parserAdd(
-                        parser, 18, first.start, parserPrevious(parser).end,
+                        parser, AstKind.Index, first.start, parserPrevious(parser).end,
                         subtreeStart, 0);
                 } else {
                     var postfix = token.kind == TokenKind.Bang;
@@ -480,7 +481,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                     if (postfix) {
                         parser.current++;
                         root = parserAdd(
-                            parser, 19, first.start, token.end,
+                            parser, AstKind.Postfix, first.start, token.end,
                             subtreeStart, tokenKindValue(token.kind));
                     } else {
                         if (token.kind == TokenKind.KwAs) {
@@ -490,7 +491,7 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                 parser.current++;
                                 parseType(parser);
                                 root = parserAdd(
-                                    parser, 15, first.start,
+                                    parser, AstKind.Cast, first.start,
                                     parser.nodes.data[parser.nodes.length - 1].end,
                                     subtreeStart, 0);
                             }
@@ -506,10 +507,10 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                     val leftKind =
                                         parser.nodes.data[root].kind;
                                     if (isAssignmentKind(token.kind)) {
-                                        var assignable = leftKind == 10;
-                                        if (leftKind == 17) assignable = true;
-                                        if (leftKind == 18) assignable = true;
-                                        if (leftKind == 12) {
+                                        var assignable = leftKind == AstKind.Identifier;
+                                        if (leftKind == AstKind.Member) assignable = true;
+                                        if (leftKind == AstKind.Index) assignable = true;
+                                        if (leftKind == AstKind.Unary) {
                                             if (parser.nodes.data[root].aux ==
                                                 tokenKindValue(TokenKind.Star)) {
                                                 assignable = true;
@@ -523,9 +524,9 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                     val right = parseExpression(
                                         parser, rightBindingPower(token.kind));
                                     if (!parser.ok) return 0;
-                                    var nodeKind: u32 = 13;
+                                    var nodeKind = AstKind.Binary;
                                     if (isAssignmentKind(token.kind)) {
-                                        nodeKind = 14;
+                                        nodeKind = AstKind.Assignment;
                                     }
                                     root = parserAdd(
                                         parser, nodeKind, first.start,
@@ -577,7 +578,7 @@ fn parseBlock(var parser: Parser): u64 {
     while (parser.ok) {
         if (parserCheck(parser, TokenKind.RightBrace)) {
             parser.current++;
-            return parserAdd(parser, 30, 0, 0, subtreeStart, count);
+            return parserAdd(parser, AstKind.Block, 0, 0, subtreeStart, count);
         }
         if (parserCheck(parser, TokenKind.EndOfFile)) {
             parser.ok = false;
@@ -593,7 +594,7 @@ fn parseControlBody(var parser: Parser): u64 {
     if (parserCheck(parser, TokenKind.LeftBrace)) return parseBlock(parser);
     val subtreeStart = parser.nodes.length;
     parseStatement(parser);
-    return parserAdd(parser, 30, 0, 0, subtreeStart, 1);
+    return parserAdd(parser, AstKind.Block, 0, 0, subtreeStart, 1);
 }
 
 fn parseStatement(var parser: Parser): u64 {
@@ -613,7 +614,7 @@ fn parseStatement(var parser: Parser): u64 {
             if (parserCheck(parser, TokenKind.RightBrace)) {
                 parser.current++;
                 return parserAdd(
-                    parser, 39, first.start, parserPrevious(parser).end,
+                    parser, AstKind.WhenStatement, first.start, parserPrevious(parser).end,
                     subtreeStart, branchCount + hasSubject * 65536);
             }
             val branchStart = parser.nodes.length;
@@ -642,7 +643,7 @@ fn parseStatement(var parser: Parser): u64 {
             if (!parserExpect(parser, TokenKind.Arrow)) return 0;
             parseControlBody(parser);
             parserAdd(
-                parser, 40, first.start, parserPrevious(parser).end,
+                parser, AstKind.ParameterOrWhenBranch, first.start, parserPrevious(parser).end,
                 branchStart, isElse + patternCount * 65536);
             branchCount++;
         }
@@ -660,7 +661,7 @@ fn parseStatement(var parser: Parser): u64 {
             end = parserPrevious(parser).end;
             hasElse = 1;
         }
-        return parserAdd(parser, 31, first.start, end, subtreeStart, hasElse);
+        return parserAdd(parser, AstKind.IfStatement, first.start, end, subtreeStart, hasElse);
     }
     if (parserMatch(parser, TokenKind.KwWhile)) {
         if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
@@ -669,26 +670,26 @@ fn parseStatement(var parser: Parser): u64 {
         parseControlBody(parser);
         val end = parserPrevious(parser).end;
         return parserAdd(
-            parser, 32, first.start, end,
+            parser, AstKind.WhileStatement, first.start, end,
             subtreeStart, 0);
     }
     if (parserMatch(parser, TokenKind.KwBreak)) {
         if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
         return parserAdd(
-            parser, 36, first.start, parserPrevious(parser).end,
+            parser, AstKind.BreakStatement, first.start, parserPrevious(parser).end,
             subtreeStart, 0);
     }
     if (parserMatch(parser, TokenKind.KwFor)) {
         if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
         if (!parserExpect(parser, TokenKind.Identifier)) return 0;
         val name = parserPrevious(parser);
-        parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+        parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
         var hasIndex: u32 = 0;
         if (parserMatch(parser, TokenKind.Comma)) {
             if (!parserExpect(parser, TokenKind.Identifier)) return 0;
             val indexName = parserPrevious(parser);
             parserAdd(
-                parser, 45, indexName.start, indexName.end,
+                parser, AstKind.Name, indexName.start, indexName.end,
                 parser.nodes.length, 0);
             hasIndex = 1;
         }
@@ -697,13 +698,13 @@ fn parseStatement(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.RightParen)) return 0;
         parseControlBody(parser);
         return parserAdd(
-            parser, 38, first.start, parserPrevious(parser).end,
+            parser, AstKind.ForStatement, first.start, parserPrevious(parser).end,
             subtreeStart, hasIndex);
     }
     if (parserMatch(parser, TokenKind.KwContinue)) {
         if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
         return parserAdd(
-            parser, 37, first.start, parserPrevious(parser).end,
+            parser, AstKind.ContinueStatement, first.start, parserPrevious(parser).end,
             subtreeStart, 0);
     }
     var isVariable = first.kind == TokenKind.KwVal;
@@ -713,20 +714,20 @@ fn parseStatement(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.Identifier)) return 0;
         val variableName = parserPrevious(parser);
         parserAdd(
-            parser, 45, variableName.start, variableName.end,
+            parser, AstKind.Name, variableName.start, variableName.end,
             parser.nodes.length, 0);
         if (parserMatch(parser, TokenKind.Colon)) parseType(parser);
         if (!parserExpect(parser, TokenKind.Equal)) return 0;
         parseExpression(parser, 0);
         if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
         return parserAdd(
-            parser, 33, first.start, parserPrevious(parser).end,
+            parser, AstKind.VariableDeclaration, first.start, parserPrevious(parser).end,
             subtreeStart, tokenKindValue(first.kind));
     }
     if (parserMatch(parser, TokenKind.KwDefer)) {
         parseStatement(parser);
         return parserAdd(
-            parser, 41, first.start, parserPrevious(parser).end,
+            parser, AstKind.FunctionOrDefer, first.start, parserPrevious(parser).end,
             subtreeStart, 0);
     }
     if (parserMatch(parser, TokenKind.KwReturn)) {
@@ -737,14 +738,14 @@ fn parseStatement(var parser: Parser): u64 {
         }
         if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
         return parserAdd(
-            parser, 34, first.start, parserPrevious(parser).end,
+            parser, AstKind.ReturnStatement, first.start, parserPrevious(parser).end,
             subtreeStart, hasValue);
     }
     if (parserCheck(parser, TokenKind.LeftBrace)) return parseBlock(parser);
     parseExpression(parser, 0);
     if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
     return parserAdd(
-        parser, 35, first.start, parserPrevious(parser).end,
+        parser, AstKind.ExpressionStatement, first.start, parserPrevious(parser).end,
         subtreeStart, 0);
 }
 
@@ -772,7 +773,7 @@ fn parseFunction(
     if (!parserExpect(parser, TokenKind.Identifier)) return 0;
     val functionName = parserPrevious(parser);
     parserAdd(
-        parser, 45, functionName.start, functionName.end,
+        parser, AstKind.Name, functionName.start, functionName.end,
         parser.nodes.length, 0);
     var typeParameterCount: u32 = 0;
     if (parserMatch(parser, TokenKind.Less)) {
@@ -783,19 +784,19 @@ fn parseFunction(
             if (!parserExpect(parser, TokenKind.Identifier)) return 0;
             val parameterName = parserPrevious(parser);
             parserAdd(
-                parser, 45, parameterName.start, parameterName.end,
+                parser, AstKind.Name, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var hasConstraint: u32 = 0;
             if (parserMatch(parser, TokenKind.Colon)) {
                 if (!parserExpect(parser, TokenKind.Identifier)) return 0;
                 val constraint = parserPrevious(parser);
                 parserAdd(
-                    parser, 45, constraint.start, constraint.end,
+                    parser, AstKind.Name, constraint.start, constraint.end,
                     parser.nodes.length, 0);
                 hasConstraint = 1;
             }
             parserAdd(
-                parser, 46, parameterStart, parserPrevious(parser).end,
+                parser, AstKind.TypeParameter, parameterStart, parserPrevious(parser).end,
                 parameterSubtree, hasConstraint);
             typeParameterCount++;
             if (!parserMatch(parser, TokenKind.Comma)) {
@@ -821,14 +822,14 @@ fn parseFunction(
             if (!parserExpect(parser, TokenKind.Identifier)) return 0;
             val parameterName = parserPrevious(parser);
             parserAdd(
-                parser, 45, parameterName.start, parameterName.end,
+                parser, AstKind.Name, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var typeNode: u64 = 0;
             if (ownerEnd != ownerStart && parameterCount == 0) {
                 if (!parserCheck(parser, TokenKind.Colon)) {
                     associated = 0;
                     typeNode = parserAdd(
-                        parser, 1, ownerStart, ownerEnd,
+                        parser, AstKind.NamedType, ownerStart, ownerEnd,
                         parser.nodes.length, 1);
                 } else {
                     parser.current++;
@@ -839,7 +840,7 @@ fn parseFunction(
                 typeNode = parseType(parser);
             }
             parserAdd(
-                parser, 40, parameterStart, parser.nodes.data[typeNode].end,
+                parser, AstKind.ParameterOrWhenBranch, parameterStart, parser.nodes.data[typeNode].end,
                 parameterSubtree, mode);
             parameterCount++;
             if (!parserMatch(parser, TokenKind.Comma)) parameters = false;
@@ -851,7 +852,7 @@ fn parseFunction(
         parseType(parser);
     } else {
         parserAdd(
-            parser, 1, parserPrevious(parser).end,
+            parser, AstKind.NamedType, parserPrevious(parser).end,
             parserPrevious(parser).end, parser.nodes.length, 49);
         if (parserCheck(parser, TokenKind.FatArrow)) infersReturn = 1;
     }
@@ -870,12 +871,12 @@ fn parseFunction(
                 val expressionRoot = parseExpression(parser, 0);
                 if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
                 parserAdd(
-                    parser, 34,
+                    parser, AstKind.ReturnStatement,
                     parser.nodes.data[expressionRoot].start,
                     parser.nodes.data[expressionRoot].end,
                     bodyStart, 1);
             }
-            parserAdd(parser, 30, 0, 0, bodyStart, 1);
+            parserAdd(parser, AstKind.Block, 0, 0, bodyStart, 1);
             end = parserPrevious(parser).end;
         } else {
         parseBlock(parser);
@@ -885,7 +886,7 @@ fn parseFunction(
     var aux = parameterCount;
     if (isExtern) aux += 65536;
     aux += typeParameterCount * 131072;
-    val root = parserAdd(parser, 41, start, end, subtreeStart, aux);
+    val root = parserAdd(parser, AstKind.FunctionOrDefer, start, end, subtreeStart, aux);
     var function = parser.nodes.data[root];
     function.storage = (expressionBody + infersReturn * 2) as u64;
     if (ownerEnd > ownerStart) {
@@ -902,7 +903,7 @@ fn parseStruct(var parser: Parser): u64 {
     if (!parserExpect(parser, TokenKind.Identifier)) return 0;
     val structName = parserPrevious(parser);
     parserAdd(
-        parser, 45, structName.start, structName.end,
+        parser, AstKind.Name, structName.start, structName.end,
         parser.nodes.length, 0);
     var typeParameterCount: u32 = 0;
     if (parserMatch(parser, TokenKind.Less)) {
@@ -913,19 +914,19 @@ fn parseStruct(var parser: Parser): u64 {
             if (!parserExpect(parser, TokenKind.Identifier)) return 0;
             val parameterName = parserPrevious(parser);
             parserAdd(
-                parser, 45, parameterName.start, parameterName.end,
+                parser, AstKind.Name, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var hasConstraint: u32 = 0;
             if (parserMatch(parser, TokenKind.Colon)) {
                 if (!parserExpect(parser, TokenKind.Identifier)) return 0;
                 val constraint = parserPrevious(parser);
                 parserAdd(
-                    parser, 45, constraint.start, constraint.end,
+                    parser, AstKind.Name, constraint.start, constraint.end,
                     parser.nodes.length, 0);
                 hasConstraint = 1;
             }
             parserAdd(
-                parser, 46, parameterStart, parserPrevious(parser).end,
+                parser, AstKind.TypeParameter, parameterStart, parserPrevious(parser).end,
                 parameterSubtree, hasConstraint);
             typeParameterCount++;
             if (!parserMatch(parser, TokenKind.Comma)) {
@@ -944,12 +945,12 @@ fn parseStruct(var parser: Parser): u64 {
             if (!parserExpect(parser, TokenKind.Identifier)) return 0;
             val fieldName = parserPrevious(parser);
             parserAdd(
-                parser, 45, fieldName.start, fieldName.end,
+                parser, AstKind.Name, fieldName.start, fieldName.end,
                 parser.nodes.length, 0);
             if (!parserExpect(parser, TokenKind.Colon)) return 0;
             val typeNode = parseType(parser);
             parserAdd(
-                parser, 42, fieldStart, parser.nodes.data[typeNode].end,
+                parser, AstKind.StructField, fieldStart, parser.nodes.data[typeNode].end,
                 fieldSubtree, 0);
             fieldCount++;
             if (!parserMatch(parser, TokenKind.Comma)) fields = false;
@@ -967,7 +968,7 @@ fn parseStruct(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.RightBrace)) return 0;
     }
     val root = parserAdd(
-        parser, 43, start, parserPrevious(parser).end,
+        parser, AstKind.StructDeclaration, start, parserPrevious(parser).end,
         subtreeStart, fieldCount + typeParameterCount * 65536);
     var structure = parser.nodes.data[root];
     structure.storage = methodCount as u64;
@@ -981,7 +982,7 @@ fn parseEnum(var parser: Parser): u64 {
     parser.current++;
     if (parserExpect(parser, TokenKind.Identifier) == false) return 0;
     val name = parserPrevious(parser);
-    parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+    parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
     if (parserExpect(parser, TokenKind.LeftBrace) == false) return 0;
     if (parserCheck(parser, TokenKind.RightBrace)) {
         parser.ok = false;
@@ -993,7 +994,7 @@ fn parseEnum(var parser: Parser): u64 {
         if (parserExpect(parser, TokenKind.Identifier) == false) return 0;
         val variant = parserPrevious(parser);
         parserAdd(
-            parser, 45, variant.start, variant.end,
+            parser, AstKind.Name, variant.start, variant.end,
             parser.nodes.length, 0);
         count++;
         if (parserMatch(parser, TokenKind.Comma)) {
@@ -1007,7 +1008,7 @@ fn parseEnum(var parser: Parser): u64 {
     }
     if (parserExpect(parser, TokenKind.RightBrace) == false) return 0;
     return parserAdd(
-        parser, 49, start, parserPrevious(parser).end,
+        parser, AstKind.EnumDeclaration, start, parserPrevious(parser).end,
         subtreeStart, count);
 }
 
@@ -1018,20 +1019,20 @@ fn parseModule(var parser: Parser): u64 {
     if (!parserExpect(parser, TokenKind.Identifier)) return 0;
     val firstName = parserPrevious(parser);
     parserAdd(
-        parser, 45, firstName.start, firstName.end,
+        parser, AstKind.Name, firstName.start, firstName.end,
         parser.nodes.length, 0);
     var partCount: u32 = 1;
     while (parserMatch(parser, TokenKind.Dot)) {
         if (!parserExpect(parser, TokenKind.Identifier)) return 0;
         val name = parserPrevious(parser);
         parserAdd(
-            parser, 45, name.start, name.end,
+            parser, AstKind.Name, name.start, name.end,
             parser.nodes.length, 0);
         partCount++;
     }
     if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
     return parserAdd(
-        parser, 47, start, parserPrevious(parser).end,
+        parser, AstKind.ModuleDeclaration, start, parserPrevious(parser).end,
         subtreeStart, partCount);
 }
 
@@ -1042,7 +1043,7 @@ fn parseImport(var parser: Parser): u64 {
     if (!parserExpect(parser, TokenKind.Identifier)) return 0;
     val firstName = parserPrevious(parser);
     parserAdd(
-        parser, 45, firstName.start, firstName.end,
+        parser, AstKind.Name, firstName.start, firstName.end,
         parser.nodes.length, 0);
     var partCount: u32 = 1;
     var isWildcard: u32 = 0;
@@ -1055,13 +1056,13 @@ fn parseImport(var parser: Parser): u64 {
         if (!parserExpect(parser, TokenKind.Identifier)) return 0;
         val name = parserPrevious(parser);
         parserAdd(
-            parser, 45, name.start, name.end,
+            parser, AstKind.Name, name.start, name.end,
             parser.nodes.length, 0);
         partCount++;
     }
     if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
     return parserAdd(
-        parser, 48, start, parserPrevious(parser).end,
+        parser, AstKind.ImportDeclaration, start, parserPrevious(parser).end,
         subtreeStart, partCount + isWildcard * 65536);
 }
 
@@ -1071,13 +1072,15 @@ fn parseConstant(var parser: Parser): u64 {
     parser.current++;
     if (!parserExpect(parser, TokenKind.Identifier)) return 0;
     val name = parserPrevious(parser);
-    parserAdd(parser, 45, name.start, name.end, parser.nodes.length, 0);
+    parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
     var hasType: u32 = 0;
     if (parserMatch(parser, TokenKind.Colon)) { parseType(parser); hasType = 1; }
     if (!parserExpect(parser, TokenKind.Equal)) return 0;
     parseExpression(parser, 0);
     if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-    return parserAdd(parser, 50, start, parserPrevious(parser).end, subtreeStart, hasType);
+    return parserAdd(
+        parser, AstKind.ConstantDeclaration, start,
+        parserPrevious(parser).end, subtreeStart, hasType);
 }
 
 fn parse(val tokens: List<Token>): ParseResult {
@@ -1117,7 +1120,7 @@ fn parse(val tokens: List<Token>): ParseResult {
     var expectedKind: u32 = 0;
     if (parserCheck(parser, TokenKind.EndOfFile)) {
         val end = parserPeek(parser).end;
-        parserAdd(parser, 44, start, end, 0, declarationCount);
+        parserAdd(parser, AstKind.Program, start, end, 0, declarationCount);
         ok = true;
     } else {
         errorStart = parserPeek(parser).start;

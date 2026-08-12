@@ -525,7 +525,7 @@ fn structRootByName(
     for (index in 0..<program.aux) {
         val root = roots[index as u64];
         val node = nodes.data[root];
-        if (node.kind == 43) {
+        if (node.kind == AstKind.StructDeclaration) {
             val nameNode = nodes.data[node.subtreeStart];
             if (sourceHash(source, nameNode.start, nameNode.end) == name) {
                 found = root;
@@ -544,7 +544,7 @@ fn functionRootByName(
     for (index in 0..<program.aux) {
         val root = roots[index as u64];
         val node = nodes.data[root];
-        if (node.kind == 41) {
+        if (node.kind == AstKind.FunctionOrDefer) {
             val nameNode = nodes.data[node.subtreeStart];
             if (sourceHash(source, nameNode.start, nameNode.end) == name) {
                 found = root;
@@ -580,7 +580,7 @@ fn emitterVariableRootByStorage(
     val nodes: List<AstNode>, storage: u64): u64 {
     for (root in 0..<nodes.length) {
         val node = nodes.data[root];
-        if (node.kind == 33) {
+        if (node.kind == AstKind.VariableDeclaration) {
             val name = nodes.data[node.subtreeStart];
             if (name.start == storage) return root;
         }
@@ -605,7 +605,7 @@ fn emitterAssociatedOwnerStructRoot(
     var owner = nodes.length;
     for (index in 0..<program.aux) {
         val structureRoot = roots[index as u64];
-        if (nodes.data[structureRoot].kind == 43) {
+        if (nodes.data[structureRoot].kind == AstKind.StructDeclaration) {
             var methodRoot = structureRoot - 1;
             val methodCount = emitterStructMethodCount(
                 nodes.data[structureRoot]);
@@ -988,16 +988,17 @@ fn emitClearAutomaticDrop(
     if (nodes.data[root].typeKind != 8) return;
     var ownerRoot = root;
     var owner = nodes.data[ownerRoot];
-    while (owner.kind == 17 || owner.kind == 19) {
+    while (owner.kind == AstKind.Member || owner.kind == AstKind.Postfix) {
         ownerRoot--;
         owner = nodes.data[ownerRoot];
     }
-    if (owner.kind == 18) {
+    if (owner.kind == AstKind.Index) {
         val indexRoot = ownerRoot - 1;
         ownerRoot = nodes.data[indexRoot].subtreeStart - 1;
         owner = nodes.data[ownerRoot];
     }
-    if (owner.kind != 10 || (owner.ownership / 2) % 2 == 0) return;
+    if (owner.kind != AstKind.Identifier ||
+        (owner.ownership / 2) % 2 == 0) return;
     appendStore(buffer);
     buffer.append("i1 false");
     appendPtr(buffer); appendDropFlagName(buffer, owner.storage);
@@ -1012,19 +1013,19 @@ fn emitAddress(
     root: u64,
     var counter: IrCounter): IrValue {
     val node = nodes.data[root];
-    if (node.kind == 10) {
+    if (node.kind == AstKind.Identifier) {
         return IrValue(
             4, node.start, node.end, node.storage,
             9, node.typeName, node.typeKind);
     }
-    if (node.kind == 12) {
+    if (node.kind == AstKind.Unary) {
         if (node.aux == tokenKindValue(TokenKind.Star)) {
             return emitExpression(
                 buffer, source, nodes, genericArguments,
                 root - 1, counter);
         }
     }
-    if (node.kind == 17) {
+    if (node.kind == AstKind.Member) {
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
         val objectAddress = emitAddress(
@@ -1053,7 +1054,7 @@ fn emitAddress(
             2, 0, 0, temporary, 9,
             node.typeName, node.typeKind);
     }
-    if (node.kind == 18) {
+    if (node.kind == AstKind.Index) {
         val indexRoot = root - 1;
         val objectRoot = expressionChildBefore(nodes, indexRoot);
         val object = emitExpression(
@@ -1181,7 +1182,7 @@ fn emitExpression(
     root: u64,
     var counter: IrCounter): IrValue {
     val node = nodes.data[root];
-    if (node.kind == 11) {
+    if (node.kind == AstKind.Literal) {
         if (node.typeKind == 16) {
             return IrValue(3, 0, 0, 0, 16, 0, 0);
         }
@@ -1225,7 +1226,7 @@ fn emitExpression(
             1, node.start, node.end, 0,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 25) {
+    if (node.kind == AstKind.IfExpression) {
         val thenCount = node.aux % 65536;
         val elseCount = node.aux / 65536;
         val elseValueRoot = root - 1;
@@ -1254,7 +1255,7 @@ fn emitExpression(
         appendBlockLabel(buffer, counter, thenBlock);
         for (index in 0..<thenCount) {
             val statement = nodes.data[thenRoots[index as u64]];
-            if (statement.kind == 33) {
+            if (statement.kind == AstKind.VariableDeclaration) {
                 emitVariableAlloca(
                     buffer, genericArguments, nodes,
                     thenRoots[index as u64]);
@@ -1277,7 +1278,7 @@ fn emitExpression(
         appendBlockLabel(buffer, counter, elseBlock);
         for (index in 0..<elseCount) {
             val statement = nodes.data[elseRoots[index as u64]];
-            if (statement.kind == 33) {
+            if (statement.kind == AstKind.VariableDeclaration) {
                 emitVariableAlloca(
                     buffer, genericArguments, nodes,
                     elseRoots[index as u64]);
@@ -1319,7 +1320,7 @@ fn emitExpression(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 23) {
+    if (node.kind == AstKind.WhenExpression) {
         val branchCount = node.aux % 65536;
         val hasSubject = node.aux / 65536;
         val roots = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
@@ -1351,7 +1352,7 @@ fn emitExpression(
             }
             for (statementIndex in 0..<statementCount) {
                 val statement = nodes.data[statementRoots[statementIndex as u64]];
-                if (statement.kind == 33) {
+                if (statement.kind == AstKind.VariableDeclaration) {
                     emitVariableAlloca(
                         buffer, genericArguments, nodes,
                         statementRoots[statementIndex as u64]);
@@ -1449,7 +1450,7 @@ fn emitExpression(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 22) {
+    if (node.kind == AstKind.ArrayLiteral) {
         if (node.aux == 0) {
             return IrValue(
                 5, 0, 0, 0,
@@ -1492,7 +1493,7 @@ fn emitExpression(
         k_boot_free(roots as unit*);
         return aggregate;
     }
-    if (node.kind == 12) {
+    if (node.kind == AstKind.Unary) {
         val operandRoot = root - 1;
         if (node.aux == tokenKindValue(TokenKind.Ampersand)) {
             return emitAddress(
@@ -1552,10 +1553,11 @@ fn emitExpression(
         }
         return operand;
     }
-    if (node.kind == 10) {
+    if (node.kind == AstKind.Identifier) {
         var isConstant = node.aux == 1;
         if (node.storage < nodes.length) {
-            if (nodes.data[node.storage].kind == 50) isConstant = true;
+            if (nodes.data[node.storage].kind == AstKind.ConstantDeclaration)
+                isConstant = true;
         }
         if (isConstant) {
             return emitExpression(
@@ -1578,7 +1580,7 @@ fn emitExpression(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 13) {
+    if (node.kind == AstKind.Binary) {
         val rightRoot = root - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
         if (node.aux == tokenKindValue(TokenKind.KwIn)) {
@@ -1720,7 +1722,7 @@ fn emitExpression(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 14) {
+    if (node.kind == AstKind.Assignment) {
         val rightRoot = root - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
         var right = emitExpression(
@@ -1783,7 +1785,7 @@ fn emitExpression(
         }
         return right;
     }
-    if (node.kind == 15) {
+    if (node.kind == AstKind.Cast) {
         val typeRoot = root - 1;
         val valueRoot = expressionChildBefore(nodes, typeRoot);
         val value = emitExpression(
@@ -1942,7 +1944,7 @@ fn emitExpression(
         }
         return converted;
     }
-    if (node.kind == 17) {
+    if (node.kind == AstKind.Member) {
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
         if (node.typeKind == 20 && objectNode.typeKind == 20) {
@@ -1985,10 +1987,10 @@ fn emitExpression(
         val start = objectNode.typePointee % 65536;
         val count = objectNode.typePointee / 65536;
         
-        var addressable = objectNode.kind == 10;
-        if (objectNode.kind == 17) addressable = true;
-        if (objectNode.kind == 18) addressable = true;
-        if (objectNode.kind == 12) {
+        var addressable = objectNode.kind == AstKind.Identifier;
+        if (objectNode.kind == AstKind.Member) addressable = true;
+        if (objectNode.kind == AstKind.Index) addressable = true;
+        if (objectNode.kind == AstKind.Unary) {
             if (objectNode.aux == tokenKindValue(TokenKind.Star)) addressable = true;
         }
         if (!addressable) {
@@ -2027,18 +2029,20 @@ fn emitExpression(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 18) {
+    if (node.kind == AstKind.Index) {
         val indexRoot = root - 1;
         val objectRoot = expressionChildBefore(nodes, indexRoot);
         val objectNode = nodes.data[objectRoot];
         var constantArray = false;
-        if (objectNode.kind == 10 && objectNode.typeKind == 19) {
+        if (objectNode.kind == AstKind.Identifier && objectNode.typeKind == 19) {
             if (objectNode.storage < nodes.length) {
-                if (nodes.data[objectNode.storage].kind == 50) constantArray = true;
+                if (nodes.data[objectNode.storage].kind ==
+                    AstKind.ConstantDeclaration) constantArray = true;
             }
         }
         var constantIndex = constantArray;
-        if (nodes.data[indexRoot].kind != 11) constantIndex = false;
+        if (nodes.data[indexRoot].kind != AstKind.Literal)
+            constantIndex = false;
         if (constantIndex) {
             val object = emitExpression(
                 buffer, source, nodes, genericArguments,
@@ -2073,7 +2077,7 @@ fn emitExpression(
             2, 0, 0, temporary,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 19) {
+    if (node.kind == AstKind.Postfix) {
         if (node.aux == tokenKindValue(TokenKind.PlusPlus) ||
             node.aux == tokenKindValue(TokenKind.MinusMinus)) {
             val valueRoot = root - 1;
@@ -2146,7 +2150,7 @@ fn emitExpression(
             2, 0, 0, value,
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 21) {
+    if (node.kind == AstKind.Sizeof) {
         val typeNode = nodes.data[root - 1];
         return IrValue(
             3, 0, 0,
@@ -2155,7 +2159,7 @@ fn emitExpression(
                 typeNode.typeName, typeNode.typePointee),
             node.typeKind, node.typeName, node.typePointee);
     }
-    if (node.kind == 16) {
+    if (node.kind == AstKind.Call) {
         var argumentCount = node.aux % 65536;
         val explicitTypeCount = node.aux / 65536;
         val arguments =
@@ -2170,7 +2174,7 @@ fn emitExpression(
             cursor = expressionChildBefore(nodes, cursor);
         }
         val callee = nodes.data[cursor];
-        val isMember = callee.kind == 17;
+        val isMember = callee.kind == AstKind.Member;
         val calleeHash =
             sourceHash(source, callee.start, callee.end);
         var functionRoot = functionRootByName(source, nodes, calleeHash);
@@ -2460,7 +2464,7 @@ fn emitAutomaticDrop(
     if ((statement.ownership / 2) % 2 == 0) return;
     val name = nodes.data[statement.subtreeStart];
     var valueType = TypeValue(0, 0, 0);
-    if (statement.kind == 33) {
+    if (statement.kind == AstKind.VariableDeclaration) {
         val initializerRoot = root - 1;
         valueType = TypeValue(
             nodes.data[initializerRoot].typeKind,
@@ -2580,7 +2584,7 @@ fn emitBlock(
     root: u64,
     var counter: IrCounter,
     var defers: List<u64>): bool {
-    if (nodes.data[root].kind != 30) {
+    if (nodes.data[root].kind != AstKind.Block) {
         return emitStatement(
             buffer, source, nodes, genericArguments,
             root, counter, defers);
@@ -2839,29 +2843,29 @@ fn emitStatement(
     var counter: IrCounter,
     var defers: List<u64>): bool {
     val statement = nodes.data[root];
-    if (statement.kind == 41) {
+    if (statement.kind == AstKind.FunctionOrDefer) {
         defers.add(root - 1);
         return false;
     }
-    if (statement.kind == 36) {
+    if (statement.kind == AstKind.BreakStatement) {
         emitDeferRange(
             buffer, source, nodes, genericArguments,
             counter, defers, defers.length, counter.loopDeferDepth);
         appendBranch(buffer, counter.breakBlock);
         return true;
     }
-    if (statement.kind == 37) {
+    if (statement.kind == AstKind.ContinueStatement) {
         emitDeferRange(
             buffer, source, nodes, genericArguments,
             counter, defers, defers.length, counter.loopDeferDepth);
         appendBranch(buffer, counter.continueBlock);
         return true;
     }
-    if (statement.kind == 38) {
+    if (statement.kind == AstKind.ForStatement) {
         val bodyRoot = root - 1;
         val collectionRoot = expressionChildBefore(nodes, bodyRoot);
         val collectionNode = nodes.data[collectionRoot];
-        var range = collectionNode.kind == 13;
+        var range = collectionNode.kind == AstKind.Binary;
         if (range) {
             range = collectionNode.aux == tokenKindValue(TokenKind.Range);
             if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusive)) range = true;
@@ -3027,15 +3031,16 @@ fn emitStatement(
         appendBlockLabel(buffer, counter, endBlock);
         return false;
     }
-    if (statement.kind == 39) {
+    if (statement.kind == AstKind.WhenStatement) {
         return emitWhen(
             buffer, source, nodes, genericArguments, root, counter, defers);
     }
-    if (statement.kind == 33) {
+    if (statement.kind == AstKind.VariableDeclaration) {
         val initializerRoot = root - 1;
         val initializerNode = nodes.data[initializerRoot];
         var initializer = IrValue(0, 0, 0, 0, 0, 0, 0);
-        if (initializerNode.kind == 11 && initializerNode.typeKind == 10) {
+        if (initializerNode.kind == AstKind.Literal &&
+            initializerNode.typeKind == 10) {
             initializer = emitOwnedStringLiteral(
                 buffer, source, initializerNode, counter);
         } else {
@@ -3077,7 +3082,7 @@ fn emitStatement(
         }
         return false;
     } else {
-        if (statement.kind == 34) {
+        if (statement.kind == AstKind.ReturnStatement) {
             if (statement.aux == 0) {
                 emitDeferRange(
                     buffer, source, nodes, genericArguments,
@@ -3151,18 +3156,18 @@ fn emitStatement(
             appendNewline(buffer);
             return true;
         } else {
-            if (statement.kind == 35) {
+            if (statement.kind == AstKind.ExpressionStatement) {
                 emitExpression(
                     buffer, source, nodes, genericArguments,
                     root - 1, counter);
                 return false;
             } else {
-                if (statement.kind == 30) {
+                if (statement.kind == AstKind.Block) {
                     return emitBlock(
                         buffer, source, nodes, genericArguments,
                         root, counter, defers);
                 }
-                if (statement.kind == 31) {
+                if (statement.kind == AstKind.IfStatement) {
                     var elseRoot: u64 = 0;
                     var thenRoot = root - 1;
                     if (statement.aux == 1) {
@@ -3215,7 +3220,7 @@ fn emitStatement(
                     }
                     return true;
                 }
-                if (statement.kind == 32) {
+                if (statement.kind == AstKind.WhileStatement) {
                     val bodyRoot = root - 1;
                     val conditionRoot =
                         expressionChildBefore(nodes, bodyRoot);
@@ -3421,13 +3426,13 @@ fn emitBlockAllocas(
     for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
         val statement = nodes.data[root];
-        if (statement.kind == 33) {
+        if (statement.kind == AstKind.VariableDeclaration) {
             emitVariableAlloca(buffer, genericArguments, nodes, root);
         }
-        if (statement.kind == 30) {
+        if (statement.kind == AstKind.Block) {
             emitBlockAllocas(buffer, genericArguments, nodes, root);
         }
-        if (statement.kind == 31) {
+        if (statement.kind == AstKind.IfStatement) {
             var branchRoot = root - 1;
             if (statement.aux == 1) {
                 emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
@@ -3435,15 +3440,15 @@ fn emitBlockAllocas(
             }
             emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
         }
-        if (statement.kind == 32) {
+        if (statement.kind == AstKind.WhileStatement) {
             emitBlockAllocas(buffer, genericArguments, nodes, root - 1);
         }
-        if (statement.kind == 38) {
+        if (statement.kind == AstKind.ForStatement) {
             val bodyRoot = root - 1;
             val collectionRoot = expressionChildBefore(nodes, bodyRoot);
             val name = nodes.data[statement.subtreeStart];
             val collection = nodes.data[collectionRoot];
-            var range = collection.kind == 13;
+            var range = collection.kind == AstKind.Binary;
             if (range) {
                 range = collection.aux == tokenKindValue(TokenKind.Range);
                 if (collection.aux == tokenKindValue(TokenKind.RangeExclusive)) range = true;
@@ -3476,7 +3481,7 @@ fn emitBlockAllocas(
             }
             emitBlockAllocas(buffer, genericArguments, nodes, bodyRoot);
         }
-        if (statement.kind == 39) {
+        if (statement.kind == AstKind.WhenStatement) {
             val branchCount = statement.aux % 65536;
             var branchRoot = root - 1;
             for (branchIndex in 0..<branchCount) {
@@ -3631,7 +3636,7 @@ fn emitFunction(
             blockRoot, counter, defers);
     if (!terminated) {
         var returnsUnit = returnType.typeKind == 1;
-        if (returnType.kind == 1 &&
+        if (returnType.kind == AstKind.NamedType &&
             returnType.aux == tokenKindValue(TokenKind.KwUnit)) returnsUnit = true;
         if (functionInfersReturn(function) && function.typeKind == 1)
             returnsUnit = true;
@@ -3670,7 +3675,7 @@ fn emitSpecializedFunction(
             node.typeName = concrete.name;
             node.typePointee = concrete.pointee;
         }
-        if (node.kind == 16) {
+        if (node.kind == AstKind.Call) {
             val genericCount = node.genericArgumentCount;
             if (genericCount > 0) {
                 val substituted =
@@ -3745,10 +3750,10 @@ fn emitSimpleFunction(
     if (nodes.data[blockRoot].aux != 1) return false;
     val statementRoot = firstStatementRoot(nodes, blockRoot);
     val statement = nodes.data[statementRoot];
-    if (statement.kind != 34) return false;
+    if (statement.kind != AstKind.ReturnStatement) return false;
     if (statement.aux != 1) return false;
     val literal = nodes.data[statementRoot - 1];
-    if (literal.kind != 11) return false;
+    if (literal.kind != AstKind.Literal) return false;
     if (literal.aux != tokenKindValue(TokenKind.IntegerLiteral)) return false;
 
     appendDefine(buffer);
@@ -3918,7 +3923,7 @@ fn emitModule(
     appendOwnedStringDeclarations(buffer);
     for (literalIndex in 0..<nodes.length) {
         val literal = nodes.data[literalIndex];
-        if (literal.kind == 11 &&
+        if (literal.kind == AstKind.Literal &&
             literal.aux == tokenKindValue(TokenKind.StringLiteral) &&
             (literal.typeKind == 10 || literal.typeKind == 13))
             appendStringGlobal(buffer, source, literal, literalIndex);
@@ -3935,7 +3940,7 @@ fn emitModule(
     }
     for (index in 0..<program.aux) {
         root = roots[index as u64];
-        if (nodes.data[root].kind == 43) {
+        if (nodes.data[root].kind == AstKind.StructDeclaration) {
             if (structTypeParameterCount(nodes.data[root]) == 0) {
                 emitStruct(buffer, source, nodes, genericArguments, root);
             }
@@ -3977,14 +3982,14 @@ fn emitModule(
     appendNewline(buffer);
     for (index in 0..<program.aux) {
         root = roots[index as u64];
-        if (nodes.data[root].kind == 41) {
+        if (nodes.data[root].kind == AstKind.FunctionOrDefer) {
             if (functionTypeParameterCount(nodes.data[root]) == 0) {
                 emitFunction(
                     buffer, source, nodes, genericArguments,
                     root, 0, 0);
             }
         } else {
-            if (nodes.data[root].kind == 43) {
+            if (nodes.data[root].kind == AstKind.StructDeclaration) {
                 var methodRoot = root - 1;
                 val methods = emitterStructMethodCount(nodes.data[root]);
                 for (method in 0..<methods) {
@@ -4003,7 +4008,7 @@ fn emitModule(
     defer requests.free();
     for (callIndex in 0..<nodes.length) {
         val call = nodes.data[callIndex];
-        if (call.kind == 16) {
+        if (call.kind == AstKind.Call) {
             if (callArgumentsAreConcrete(call, genericArguments)) {
                 val calleeRoot = callCalleeRoot(nodes, callIndex);
                 val callee = nodes.data[calleeRoot];
@@ -4012,7 +4017,7 @@ fn emitModule(
                         source, nodes,
                         sourceHash(
                             source, callee.start, callee.end));
-                if (callee.kind == 17) functionRoot = call.storage;
+                if (callee.kind == AstKind.Member) functionRoot = call.storage;
                 if (functionRoot != nodes.length) {
                     if (
                         !specializationRequestExists(
@@ -4041,7 +4046,7 @@ fn emitModule(
             nodes.data[request.functionRoot].subtreeStart;
         for (nestedIndex in functionStart..<request.functionRoot) {
             val nestedCall = nodes.data[nestedIndex];
-            if (nestedCall.kind == 16) {
+            if (nestedCall.kind == AstKind.Call) {
             if (nestedCall.genericArgumentCount > 0) {
                 val calleeRoot =
                     callCalleeRoot(nodes, nestedIndex);
@@ -4051,7 +4056,8 @@ fn emitModule(
                         source, nodes,
                         sourceHash(
                             source, callee.start, callee.end));
-                if (callee.kind == 17) nestedFunctionRoot = nestedCall.storage;
+                if (callee.kind == AstKind.Member)
+                    nestedFunctionRoot = nestedCall.storage;
                 if (nestedFunctionRoot != nodes.length) {
                     val nestedCount = nestedCall.genericArgumentCount;
                     val substituted =

@@ -46,7 +46,7 @@ fn nodeHash(val semantic: Semantic, node: AstNode) =>
 fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
-    if (node.kind == 12) {
+    if (node.kind == AstKind.Unary) {
         if (node.aux != tokenKindValue(TokenKind.Plus)) {
             if (node.aux != tokenKindValue(TokenKind.Minus)) {
                 return IntegerConstant(false, false, false, 0);
@@ -55,7 +55,7 @@ fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
         negative = node.aux == tokenKindValue(TokenKind.Minus);
         node = semantic.nodes.data[root - 1];
     }
-    if (node.kind != 11) return IntegerConstant(false, false, false, 0);
+    if (node.kind != AstKind.Literal) return IntegerConstant(false, false, false, 0);
     if (node.aux != tokenKindValue(TokenKind.IntegerLiteral))
         return IntegerConstant(false, false, false, 0);
     var magnitude: u64 = 0;
@@ -79,7 +79,7 @@ fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
 fn floatConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
-    if (node.kind == 12) {
+    if (node.kind == AstKind.Unary) {
         if (node.aux != tokenKindValue(TokenKind.Plus)) {
             if (node.aux != tokenKindValue(TokenKind.Minus)) {
                 return IntegerConstant(false, false, false, 0);
@@ -88,7 +88,7 @@ fn floatConstant(val semantic: Semantic, root: u64): IntegerConstant {
         negative = node.aux == tokenKindValue(TokenKind.Minus);
         node = semantic.nodes.data[root - 1];
     }
-    if (node.kind != 11) {
+    if (node.kind != AstKind.Literal) {
         return IntegerConstant(false, false, false, 0);
     }
     if (node.aux != tokenKindValue(TokenKind.FloatLiteral))
@@ -245,7 +245,7 @@ fn enumWhenExhaustive(
             val conditionRoot = whenPatternRoot(
                 semantic, roots[index as u64], valueForm, patternIndex);
             val condition = semantic.nodes.data[conditionRoot];
-            if (condition.kind == 17 && condition.typeKind == 20 &&
+            if (condition.kind == AstKind.Member && condition.typeKind == 20 &&
                     condition.typeName == subject.name) {
                 for (prior in 0..index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
@@ -258,7 +258,7 @@ fn enumWhenExhaustive(
                             semantic, roots[prior as u64], valueForm,
                             priorPattern);
                         val priorCondition = semantic.nodes.data[priorRoot];
-                        if (priorCondition.kind == 17 &&
+                        if (priorCondition.kind == AstKind.Member &&
                                 priorCondition.typeKind == 20 &&
                                 priorCondition.typeName == subject.name &&
                                 priorCondition.storage == condition.storage) {
@@ -314,13 +314,14 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
     val statementRoot = functionRoot - 2;
     val statement = semantic.nodes.data[statementRoot];
     var inferred = unitType();
-    if (statement.kind == 34) {
+    if (statement.kind == AstKind.ReturnStatement) {
         val expressionRoot = statementRoot - 1;
         inferred = expressionType(semantic, expressionRoot);
-        if (inferred.kind == 1 || semantic.nodes.data[expressionRoot].kind == 14) {
+        if (inferred.kind == 1 ||
+            semantic.nodes.data[expressionRoot].kind == AstKind.Assignment) {
             inferred = unitType();
             var expressionStatement = statement;
-            expressionStatement.kind = 35;
+            expressionStatement.kind = AstKind.ExpressionStatement;
             semantic.nodes.data[statementRoot] = expressionStatement;
         }
     } else {
@@ -715,7 +716,7 @@ fn structTypeArgumentRoot(
 
 fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
     val node = semantic.nodes.data[root];
-    if (node.kind == 1) {
+    if (node.kind == AstKind.NamedType) {
         val tokenKind = node.aux % 256;
         val primitive = primitiveType(tokenKind);
         if (primitive.kind != 0) return primitive;
@@ -744,18 +745,18 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         }
         return TypeValue(8, name, 0);
     }
-    if (node.kind == 2) {
+    if (node.kind == AstKind.PointerType) {
         val inner = typeFromNode(semantic, root - 1);
         if (inner.kind == 9) {
             return TypeValue(9, inner.pointee as u64, 9);
         }
         return TypeValue(9, inner.name, inner.kind);
     }
-    if (node.kind == 4) {
+    if (node.kind == AstKind.SliceType) {
         val inner = typeFromNode(semantic, root - 1);
         return TypeValue(13, inner.name, inner.kind);
     }
-    if (node.kind == 5) {
+    if (node.kind == AstKind.ArrayType) {
         var childRoot = root - 1;
         var size: u64 = 0;
         if (node.aux == 1) {
@@ -770,7 +771,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
 
         return typeFromNode(semantic, childRoot).array(size);
     }
-    if (node.kind == 3) {
+    if (node.kind == AstKind.NullableType) {
         val inner = typeFromNode(semantic, root - 1);
         return TypeValue(15, inner.name, inner.kind);
     }
@@ -811,7 +812,7 @@ fn contextualizeLiteralByteSlice(
     var semantic: Semantic, root: u64,
     expected: TypeValue, actual: TypeValue): TypeValue {
     val node = semantic.nodes.data[root];
-    if (node.kind != 11 ||
+    if (node.kind != AstKind.Literal ||
         node.aux != tokenKindValue(TokenKind.StringLiteral)) return actual;
     if (expected.kind != 13 || expected.pointee != 5) return actual;
     var typed = node;
@@ -841,7 +842,7 @@ fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
 
 fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
     val node = semantic.nodes.data[root];
-    if (node.kind == 10) {
+    if (node.kind == AstKind.Identifier) {
         val local = localFind(semantic.locals, nodeHash(semantic, node));
         if (local != semantic.locals.length) {
             var value = semantic.locals.data[local];
@@ -853,11 +854,11 @@ fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == 17 || node.kind == 19) {
+    if (node.kind == AstKind.Member || node.kind == AstKind.Postfix) {
         markOwnerRootMoved(semantic, root - 1);
         return;
     }
-    if (node.kind == 18) {
+    if (node.kind == AstKind.Index) {
         val indexRoot = root - 1;
         val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
         if (semantic.nodes.data[objectRoot].typeKind == 19) {
@@ -871,7 +872,7 @@ fn markExpressionMoved(var semantic: Semantic, root: u64) {
     val node = semantic.nodes.data[root];
     val value = TypeValue(node.typeKind, node.typeName, node.typePointee);
     if (!typeNeedsOwnership(semantic, value)) return;
-    if (node.kind == 25) {
+    if (node.kind == AstKind.IfExpression) {
         val elseValueRoot = root - 1;
         var thenValueRoot = semantic.nodes.data[elseValueRoot].subtreeStart - 1;
         for (index in 0..<node.aux / 65536) {
@@ -881,7 +882,7 @@ fn markExpressionMoved(var semantic: Semantic, root: u64) {
         markExpressionMoved(semantic, elseValueRoot);
         return;
     }
-    if (node.kind == 23) {
+    if (node.kind == AstKind.WhenExpression) {
         var branchRoot = root - 1;
         for (index in node.aux % 65536>..0) {
             markExpressionMoved(semantic, branchRoot - 1);
@@ -889,7 +890,7 @@ fn markExpressionMoved(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == 22) {
+    if (node.kind == AstKind.ArrayLiteral) {
         var childRoot = root - 1;
         for (index in 0..<node.aux) {
             markExpressionMoved(semantic, childRoot);
@@ -936,7 +937,7 @@ fn includeCurrentOwnership(
 fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (!semantic.result.ok) return invalidType();
     val node = semantic.nodes.data[root];
-    if (node.kind == 10) {
+    if (node.kind == AstKind.Identifier) {
         val name = nodeHash(semantic, node);
         val local = localFind(semantic.locals, name);
         if (local != semantic.locals.length) {
@@ -968,7 +969,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         semanticFail(semantic, 2, node);
         return invalidType();
     }
-    if (node.kind == 11) {
+    if (node.kind == AstKind.Literal) {
         if (node.aux == tokenKindValue(TokenKind.IntegerLiteral)) return integerLiteralType();
         if (node.aux == tokenKindValue(TokenKind.FloatLiteral)) return TypeValue(18, 0, 0);
         if (node.aux == tokenKindValue(TokenKind.StringLiteral)) return TypeValue(10, 0, 0);
@@ -977,7 +978,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (node.aux == tokenKindValue(TokenKind.KwNull)) return TypeValue(16, 0, 0);
         return invalidType();
     }
-    if (node.kind == 12) {
+    if (node.kind == AstKind.Unary) {
         val operand = expressionType(semantic, root - 1);
         if (node.aux == tokenKindValue(TokenKind.Star)) {
             if (operand.kind != 9) {
@@ -1004,12 +1005,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return operand;
     }
-    if (node.kind == 13) {
+    if (node.kind == AstKind.Binary) {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         if (node.aux == tokenKindValue(TokenKind.KwIn)) {
             val range = semantic.nodes.data[rightRoot];
-            var validRange = range.kind == 13;
+            var validRange = range.kind == AstKind.Binary;
             if (validRange) {
                 validRange = range.aux == tokenKindValue(TokenKind.Range) ||
                     range.aux == tokenKindValue(TokenKind.RangeExclusive) ||
@@ -1079,12 +1080,12 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         semanticFail(semantic, 4, node);
         return invalidType();
     }
-    if (node.kind == 14) {
+    if (node.kind == AstKind.Assignment) {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         val target = semantic.nodes.data[leftRoot];
         var targetLocal = semantic.locals.length;
-        if (target.kind == 10) {
+        if (target.kind == AstKind.Identifier) {
             targetLocal = localFind(semantic.locals, nodeHash(semantic, target));
             if (targetLocal == semantic.locals.length) {
                 semanticFail(semantic, 2, target);
@@ -1129,7 +1130,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return left;
     }
-    if (node.kind == 15) {
+    if (node.kind == AstKind.Cast) {
         val typeRoot = root - 1;
         val valueRoot = semantic.nodes.data[typeRoot].subtreeStart - 1;
         var source = expressionType(semantic, valueRoot);
@@ -1195,7 +1196,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return target;
     }
-    if (node.kind == 16) {
+    if (node.kind == AstKind.Call) {
         var argumentCount = node.aux % 65536;
         val callExplicitTypeCount = node.aux / 65536;
         val argumentRoots =
@@ -1211,7 +1212,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val callee = semantic.nodes.data[calleeRoot];
         var explicitTypeCount = callExplicitTypeCount;
-        if (callee.kind == 17) explicitTypeCount = callee.aux;
+        if (callee.kind == AstKind.Member) explicitTypeCount = callee.aux;
         val explicitTypeRoots =
             k_boot_alloc(
                 (explicitTypeCount as u64) * sizeof(u64)) as u64*;
@@ -1226,13 +1227,13 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         var functionName: u64 = 0;
         var associated = false;
-        if (callee.kind == 10) {
+        if (callee.kind == AstKind.Identifier) {
             functionName = nodeHash(semantic, callee);
         } else {
-            if (callee.kind == 17) {
+            if (callee.kind == AstKind.Member) {
                 val objectRoot = associatedObjectRoot(semantic, cursor);
                 val objectNode = semantic.nodes.data[objectRoot];
-                if (objectNode.kind == 10) {
+                if (objectNode.kind == AstKind.Identifier) {
                     val structureIndex = declarationFind(
                         semantic.structs, nodeHash(semantic, objectNode));
                     if (structureIndex != semantic.structs.length) {
@@ -1280,7 +1281,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val functionIndex = declarationFind(semantic.functions, functionName);
         if (functionIndex == semantic.functions.length) {
-            if (callee.kind == 10 && functionName == 210727929557 &&
+            if (callee.kind == AstKind.Identifier &&
+                functionName == 210727929557 &&
                 localFind(semantic.locals, functionName) == semantic.locals.length) {
                 if (argumentCount != 2) {
                     semanticFail(semantic, 3, callee);
@@ -1463,7 +1465,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 functionParameterRoot(semantic, functionRoot, 1)];
             if (receiverParameter.aux == 2) {
                 val receiverNode = semantic.nodes.data[argumentRoots[0]];
-                if (receiverNode.kind == 10) {
+                if (receiverNode.kind == AstKind.Identifier) {
                     val receiverLocal =
                         localFind(semantic.locals, nodeHash(semantic, receiverNode));
                     if (receiverLocal == semantic.locals.length) {
@@ -1661,10 +1663,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         k_boot_free(argumentRoots as unit*);
         return returnType;
     }
-    if (node.kind == 17) {
+    if (node.kind == AstKind.Member) {
         val objectRoot = root - 1;
         val objectNode = semantic.nodes.data[objectRoot];
-        if (objectNode.kind == 10) {
+        if (objectNode.kind == AstKind.Identifier) {
             val enumIndex = declarationFind(semantic.enums, nodeHash(semantic, objectNode));
             if (enumIndex != semantic.enums.length) {
                 val enumRoot = semantic.enums.data[enumIndex].node;
@@ -1735,7 +1737,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         semanticFail(semantic, 8, node);
         return invalidType();
     }
-    if (node.kind == 18) {
+    if (node.kind == AstKind.Index) {
         val indexRoot = root - 1;
         val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
         val object = expressionType(semantic, objectRoot);
@@ -1755,7 +1757,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return TypeValue(object.pointee, object.name, 0);
     }
-    if (node.kind == 19) {
+    if (node.kind == AstKind.Postfix) {
         val operand = expressionType(semantic, root - 1);
         if (node.aux == tokenKindValue(TokenKind.PlusPlus) ||
             node.aux == tokenKindValue(TokenKind.MinusMinus)) {
@@ -1763,7 +1765,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             if (!operand.isFloat() && !operand.isInteger())
                 semanticFail(semantic, 4, node);
             val target = semantic.nodes.data[root - 1];
-            if (target.kind == 10) {
+            if (target.kind == AstKind.Identifier) {
                 val local = localFind(semantic.locals, nodeHash(semantic, target));
                 if (local == semantic.locals.length) semanticFail(semantic, 2, target);
                 else {
@@ -1779,7 +1781,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return TypeValue(operand.pointee, operand.name, 0);
     }
-    if (node.kind == 25) {
+    if (node.kind == AstKind.IfExpression) {
         val thenCount = node.aux % 65536;
         val elseCount = node.aux / 65536;
         val elseValueRoot = root - 1;
@@ -1838,7 +1840,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         semantic.nodes.data[root] = resolved;
         return thenType;
     }
-    if (node.kind == 23) {
+    if (node.kind == AstKind.WhenExpression) {
         val branchCount = node.aux % 65536;
         val hasSubject = node.aux / 65536;
         val roots = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
@@ -1943,7 +1945,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         k_boot_free(roots as unit*);
         return result;
     }
-    if (node.kind == 22) {
+    if (node.kind == AstKind.ArrayLiteral) {
         if (node.aux == 0) return invalidType().array(0);
         var childRoot = root - 1;
         var element = expressionType(semantic, childRoot);
@@ -1963,8 +1965,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         return element.array(node.aux as u64);
     }
-    if (node.kind == 20) return unitType();
-    if (node.kind == 21) {
+    if (node.kind == AstKind.UnitLiteral) return unitType();
+    if (node.kind == AstKind.Sizeof) {
         typeFromNode(semantic, root - 1);
         return TypeValue(7, 0, 0);
     }
@@ -1972,7 +1974,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
 }
 
 fn checkBlock(var semantic: Semantic, root: u64) {
-    if (semantic.nodes.data[root].kind != 30) {
+    if (semantic.nodes.data[root].kind != AstKind.Block) {
         checkStatement(semantic, root);
         return;
     }
@@ -1998,12 +2000,14 @@ fn checkBlock(var semantic: Semantic, root: u64) {
 
 fn statementTerminates(val nodes: List<AstNode>, root: u64): bool {
     val node = nodes.data[root];
-    if (node.kind == 34 || node.kind == 36 || node.kind == 37) return true;
-    if (node.kind == 30) {
+    if (node.kind == AstKind.ReturnStatement ||
+        node.kind == AstKind.BreakStatement ||
+        node.kind == AstKind.ContinueStatement) return true;
+    if (node.kind == AstKind.Block) {
         if (node.aux == 0) return false;
         return statementTerminates(nodes, root - 1);
     }
-    if (node.kind == 31 && node.aux == 1) {
+    if (node.kind == AstKind.IfStatement && node.aux == 1) {
         val elseRoot = root - 1;
         val thenRoot = nodes.data[elseRoot].subtreeStart - 1;
         return statementTerminates(nodes, thenRoot) &&
@@ -2015,7 +2019,7 @@ fn statementTerminates(val nodes: List<AstNode>, root: u64): bool {
 fn resolveWhenResultType(
     var semantic: Semantic, root: u64, target: TypeValue) {
     var whenNode = semantic.nodes.data[root];
-    if (whenNode.kind != 23) return;
+    if (whenNode.kind != AstKind.WhenExpression) return;
     whenNode.typeKind = target.kind;
     whenNode.typeName = target.name;
     whenNode.typePointee = target.pointee;
@@ -2038,7 +2042,7 @@ fn resolveWhenResultType(
 fn resolveIfResultType(
     var semantic: Semantic, root: u64, target: TypeValue) {
     var ifNode = semantic.nodes.data[root];
-    if (ifNode.kind != 25) return;
+    if (ifNode.kind != AstKind.IfExpression) return;
     ifNode.typeKind = target.kind;
     ifNode.typeName = target.name;
     ifNode.typePointee = target.pointee;
@@ -2068,11 +2072,11 @@ fn resolveIfResultType(
 fn checkStatement(var semantic: Semantic, root: u64) {
     if (!semantic.result.ok) return;
     val node = semantic.nodes.data[root];
-    if (node.kind == 30) {
+    if (node.kind == AstKind.Block) {
         checkBlock(semantic, root);
         return;
     }
-    if (node.kind == 31) {
+    if (node.kind == AstKind.IfStatement) {
         var thenRoot = root - 1;
         var elseRoot = semantic.nodes.length;
         if (node.aux == 1) {
@@ -2107,7 +2111,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         k_boot_free(before as unit*);
         return;
     }
-    if (node.kind == 32) {
+    if (node.kind == AstKind.WhileStatement) {
         val bodyRoot = root - 1;
         semantic.loopDepth++;
         checkBlock(semantic, bodyRoot);
@@ -2120,13 +2124,13 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == 38) {
+    if (node.kind == AstKind.ForStatement) {
         val bodyRoot = root - 1;
         val collectionRoot =
             semantic.nodes.data[bodyRoot].subtreeStart - 1;
         var collectionNode = semantic.nodes.data[collectionRoot];
         var valueType = expressionType(semantic, collectionRoot);
-        var range = collectionNode.kind == 13;
+        var range = collectionNode.kind == AstKind.Binary;
         if (range) {
             range = collectionNode.aux == tokenKindValue(TokenKind.Range);
             if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusive)) range = true;
@@ -2194,7 +2198,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         semantic.locals.setLength(savedLocals);
         return;
     }
-    if (node.kind == 39) {
+    if (node.kind == AstKind.WhenStatement) {
         val branchCount = node.aux % 65536;
         val hasSubject = node.aux / 65536;
         if (branchCount == 0) {
@@ -2284,26 +2288,26 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         k_boot_free(roots as unit*);
         return;
     }
-    if (node.kind == 41) {
+    if (node.kind == AstKind.FunctionOrDefer) {
         val savedSuppressMoves = semantic.suppressMoves;
         semantic.suppressMoves = true;
         checkStatement(semantic, root - 1);
         semantic.suppressMoves = savedSuppressMoves;
         return;
     }
-    if (node.kind == 36) {
+    if (node.kind == AstKind.BreakStatement) {
         if (semantic.loopDepth == 0) {
             semanticFail(semantic, 4, node);
         }
         return;
     }
-    if (node.kind == 37) {
+    if (node.kind == AstKind.ContinueStatement) {
         if (semantic.loopDepth == 0) {
             semanticFail(semantic, 4, node);
         }
         return;
     }
-    if (node.kind == 33) {
+    if (node.kind == AstKind.VariableDeclaration) {
         val initializerRoot = root - 1;
         var initializer = expressionType(semantic, initializerRoot);
         val nameNode = semantic.nodes.data[node.subtreeStart];
@@ -2357,7 +2361,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             false, automaticDrop));
         return;
     }
-    if (node.kind == 34) {
+    if (node.kind == AstKind.ReturnStatement) {
         var actual = unitType();
         if (node.aux == 1) {
             actual = expressionType(semantic, root - 1);
@@ -2367,13 +2371,14 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val function = semantic.nodes.data[semantic.currentFunction];
         if (function.storage % 2 == 1 && node.aux == 1) {
             var statementLike = actual.kind == 1;
-            if (semantic.nodes.data[root - 1].kind == 14) statementLike = true;
+            if (semantic.nodes.data[root - 1].kind == AstKind.Assignment)
+                statementLike = true;
             if (statementLike) {
                 if (semantic.returnType.kind != 1)
                     semanticFail(semantic, 5, semantic.nodes.data[root - 1]);
                 else {
                     var expressionStatement = node;
-                    expressionStatement.kind = 35;
+                    expressionStatement.kind = AstKind.ExpressionStatement;
                     semantic.nodes.data[root] = expressionStatement;
                 }
                 return;
@@ -2418,7 +2423,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == 35) {
+    if (node.kind == AstKind.ExpressionStatement) {
         val previousMutationRoot = semantic.mutationRoot;
         semantic.mutationRoot = root - 1;
         expressionType(semantic, root - 1);
@@ -2484,24 +2489,25 @@ fn checkFunction(var semantic: Semantic, root: u64) {
 
 fn isConstantExpression(val semantic: Semantic, root: u64): bool {
     val node = semantic.nodes.data[root];
-    if (node.kind == 11) return true;
-    if (node.kind == 10) {
+    if (node.kind == AstKind.Literal) return true;
+    if (node.kind == AstKind.Identifier) {
         return declarationFind(semantic.constants, nodeHash(semantic, node)) !=
             semantic.constants.length;
     }
-    if (node.kind == 12) return isConstantExpression(semantic, root - 1);
-    if (node.kind == 13) {
+    if (node.kind == AstKind.Unary)
+        return isConstantExpression(semantic, root - 1);
+    if (node.kind == AstKind.Binary) {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         return isConstantExpression(semantic, leftRoot) &&
             isConstantExpression(semantic, rightRoot);
     }
-    if (node.kind == 15) {
+    if (node.kind == AstKind.Cast) {
         val typeRoot = root - 1;
         return isConstantExpression(
             semantic, semantic.nodes.data[typeRoot].subtreeStart - 1);
     }
-    if (node.kind == 22) {
+    if (node.kind == AstKind.ArrayLiteral) {
         var childRoot = root - 1;
         for (index in 0..<node.aux) {
             if (!isConstantExpression(semantic, childRoot)) return false;
@@ -2516,7 +2522,7 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
     for (index in 0..<count) {
         val root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
-        if (declaration.kind == 49) {
+        if (declaration.kind == AstKind.EnumDeclaration) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = nodeHash(semantic, nameNode);
             if (declarationFind(semantic.enums, name) != semantic.enums.length) {
@@ -2541,7 +2547,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
     for (index in 0..<program.aux) {
         root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
-        if (declaration.kind == 43) {
+        if (declaration.kind == AstKind.StructDeclaration) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = nodeHash(semantic, nameNode);
             if (declarationFind(semantic.structs, name) !=
@@ -2588,7 +2594,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             }
             semantic.currentStruct = savedStruct;
         } else {
-            if (declaration.kind == 50) {
+            if (declaration.kind == AstKind.ConstantDeclaration) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = nodeHash(semantic, nameNode);
                 val initializerRoot = root - 1;
@@ -2610,7 +2616,8 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         semantic.nodes.data[initializerRoot].subtreeStart - 1];
                     var accepted = typeAccepts(
                         expected, actual, semantic.genericArguments);
-                    if (expected.kind == 19 && typeNode.kind == 5 &&
+                    if (expected.kind == 19 &&
+                        typeNode.kind == AstKind.ArrayType &&
                         typeNode.aux == 0 && actual.kind == 19) {
                         accepted = typeAccepts(
                             expected.arrayElement(), actual.arrayElement(),
@@ -2618,7 +2625,8 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     }
                     if (!accepted)
                         semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
-                    if (expected.kind == 19 && typeNode.kind == 5 &&
+                    if (expected.kind == 19 &&
+                        typeNode.kind == AstKind.ArrayType &&
                         typeNode.aux == 0 && actual.kind == 19) {
                         actual = expected.arrayElement().array(actual.arraySize());
                     } else actual = expected;
@@ -2629,7 +2637,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 typed.typePointee = actual.pointee;
                 semantic.nodes.data[root] = typed;
                 semantic.constants.add(DeclarationInfo(name, root));
-            } else if (declaration.kind == 49) {
+            } else if (declaration.kind == AstKind.EnumDeclaration) {
                 for (left in 0..<declaration.aux) {
                     for (right in left + 1..<declaration.aux) {
                         val leftNode = semantic.nodes.data[
@@ -2641,7 +2649,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         }
                     }
                 }
-            } else if (declaration.kind == 41) {
+            } else if (declaration.kind == AstKind.FunctionOrDefer) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = nodeHash(semantic, nameNode);
                 if (declarationFind(semantic.functions, name) !=
@@ -2676,10 +2684,10 @@ fn analyze(source: Source, val nodes: List<AstNode>): SemanticResult {
         val program = semantic.nodes.data[programRoot];
         var root = programRoot - 1;
         for (index in 0..<program.aux) {
-            if (semantic.nodes.data[root].kind == 41) {
+            if (semantic.nodes.data[root].kind == AstKind.FunctionOrDefer) {
                 checkFunction(semantic, root);
             } else {
-                if (semantic.nodes.data[root].kind == 43) {
+                if (semantic.nodes.data[root].kind == AstKind.StructDeclaration) {
                     var methodRoot = root - 1;
                     val methods = structMethodCount(semantic.nodes.data[root]);
                     for (method in 0..<methods) {
