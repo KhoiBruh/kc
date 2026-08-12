@@ -268,10 +268,28 @@ enum Status {
 val state: Status = Status.Ready
 ```
 
+Enum may declare an integer backing type and explicit values:
+
+```text
+enum HttpStatus: u32 {
+    Ok = 200,
+    Created,
+    NotFound = 404
+}
+
+val raw: u32 = HttpStatus.Created.value
+```
+
+The supported backing types are `i32`, `i64`, `u8`, `u32`, and `u64`; omitted
+backing type means `u32`. The first implicit value is `0`, later implicit values
+increment the preceding value, and duplicate or out-of-range values are rejected.
+The read-only `.value` member exposes the backing representation. Enum/integer
+implicit conversions and `as` casts remain unsupported.
+
 * Dấu phẩy là bắt buộc giữa hai variant; trailing comma trước `}` bị từ chối.
 * Variant được tạo và truy cập qua tên enum, ví dụ `Status.Ready`.
-* Tag bắt đầu từ `0` theo thứ tự khai báo và dùng `u32` nội bộ.
-* Không hỗ trợ payload, generic enum, underlying type công khai hoặc gán tag thủ công trong v0.1.
+* Backing type mặc định là `u32`; backing type và giá trị tường minh tuân theo contract ở trên.
+* Không hỗ trợ payload hoặc generic enum trong v0.1.
 * Enum là kiểu riêng, copy ngầm và không chuyển đổi ngầm sang số nguyên.
 * Với enum `when`, `else` có thể bỏ qua chỉ khi mọi
   variant đã xuất hiện đúng một lần; nhánh trùng hoặc thiếu variant là diagnostic.
@@ -875,7 +893,7 @@ và LLVM IR parity đều pass qua `kc1`–`kc4`. Debug và Release giữ cùng 
 IR hợp lệ và fixed-point `kc3.ll == kc4.ll`.
 
 **Payload-free enum self-hosting milestone: complete.** Khai báo enum,
-`Enum.Variant`, truyền/trả enum, tag `u32`, và exhaustive enum `when` có
+`Enum.Variant`, backing value, `.value`, truyền/trả enum, và exhaustive enum `when` có
 diagnostic span/category parity đều được compiler K tự biên dịch qua `kc1`–`kc4`.
 
 The bootstrap subset lives in `src/bootstrap/`; `manifest.txt` is an inventory

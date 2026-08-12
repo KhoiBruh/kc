@@ -82,7 +82,7 @@ $validFixtures = @(
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
-    "collection_for.k", "when_control.k", "enum_control.k", "enum_type_before.k",
+    "collection_for.k", "when_control.k", "enum_control.k", "enum_backing_values.k", "enum_type_before.k",
     "enum_type_after.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
     "ownership_control_flow.k", "literal_slice_contexts.k", "slice_from_pointer.k",
@@ -192,6 +192,9 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "enum_control.k" -and $stage1Exit -ne 42) {
         Write-Error "enum control fixture did not return 42"
+    }
+    if ($fixtureName -eq "enum_backing_values.k" -and $stage1Exit -ne 42) {
+        Write-Error "enum backing-value fixture did not return 42"
     }
     if (($fixtureName -eq "enum_type_before.k" -or
          $fixtureName -eq "enum_type_after.k") -and $stage1Exit -ne 42) {
@@ -529,7 +532,10 @@ $invalidFixtures = @(
     "bootstrap-semantic-move-nullable.k",
     "bootstrap-semantic-move-if-value.k",
     "bootstrap-semantic-move-when-value.k",
-    "bootstrap-semantic-move-array.k"
+    "bootstrap-semantic-move-array.k",
+    "bootstrap-semantic-enum-overflow.k",
+    "bootstrap-semantic-enum-duplicate-value.k",
+    "bootstrap-semantic-enum-conversion.k"
 )
 foreach ($fixtureName in $invalidFixtures) {
     $fixture = Join-Path $InvalidFixtureDirectory $fixtureName

@@ -427,7 +427,8 @@ fn appendType(
         buffer.append("double");
     }
     if (kind == typeKindValue(TypeKind.IntegerLiteral)) appendI32(buffer);
-    if (kind == typeKindValue(TypeKind.Enum)) appendI32(buffer);
+    if (kind == typeKindValue(TypeKind.Enum))
+        appendType(buffer, genericArguments, pointee, 0, 0);
     if (kind == typeKindValue(TypeKind.Slice)) {
         buffer.append("{ ptr, i64 }");
     }
@@ -727,7 +728,8 @@ fn typeAlignment(
     if (kind == typeKindValue(TypeKind.I32)) return 4;
     if (kind == typeKindValue(TypeKind.U32)) return 4;
     if (kind == typeKindValue(TypeKind.IntegerLiteral)) return 4;
-    if (kind == typeKindValue(TypeKind.Enum)) return 4;
+    if (kind == typeKindValue(TypeKind.Enum))
+        return typeAlignment(source, nodes, genericArguments, pointee, 0, 0);
     if (kind == typeKindValue(TypeKind.F32)) return 4;
     if (kind == typeKindValue(TypeKind.I64)) return 8;
     if (kind == typeKindValue(TypeKind.U64)) return 8;
@@ -777,7 +779,8 @@ fn typeSize(
     if (kind == typeKindValue(TypeKind.I32)) return 4;
     if (kind == typeKindValue(TypeKind.U32)) return 4;
     if (kind == typeKindValue(TypeKind.IntegerLiteral)) return 4;
-    if (kind == typeKindValue(TypeKind.Enum)) return 4;
+    if (kind == typeKindValue(TypeKind.Enum))
+        return typeSize(source, nodes, genericArguments, pointee, 0, 0);
     if (kind == typeKindValue(TypeKind.F32)) return 4;
     if (kind == typeKindValue(TypeKind.I64)) return 8;
     if (kind == typeKindValue(TypeKind.U64)) return 8;
@@ -1947,8 +1950,15 @@ fn emitExpression(
     if (node.kind == AstKind.Member) {
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
-        if (node.typeKind == typeKindValue(TypeKind.Enum) && objectNode.typeKind == typeKindValue(TypeKind.Enum)) {
-            return IrValue(3, 0, 0, node.storage, typeKindValue(TypeKind.Enum), node.typeName, 0);
+        if (objectNode.typeKind == typeKindValue(TypeKind.Enum)) {
+            if (node.typeKind == typeKindValue(TypeKind.Enum)) {
+                return IrValue(
+                    3, 0, 0, node.storage, typeKindValue(TypeKind.Enum),
+                    node.typeName, node.typePointee);
+            }
+            return emitExpression(
+                buffer, source, nodes, genericArguments,
+                objectRoot, counter);
         }
         if (objectNode.typeKind == typeKindValue(TypeKind.String)) {
             val object = emitExpression(

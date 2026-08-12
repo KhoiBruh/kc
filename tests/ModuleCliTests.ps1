@@ -13,3 +13,11 @@ Pop-Location
 if ($compileExit -ne 0) { Write-Error "module fixture did not compile" }
 & $Output
 if ($LASTEXITCODE -ne 42) { Write-Error "module fixture returned $LASTEXITCODE" }
+
+Push-Location $moduleRoot
+& $Compiler "enum_import/main.k" -o $Output
+$enumCompileExit = $LASTEXITCODE
+Pop-Location
+if ($enumCompileExit -ne 0) { Write-Error "imported enum fixture did not compile" }
+& $Output
+if ($LASTEXITCODE -ne 42) { Write-Error "imported enum fixture returned $LASTEXITCODE" }

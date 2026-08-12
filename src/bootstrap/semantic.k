@@ -43,6 +43,23 @@ fn sourceHash(source: Source, start: u64, end: u64): u64 {
 fn nodeHash(val semantic: Semantic, node: AstNode) =>
     sourceHash(semantic.source, node.start, node.end);
 
+fn enumVariantStart(enumeration: AstNode) =>
+    enumeration.subtreeStart + 1 + enumeration.storage;
+
+fn enumExplicitConstant(val semantic: Semantic, variant: AstNode): IntegerConstant {
+    if (variant.conversionKind == 0)
+        return IntegerConstant(false, false, false, 0);
+    var magnitude: u64 = 0;
+    var overflow = false;
+    for (offset in variant.storage..<variant.typeName) {
+        val digit = (semantic.source.data[offset] - 48) as u64;
+        if (magnitude > 1844674407370955161) overflow = true;
+        else if (magnitude == 1844674407370955161 && digit > 5) overflow = true;
+        if (!overflow) magnitude = magnitude * 10 + digit;
+    }
+    return IntegerConstant(true, variant.ownership == 1, overflow, magnitude);
+}
+
 fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
@@ -261,7 +278,7 @@ fn enumWhenExhaustive(
                         if (priorCondition.kind == AstKind.Member &&
                                 priorCondition.typeKind == typeKindValue(TypeKind.Enum) &&
                                 priorCondition.typeName == subject.name &&
-                                priorCondition.storage == condition.storage) {
+                                priorCondition.conversionKind == condition.conversionKind) {
                             var diagnostic = condition;
                             diagnostic.start = semantic.nodes.data[
                                 condition.subtreeStart].start;
@@ -732,8 +749,10 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         }
         
         val name = nodeHash(semantic, node);
-        if (declarationFind(semantic.enums, name) != semantic.enums.length) {
-            return TypeValue(TypeKind.Enum, name, 0);
+        val enumIndex = declarationFind(semantic.enums, name);
+        if (enumIndex != semantic.enums.length) {
+            val enumeration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
+            return TypeValue(TypeKind.Enum, name, enumeration.typePointee);
         }
         return TypeValue(TypeKind.Struct, name, 0);
     }
@@ -1662,18 +1681,23 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val wanted = nodeHash(semantic, node);
                 for (position in 0..<enumeration.aux) {
                     val variant = semantic.nodes.data[
-                        enumeration.subtreeStart + 1 + position as u64];
+                        enumVariantStart(enumeration) + position as u64];
                     if (nodeHash(semantic, variant) == wanted) {
                         var resolvedObject = objectNode;
                         resolvedObject.typeKind = typeKindValue(TypeKind.Enum);
                         resolvedObject.typeName = semantic.enums.data[enumIndex].name;
+                        resolvedObject.typePointee = enumeration.typePointee;
                         semantic.nodes.data[objectRoot] = resolvedObject;
                         var resolved = node;
-                        resolved.storage = position as u64;
+                        resolved.storage = variant.storage;
+                        resolved.conversionKind = position;
                         resolved.typeKind = typeKindValue(TypeKind.Enum);
                         resolved.typeName = semantic.enums.data[enumIndex].name;
+                        resolved.typePointee = enumeration.typePointee;
                         semantic.nodes.data[root] = resolved;
-                        return TypeValue(TypeKind.Enum, resolved.typeName, 0);
+                        return TypeValue(
+                            TypeKind.Enum, resolved.typeName,
+                            enumeration.typePointee);
                     }
                 }
                 semanticFail(semantic, 2, node);
@@ -1681,6 +1705,16 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         val object = expressionType(semantic, objectRoot);
+        if (object.kind == TypeKind.Enum) {
+            if (nodeHash(semantic, node) == 210731095874) {
+                var resolved = node;
+                resolved.typeKind = object.pointee;
+                semantic.nodes.data[root] = resolved;
+                return TypeValue(typeKindFromValue(object.pointee), 0, 0);
+            }
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
         if (object.kind == TypeKind.String) {
             if (nodeHash(semantic, node) == 210708248140) {
                 return TypeValue(TypeKind.Slice, 0, typeKindValue(TypeKind.U8));
@@ -2517,6 +2551,20 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
                 semanticFail(semantic, 1, nameNode);
             } else {
                 semantic.enums.add(DeclarationInfo(name, root));
+                var backing = TypeValue(TypeKind.U32, 0, 0);
+                if (declaration.storage > 0) {
+                    backing = typeFromNode(
+                        semantic, enumVariantStart(declaration) - 1);
+                    if (!backing.isInteger()) {
+                        semanticFail(
+                            semantic, 4,
+                            semantic.nodes.data[enumVariantStart(declaration) - 1]);
+                        backing = TypeValue(TypeKind.U32, 0, 0);
+                    }
+                }
+                var typed = declaration;
+                typed.typePointee = typeKindValue(backing.kind);
+                semantic.nodes.data[root] = typed;
             }
         }
     }
@@ -2626,12 +2674,47 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 semantic.nodes.data[root] = typed;
                 semantic.constants.add(DeclarationInfo(name, root));
             } else if (declaration.kind == AstKind.EnumDeclaration) {
+                val backing = TypeValue(
+                    typeKindFromValue(declaration.typePointee), 0, 0);
+                var nextNegative = false;
+                var nextMagnitude: u64 = 0;
+                var nextOverflow = false;
                 for (left in 0..<declaration.aux) {
+                    val leftRoot = enumVariantStart(declaration) + left as u64;
+                    var leftNode = semantic.nodes.data[leftRoot];
+                    var constant = IntegerConstant(
+                        true, nextNegative, nextOverflow, nextMagnitude);
+                    if (leftNode.conversionKind == 1)
+                        constant = enumExplicitConstant(semantic, leftNode);
+                    if (!constant.ok || !integerConstantFits(constant, backing))
+                        semanticFail(semantic, 4, leftNode);
+                    var value = constant.magnitude;
+                    if (constant.negative) value = 0 - value;
+                    for (prior in 0..<left) {
+                        val priorNode = semantic.nodes.data[
+                            enumVariantStart(declaration) + prior as u64];
+                        if (priorNode.storage == value)
+                            semanticFail(semantic, 1, leftNode);
+                    }
+                    leftNode.storage = value;
+                    leftNode.conversionKind = left;
+                    semantic.nodes.data[leftRoot] = leftNode;
+                    nextNegative = constant.negative;
+                    nextMagnitude = constant.magnitude;
+                    nextOverflow = constant.overflow;
+                    if (nextNegative) {
+                        if (nextMagnitude > 0) nextMagnitude--;
+                        if (nextMagnitude == 0) nextNegative = false;
+                    } else {
+                        if (nextMagnitude == 18446744073709551615) {
+                            nextOverflow = true;
+                        } else nextMagnitude++;
+                    }
                     for (right in left + 1..<declaration.aux) {
                         val leftNode = semantic.nodes.data[
-                            declaration.subtreeStart + 1 + left as u64];
+                            enumVariantStart(declaration) + left as u64];
                         val rightNode = semantic.nodes.data[
-                            declaration.subtreeStart + 1 + right as u64];
+                            enumVariantStart(declaration) + right as u64];
                         if (nodeHash(semantic, leftNode) == nodeHash(semantic, rightNode)) {
                             semanticFail(semantic, 1, rightNode);
                         }

@@ -68,7 +68,9 @@ struct RuntimeArraySizeCheck {
 
 struct EnumSymbol {
     const EnumDecl* declaration;
-    std::unordered_map<std::string, std::uint32_t> variants;
+    SemanticType backingType;
+    std::unordered_map<std::string, std::uint64_t> variants;
+    std::unordered_map<std::string, std::uint32_t> variantIndices;
 };
 
 struct ConstantSymbol {
@@ -117,7 +119,8 @@ struct SemanticResult {
     std::unordered_map<const CastExpr*, IntegerCastInfo> integerCasts;
     std::unordered_map<const CastExpr*, FloatCastInfo> floatCasts;
     std::unordered_map<const CallExpr*, ResolvedCall> resolvedCalls;
-    std::unordered_map<const MemberExpr*, std::uint32_t> enumValues;
+    std::unordered_map<const MemberExpr*, std::uint64_t> enumValues;
+    std::unordered_map<const MemberExpr*, std::uint32_t> enumVariantIndices;
     std::vector<SpecializationKey> requestedSpecializations;
     std::unordered_map<const VariableDecl*, SemanticType> declarationTypes;
     std::unordered_set<const Expr*> ownershipMoves;

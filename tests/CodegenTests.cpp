@@ -820,6 +820,20 @@ TEST(codegen_lowers_enum_variants_as_u32_tags) {
     EXPECT_TRUE(ir.find("ret i32 2") != std::string::npos);
 }
 
+TEST(codegen_lowers_enum_backing_values_without_runtime_conversion) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "enum Tiny: u8 { A = 10, B }"
+        "enum Signed: i32 { Negative = -1, Zero }"
+        "fn tiny(): u8 { return Tiny.B.value; }"
+        "fn signed(): i32 { val value = Signed.Negative; return value.value; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define i8 @tiny") != std::string::npos);
+    EXPECT_TRUE(ir.find("ret i8 11") != std::string::npos);
+    EXPECT_TRUE(ir.find("store i32 -1") != std::string::npos);
+}
+
 TEST(codegen_lowers_exhaustive_enum_when_without_else) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

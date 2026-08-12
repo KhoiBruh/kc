@@ -722,6 +722,49 @@ TEST(semantic_resolves_enum_variants_and_rejects_unknown_variants) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
 }
 
+TEST(semantic_types_enum_backing_values_and_value_member) {
+    SemanticFixture valid{
+        "enum Default { A, B, C }"
+        "enum Explicit: u32 { A = 10, B, C = 20, D }"
+        "enum Tiny: u8 { A = 254, B }"
+        "enum Signed: i32 { Negative = -1, Zero = 0 }"
+        "enum NamedValue { value }"
+        "fn raw(val value: Explicit): u32 { return value.value; }"
+        "fn direct(): i32 { return Signed.Negative.value; }"
+        "fn named(): u32 { return NamedValue.value.value; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture overflow{
+        "enum E: u8 { Bad = 256 } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(overflow.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture autoOverflow{
+        "enum E: u8 { Last = 255, Bad } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(autoOverflow.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture duplicate{
+        "enum E: u32 { A = 10, B = 10 } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(duplicate.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture invalidBacking{
+        "enum E: bool { A } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(invalidBacking.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_keeps_enum_integer_conversions_explicitly_unavailable) {
+    SemanticFixture enumToInteger{
+        "enum E { A } fn main(): i32 { val x: u32 = E.A; return 0; }"};
+    EXPECT_EQ(enumToInteger.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture enumCast{
+        "enum E { A } fn main(): i32 { return E.A as i32; }"};
+    EXPECT_EQ(enumCast.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture integerToEnum{
+        "enum E { A } fn take(val value: E) {} fn main(): i32 { take(0); return 0; }"};
+    EXPECT_EQ(integerToEnum.semantic.diagnostics.size(), 1u);
+}
+
 TEST(semantic_resolves_enum_types_independent_of_declaration_order) {
     SemanticFixture before{
         "enum TestKind { Alpha, Beta }"

@@ -1716,11 +1716,23 @@ private:
                     return {};
                 }
                 result_.enumValues[&member] = variant->second;
+                result_.enumVariantIndices[&member] =
+                    enumeration->second.variantIndices.at(variantName);
                 result_.expressionTypes[member.object.get()] = enumType(enumName);
                 return enumType(enumName);
             }
         }
         const auto objectType = analyzeExpr(*member.object);
+        if (objectType.kind == SemanticTypeKind::Enum) {
+            const auto name = spelling(source_, member.name);
+            if (name == "value") {
+                const auto enumeration = result_.enums.find(objectType.name);
+                if (enumeration != result_.enums.end())
+                    return enumeration->second.backingType;
+            }
+            diagnose("unknown enum member '" + name + "'", member.name);
+            return {};
+        }
         if (objectType.kind == SemanticTypeKind::String) {
             const auto name = spelling(source_, member.name);
             if (name == "bytes")
@@ -1976,8 +1988,8 @@ private:
         for (const auto* pattern : patterns) {
             const auto* member = std::get_if<MemberExpr>(&pattern->node);
             if (!member) continue;
-            const auto value = result_.enumValues.find(member);
-            if (value == result_.enumValues.end() || value->second >= seen.size())
+            const auto value = result_.enumVariantIndices.find(member);
+            if (value == result_.enumVariantIndices.end() || value->second >= seen.size())
                 continue;
             if (seen[value->second])
                 diagnose("duplicate enum variant in when", pattern->span);
@@ -1996,14 +2008,63 @@ private:
             diagnose("duplicate type '" + name + "'", enumeration.name);
             return;
         }
-        EnumSymbol symbol{&enumeration, {}};
+        SemanticType backingType{SemanticTypeKind::U32};
+        if (enumeration.backingType) backingType = resolve(*enumeration.backingType);
+        if (!isInteger(backingType) ||
+            (backingType.kind != SemanticTypeKind::I32 &&
+             backingType.kind != SemanticTypeKind::I64 &&
+             backingType.kind != SemanticTypeKind::U8 &&
+             backingType.kind != SemanticTypeKind::U32 &&
+             backingType.kind != SemanticTypeKind::U64)) {
+            diagnose("enum backing type must be i32, i64, u8, u32, or u64",
+                     enumeration.backingType ? enumeration.backingType->span : enumeration.name);
+            backingType = {SemanticTypeKind::U32};
+        }
+        EnumSymbol symbol{&enumeration, backingType, {}, {}};
+        std::unordered_set<std::uint64_t> values;
+        std::uint64_t nextValue = 0;
+        bool nextValueOverflows = false;
         for (std::size_t i = 0; i < enumeration.variants.size(); ++i) {
             const auto variant = spelling(source_, enumeration.variants[i].name);
             if (symbol.variants.contains(variant))
                 diagnose("duplicate enum variant '" + variant + "'",
                          enumeration.variants[i].name);
-            else
-                symbol.variants.emplace(variant, static_cast<std::uint32_t>(i));
+            else {
+                std::uint64_t value = nextValue;
+                if (!enumeration.variants[i].value && nextValueOverflows)
+                    diagnose("enum value does not fit backing type",
+                             enumeration.variants[i].span);
+                if (enumeration.variants[i].value) {
+                    const auto constant = integerConstant(*enumeration.variants[i].value);
+                    if (!constant) {
+                        diagnose("enum value must be an integer constant",
+                                 enumeration.variants[i].value->span);
+                    } else if (!integerConstantFits(*constant, backingType)) {
+                        diagnose("enum value does not fit backing type",
+                                 enumeration.variants[i].value->span);
+                    } else {
+                        std::from_chars(
+                            constant->digits.data(),
+                            constant->digits.data() + constant->digits.size(), value);
+                        if (constant->negative) value = 0 - value;
+                    }
+                }
+                if (values.contains(value))
+                    diagnose("duplicate enum backing value", enumeration.variants[i].span);
+                values.insert(value);
+                symbol.variants.emplace(variant, value);
+                symbol.variantIndices.emplace(variant, static_cast<std::uint32_t>(i));
+                nextValue = value + 1;
+                std::uint64_t maximum = std::numeric_limits<std::uint64_t>::max();
+                if (backingType.kind == SemanticTypeKind::U8) maximum = 255;
+                else if (backingType.kind == SemanticTypeKind::U32)
+                    maximum = 4294967295;
+                else if (backingType.kind == SemanticTypeKind::I32)
+                    maximum = 2147483647;
+                else if (backingType.kind == SemanticTypeKind::I64)
+                    maximum = 9223372036854775807;
+                nextValueOverflows = value == maximum;
+            }
         }
         result_.enums.emplace(name, std::move(symbol));
     }

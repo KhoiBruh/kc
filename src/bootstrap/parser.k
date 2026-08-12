@@ -983,6 +983,11 @@ fn parseEnum(var parser: Parser): u64 {
     if (parserExpect(parser, TokenKind.Identifier) == false) return 0;
     val name = parserPrevious(parser);
     parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
+    var hasBacking: u64 = 0;
+    if (parserMatch(parser, TokenKind.Colon)) {
+        parseType(parser);
+        hasBacking = parser.nodes.length - subtreeStart - 1;
+    }
     if (parserExpect(parser, TokenKind.LeftBrace) == false) return 0;
     if (parserCheck(parser, TokenKind.RightBrace)) {
         parser.ok = false;
@@ -993,9 +998,24 @@ fn parseEnum(var parser: Parser): u64 {
     while (parsing) {
         if (parserExpect(parser, TokenKind.Identifier) == false) return 0;
         val variant = parserPrevious(parser);
-        parserAdd(
+        val variantRoot = parserAdd(
             parser, AstKind.Name, variant.start, variant.end,
             parser.nodes.length, 0);
+        if (parserMatch(parser, TokenKind.Equal)) {
+            var negative: u32 = 0;
+            if (parserMatch(parser, TokenKind.Plus)) {
+            } else if (parserMatch(parser, TokenKind.Minus)) {
+                negative = 1;
+            }
+            if (!parserExpect(parser, TokenKind.IntegerLiteral)) return 0;
+            val value = parserPrevious(parser);
+            var variantNode = parser.nodes.data[variantRoot];
+            variantNode.conversionKind = 1;
+            variantNode.storage = value.start;
+            variantNode.typeName = value.end;
+            variantNode.ownership = negative;
+            parser.nodes.data[variantRoot] = variantNode;
+        }
         count++;
         if (parserMatch(parser, TokenKind.Comma)) {
             if (parserCheck(parser, TokenKind.RightBrace)) {
@@ -1007,9 +1027,13 @@ fn parseEnum(var parser: Parser): u64 {
         }
     }
     if (parserExpect(parser, TokenKind.RightBrace) == false) return 0;
-    return parserAdd(
+    val root = parserAdd(
         parser, AstKind.EnumDeclaration, start, parserPrevious(parser).end,
         subtreeStart, count);
+    var enumeration = parser.nodes.data[root];
+    enumeration.storage = hasBacking;
+    parser.nodes.data[root] = enumeration;
+    return root;
 }
 
 fn parseModule(var parser: Parser): u64 {

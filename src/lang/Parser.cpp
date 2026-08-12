@@ -537,6 +537,11 @@ std::optional<EnumDecl> Parser::parseEnum() {
     const auto start = advance().span;
     if (!expect(TokenKind::Identifier, "expected enum name")) return std::nullopt;
     const auto name = previous().span;
+    TypePtr backingType;
+    if (match(TokenKind::Colon)) {
+        backingType = parseType();
+        if (!backingType) return std::nullopt;
+    }
     if (!expect(TokenKind::LeftBrace, "expected '{' after enum name"))
         return std::nullopt;
     std::vector<EnumVariant> variants;
@@ -547,7 +552,13 @@ std::optional<EnumDecl> Parser::parseEnum() {
     while (true) {
         if (!expect(TokenKind::Identifier, "expected enum variant"))
             return std::nullopt;
-        variants.push_back({previous().span, previous().span});
+        const auto variantName = previous().span;
+        ExprPtr value;
+        if (match(TokenKind::Equal)) {
+            value = parseExpression();
+            if (!value) return std::nullopt;
+        }
+        variants.push_back({variantName, std::move(value), variantName});
         if (!match(TokenKind::Comma)) break;
         if (check(TokenKind::RightBrace)) {
             report(peek().span, "trailing comma is not allowed in enum");
@@ -556,7 +567,9 @@ std::optional<EnumDecl> Parser::parseEnum() {
     }
     if (!expect(TokenKind::RightBrace, "expected '}' after enum variants"))
         return std::nullopt;
-    return EnumDecl{name, std::move(variants), spanFrom(start, previous().span)};
+    return EnumDecl{
+        name, std::move(backingType), std::move(variants),
+        spanFrom(start, previous().span)};
 }
 
 std::unique_ptr<BlockStmt> Parser::parseControlBody(SourceSpan& span) {

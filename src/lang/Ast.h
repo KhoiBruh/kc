@@ -171,9 +171,10 @@ struct StructDecl {
     SourceSpan span;
 };
 
-struct EnumVariant { SourceSpan name; SourceSpan span; };
+struct EnumVariant { SourceSpan name; ExprPtr value; SourceSpan span; };
 struct EnumDecl {
     SourceSpan name;
+    TypePtr backingType;
     std::vector<EnumVariant> variants;
     SourceSpan span;
 };
