@@ -1280,6 +1280,34 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val functionIndex = declarationFind(semantic.functions, functionName);
         if (functionIndex == semantic.functions.length) {
+            if (callee.kind == 10 && functionName == 210727929557 &&
+                localFind(semantic.locals, functionName) == semantic.locals.length) {
+                if (argumentCount != 2) {
+                    semanticFail(semantic, 3, callee);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                val pointer = expressionType(semantic, argumentRoots[0]);
+                val length = expressionType(semantic, argumentRoots[1]);
+                if (pointer.kind != 9 || pointer.pointee == 1) {
+                    semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[0]]);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                if (!typeAccepts(
+                        TypeValue(7, 0, 0), length,
+                        semantic.genericArguments)) {
+                    semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[1]]);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return TypeValue(13, pointer.name, pointer.pointee);
+            }
             if (nodeIsPrint(semantic, callee)) {
                 if (argumentCount != 1) {
                     semanticFail(semantic, 3, callee);

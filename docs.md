@@ -244,9 +244,15 @@ val inferred: i8[] = [0, 1, 2]      // Suy luận thành i8[3]
 ```text
 val values: i8[] = [0, 1, 2, 3]
 val view: []i8 = values
+val rawView: []u8 = slice(data, length)
 ```
 
 Slice không được sống lâu hơn mảng hoặc vùng dữ liệu mà nó tham chiếu.
+`slice(pointer, length)` là cầu nối low-level tường minh từ raw pointer có kiểu
+`T*` sang borrowed slice `[]T`. Thao tác này không cấp phát, sao chép hay nhận
+quyền sở hữu. Người gọi phải giữ vùng nhớ hợp lệ trong toàn bộ thời gian dùng
+slice; raw pointer không mang thông tin kích thước nên `length` do người gọi
+cung cấp quyết định giới hạn bounds check.
 
 ### Kiểu liệt kê (Enums)
 

@@ -660,6 +660,37 @@ TEST(semantic_accepts_print_string_and_i32_builtins) {
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 
+TEST(semantic_constructs_borrowed_slices_from_typed_raw_pointers) {
+    SemanticFixture valid{
+        "fn view(data: u8*, length: u64): []u8 {"
+        "val inferred = slice(data, length);"
+        "val explicit: []u8 = slice(data, 0);"
+        "return inferred;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalidFirst{
+        "fn bad(): i32 { val bytes = slice(123, 4); return 0; }"};
+    EXPECT_EQ(invalidFirst.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture invalidArity{
+        "fn bad(data: u8*): i32 { val bytes = slice(data); return 0; }"};
+    EXPECT_EQ(invalidArity.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture shadowed{
+        "fn bad(slice: u8*, length: u64): i32 {"
+        "val bytes = slice(slice, length); return 0; }"};
+    EXPECT_EQ(shadowed.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_prefers_user_function_named_slice_over_intrinsic) {
+    SemanticFixture fixture{
+        "fn slice(value: i32): i32 { return value + 1; }"
+        "fn main(): i32 { return slice(41); }"};
+
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
 TEST(semantic_checks_control_flow_conditions_and_scopes) {
     SemanticFixture valid{
         "fn main(): i32 {"

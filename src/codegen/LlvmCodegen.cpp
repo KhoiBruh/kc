@@ -1436,6 +1436,21 @@ private:
                 return builder_.CreateCall(target, arguments);
             }
             const auto* callee = std::get_if<IdentifierExpr>(&call->callee->node);
+            if (callee && spelling(source(), callee->name) == "slice" &&
+                call->arguments.size() == 2 &&
+                semantic().functions.find("slice") ==
+                    semantic().functions.end()) {
+                auto* pointer = emitExpr(*call->arguments[0]);
+                auto* length = emitExpr(*call->arguments[1]);
+                if (!pointer || !length) return nullptr;
+                const auto type = semantic().expressionTypes.find(&expression);
+                if (type == semantic().expressionTypes.end()) return nullptr;
+                auto* aggregateType = lowerType(type->second, expression.span);
+                if (!aggregateType) return nullptr;
+                llvm::Value* aggregate = llvm::UndefValue::get(aggregateType);
+                aggregate = builder_.CreateInsertValue(aggregate, pointer, 0);
+                return builder_.CreateInsertValue(aggregate, length, 1);
+            }
             if (callee && spelling(source(), callee->name) == "print" &&
                 call->arguments.size() == 1) {
                 const auto& argument = *call->arguments.front();

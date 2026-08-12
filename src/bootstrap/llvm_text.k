@@ -2233,6 +2233,45 @@ fn emitExpression(
                 }
             }
         }
+        val isSlice = functionRoot == nodes.length && !isMember &&
+            calleeHash == 210727929557;
+        if (isSlice) {
+            values[1] = emitImplicitIntegerWiden(
+                buffer, source, genericArguments, values[1], 7, 0, 0,
+                counter);
+            val dataTemporary = nextTemporary(counter);
+            appendValuePrefix(buffer);
+            appendDecimal(buffer, dataTemporary);
+            appendEquals(buffer);
+            appendInsertValue(buffer);
+            buffer.append(" ");
+            appendNodeType(buffer, genericArguments, node);
+            buffer.append(" ");
+            appendUndef(buffer);
+            buffer.append(", ptr ");
+            appendIrValue(buffer, source, values[0]);
+            buffer.append(", 0");
+            appendNewline(buffer);
+            val lengthTemporary = nextTemporary(counter);
+            appendValuePrefix(buffer);
+            appendDecimal(buffer, lengthTemporary);
+            appendEquals(buffer);
+            appendInsertValue(buffer);
+            buffer.append(" ");
+            appendNodeType(buffer, genericArguments, node);
+            buffer.append(" ");
+            appendValuePrefix(buffer);
+            appendDecimal(buffer, dataTemporary);
+            buffer.append(", i64 ");
+            appendIrValue(buffer, source, values[1]);
+            buffer.append(", 1");
+            appendNewline(buffer);
+            k_boot_free(values as unit*);
+            k_boot_free(arguments as unit*);
+            return IrValue(
+                2, 0, 0, lengthTemporary,
+                node.typeKind, node.typeName, node.typePointee);
+        }
         if (node.typeKind == 8) {
         if (functionRoot == nodes.length) {
             val structureRoot =

@@ -1319,6 +1319,30 @@ private:
             result_.expressionTypes[call.callee.get()] = {SemanticTypeKind::Unit};
             return {SemanticTypeKind::Unit};
         }
+        if (name == "slice" && !findVariable(name) &&
+            result_.functions.find(name) == result_.functions.end()) {
+            if (call.arguments.size() != 2) {
+                diagnose("slice argument count does not match", call.callee->span);
+                for (const auto& argument : call.arguments) analyzeExpr(*argument);
+                return {};
+            }
+            const auto pointer = analyzeExpr(*call.arguments[0]);
+            const SemanticType lengthType{SemanticTypeKind::U64};
+            const auto length = analyzeExpr(*call.arguments[1], lengthType);
+            if (pointer.kind != SemanticTypeKind::Pointer || !pointer.element ||
+                pointer.element->kind == SemanticTypeKind::Unit) {
+                diagnose("slice first argument must be a typed raw pointer",
+                         call.arguments[0]->span);
+                return {};
+            }
+            if (!compatible(lengthType, length)) {
+                diagnose("slice length must be u64", call.arguments[1]->span);
+                return {};
+            }
+            const auto type = sliceType(*pointer.element);
+            result_.expressionTypes[call.callee.get()] = type;
+            return type;
+        }
         if (const auto structure = result_.structs.find(name);
             structure != result_.structs.end()) {
             std::vector<SemanticType> typeArguments;

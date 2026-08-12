@@ -85,6 +85,34 @@ TEST(codegen_lowers_print_builtins_to_runtime_calls) {
     EXPECT_TRUE(ir.find("@k_std_print_i32") != std::string::npos);
 }
 
+TEST(codegen_constructs_borrowed_slice_without_allocation) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn first(data: u8*, length: u64): u8 {"
+        "val bytes = slice(data, length);"
+        "return bytes[0];"
+        "}",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("insertvalue { ptr, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_std_alloc") == std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_boot_alloc") == std::string::npos);
+    EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
+}
+
+TEST(codegen_calls_user_function_named_slice) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn slice(data: u8*, length: u64): i32 { return 42; }"
+        "fn call(data: u8*, length: u64): i32 { return slice(data, length); }",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("call i32 @slice(") != std::string::npos);
+    EXPECT_TRUE(ir.find("insertvalue { ptr, i64 }") == std::string::npos);
+}
+
 TEST(codegen_lowers_direct_user_function_calls) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

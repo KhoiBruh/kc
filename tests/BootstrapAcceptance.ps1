@@ -85,7 +85,8 @@ $validFixtures = @(
     "collection_for.k", "when_control.k", "enum_control.k", "enum_type_before.k",
     "enum_type_after.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
-    "ownership_control_flow.k", "literal_slice_contexts.k"
+    "ownership_control_flow.k", "literal_slice_contexts.k", "slice_from_pointer.k",
+    "slice_function_shadow.k"
 )
 Push-Location $moduleRoot
 try {
@@ -126,6 +127,21 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "integer_casts.k" -and $stage1Exit -ne 42) {
         Write-Error "checked integer cast fixture did not return 42"
+    }
+    if ($fixtureName -eq "slice_from_pointer.k" -and $stage1Exit -ne 42) {
+        Write-Error "borrowed raw-pointer slice fixture did not return 42"
+    }
+    if ($fixtureName -eq "slice_function_shadow.k" -and $stage1Exit -ne 42) {
+        Write-Error "user function named slice fixture did not return 42"
+    }
+    if ($fixtureName -eq "slice_function_shadow.k") {
+        foreach ($ll in @($stage1Ll, $stage2Ll, $stage3Ll, $stage4Ll)) {
+            $text = Get-Content -Raw $ll
+            if ($text -cnotmatch "call i32 @slice\(i32 41\)" -or
+                $text -cmatch "insertvalue \{ ptr, i64 \}") {
+                Write-Error "user function named slice did not lower as an ordinary call in $ll"
+            }
+        }
     }
     if ($fixtureName -eq "implicit_integer_widening.k" -and $stage1Exit -ne 42) {
         Write-Error "implicit integer widening fixture did not return 42"
@@ -505,6 +521,8 @@ $invalidFixtures = @(
     "bootstrap-semantic-condition.k",
     "bootstrap-semantic-immutable.k",
     "bootstrap-semantic-access.k",
+    "bootstrap-semantic-slice-first.k",
+    "bootstrap-semantic-slice-arity.k",
     "bootstrap-semantic-move-generic.k",
     "bootstrap-semantic-move-associated.k",
     "bootstrap-semantic-move-method.k",
