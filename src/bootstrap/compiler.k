@@ -35,7 +35,7 @@ fn compilerFailure(kind: u32) {
         2 -> message.append("launch opt");
         else -> message.append("launch clang");
     }
-    message.add(10);
+    message.append("\n");
     k_boot_stderr(message.data, message.length);
 }
 
@@ -181,169 +181,37 @@ fn stderrNumber(value: u64): StringBuilder {
 
 fn appendErrorMessage(var buffer: StringBuilder, category: u32) {
     if (category >= 1000) {
-        buffer.add(101); buffer.add(120);
-        buffer.add(112); buffer.add(101);
-        buffer.add(99); buffer.add(116);
-        buffer.add(101); buffer.add(100);
-        buffer.add(32); buffer.add(39);
+        buffer.append("expected '");
         val kind = category - 1000;
         when (kind) {
-            1 -> {
-                buffer.add(105); buffer.add(110);
-                buffer.add(100); buffer.add(101);
-                buffer.add(110); buffer.add(116);
-                buffer.add(105); buffer.add(102);
-                buffer.add(105); buffer.add(101);
-                buffer.add(114);
-            }
-            50 -> buffer.add(40);
-            51 -> buffer.add(41);
-            52 -> buffer.add(123);
-            53 -> buffer.add(125);
-            54 -> buffer.add(91);
-            55 -> buffer.add(93);
-            56 -> buffer.add(44);
-            57 -> buffer.add(58);
-            58 -> buffer.add(59);
-            59 -> buffer.add(46);
-            67 -> buffer.add(61);
-            else -> {
-                buffer.add(116); buffer.add(111);
-                buffer.add(107); buffer.add(101);
-                buffer.add(110);
-            }
+            1 -> buffer.append("identifier");
+            50 -> buffer.append("(");
+            51 -> buffer.append(")");
+            52 -> buffer.append("{");
+            53 -> buffer.append("}");
+            54 -> buffer.append("[");
+            55 -> buffer.append("]");
+            56 -> buffer.append(",");
+            57 -> buffer.append(":");
+            58 -> buffer.append(";");
+            59 -> buffer.append(".");
+            67 -> buffer.append("=");
+            else -> buffer.append("token");
         }
-        buffer.add(39);
+        buffer.append("'");
     } else {
         when (category) {
-            100 -> {
-                buffer.add(117); buffer.add(110);
-                buffer.add(116); buffer.add(101);
-                buffer.add(114); buffer.add(109);
-                buffer.add(105); buffer.add(110);
-                buffer.add(97); buffer.add(116);
-                buffer.add(101); buffer.add(100);
-                buffer.add(32); buffer.add(115);
-                buffer.add(116); buffer.add(114);
-                buffer.add(105); buffer.add(110);
-                buffer.add(103);
-            }
-            101 -> {
-                buffer.add(105); buffer.add(110);
-                buffer.add(118); buffer.add(97);
-                buffer.add(108); buffer.add(105);
-                buffer.add(100); buffer.add(32);
-                buffer.add(99); buffer.add(104);
-                buffer.add(97); buffer.add(114);
-                buffer.add(97); buffer.add(99);
-                buffer.add(116); buffer.add(101);
-                buffer.add(114);
-            }
-            1 -> {
-                buffer.add(100); buffer.add(117);
-                buffer.add(112); buffer.add(108);
-                buffer.add(105); buffer.add(99);
-                buffer.add(97); buffer.add(116);
-                buffer.add(101); buffer.add(32);
-                buffer.add(100); buffer.add(101);
-                buffer.add(99); buffer.add(108);
-                buffer.add(97); buffer.add(114);
-                buffer.add(97); buffer.add(116);
-                buffer.add(105); buffer.add(111);
-                buffer.add(110);
-            }
-            2 -> {
-                buffer.add(117); buffer.add(110);
-                buffer.add(107); buffer.add(110);
-                buffer.add(111); buffer.add(119);
-                buffer.add(110); buffer.add(32);
-                buffer.add(105); buffer.add(100);
-                buffer.add(101); buffer.add(110);
-                buffer.add(116); buffer.add(105);
-                buffer.add(102); buffer.add(105);
-                buffer.add(101); buffer.add(114);
-            }
-            3 -> {
-                buffer.add(97); buffer.add(114);
-                buffer.add(103); buffer.add(117);
-                buffer.add(109); buffer.add(101);
-                buffer.add(110); buffer.add(116);
-                buffer.add(32); buffer.add(99);
-                buffer.add(111); buffer.add(117);
-                buffer.add(110); buffer.add(116);
-                buffer.add(32); buffer.add(109);
-                buffer.add(105); buffer.add(115);
-                buffer.add(109); buffer.add(97);
-                buffer.add(116); buffer.add(99);
-                buffer.add(104);
-            }
-            4 -> {
-                buffer.add(116); buffer.add(121);
-                buffer.add(112); buffer.add(101);
-                buffer.add(32); buffer.add(109);
-                buffer.add(105); buffer.add(115);
-                buffer.add(109); buffer.add(97);
-                buffer.add(116); buffer.add(99);
-                buffer.add(104);
-            }
-            5 -> {
-                buffer.add(114); buffer.add(101);
-                buffer.add(116); buffer.add(117);
-                buffer.add(114); buffer.add(110);
-                buffer.add(32); buffer.add(116);
-                buffer.add(121); buffer.add(112);
-                buffer.add(101); buffer.add(32);
-                buffer.add(109); buffer.add(105);
-                buffer.add(115); buffer.add(109);
-                buffer.add(97); buffer.add(116);
-                buffer.add(99);
-            }
-            6 -> {
-                buffer.add(99); buffer.add(111);
-                buffer.add(110); buffer.add(100);
-                buffer.add(105); buffer.add(116);
-                buffer.add(105); buffer.add(111);
-                buffer.add(110); buffer.add(32);
-                buffer.add(109); buffer.add(117);
-                buffer.add(115); buffer.add(116);
-                buffer.add(32); buffer.add(98);
-                buffer.add(101); buffer.add(32);
-                buffer.add(98); buffer.add(111);
-                buffer.add(111); buffer.add(108);
-            }
-            7 -> {
-                buffer.add(99); buffer.add(97);
-                buffer.add(110); buffer.add(110);
-                buffer.add(111); buffer.add(116);
-                buffer.add(32); buffer.add(97);
-                buffer.add(115); buffer.add(115);
-                buffer.add(105); buffer.add(103);
-                buffer.add(110); buffer.add(32);
-                buffer.add(116); buffer.add(111);
-                buffer.add(32); buffer.add(105);
-                buffer.add(109); buffer.add(109);
-                buffer.add(117); buffer.add(116);
-                buffer.add(97); buffer.add(98);
-                buffer.add(108); buffer.add(101);
-            }
-            8 -> {
-                buffer.add(105); buffer.add(110);
-                buffer.add(118); buffer.add(97);
-                buffer.add(108); buffer.add(105);
-                buffer.add(100); buffer.add(32);
-                buffer.add(109); buffer.add(101);
-                buffer.add(109); buffer.add(98);
-                buffer.add(101); buffer.add(114);
-                buffer.add(32); buffer.add(97);
-                buffer.add(99); buffer.add(99);
-                buffer.add(101); buffer.add(115);
-                buffer.add(115);
-            }
-            else -> {
-                buffer.add(101); buffer.add(114);
-                buffer.add(114); buffer.add(111);
-                buffer.add(114);
-            }
+            100 -> buffer.append("unterminated string");
+            101 -> buffer.append("invalid character");
+            1 -> buffer.append("duplicate declaration");
+            2 -> buffer.append("unknown identifier");
+            3 -> buffer.append("argument count mismatch");
+            4 -> buffer.append("type mismatch");
+            5 -> buffer.append("return type mismatch");
+            6 -> buffer.append("condition must be bool");
+            7 -> buffer.append("cannot assign to immutable");
+            8 -> buffer.append("invalid member access");
+            else -> buffer.append("error");
         }
     }
 }
@@ -360,7 +228,7 @@ fn printDiagnostic(
         val total = segment.sourceStart + segment.sourceLength;
         if (start in segment.sourceStart..total) {
 			buf.appendBytes(slice(segment.path, segment.pathLength));
-			buf.add(58);
+			buf.append(":");
 			sourceStart = segment.sourceStart;
             break;
         }
@@ -369,20 +237,13 @@ fn printDiagnostic(
     val lineNum = stderrNumber(findLine(source, sourceStart, start));
     defer lineNum.free();
     buf.appendBytes(slice(lineNum.data, lineNum.length));
-    buf.add(58);
+    buf.append(":");
     val colNum = stderrNumber(findColumn(source, sourceStart, start));
     defer colNum.free();
     buf.appendBytes(slice(colNum.data, colNum.length));
-    buf.add(58);
-    buf.add(32);
-    buf.add(101);
-    buf.add(114);
-    buf.add(114);
-    buf.add(111);
-    buf.add(114);
-    buf.add(58);
-    buf.add(32);
+    buf.append(": ");
+    buf.append("error: ");
     appendErrorMessage(buf, category);
-    buf.add(10);
+    buf.append("\n");
     k_boot_stderr(buf.data, buf.length);
 }
