@@ -1166,6 +1166,10 @@ private:
         if (literal.kind == TokenKind::KwTrue || literal.kind == TokenKind::KwFalse)
             return {SemanticTypeKind::Bool};
         if (literal.kind == TokenKind::CharLiteral) return {SemanticTypeKind::Char};
+        if (literal.kind == TokenKind::StringLiteral && expected &&
+            expected->kind == SemanticTypeKind::Slice && expected->element &&
+            expected->element->kind == SemanticTypeKind::U8)
+            return *expected;
         return {SemanticTypeKind::String};
     }
 

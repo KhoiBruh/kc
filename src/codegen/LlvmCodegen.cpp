@@ -1590,6 +1590,16 @@ private:
                     value, builder_.getFalse(), 0);
             }
             auto text = spelling(source(), literal->spelling);
+            if (semanticType.kind == SemanticTypeKind::Slice &&
+                literal->kind == TokenKind::StringLiteral) {
+                const auto decoded = decodeStringLiteral(text);
+                llvm::Value* value = llvm::UndefValue::get(type);
+                value = builder_.CreateInsertValue(
+                    value, builder_.CreateGlobalString(decoded), 0);
+                return builder_.CreateInsertValue(
+                    value, llvm::ConstantInt::get(
+                        builder_.getInt64Ty(), decoded.size()), 1);
+            }
             if (semanticType.kind == SemanticTypeKind::String) {
                 const auto decoded = decodeStringLiteral(text);
                 llvm::Value* value = llvm::UndefValue::get(type);

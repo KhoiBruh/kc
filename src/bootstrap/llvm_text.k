@@ -1057,6 +1057,18 @@ fn emitAddress(
         val object = emitExpression(
             buffer, source, nodes, genericArguments,
             objectRoot, counter);
+        var data = object;
+        if (object.typeKind == 13) {
+            val extracted = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, extracted);
+            appendEquals(buffer); appendExtractValue(buffer);
+            appendType(
+                buffer, genericArguments,
+                object.typeKind, object.typeName, object.typePointee);
+            buffer.append(" "); appendIrValue(buffer, source, object);
+            buffer.append(", 0"); appendNewline(buffer);
+            data = IrValue(2, 0, 0, extracted, 9, 0, 5);
+        }
         val index = emitExpression(
             buffer, source, nodes, genericArguments,
             indexRoot, counter);
@@ -1067,7 +1079,7 @@ fn emitAddress(
         appendGetElementPtr(buffer);
         buffer.append(" ");
         appendNodeType(buffer, genericArguments, node);
-        appendPointerValue(buffer, source, object);
+        appendPointerValue(buffer, source, data);
         buffer.append(", ");
         appendType(
             buffer, genericArguments, index.typeKind, index.typeName, index.typePointee);
@@ -1170,6 +1182,22 @@ fn emitExpression(
     if (node.kind == 11) {
         if (node.typeKind == 16) {
             return IrValue(3, 0, 0, 0, 16, 0, 0);
+        }
+        if (node.typeKind == 13 && node.typePointee == 5) {
+            var decoded = decodeStringLiteral(source, node);
+            defer decoded.free();
+            var temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
+            appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
+            buffer.append(" undef, ptr @.ks"); appendDecimal(buffer, root);
+            buffer.append(", 0"); appendNewline(buffer);
+            temporary = nextTemporary(counter);
+            appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
+            appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
+            buffer.append(" "); appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
+            buffer.append(", i64 "); appendDecimal(buffer, decoded.length);
+            buffer.append(", 1"); appendNewline(buffer);
+            return IrValue(2, 0, 0, temporary, 13, 0, 5);
         }
         if (node.typeKind == 10) {
             var decoded = decodeStringLiteral(source, node);
@@ -1995,7 +2023,7 @@ fn emitExpression(
         val objectRoot = expressionChildBefore(nodes, indexRoot);
         val objectNode = nodes.data[objectRoot];
         var constantArray = false;
-        if (objectNode.kind == 10) {
+        if (objectNode.kind == 10 && objectNode.typeKind == 19) {
             if (objectNode.storage < nodes.length) {
                 if (nodes.data[objectNode.storage].kind == 50) constantArray = true;
             }
@@ -3835,7 +3863,9 @@ fn emitModule(
     appendOwnedStringDeclarations(buffer);
     for (literalIndex in 0..<nodes.length) {
         val literal = nodes.data[literalIndex];
-        if (literal.kind == 11 && literal.typeKind == 10) appendStringGlobal(buffer, source, literal, literalIndex);
+        if (literal.kind == 11 && literal.aux == 5 &&
+            (literal.typeKind == 10 || literal.typeKind == 13))
+            appendStringGlobal(buffer, source, literal, literalIndex);
     }
     appendNewline(buffer);
     val programRoot = nodes.length - 1;

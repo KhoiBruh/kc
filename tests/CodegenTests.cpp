@@ -723,6 +723,19 @@ TEST(codegen_lowers_array_to_slice_and_slice_indexing) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_string_literal_to_read_only_byte_slice) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn first(val bytes: []u8): u8 { return bytes[0]; }"
+        "fn main(): u8 { return first(\"abc\"); }",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("c\"abc\\00\"") != std::string::npos);
+    EXPECT_TRUE(ir.find("{ ptr, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("i64 3") != std::string::npos);
+}
+
 TEST(codegen_lowers_when_expression_to_phi) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(

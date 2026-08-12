@@ -803,6 +803,20 @@ fn expressionType(var semantic: Semantic, root: u64): TypeValue {
     return value;
 }
 
+fn contextualizeLiteralByteSlice(
+    var semantic: Semantic, root: u64,
+    expected: TypeValue, actual: TypeValue): TypeValue {
+    val node = semantic.nodes.data[root];
+    if (node.kind != 11 || node.aux != 5) return actual;
+    if (expected.kind != 13 || expected.pointee != 5) return actual;
+    var typed = node;
+    typed.typeKind = expected.kind;
+    typed.typeName = expected.name;
+    typed.typePointee = expected.pointee;
+    semantic.nodes.data[root] = typed;
+    return expected;
+}
+
 fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
     if (value.kind == 10 || value.kind == 14 || value.kind == 19) return true;
     if (value.kind == 15) {
@@ -1093,7 +1107,9 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         } else {
             left = expressionType(semantic, leftRoot);
         }
-        val right = expressionType(semantic, rightRoot);
+        var right = expressionType(semantic, rightRoot);
+        right = contextualizeLiteralByteSlice(
+            semantic, rightRoot, left, right);
         if (!typeAccepts(left, right, semantic.genericArguments)) {
             semanticFail(semantic, 4, node);
         } else if (node.aux == 65) {
@@ -1354,6 +1370,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         typeArguments, typeCount as u64, typeCount as u64,
                         sizeof(TypeValue)),
                     0, typeCount);
+                actual = contextualizeLiteralByteSlice(
+                    semantic, argumentRoots[argument as u64], expected, actual);
                 if (!typeAccepts(expected, actual, semantic.genericArguments)) {
                     semanticFail(
                         semantic, 4,
@@ -1483,7 +1501,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         for (argument in 0..<argumentCount) {
-            val actual = expressionType(
+            var actual = expressionType(
                 semantic, argumentRoots[argument as u64]);
             val parameterRoot =
                 functionParameterRoot(
@@ -1537,6 +1555,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         sizeof(TypeValue)),
                     0, typeCount);
             }
+            actual = contextualizeLiteralByteSlice(
+                semantic, argumentRoots[argument as u64], expected, actual);
             if (!typeAccepts(expected, actual, semantic.genericArguments)) {
                 semanticFail(
                     semantic, 4,
@@ -2249,7 +2269,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
     }
     if (node.kind == 33) {
         val initializerRoot = root - 1;
-        val initializer = expressionType(semantic, initializerRoot);
+        var initializer = expressionType(semantic, initializerRoot);
         val nameNode = semantic.nodes.data[node.subtreeStart];
         val name = nodeHash(semantic, nameNode);
         if (localFindFrom(semantic.locals, name, semantic.scopeStart) !=
@@ -2271,6 +2291,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             valueType = typeFromNode(
                 semantic,
                 semantic.nodes.data[initializerRoot].subtreeStart - 1);
+            initializer = contextualizeLiteralByteSlice(
+                semantic, initializerRoot, valueType, initializer);
             if (!typeAccepts(valueType, initializer, semantic.genericArguments)) {
                 semanticFail(
                     semantic, 4, semantic.nodes.data[initializerRoot]);
@@ -2303,6 +2325,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         var actual = unitType();
         if (node.aux == 1) {
             actual = expressionType(semantic, root - 1);
+            actual = contextualizeLiteralByteSlice(
+                semantic, root - 1, semantic.returnType, actual);
         }
         val function = semantic.nodes.data[semantic.currentFunction];
         if (function.storage % 2 == 1 && node.aux == 1) {
@@ -2526,6 +2550,8 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 if (declaration.aux == 1) {
                     val expected = typeFromNode(
                         semantic, semantic.nodes.data[initializerRoot].subtreeStart - 1);
+                    actual = contextualizeLiteralByteSlice(
+                        semantic, initializerRoot, expected, actual);
                     val typeNode = semantic.nodes.data[
                         semantic.nodes.data[initializerRoot].subtreeStart - 1];
                     var accepted = typeAccepts(

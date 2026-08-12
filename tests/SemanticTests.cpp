@@ -1108,6 +1108,36 @@ TEST(semantic_move_only_allows_overwrite_for_automatic_drop) {
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 
+TEST(semantic_contextually_converts_string_literals_to_byte_slices) {
+    SemanticFixture valid{
+        "fn first(val bytes: []u8): u8 { return bytes[0]; }"
+        "fn main(): u8 { return first(\"abc\"); }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "fn first(val bytes: []u8): u8 { return bytes[0]; }"
+        "fn main(): u8 { val text = \"abc\"; return first(text); }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_contextually_converts_string_literals_in_all_expected_type_paths) {
+    SemanticFixture valid{
+        "struct View(bytes: []u8)"
+        "const PREFIX: []u8 = \"p\";"
+        "fn main(): i32 {"
+        "val view = View(\"abc\");"
+        "var bytes: []u8 = \"a\";"
+        "bytes = \"bc\";"
+        "return (view.bytes[1] + bytes[0] + PREFIX[0]) as i32;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "struct View(bytes: []u8)"
+        "fn main() { val text = \"abc\"; val view = View(text); }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
+}
+
 TEST(semantic_exposes_borrowed_string_bytes) {
     SemanticFixture fixture{
         "fn second(val text: string): u8 { val bytes = text.bytes; return bytes[1]; }"};

@@ -1,8 +1,7 @@
 fn main(): i32 {
     var bytes = ByteBuffer.new();
-    bytes.add(7);
-    bytes.add(8);
-    bytes.add(9);
+    bytes.append("");
+    bytes.append("\u{7}\u{8}\u{9}");
     if (bytes.length != 3) {
         return 1;
     }

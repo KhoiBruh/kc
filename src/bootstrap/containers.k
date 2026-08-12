@@ -26,6 +26,10 @@ struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
         self.length++;
     }
 
+    fn append(var self, val bytes: []u8) {
+        for (byte in bytes) self.add(byte);
+    }
+
     fn free(self) => k_boot_free(self.data as unit*);
 }
 

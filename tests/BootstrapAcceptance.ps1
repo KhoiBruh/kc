@@ -84,7 +84,7 @@ $validFixtures = @(
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
     "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
-    "ownership_control_flow.k"
+    "ownership_control_flow.k", "literal_slice_contexts.k"
 )
 Push-Location $moduleRoot
 try {

@@ -69,79 +69,29 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
     var message = ByteBuffer.new();
     defer message.free();
     loaderAppend(message, path.data, path.length);
-    message.add(58); loaderAppendNumber(message, line);
-    message.add(58); loaderAppendNumber(message, column);
-    message.add(58); message.add(32);
-    message.add(101); message.add(114);
-    message.add(114); message.add(111);
-    message.add(114); message.add(58);
-    message.add(32);
+    message.append(":"); loaderAppendNumber(message, line);
+    message.append(":"); loaderAppendNumber(message, column);
+    message.append(": error: ");
 
     when (category) {
         1 -> {
-            message.add(99); message.add(97);
-            message.add(110); message.add(110);
-            message.add(111); message.add(116);
-            message.add(32); message.add(114);
-            message.add(101); message.add(115);
-            message.add(111); message.add(108);
-            message.add(118); message.add(101);
-            message.add(32); message.add(105);
-            message.add(109); message.add(112);
-            message.add(111); message.add(114);
-            message.add(116);
+            message.append("cannot resolve import");
         }
         2 -> {
-            message.add(109); message.add(111);
-            message.add(100); message.add(117);
-            message.add(108); message.add(101);
-            message.add(32); message.add(105);
-            message.add(109); message.add(112);
-            message.add(111); message.add(114);
-            message.add(116); message.add(32);
-            message.add(100); message.add(101);
-            message.add(112); message.add(116);
-            message.add(104); message.add(32);
-            message.add(101); message.add(120);
-            message.add(99); message.add(101);
-            message.add(101); message.add(100);
-            message.add(101); message.add(100);
+            message.append("module import depth exceeded");
         }
         3 -> {
-            message.add(117); message.add(110);
-            message.add(116); message.add(101);
-            message.add(114); message.add(109);
-            message.add(105); message.add(110);
-            message.add(97); message.add(116);
-            message.add(101); message.add(100);
-            message.add(32); message.add(115);
-            message.add(116); message.add(114);
-            message.add(105); message.add(110);
-            message.add(103);
+            message.append("unterminated string");
         }
         4 -> {
-            message.add(105); message.add(110);
-            message.add(118); message.add(97);
-            message.add(108); message.add(105);
-            message.add(100); message.add(32);
-            message.add(99); message.add(104);
-            message.add(97); message.add(114);
-            message.add(97); message.add(99);
-            message.add(116); message.add(101);
-            message.add(114);
+            message.append("invalid character");
         }
         else -> {
-            message.add(105); message.add(110);
-            message.add(118); message.add(97);
-            message.add(108); message.add(105);
-            message.add(100); message.add(32);
-            message.add(115); message.add(111);
-            message.add(117); message.add(114);
-            message.add(99); message.add(101);
+            message.append("invalid source");
         }
     }
     
-    message.add(10);
+    message.append("\n");
     k_boot_stderr(message.data, message.length);
 }
 

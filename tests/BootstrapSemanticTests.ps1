@@ -52,6 +52,12 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "K semantic analyzer rejected the valid multiple generic fixture"
 }
 
+$literalSliceValid = Join-Path $FixtureDirectory "../bootstrap/literal_slice_contexts.k"
+$null = & $Output $literalSliceValid
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "K semantic analyzer rejected literal slice contexts"
+}
+
 foreach ($validOwnershipCase in @(
     "bootstrap-semantic-move-reinitialize-valid.k",
     "bootstrap-semantic-move-borrow-valid.k"
@@ -67,6 +73,7 @@ $cases = @(
     @("bootstrap-semantic-unknown.k", 2),
     @("bootstrap-semantic-arity.k", 3),
     @("bootstrap-semantic-type.k", 4),
+    @("bootstrap-semantic-literal-slice-owned.k", 4),
     @("bootstrap-semantic-return.k", 5),
     @("bootstrap-semantic-condition.k", 6),
     @("bootstrap-semantic-logical-type.k", 4),
