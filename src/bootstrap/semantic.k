@@ -2476,6 +2476,22 @@ fn isConstantExpression(val semantic: Semantic, root: u64): bool {
     return false;
 }
 
+fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
+    for (index in 0..<count) {
+        val root = roots[index as u64];
+        val declaration = semantic.nodes.data[root];
+        if (declaration.kind == 49) {
+            val nameNode = semantic.nodes.data[declaration.subtreeStart];
+            val name = nodeHash(semantic, nameNode);
+            if (declarationFind(semantic.enums, name) != semantic.enums.length) {
+                semanticFail(semantic, 1, nameNode);
+            } else {
+                semantic.enums.add(DeclarationInfo(name, root));
+            }
+        }
+    }
+}
+
 fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
     val program = semantic.nodes.data[programRoot];
     val roots =
@@ -2485,6 +2501,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
         roots[index as u64] = root;
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
+    predeclareEnums(semantic, roots, program.aux);
     for (index in 0..<program.aux) {
         root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
@@ -2492,7 +2509,8 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = nodeHash(semantic, nameNode);
             if (declarationFind(semantic.structs, name) !=
-                    semantic.structs.length) {
+                    semantic.structs.length ||
+                declarationFind(semantic.enums, name) != semantic.enums.length) {
                 semanticFail(semantic, 1, nameNode);
             } else {
                 semantic.structs.add(DeclarationInfo(name, root));
@@ -2576,13 +2594,6 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 semantic.nodes.data[root] = typed;
                 semantic.constants.add(DeclarationInfo(name, root));
             } else if (declaration.kind == 49) {
-                val nameNode = semantic.nodes.data[declaration.subtreeStart];
-                val name = nodeHash(semantic, nameNode);
-                if (declarationFind(semantic.enums, name) != semantic.enums.length) {
-                    semanticFail(semantic, 1, nameNode);
-                } else {
-                    semantic.enums.add(DeclarationInfo(name, root));
-                }
                 for (left in 0..<declaration.aux) {
                     for (right in left + 1..<declaration.aux) {
                         val leftNode = semantic.nodes.data[

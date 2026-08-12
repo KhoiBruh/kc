@@ -82,7 +82,8 @@ $validFixtures = @(
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
-    "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
+    "collection_for.k", "when_control.k", "enum_control.k", "enum_type_before.k",
+    "enum_type_after.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
     "ownership_control_flow.k", "literal_slice_contexts.k"
 )
@@ -175,6 +176,10 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "enum_control.k" -and $stage1Exit -ne 42) {
         Write-Error "enum control fixture did not return 42"
+    }
+    if (($fixtureName -eq "enum_type_before.k" -or
+         $fixtureName -eq "enum_type_after.k") -and $stage1Exit -ne 42) {
+        Write-Error "enum type declaration-order fixture did not return 42"
     }
     if ($fixtureName -eq "integer_cast_panic.k" -and $stage1Exit -ne 2) {
         Write-Error "out-of-range integer cast did not panic with exit code 2"

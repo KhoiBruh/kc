@@ -691,6 +691,30 @@ TEST(semantic_resolves_enum_variants_and_rejects_unknown_variants) {
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
 }
 
+TEST(semantic_resolves_enum_types_independent_of_declaration_order) {
+    SemanticFixture before{
+        "enum TestKind { Alpha, Beta }"
+        "struct Holder(kind: TestKind)"
+        "fn identity(kind: TestKind): TestKind { return kind; }"};
+    EXPECT_TRUE(before.semantic.diagnostics.empty());
+
+    SemanticFixture after{
+        "struct Holder(kind: TestKind)"
+        "enum TestKind { Alpha, Beta }"
+        "fn identity(kind: TestKind): TestKind { return kind; }"};
+    EXPECT_TRUE(after.semantic.diagnostics.empty());
+
+    SemanticFixture structThenEnum{
+        "struct Thing(value: i32)"
+        "enum Thing { A }"};
+    EXPECT_EQ(structThenEnum.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture enumThenStruct{
+        "enum Thing { A }"
+        "struct Thing(value: i32)"};
+    EXPECT_EQ(enumThenStruct.semantic.diagnostics.size(), 1u);
+}
+
 TEST(semantic_types_when_expressions_and_requires_else) {
     SemanticFixture valid{
         "fn choose(val code: i32): i32 { return when (code) {"
