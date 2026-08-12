@@ -2218,7 +2218,8 @@ fn emitExpression(
                 val parameter = nodes.data[
                     parameterRoot(
                         nodes, functionRoot, index + 1)];
-                if (parameter.aux == 2) byReference = true;
+                if (parameterMode(parameter) == ParameterMode.MutableBorrow)
+                    byReference = true;
             }
             if (byReference) {
                 values[index as u64] = emitAddress(
@@ -2249,7 +2250,7 @@ fn emitExpression(
                 if (functionRoot != nodes.length) {
                     val ownedParameter = nodes.data[
                         parameterRoot(nodes, functionRoot, index + 1)];
-                    if (ownedParameter.aux == 0)
+                    if (parameterMode(ownedParameter) == ParameterMode.Owned)
                         emitClearAutomaticDrop(
                             buffer, nodes, arguments[index as u64]);
                 }
@@ -2412,7 +2413,7 @@ fn emitExpression(
                 val callParameter = nodes.data[
                     parameterRoot(
                         nodes, functionRoot, index + 1)];
-                if (callParameter.aux == 2) {
+                if (parameterMode(callParameter) == ParameterMode.MutableBorrow) {
                     appendType(buffer, genericArguments, 9, 0, 0);
                 } else {
                     val parameterType =
@@ -3574,18 +3575,18 @@ fn emitFunction(
         val parameterName = nodes.data[parameter.subtreeStart];
         val parameterType = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition) - 1];
-        if (parameter.aux == 2) {
+        if (parameterMode(parameter) == ParameterMode.MutableBorrow) {
             appendType(buffer, genericArguments, 9, 0, parameterType.typeKind);
         } else {
             appendNodeType(buffer, genericArguments, parameterType);
         }
         buffer.append(" %");
-        if (parameter.aux != 2) {
+        if (parameterMode(parameter) != ParameterMode.MutableBorrow) {
             buffer.append("arg.");
         } else {
             appendLocalPrefix(buffer);
         }
-        if (parameter.aux == 2) {
+        if (parameterMode(parameter) == ParameterMode.MutableBorrow) {
             appendDecimal(buffer, parameterName.start);
         } else {
             appendSource(
@@ -3612,7 +3613,7 @@ fn emitFunction(
         val parameter = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition)];
         val parameterName = nodes.data[parameter.subtreeStart];
-        if (parameter.aux != 2) {
+        if (parameterMode(parameter) != ParameterMode.MutableBorrow) {
         val parameterType = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition) - 1];
         appendValuePrefix(buffer);

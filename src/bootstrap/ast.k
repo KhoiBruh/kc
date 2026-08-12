@@ -54,6 +54,12 @@ enum AstKind: u32 {
     ConstantDeclaration
 }
 
+enum ParameterMode: u32 {
+    Owned = 0,
+    ImmutableBorrow = 1,
+    MutableBorrow = 2
+}
+
 
 struct AstNode(
     kind: AstKind,
@@ -70,3 +76,9 @@ struct AstNode(
     conversionKind: u32,
     ownership: u32
 )
+
+fn parameterMode(node: AstNode): ParameterMode => when (node.aux) {
+    ParameterMode.ImmutableBorrow.value -> ParameterMode.ImmutableBorrow;
+    ParameterMode.MutableBorrow.value -> ParameterMode.MutableBorrow;
+    else -> ParameterMode.Owned;
+};

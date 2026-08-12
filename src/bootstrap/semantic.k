@@ -325,7 +325,8 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
             LocalInfo(
                 nodeHash(semantic, nameNode),
                 typeFromNode(semantic, parameterRoot - 1),
-                parameter.aux != 1, nameNode.start, false, false
+                parameterMode(parameter) != ParameterMode.ImmutableBorrow,
+                nameNode.start, false, false
             )
 		);
     }
@@ -832,8 +833,8 @@ fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
     val functionRoot = semantic.functions.data[method].node;
     val function = semantic.nodes.data[functionRoot];
     if (functionParameterCount(function) == 0) return false;
-    return semantic.nodes.data[
-        functionParameterRoot(semantic, functionRoot, 1)].aux == 0;
+    return parameterMode(semantic.nodes.data[
+        functionParameterRoot(semantic, functionRoot, 1)]) == ParameterMode.Owned;
 }
 
 fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
@@ -1456,7 +1457,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (function.conversionKind == 1) {
             val receiverParameter = semantic.nodes.data[
                 functionParameterRoot(semantic, functionRoot, 1)];
-            if (receiverParameter.aux == 2) {
+            if (parameterMode(receiverParameter) == ParameterMode.MutableBorrow) {
                 val receiverNode = semantic.nodes.data[argumentRoots[0]];
                 if (receiverNode.kind == AstKind.Identifier) {
                     val receiverLocal =
@@ -1593,7 +1594,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     semantic.nodes.data[
                         argumentRoots[argument as u64]]);
             }
-            if (semantic.nodes.data[parameterRoot].aux == 0) {
+            if (parameterMode(semantic.nodes.data[parameterRoot]) ==
+                    ParameterMode.Owned) {
                 markExpressionMoved(
                     semantic, argumentRoots[argument as u64]);
             }
@@ -2462,7 +2464,8 @@ fn checkFunction(var semantic: Semantic, root: u64) {
             functionParameterRoot(semantic, root, position + 1);
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
-        val mutable = parameter.aux != 1;
+        val mutable =
+            parameterMode(parameter) != ParameterMode.ImmutableBorrow;
         val parameterName = nodeHash(semantic, nameNode);
         if (localFindFrom(semantic.locals, parameterName, 0) !=
                 semantic.locals.length) {
@@ -2471,7 +2474,8 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         }
         val parameterType = typeFromNode(semantic, parameterRoot - 1);
         var automaticDrop =
-            parameter.aux == 0 && parameterType.kind == TypeKind.Struct &&
+            parameterMode(parameter) == ParameterMode.Owned &&
+            parameterType.kind == TypeKind.Struct &&
             typeNeedsOwnership(semantic, parameterType);
         val functionName = semantic.nodes.data[function.subtreeStart];
         if (function.conversionKind == 1 && position == 0 &&

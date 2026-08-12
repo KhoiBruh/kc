@@ -5,6 +5,7 @@ import bootstrap.token.TokenKind;
 import bootstrap.list.List;
 import bootstrap.ast.AstKind;
 import bootstrap.ast.AstNode;
+import bootstrap.ast.ParameterMode;
 
 struct ParseResult(nodes: List<AstNode>, ok: bool, errorStart: u64, expectedKind: u32)
 struct Parser(
@@ -813,10 +814,12 @@ fn parseFunction(
         while (parameters) {
             val parameterSubtree = parser.nodes.length;
             val parameterStart = parserPeek(parser).start;
-            var mode: u32 = 0;
-            if (parserMatch(parser, TokenKind.KwVal)) mode = 1;
+            var mode = ParameterMode.Owned;
+            if (parserMatch(parser, TokenKind.KwVal))
+                mode = ParameterMode.ImmutableBorrow;
             else {
-                if (parserMatch(parser, TokenKind.KwVar)) mode = 2;
+                if (parserMatch(parser, TokenKind.KwVar))
+                    mode = ParameterMode.MutableBorrow;
             }
             if (!parserExpect(parser, TokenKind.Identifier)) return 0;
             val parameterName = parserPrevious(parser);
@@ -840,7 +843,7 @@ fn parseFunction(
             }
             parserAdd(
                 parser, AstKind.ParameterOrWhenBranch, parameterStart, parser.nodes.data[typeNode].end,
-                parameterSubtree, mode);
+                parameterSubtree, mode.value);
             parameterCount++;
             if (!parserMatch(parser, TokenKind.Comma)) parameters = false;
         }
