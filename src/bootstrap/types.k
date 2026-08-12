@@ -156,19 +156,19 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, val genericArguments: Lis
     return false;
 }
 
-fn primitiveType(tokenKind: u32): TypeValue {
-    if (tokenKind == TokenKind.KwUnit.value) return unitType();
-    if (tokenKind == TokenKind.KwBool.value) return boolType();
-    if (tokenKind == TokenKind.KwI32.value) return TypeValue(TypeKind.I32, 0, 0);
-    if (tokenKind == TokenKind.KwI64.value) return TypeValue(TypeKind.I64, 0, 0);
-    if (tokenKind == TokenKind.KwU8.value) return TypeValue(TypeKind.U8, 0, 0);
-    if (tokenKind == TokenKind.KwU32.value) return TypeValue(TypeKind.U32, 0, 0);
-    if (tokenKind == TokenKind.KwU64.value) return TypeValue(TypeKind.U64, 0, 0);
-    if (tokenKind == TokenKind.KwF32.value) return TypeValue(TypeKind.F32, 0, 0);
-    if (tokenKind == TokenKind.KwF64.value) return TypeValue(TypeKind.F64, 0, 0);
-    if (tokenKind == TokenKind.KwString.value) return TypeValue(TypeKind.String, 0, 0);
-    return invalidType();
-}
+fn primitiveType(tokenKind: u32): TypeValue => when (tokenKind) {
+    TokenKind.KwUnit.value -> unitType();
+    TokenKind.KwBool.value -> boolType();
+    TokenKind.KwI32.value -> TypeValue(TypeKind.I32, 0, 0);
+    TokenKind.KwI64.value -> TypeValue(TypeKind.I64, 0, 0);
+    TokenKind.KwU8.value -> TypeValue(TypeKind.U8, 0, 0);
+    TokenKind.KwU32.value -> TypeValue(TypeKind.U32, 0, 0);
+    TokenKind.KwU64.value -> TypeValue(TypeKind.U64, 0, 0);
+    TokenKind.KwF32.value -> TypeValue(TypeKind.F32, 0, 0);
+    TokenKind.KwF64.value -> TypeValue(TypeKind.F64, 0, 0);
+    TokenKind.KwString.value -> TypeValue(TypeKind.String, 0, 0);
+    else -> invalidType();
+};
 
 struct LocalInfo(
     name: u64, valueType: TypeValue, mutable: bool, storage: u64,

@@ -193,11 +193,13 @@ fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
         }
         return value.magnitude <= 2147483648;
     }
-    if (target.kind == TypeKind.U8) return value.magnitude <= 255;
-    if (target.kind == TypeKind.U32) return value.magnitude <= 4294967295;
-    if (target.kind == TypeKind.I32) return value.magnitude <= 2147483647;
-    if (target.kind == TypeKind.I64) return value.magnitude <= 9223372036854775807;
-    return true;
+    return when (target.kind) {
+        TypeKind.U8 -> value.magnitude <= 255;
+        TypeKind.U32 -> value.magnitude <= 4294967295;
+        TypeKind.I32 -> value.magnitude <= 2147483647;
+        TypeKind.I64 -> value.magnitude <= 9223372036854775807;
+        else -> true;
+    };
 }
 
 fn nodeIsPrint(val semantic: Semantic, node: AstNode): bool {
@@ -644,30 +646,14 @@ fn constraintAcceptsType(constraint: u32, type: TypeValue): bool {
     if (type.kind == TypeKind.TypeParameter) {
         return type.pointee >= constraint;
     }
-    if (constraint == 1) {
-        if (type.kind == TypeKind.Bool) return true;
-        if (type.isInteger()) return true;
-        return type.kind == TypeKind.IntegerLiteral;
-    }
-    if (constraint == 2) {
-        if (type.isInteger()) return true;
-        return type.kind == TypeKind.IntegerLiteral;
-    }
-    if (constraint == 3) {
-        if (type.isInteger()) return true;
-        return type.kind == TypeKind.IntegerLiteral;
-    }
-    if (constraint == 4) {
-        if (type.isInteger()) return true;
-        return type.kind == TypeKind.IntegerLiteral;
-    }
-    if (constraint == 5) {
-        if (type.kind == TypeKind.U8) return true;
-        if (type.kind == TypeKind.U32) return true;
-        if (type.kind == TypeKind.U64) return true;
-        return type.kind == TypeKind.IntegerLiteral;
-    }
-    return false;
+    val integer = type.isInteger() || type.kind == TypeKind.IntegerLiteral;
+    return when (constraint) {
+        1 -> type.kind == TypeKind.Bool || integer;
+        2, 3, 4 -> integer;
+        5 -> type.kind == TypeKind.U8 || type.kind == TypeKind.U32 ||
+            type.kind == TypeKind.U64 || type.kind == TypeKind.IntegerLiteral;
+        else -> false;
+    };
 }
 
 fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
@@ -980,13 +966,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         return invalidType();
     }
     if (node.kind == AstKind.Literal) {
-        if (node.aux == TokenKind.IntegerLiteral.value) return integerLiteralType();
-        if (node.aux == TokenKind.FloatLiteral.value) return TypeValue(TypeKind.F64, 0, 0);
-        if (node.aux == TokenKind.StringLiteral.value) return TypeValue(TypeKind.String, 0, 0);
-        if (node.aux == TokenKind.KwTrue.value) return boolType();
-        if (node.aux == TokenKind.KwFalse.value) return boolType();
-        if (node.aux == TokenKind.KwNull.value) return TypeValue(TypeKind.NullLiteral, 0, 0);
-        return invalidType();
+        return when (node.aux) {
+            TokenKind.IntegerLiteral.value -> integerLiteralType();
+            TokenKind.FloatLiteral.value -> TypeValue(TypeKind.F64, 0, 0);
+            TokenKind.StringLiteral.value -> TypeValue(TypeKind.String, 0, 0);
+            TokenKind.KwTrue.value, TokenKind.KwFalse.value -> boolType();
+            TokenKind.KwNull.value -> TypeValue(TypeKind.NullLiteral, 0, 0);
+            else -> invalidType();
+        };
     }
     if (node.kind == AstKind.Unary) {
         val operand = expressionType(semantic, root - 1);
