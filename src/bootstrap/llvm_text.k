@@ -1,6 +1,8 @@
 module bootstrap.llvm_text;
 
 import bootstrap.*;
+import bootstrap.token.TokenKind;
+import bootstrap.token.tokenKindValue;
 
 fn appendDecimal(var buffer: StringBuilder, value: u64) {
     val digits = k_boot_alloc(20) as u8*;
@@ -219,16 +221,16 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
     var floating = typeKind == 17;
     if (typeKind == 18) floating = true;
     if (floating) buffer.append("f");
-    if (kind == 60) {
+    if (kind == tokenKindValue(TokenKind.Plus)) {
         buffer.append("add");
     }
-    if (kind == 61) {
+    if (kind == tokenKindValue(TokenKind.Minus)) {
         buffer.append("sub");
     }
-    if (kind == 62) {
+    if (kind == tokenKindValue(TokenKind.Star)) {
         buffer.append("mul");
     }
-    if (kind == 63) {
+    if (kind == tokenKindValue(TokenKind.Slash)) {
         if (floating) {
             buffer.append("di");
             buffer.append("v"); return;
@@ -243,7 +245,7 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
         }
         buffer.append("div");
     }
-    if (kind == 64) {
+    if (kind == tokenKindValue(TokenKind.Percent)) {
         if (floating) {
             buffer.append("re");
             buffer.append("m"); return;
@@ -934,17 +936,17 @@ fn appendConditionalBranch(
 fn appendComparison(
     var buffer: StringBuilder, kind: u32, typeKind: u32) {
     buffer.append("icmp ");
-    if (kind == 79) {
+    if (kind == tokenKindValue(TokenKind.EqualEqual)) {
         buffer.append("eq");
     }
-    if (kind == 80) {
+    if (kind == tokenKindValue(TokenKind.BangEqual)) {
         buffer.append("ne");
     }
     var unsigned = typeKind == 5;
     if (typeKind == 6) unsigned = true;
     if (typeKind == 7) unsigned = true;
     if (typeKind == 20) unsigned = true;
-    if (kind == 66) {
+    if (kind == tokenKindValue(TokenKind.Less)) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -952,7 +954,7 @@ fn appendComparison(
         }
         buffer.append("lt");
     }
-    if (kind == 81) {
+    if (kind == tokenKindValue(TokenKind.LessEqual)) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -960,7 +962,7 @@ fn appendComparison(
         }
         buffer.append("le");
     }
-    if (kind == 67) {
+    if (kind == tokenKindValue(TokenKind.Greater)) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -968,7 +970,7 @@ fn appendComparison(
         }
         buffer.append("gt");
     }
-    if (kind == 82) {
+    if (kind == tokenKindValue(TokenKind.GreaterEqual)) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -1016,7 +1018,7 @@ fn emitAddress(
             9, node.typeName, node.typeKind);
     }
     if (node.kind == 12) {
-        if (node.aux == 62) {
+        if (node.aux == tokenKindValue(TokenKind.Star)) {
             return emitExpression(
                 buffer, source, nodes, genericArguments,
                 root - 1, counter);
@@ -1492,7 +1494,7 @@ fn emitExpression(
     }
     if (node.kind == 12) {
         val operandRoot = root - 1;
-        if (node.aux == 68) {
+        if (node.aux == tokenKindValue(TokenKind.Ampersand)) {
             return emitAddress(
                 buffer, source, nodes, genericArguments,
                 operandRoot, counter);
@@ -1500,7 +1502,7 @@ fn emitExpression(
         val operand = emitExpression(
             buffer, source, nodes, genericArguments,
             operandRoot, counter);
-        if (node.aux == 62) {
+        if (node.aux == tokenKindValue(TokenKind.Star)) {
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
@@ -1513,7 +1515,7 @@ fn emitExpression(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
         }
-        if (node.aux == 61) {
+        if (node.aux == tokenKindValue(TokenKind.Minus)) {
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
@@ -1533,7 +1535,7 @@ fn emitExpression(
                 2, 0, 0, temporary,
                 node.typeKind, node.typeName, node.typePointee);
         }
-        if (node.aux == 73) {
+        if (node.aux == tokenKindValue(TokenKind.Bang)) {
             val temporary = nextTemporary(counter);
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
@@ -1579,7 +1581,7 @@ fn emitExpression(
     if (node.kind == 13) {
         val rightRoot = root - 1;
         val leftRoot = expressionChildBefore(nodes, rightRoot);
-        if (node.aux == 18) {
+        if (node.aux == tokenKindValue(TokenKind.KwIn)) {
             val range = nodes.data[rightRoot];
             val upperRoot = rightRoot - 1;
             val lowerRoot = expressionChildBefore(nodes, upperRoot);
@@ -1590,9 +1592,13 @@ fn emitExpression(
             val upper = emitExpression(
                 buffer, source, nodes, genericArguments, upperRoot, counter);
             var lowerOperator: u32 = 82;
-            if (range.aux == 93 || range.aux == 94) lowerOperator = 67;
+            if (range.aux == tokenKindValue(TokenKind.RangeExclusiveStart) ||
+                range.aux == tokenKindValue(TokenKind.RangeExclusiveBoth))
+                lowerOperator = tokenKindValue(TokenKind.Greater);
             var upperOperator: u32 = 81;
-            if (range.aux == 88 || range.aux == 94) upperOperator = 66;
+            if (range.aux == tokenKindValue(TokenKind.RangeExclusive) ||
+                range.aux == tokenKindValue(TokenKind.RangeExclusiveBoth))
+                upperOperator = tokenKindValue(TokenKind.Less);
             val lowerCheck = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, lowerCheck); appendEquals(buffer);
             appendComparison(buffer, lowerOperator, subject.typeKind);
@@ -1624,13 +1630,13 @@ fn emitExpression(
         var left = emitExpression(
             buffer, source, nodes, genericArguments,
             leftRoot, counter);
-        var logical = node.aux == 83;
-        if (node.aux == 84) logical = true;
+        var logical = node.aux == tokenKindValue(TokenKind.AndAnd);
+        if (node.aux == tokenKindValue(TokenKind.OrOr)) logical = true;
         if (logical) {
             val leftBlock = counter.currentBlock;
             val rhsBlock = nextBlock(counter);
             val mergeBlock = nextBlock(counter);
-            if (node.aux == 83) {
+            if (node.aux == tokenKindValue(TokenKind.AndAnd)) {
                 appendConditionalBranch(
                     buffer, source, left, rhsBlock, mergeBlock);
             } else {
@@ -1648,7 +1654,7 @@ fn emitExpression(
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer);
             buffer.append("phi i1 [");
-            if (node.aux == 83) buffer.append("0");
+            if (node.aux == tokenKindValue(TokenKind.AndAnd)) buffer.append("0");
             else buffer.append("1");
             buffer.append(", ");
             appendBlockReference(buffer, leftBlock);
@@ -1664,11 +1670,12 @@ fn emitExpression(
             buffer, source, nodes, genericArguments,
             rightRoot, counter);
         var comparison = false;
-        if (node.aux == 66) comparison = true;
-        if (node.aux == 67) comparison = true;
-        if (node.aux >= 79) {
-            if (node.aux <= 82) comparison = true;
-        }
+        if (node.aux == tokenKindValue(TokenKind.Less)) comparison = true;
+        if (node.aux == tokenKindValue(TokenKind.Greater)) comparison = true;
+        if (node.aux == tokenKindValue(TokenKind.EqualEqual)) comparison = true;
+        if (node.aux == tokenKindValue(TokenKind.BangEqual)) comparison = true;
+        if (node.aux == tokenKindValue(TokenKind.LessEqual)) comparison = true;
+        if (node.aux == tokenKindValue(TokenKind.GreaterEqual)) comparison = true;
         if (comparison) {
             val leftType = TypeValue(left.typeKind, left.typeName, left.typePointee);
             val rightType = TypeValue(right.typeKind, right.typeName, right.typePointee);
@@ -1727,7 +1734,7 @@ fn emitExpression(
             buffer, source, genericArguments, right,
             targetNode.typeKind, targetNode.typeName,
             targetNode.typePointee, counter);
-        if (node.aux != 65) {
+        if (node.aux != tokenKindValue(TokenKind.Equal)) {
             val loaded = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
             appendLoad(buffer);
@@ -1750,7 +1757,8 @@ fn emitExpression(
                 2, 0, 0, updated, targetNode.typeKind,
                 targetNode.typeName, targetNode.typePointee);
         }
-        if (node.aux == 65 && (targetNode.ownership / 2) % 2 == 1) {
+        if (node.aux == tokenKindValue(TokenKind.Equal) &&
+            (targetNode.ownership / 2) % 2 == 1) {
             val declarationRoot = emitterVariableRootByStorage(
                 nodes, targetNode.storage);
             if (declarationRoot != nodes.length)
@@ -1766,7 +1774,8 @@ fn emitExpression(
         appendIrValue(buffer, source, right);
         appendPointerValue(buffer, source, target);
         appendNewline(buffer);
-        if (node.aux == 65 && (targetNode.ownership / 2) % 2 == 1) {
+        if (node.aux == tokenKindValue(TokenKind.Equal) &&
+            (targetNode.ownership / 2) % 2 == 1) {
             appendStore(buffer); buffer.append("i1 ");
             buffer.append("true");
             appendPtr(buffer); appendDropFlagName(buffer, targetNode.storage);
@@ -1934,11 +1943,11 @@ fn emitExpression(
         return converted;
     }
     if (node.kind == 17) {
-        if (node.typeKind == 20) {
-            return IrValue(3, 0, 0, node.storage, 20, node.typeName, 0);
-        }
         val objectRoot = root - 1;
         val objectNode = nodes.data[objectRoot];
+        if (node.typeKind == 20 && objectNode.typeKind == 20) {
+            return IrValue(3, 0, 0, node.storage, 20, node.typeName, 0);
+        }
         if (objectNode.typeKind == 10) {
             val object = emitExpression(
                 buffer, source, nodes, genericArguments,
@@ -1980,7 +1989,7 @@ fn emitExpression(
         if (objectNode.kind == 17) addressable = true;
         if (objectNode.kind == 18) addressable = true;
         if (objectNode.kind == 12) {
-            if (objectNode.aux == 62) addressable = true;
+            if (objectNode.aux == tokenKindValue(TokenKind.Star)) addressable = true;
         }
         if (!addressable) {
             val object = emitExpression(
@@ -2065,7 +2074,8 @@ fn emitExpression(
             node.typeKind, node.typeName, node.typePointee);
     }
     if (node.kind == 19) {
-        if (node.aux == 91 || node.aux == 92) {
+        if (node.aux == tokenKindValue(TokenKind.PlusPlus) ||
+            node.aux == tokenKindValue(TokenKind.MinusMinus)) {
             val valueRoot = root - 1;
             val address = emitAddress(
                 buffer, source, nodes, genericArguments, valueRoot, counter);
@@ -2076,7 +2086,8 @@ fn emitExpression(
             val updated = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
             var operatorKind: u32 = 60;
-            if (node.aux == 92) operatorKind = 61;
+            if (node.aux == tokenKindValue(TokenKind.MinusMinus))
+                operatorKind = tokenKindValue(TokenKind.Minus);
             appendOperator(buffer, operatorKind, node.typeKind);
             buffer.append(" "); appendNodeType(buffer, genericArguments, node);
             buffer.append(" %");
@@ -2813,10 +2824,10 @@ fn emitStatement(
         val collectionNode = nodes.data[collectionRoot];
         var range = collectionNode.kind == 13;
         if (range) {
-            range = collectionNode.aux == 87;
-            if (collectionNode.aux == 88) range = true;
-            if (collectionNode.aux == 93) range = true;
-            if (collectionNode.aux == 94) range = true;
+            range = collectionNode.aux == tokenKindValue(TokenKind.Range);
+            if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusive)) range = true;
+            if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveStart)) range = true;
+            if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveBoth)) range = true;
         }
         if (!range) {
             return emitCollectionFor(
@@ -2853,7 +2864,8 @@ fn emitStatement(
         buffer.append(" -");
         buffer.append("1"); appendNewline(buffer);
         var initial = start;
-        if (collectionNode.aux == 93 || collectionNode.aux == 94) {
+        if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveStart) ||
+            collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveBoth)) {
             val shifted = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, shifted); appendEquals(buffer);
             appendOperator(buffer, 60, start.typeKind); buffer.append(" ");
@@ -2883,7 +2895,8 @@ fn emitStatement(
         val ascendingCompared = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, ascendingCompared); appendEquals(buffer);
         var ascendingOperator: u32 = 81;
-        if (collectionNode.aux == 88 || collectionNode.aux == 94)
+        if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusive) ||
+            collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveBoth))
             ascendingOperator = 66;
         appendComparison(buffer, ascendingOperator, start.typeKind);
         buffer.append(" "); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
@@ -2894,7 +2907,8 @@ fn emitStatement(
         val descendingCompared = nextTemporary(counter);
         appendValuePrefix(buffer); appendDecimal(buffer, descendingCompared); appendEquals(buffer);
         var descendingOperator: u32 = 82;
-        if (collectionNode.aux == 88 || collectionNode.aux == 94)
+        if (collectionNode.aux == tokenKindValue(TokenKind.RangeExclusive) ||
+            collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveBoth))
             descendingOperator = 67;
         appendComparison(buffer, descendingOperator, start.typeKind);
         buffer.append(" "); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
@@ -2912,7 +2926,7 @@ fn emitStatement(
         buffer.append("%"); appendDecimal(buffer, descendingCompared);
         appendNewline(buffer);
         var conditionValue = IrValue(2, 0, 0, compared, 2, 0, 0);
-        if (collectionNode.aux != 87) {
+        if (collectionNode.aux != tokenKindValue(TokenKind.Range)) {
             val nonempty = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, nonempty); appendEquals(buffer);
             buffer.append("and i1 %");
@@ -2942,7 +2956,8 @@ fn emitStatement(
         appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
-        if (collectionNode.aux == 87 || collectionNode.aux == 93) {
+        if (collectionNode.aux == tokenKindValue(TokenKind.Range) ||
+            collectionNode.aux == tokenKindValue(TokenKind.RangeExclusiveStart)) {
             val terminal = nextTemporary(counter);
             appendValuePrefix(buffer); appendDecimal(buffer, terminal); appendEquals(buffer);
             appendComparison(buffer, 79, start.typeKind); buffer.append(" ");
@@ -3391,10 +3406,10 @@ fn emitBlockAllocas(
             val collection = nodes.data[collectionRoot];
             var range = collection.kind == 13;
             if (range) {
-                range = collection.aux == 87;
-                if (collection.aux == 88) range = true;
-                if (collection.aux == 93) range = true;
-                if (collection.aux == 94) range = true;
+                range = collection.aux == tokenKindValue(TokenKind.Range);
+                if (collection.aux == tokenKindValue(TokenKind.RangeExclusive)) range = true;
+                if (collection.aux == tokenKindValue(TokenKind.RangeExclusiveStart)) range = true;
+                if (collection.aux == tokenKindValue(TokenKind.RangeExclusiveBoth)) range = true;
             }
             appendValuePrefix(buffer); appendLocalPrefix(buffer);
             appendDecimal(buffer, name.start); appendEquals(buffer);
@@ -3577,7 +3592,8 @@ fn emitFunction(
             blockRoot, counter, defers);
     if (!terminated) {
         var returnsUnit = returnType.typeKind == 1;
-        if (returnType.kind == 1 && returnType.aux == 49) returnsUnit = true;
+        if (returnType.kind == 1 &&
+            returnType.aux == tokenKindValue(TokenKind.KwUnit)) returnsUnit = true;
         if (functionInfersReturn(function) && function.typeKind == 1)
             returnsUnit = true;
         if (returnsUnit) {
@@ -3684,7 +3700,7 @@ fn emitSimpleFunction(
     if (functionParameterCount(function) != 0) return false;
     if (functionTypeParameterCount(function) != 0) return false;
     val returnTypeRoot = nodes.data[functionRoot - 1].subtreeStart - 1;
-    if (nodes.data[returnTypeRoot].aux != 35) return false;
+    if (nodes.data[returnTypeRoot].aux != tokenKindValue(TokenKind.KwI32)) return false;
     val name = nodes.data[function.subtreeStart];
     val blockRoot = functionRoot - 1;
     if (nodes.data[blockRoot].aux != 1) return false;
@@ -3694,7 +3710,7 @@ fn emitSimpleFunction(
     if (statement.aux != 1) return false;
     val literal = nodes.data[statementRoot - 1];
     if (literal.kind != 11) return false;
-    if (literal.aux != 2) return false;
+    if (literal.aux != tokenKindValue(TokenKind.IntegerLiteral)) return false;
 
     appendDefine(buffer);
     appendI32(buffer);
@@ -3863,7 +3879,8 @@ fn emitModule(
     appendOwnedStringDeclarations(buffer);
     for (literalIndex in 0..<nodes.length) {
         val literal = nodes.data[literalIndex];
-        if (literal.kind == 11 && literal.aux == 5 &&
+        if (literal.kind == 11 &&
+            literal.aux == tokenKindValue(TokenKind.StringLiteral) &&
             (literal.typeKind == 10 || literal.typeKind == 13))
             appendStringGlobal(buffer, source, literal, literalIndex);
     }

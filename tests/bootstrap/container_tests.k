@@ -1,4 +1,15 @@
 fn main(): i32 {
+    if (tokenKindValue(TokenKind.EndOfFile) != 0) return 10;
+    if (tokenKindValue(TokenKind.Identifier) != 1) return 11;
+    if (tokenKindValue(TokenKind.StringLiteral) != 5) return 12;
+    if (tokenKindValue(TokenKind.KwFn) != 10) return 13;
+    if (tokenKindValue(TokenKind.LeftParen) != 50) return 14;
+    if (tokenKindValue(TokenKind.Equal) != 65) return 15;
+    if (tokenKindValue(TokenKind.Range) != 87) return 16;
+    if (tokenKindValue(TokenKind.RangeExclusive) != 88) return 17;
+    if (tokenKindValue(TokenKind.RangeExclusiveStart) != 93) return 18;
+    if (tokenKindValue(TokenKind.RangeExclusiveBoth) != 94) return 19;
+
     var bytes = ByteBuffer.new();
     bytes.append("");
     bytes.append("\u{7}\u{8}\u{9}");
@@ -11,10 +22,10 @@ fn main(): i32 {
     bytes.free();
 
     var tokens = List<Token>.new();
-    tokens.add(Token(4, 10, 12));
-    tokens.add(Token(5, 12, 14));
-    tokens.add(Token(6, 14, 16));
-    if (tokens.data[2].kind != 6) {
+    tokens.add(Token(TokenKind.CharLiteral, 10, 12));
+    tokens.add(Token(TokenKind.StringLiteral, 12, 14));
+    tokens.add(Token(TokenKind.KwVal, 14, 16));
+    if (tokens.data[2].kind != TokenKind.KwVal) {
         return 3;
     }
     tokens.free();

@@ -2,6 +2,7 @@ module bootstrap.loader;
 
 import bootstrap.source.Source;
 import bootstrap.token.Token;
+import bootstrap.token.TokenKind;
 import bootstrap.list.List;
 import bootstrap.containers.ByteBuffer;
 import bootstrap.lexer.lex;
@@ -227,27 +228,27 @@ fn loaderScanImports(
         return false;
     }
     var current: u64 = 0;
-    if (lexed.tokens.data[current].kind == 25) {
-        while (lexed.tokens.data[current].kind != 58) {
-            if (lexed.tokens.data[current].kind == 0) {
+    if (lexed.tokens.data[current].kind == TokenKind.KwModule) {
+        while (lexed.tokens.data[current].kind != TokenKind.Semicolon) {
+            if (lexed.tokens.data[current].kind == TokenKind.EndOfFile) {
                 return false;
             }
             current++;
         }
         current++;
     }
-    while (lexed.tokens.data[current].kind == 26) {
+    while (lexed.tokens.data[current].kind == TokenKind.KwImport) {
         val start = lexed.tokens.data[current].start;
         current++;
         val first = current;
         var partCount: u64 = 0;
         var wildcard = false;
-        while (lexed.tokens.data[current].kind == 1) {
+        while (lexed.tokens.data[current].kind == TokenKind.Identifier) {
             partCount++;
             current++;
-            if (lexed.tokens.data[current].kind == 59) {
+            if (lexed.tokens.data[current].kind == TokenKind.Dot) {
                 current++;
-                if (lexed.tokens.data[current].kind == 62) {
+                if (lexed.tokens.data[current].kind == TokenKind.Star) {
                     wildcard = true;
                     current++;
                     break;
@@ -257,7 +258,7 @@ fn loaderScanImports(
             }
         }
         val end = lexed.tokens.data[current].end;
-        if (lexed.tokens.data[current].kind != 58) {
+        if (lexed.tokens.data[current].kind != TokenKind.Semicolon) {
             loader.failureKind = 2;
             return false;
         }

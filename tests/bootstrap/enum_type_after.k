@@ -9,5 +9,9 @@ fn identity(kind: TestKind): TestKind {
 }
 
 fn main(): i32 {
-    return 42;
+    val holder = Holder(identity(TestKind.Beta));
+    return when (holder.kind) {
+        TestKind.Alpha -> 0;
+        TestKind.Beta -> 42;
+    };
 }

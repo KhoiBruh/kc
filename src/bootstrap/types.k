@@ -2,6 +2,8 @@ module bootstrap.types;
 
 import bootstrap.ast.AstNode;
 import bootstrap.list.List;
+import bootstrap.token.TokenKind;
+import bootstrap.token.tokenKindValue;
 
 struct TypeValue(kind: u32, name: u64, pointee: u32) {
 
@@ -100,19 +102,19 @@ fn typeAccepts(expected: TypeValue, actual: TypeValue, val genericArguments: Lis
     return false;
 }
 
-fn primitiveType(tokenKind: u32) => when (tokenKind) {
-    49 -> unitType();
-    32 -> boolType();
-    35 -> TypeValue(3, 0, 0);
-    36 -> TypeValue(4, 0, 0);
-    38 -> TypeValue(5, 0, 0);
-    40 -> TypeValue(6, 0, 0);
-    41 -> TypeValue(7, 0, 0);
-    45 -> TypeValue(17, 0, 0);
-    46 -> TypeValue(18, 0, 0);
-    48 -> TypeValue(10, 0, 0);
-    else -> invalidType();
-};
+fn primitiveType(tokenKind: u32): TypeValue {
+    if (tokenKind == tokenKindValue(TokenKind.KwUnit)) return unitType();
+    if (tokenKind == tokenKindValue(TokenKind.KwBool)) return boolType();
+    if (tokenKind == tokenKindValue(TokenKind.KwI32)) return TypeValue(3, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwI64)) return TypeValue(4, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwU8)) return TypeValue(5, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwU32)) return TypeValue(6, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwU64)) return TypeValue(7, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwF32)) return TypeValue(17, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwF64)) return TypeValue(18, 0, 0);
+    if (tokenKind == tokenKindValue(TokenKind.KwString)) return TypeValue(10, 0, 0);
+    return invalidType();
+}
 
 struct LocalInfo(
     name: u64, valueType: TypeValue, mutable: bool, storage: u64,
