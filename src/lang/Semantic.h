@@ -4,6 +4,8 @@
 #include "lang/Diagnostic.h"
 #include "lang/SemanticType.h"
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -73,9 +75,19 @@ struct EnumSymbol {
     std::unordered_map<std::string, std::uint32_t> variantIndices;
 };
 
+struct EvaluatedConstant {
+    bool isFloat = false;
+    // Integer bit pattern or IEEE-754 double bits.
+    std::uint64_t bits = 0;
+};
+
 struct ConstantSymbol {
     const ConstantDecl* declaration;
     SemanticType type;
+    // Computed compile-time value; absent for non-scalar constants or when
+    // evaluation was not possible. When present, downstream stages must not
+    // re-evaluate the initializer expression.
+    std::optional<EvaluatedConstant> evaluated;
 };
 
 struct IntegerCastInfo {

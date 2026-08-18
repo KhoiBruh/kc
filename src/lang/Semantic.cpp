@@ -1,6 +1,7 @@
 #include "lang/Semantic.h"
 
 #include <algorithm>
+#include <bit>
 #include <charconv>
 #include <cmath>
 #include <limits>
@@ -183,6 +184,7 @@ public:
                          constant.initializer->span);
             result_.constants.emplace(name, ConstantSymbol{&constant, type});
         }
+        evaluateConstants();
         for (const auto& structure : program_.structs) {
             for (const auto& method : structure.methods) {
                 const auto found = result_.functions.find(functionName(method));
@@ -289,6 +291,351 @@ private:
             return true;
         }
         return false;
+    }
+
+    struct Evaluated {
+        SemanticType type;
+        std::uint64_t bits = 0;
+        bool isFloat = false;
+    };
+
+    void evaluateConstants() {
+        std::unordered_set<const ConstantDecl*> visiting;
+        for (const auto& constant : program_.constants) {
+            const auto name = spelling(source_, constant.name);
+            const auto symbol = result_.constants.find(name);
+            if (symbol == result_.constants.end()) continue;
+            if (!(isNumeric(symbol->second.type) ||
+                  symbol->second.type.kind == SemanticTypeKind::Bool))
+                continue;
+            visiting.insert(&constant);
+            symbol->second.evaluated =
+                evaluateConstantExpr(*constant.initializer, visiting);
+            visiting.erase(&constant);
+        }
+    }
+
+    std::optional<EvaluatedConstant> evaluateConstantExpr(
+        const Expr& expression,
+        std::unordered_set<const ConstantDecl*>& visiting) {
+        const auto value = evaluateConstant(expression, visiting);
+        if (!value) return std::nullopt;
+        return EvaluatedConstant{value->isFloat, value->bits};
+    }
+
+    std::optional<Evaluated> evaluateConstant(
+        const Expr& expression,
+        std::unordered_set<const ConstantDecl*>& visiting) {
+        const auto typeIter = result_.expressionTypes.find(&expression);
+        const auto type = typeIter == result_.expressionTypes.end()
+            ? SemanticType{}
+            : typeIter->second;
+        std::optional<Evaluated> value;
+        if (const auto* literal = std::get_if<LiteralExpr>(&expression.node))
+            value = evaluateLiteral(*literal, type);
+        else if (std::holds_alternative<UnitLiteralExpr>(expression.node))
+            value = std::nullopt;
+        else if (const auto* identifier =
+                     std::get_if<IdentifierExpr>(&expression.node)) {
+            const auto name = spelling(source_, identifier->name);
+            const auto found = result_.constants.find(name);
+            if (found == result_.constants.end()) return std::nullopt;
+            if (visiting.contains(found->second.declaration)) {
+                diagnose("circular constant definition", identifier->name);
+                return std::nullopt;
+            }
+            if (!found->second.evaluated) return std::nullopt;
+            value = Evaluated{type, found->second.evaluated->bits,
+                              found->second.evaluated->isFloat};
+        } else if (const auto* unary =
+                       std::get_if<UnaryExpr>(&expression.node)) {
+            const auto operand = evaluateConstant(*unary->operand, visiting);
+            if (operand) {
+                if (unary->op == TokenKind::Minus) {
+                    if (operand->isFloat) {
+                        const auto d =
+                            -std::bit_cast<double>(operand->bits);
+                        value = Evaluated{
+                            type,
+                            std::bit_cast<std::uint64_t>(roundTo(type, d)),
+                            true};
+                    } else {
+                        const auto width = numericBitWidth(type);
+                        if (width == 0 || width > 64) value = std::nullopt;
+                        else value = Evaluated{
+                            type, truncate(0 - operand->bits, width), false};
+                    }
+                } else if (unary->op == TokenKind::Bang) {
+                    if (type.kind != SemanticTypeKind::Bool ||
+                        operand->isFloat)
+                        value = std::nullopt;
+                    else value = Evaluated{
+                        type, operand->bits == 0 ? 1u : 0u, false};
+                } else if (unary->op == TokenKind::Plus)
+                    value = Evaluated{
+                        type, operand->bits, operand->isFloat};
+                else value = std::nullopt;
+            }
+        } else if (const auto* binary =
+                       std::get_if<BinaryExpr>(&expression.node)) {
+            const auto left = evaluateConstant(*binary->left, visiting);
+            const auto right = evaluateConstant(*binary->right, visiting);
+            if (left && right)
+                value = evaluateBinary(
+                    *binary, type, *left, *right, expression.span);
+        } else if (const auto* cast = std::get_if<CastExpr>(&expression.node)) {
+            const auto operand = evaluateConstant(*cast->value, visiting);
+            if (operand) {
+                const auto converted = convertConstant(*operand, type);
+                if (converted)
+                    value = Evaluated{type, converted->bits,
+                                      converted->isFloat};
+            }
+        }
+        if (!value) return std::nullopt;
+        const auto conversion = result_.implicitConversions.find(&expression);
+        if (conversion == result_.implicitConversions.end()) return value;
+        return convertConstant(*value, conversion->second);
+    }
+
+    std::optional<Evaluated> evaluateLiteral(const LiteralExpr& literal,
+                                             const SemanticType& type) {
+        const auto text = source_.text().substr(
+            literal.spelling.start,
+            literal.spelling.end - literal.spelling.start);
+        if (literal.kind == TokenKind::IntegerLiteral) {
+            if (numericBitWidth(type) > 64) return std::nullopt;
+            std::uint64_t value = 0;
+            const auto parsed = std::from_chars(
+                text.data(), text.data() + text.size(), value);
+            if (parsed.ec != std::errc{} ||
+                parsed.ptr != text.data() + text.size())
+                return std::nullopt;
+            return Evaluated{type, value, false};
+        }
+        if (literal.kind == TokenKind::FloatLiteral) {
+            double value = 0.0;
+            const auto parsed = std::from_chars(
+                text.data(), text.data() + text.size(), value,
+                std::chars_format::general);
+            if (parsed.ec == std::errc::result_out_of_range)
+                value = std::numeric_limits<double>::infinity();
+            else if (parsed.ec != std::errc{} ||
+                     parsed.ptr != text.data() + text.size())
+                return std::nullopt;
+            return Evaluated{type,
+                             std::bit_cast<std::uint64_t>(roundTo(type, value)),
+                             true};
+        }
+        if (literal.kind == TokenKind::KwTrue ||
+            literal.kind == TokenKind::KwFalse)
+            return Evaluated{type,
+                             literal.kind == TokenKind::KwTrue ? 1u : 0u,
+                             false};
+        return std::nullopt;
+    }
+
+    std::optional<Evaluated> evaluateBinary(const BinaryExpr& binary,
+                                            const SemanticType& type,
+                                            const Evaluated& left,
+                                            const Evaluated& right,
+                                            SourceSpan span) {
+        if (binary.op == TokenKind::AndAnd || binary.op == TokenKind::OrOr) {
+            if (type.kind != SemanticTypeKind::Bool) return std::nullopt;
+            const auto result = binary.op == TokenKind::AndAnd
+                ? (left.bits != 0 && right.bits != 0)
+                : (left.bits != 0 || right.bits != 0);
+            return Evaluated{type, result ? 1u : 0u, false};
+        }
+        if (binary.op == TokenKind::EqualEqual ||
+            binary.op == TokenKind::BangEqual ||
+            binary.op == TokenKind::Less ||
+            binary.op == TokenKind::LessEqual ||
+            binary.op == TokenKind::Greater ||
+            binary.op == TokenKind::GreaterEqual) {
+            bool result = false;
+            if (left.isFloat || right.isFloat) {
+                const auto a = toDouble(left);
+                const auto b = toDouble(right);
+                switch (binary.op) {
+                case TokenKind::EqualEqual: result = a == b; break;
+                case TokenKind::BangEqual: result = a != b; break;
+                case TokenKind::Less: result = a < b; break;
+                case TokenKind::LessEqual: result = a <= b; break;
+                case TokenKind::Greater: result = a > b; break;
+                case TokenKind::GreaterEqual: result = a >= b; break;
+                default: return std::nullopt;
+                }
+            } else {
+                const auto signedCompare =
+                    isSignedInteger(left.type) && isSignedInteger(right.type);
+                const auto a = signedCompare ? toInt64(left) : left.bits;
+                const auto b = signedCompare ? toInt64(right) : right.bits;
+                switch (binary.op) {
+                case TokenKind::EqualEqual: result = a == b; break;
+                case TokenKind::BangEqual: result = a != b; break;
+                case TokenKind::Less: result = a < b; break;
+                case TokenKind::LessEqual: result = a <= b; break;
+                case TokenKind::Greater: result = a > b; break;
+                case TokenKind::GreaterEqual: result = a >= b; break;
+                default: return std::nullopt;
+                }
+            }
+            return Evaluated{type, result ? 1u : 0u, false};
+        }
+        if (binary.op != TokenKind::Plus && binary.op != TokenKind::Minus &&
+            binary.op != TokenKind::Star && binary.op != TokenKind::Slash &&
+            binary.op != TokenKind::Percent)
+            return std::nullopt;
+        if (isNumeric(type)) {
+            if (left.isFloat || right.isFloat || isFloat(type)) {
+                const auto convertedLeft = convertConstant(left, type);
+                const auto convertedRight = convertConstant(right, type);
+                if (!convertedLeft || !convertedRight) return std::nullopt;
+                const auto a = toDouble(*convertedLeft);
+                const auto b = toDouble(*convertedRight);
+                double result = 0.0;
+                switch (binary.op) {
+                case TokenKind::Plus: result = a + b; break;
+                case TokenKind::Minus: result = a - b; break;
+                case TokenKind::Star: result = a * b; break;
+                case TokenKind::Slash: result = a / b; break;
+                case TokenKind::Percent: result = std::fmod(a, b); break;
+                default: return std::nullopt;
+                }
+                return Evaluated{
+                    type, std::bit_cast<std::uint64_t>(roundTo(type, result)),
+                    true};
+            }
+            const auto width = numericBitWidth(type);
+            if (width == 0 || width > 64) return std::nullopt;
+            const auto convertedLeft = convertConstant(left, type);
+            const auto convertedRight = convertConstant(right, type);
+            if (!convertedLeft || !convertedRight) return std::nullopt;
+            const auto signedValue = isSignedInteger(type);
+            const auto a = convertedLeft->bits;
+            const auto b = convertedRight->bits;
+            std::uint64_t result = 0;
+            switch (binary.op) {
+            case TokenKind::Plus: result = a + b; break;
+            case TokenKind::Minus: result = a - b; break;
+            case TokenKind::Star: result = a * b; break;
+            case TokenKind::Slash:
+                if (b == 0) return divideByZero(span);
+                if (signedValue) {
+                    const auto sa = static_cast<std::int64_t>(a);
+                    const auto sb = static_cast<std::int64_t>(b);
+                    if (sa == std::numeric_limits<std::int64_t>::min() &&
+                        sb == -1)
+                        return std::nullopt;
+                    result = static_cast<std::uint64_t>(sa / sb);
+                } else {
+                    result = a / b;
+                }
+                break;
+            case TokenKind::Percent:
+                if (b == 0) return divideByZero(span);
+                if (signedValue)
+                    result = static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(a) %
+                        static_cast<std::int64_t>(b));
+                else
+                    result = a % b;
+                break;
+            default: return std::nullopt;
+            }
+            return Evaluated{type, truncate(result, width), false};
+        }
+        return std::nullopt;
+    }
+
+    std::optional<Evaluated> convertConstant(const Evaluated& value,
+                                             const SemanticType& target) {
+        if (value.isFloat) {
+            const auto d = std::bit_cast<double>(value.bits);
+            if (isFloat(target)) {
+                const auto width = numericBitWidth(target);
+                if (width != 32 && width != 64) return std::nullopt;
+                return Evaluated{target,
+                                 std::bit_cast<std::uint64_t>(roundTo(target, d)),
+                                 true};
+            }
+            if (!isInteger(target)) return std::nullopt;
+            const auto width = numericBitWidth(target);
+            if (width == 0 || width > 64) return std::nullopt;
+            if (!std::isfinite(d)) return std::nullopt;
+            const auto truncated = std::trunc(d);
+            if (isSignedInteger(target)) {
+                const auto limit = std::ldexp(1.0, width - 1);
+                if (truncated < -limit || truncated >= limit)
+                    return std::nullopt;
+                return Evaluated{
+                    target,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(truncated)),
+                    false};
+            }
+            const auto limit = std::ldexp(1.0, width);
+            if (truncated < 0.0 || truncated >= limit) return std::nullopt;
+            return Evaluated{target,
+                             static_cast<std::uint64_t>(truncated), false};
+        }
+        if (numericBitWidth(value.type) > 64) return std::nullopt;
+        if (isFloat(target)) {
+            double d = 0.0;
+            if (isSignedInteger(value.type))
+                d = static_cast<double>(toInt64(value));
+            else
+                d = static_cast<double>(value.bits);
+            const auto width = numericBitWidth(target);
+            if (width != 32 && width != 64) return std::nullopt;
+            return Evaluated{target,
+                             std::bit_cast<std::uint64_t>(roundTo(target, d)),
+                             true};
+        }
+        if (!isInteger(target)) return std::nullopt;
+        const auto width = numericBitWidth(target);
+        if (width == 0 || width > 64) return std::nullopt;
+        auto bits = value.bits;
+        if (isSignedInteger(value.type))
+            bits = signExtend(bits, numericBitWidth(value.type));
+        return Evaluated{target, truncate(bits, width), false};
+    }
+
+    std::optional<Evaluated> divideByZero(SourceSpan span) {
+        diagnose("division by zero in constant expression", span);
+        return std::nullopt;
+    }
+
+    static std::uint64_t truncate(std::uint64_t bits, std::uint32_t width) {
+        if (width >= 64) return bits;
+        return bits & ((std::uint64_t{1} << width) - 1);
+    }
+
+    static std::uint64_t signExtend(std::uint64_t bits, std::uint32_t width) {
+        if (width >= 64) return bits;
+        const auto shift = 64 - width;
+        return static_cast<std::uint64_t>(static_cast<std::int64_t>(bits << shift) >>
+                                          shift);
+    }
+
+    static std::int64_t toInt64(const Evaluated& value) {
+        const auto width = numericBitWidth(value.type);
+        if (width == 0 || width >= 64)
+            return static_cast<std::int64_t>(value.bits);
+        return static_cast<std::int64_t>(signExtend(value.bits, width));
+    }
+
+    static double toDouble(const Evaluated& value) {
+        if (value.isFloat) return std::bit_cast<double>(value.bits);
+        return isSignedInteger(value.type) ? static_cast<double>(toInt64(value))
+                                           : static_cast<double>(value.bits);
+    }
+
+    static double roundTo(const SemanticType& type, double value) {
+        return numericBitWidth(type) == 32
+            ? static_cast<double>(static_cast<float>(value))
+            : value;
     }
 
     SemanticType resolve(const Type& syntax) {
