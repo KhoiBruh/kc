@@ -22,8 +22,13 @@ $ErrorActionPreference = "Stop"
 
 $combined = "$Output.combined.k"
 $modules = @(
-    "source.k", "token.k", "list.k", "containers.k", "lexer.k", "ast.k", "parser.k",
-    "types.k", "diagnostic.k", "semantic.k"
+    "source.k", "token.k", "list.k", "containers.k", "lexer.k", "ast.k",
+    "parser/mod.k", "parser/core.k", "parser/types.k", "parser/expressions.k",
+    "parser/statements.k", "parser/declarations.k",
+    "types.k", "diagnostic.k",
+    "semantic/mod.k", "semantic/context.k", "semantic/types.k", "semantic/patterns.k",
+    "semantic/expressions.k", "semantic/statements.k", "semantic/ownership.k",
+    "semantic/declarations.k"
 )
 $source = ($modules | ForEach-Object {
     [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))

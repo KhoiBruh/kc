@@ -34,7 +34,12 @@ $modules = @(
     "containers.k",
     "lexer.k",
     "ast.k",
-    "parser.k"
+    "parser/mod.k",
+    "parser/core.k",
+    "parser/types.k",
+    "parser/expressions.k",
+    "parser/statements.k",
+    "parser/declarations.k"
 )
 $source = ($modules | ForEach-Object {
     [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))

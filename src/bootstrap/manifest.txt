@@ -4,11 +4,8 @@ list.k
 containers.k
 lexer.k
 ast.k
-parser.k
 types.k
 diagnostic.k
-semantic.k
-llvm_text.k
 compiler.k
 loader.k
 mod.k

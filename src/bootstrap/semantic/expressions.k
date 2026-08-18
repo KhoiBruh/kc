@@ -1,0 +1,1137 @@
+module bootstrap.semantic.expressions;
+
+import bootstrap.*;
+import bootstrap.token.TokenKind;
+
+fn nodeIsPrint(val semantic: Semantic, node: AstNode): bool {
+    if (node.end - node.start != 5) return false;
+    if (semantic.source.data[node.start] != 112) return false;
+    if (semantic.source.data[node.start + 1] != 114) return false;
+    if (semantic.source.data[node.start + 2] != 105) return false;
+    if (semantic.source.data[node.start + 3] != 110) return false;
+    return semantic.source.data[node.start + 4] == 116;
+}
+
+fn associatedTypeArgumentRoot(
+    val semantic: Semantic, memberRoot: u64,
+    position: u32, count: u32): u64 {
+    var root = memberRoot - 1;
+    for (index in position..<count) {
+        root = semantic.nodes.data[root].subtreeStart - 1;
+    }
+    return root;
+}
+
+fn associatedObjectRoot(val semantic: Semantic, memberRoot: u64): u64 {
+    var root = memberRoot - 1;
+    val count = semantic.nodes.data[memberRoot].aux;
+    for (index in 0..<count) {
+        root = semantic.nodes.data[root].subtreeStart - 1;
+    }
+    return root;
+}
+
+fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
+    if (!semantic.result.ok) return invalidType();
+    val node = semantic.nodes.data[root];
+    if (node.kind == AstKind.Identifier) {
+        val name = nodeHash(semantic, node);
+        val local = localFind(semantic.locals, name);
+        if (local != semantic.locals.length) {
+            if (semantic.locals.data[local].moved) {
+                semanticFail(semantic, 4, node);
+                return semantic.locals.data[local].valueType;
+            }
+            var resolved = semantic.nodes.data[root];
+            resolved.storage = semantic.locals.data[local].storage;
+            if (semantic.locals.data[local].autoDrop)
+                resolved.ownership = 2;
+            semantic.nodes.data[root] = resolved;
+            return semantic.locals.data[local].valueType;
+        }
+        if (declarationFind(semantic.functions, name) !=
+                semantic.functions.length) {
+            return TypeValue(TypeKind.Function, name, 0);
+        }
+        val constant = declarationFind(semantic.constants, name);
+        if (constant != semantic.constants.length) {
+            val declarationRoot = semantic.constants.data[constant].node;
+            var resolved = semantic.nodes.data[root];
+            resolved.storage = declarationRoot;
+            resolved.aux = 1;
+            semantic.nodes.data[root] = resolved;
+            val declaration = semantic.nodes.data[declarationRoot];
+            return TypeValue(typeKindFromValue(declaration.typeKind), declaration.typeName, declaration.typePointee);
+        }
+        semanticFail(semantic, 2, node);
+        return invalidType();
+    }
+    if (node.kind == AstKind.Literal) {
+        return when (node.aux) {
+            TokenKind.IntegerLiteral.value -> integerLiteralType();
+            TokenKind.FloatLiteral.value -> TypeValue(TypeKind.F64, 0, 0);
+            TokenKind.StringLiteral.value -> TypeValue(TypeKind.String, 0, 0);
+            TokenKind.KwTrue.value, TokenKind.KwFalse.value -> boolType();
+            TokenKind.KwNull.value -> TypeValue(TypeKind.NullLiteral, 0, 0);
+            else -> invalidType();
+        };
+    }
+    if (node.kind == AstKind.Unary) {
+        val operand = expressionType(semantic, root - 1);
+        if (node.aux == TokenKind.Star.value) {
+            if (operand.kind != TypeKind.Pointer) {
+                semanticFail(semantic, 4, node);
+                return invalidType();
+            }
+            if (operand.pointee == TypeKind.Pointer.value) {
+                return TypeValue(TypeKind.Pointer, 0, operand.name as u32);
+            }
+            return TypeValue(typeKindFromValue(operand.pointee), operand.name, 0);
+        }
+        if (node.aux == TokenKind.Ampersand.value) {
+            if (operand.kind == TypeKind.Pointer) {
+                return TypeValue(TypeKind.Pointer, operand.pointee as u64, TypeKind.Pointer.value);
+            }
+            return TypeValue(TypeKind.Pointer, operand.name, operand.kind.value);
+        }
+        if (node.aux == TokenKind.Bang.value) {
+            if (operand.kind != TypeKind.Bool) {
+                semanticFail(semantic, 4, node);
+                return invalidType();
+            }
+            return TypeValue(TypeKind.Bool, 0, 0);
+        }
+        return operand;
+    }
+    if (node.kind == AstKind.Binary) {
+        val rightRoot = root - 1;
+        val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
+        if (node.aux == TokenKind.KwIn.value) {
+            val range = semantic.nodes.data[rightRoot];
+            var validRange = range.kind == AstKind.Binary;
+            if (validRange) {
+                validRange = range.aux == TokenKind.Range.value ||
+                    range.aux == TokenKind.RangeExclusive.value ||
+                    range.aux == TokenKind.RangeExclusiveStart.value ||
+                    range.aux == TokenKind.RangeExclusiveBoth.value;
+            }
+            if (!validRange) {
+                semanticFail(semantic, 4, node);
+                return boolType();
+            }
+            val upperRoot = rightRoot - 1;
+            val lowerRoot = semantic.nodes.data[upperRoot].subtreeStart - 1;
+            val subject = expressionType(semantic, leftRoot);
+            var lower = expressionType(semantic, lowerRoot);
+            var upper = expressionType(semantic, upperRoot);
+            if (lower.kind == TypeKind.IntegerLiteral) {
+                lower = subject;
+                var lowerNode = semantic.nodes.data[lowerRoot];
+                lowerNode.typeKind = subject.kind.value;
+                semantic.nodes.data[lowerRoot] = lowerNode;
+            }
+            if (upper.kind == TypeKind.IntegerLiteral) {
+                upper = subject;
+                var upperNode = semantic.nodes.data[upperRoot];
+                upperNode.typeKind = subject.kind.value;
+                semantic.nodes.data[upperRoot] = upperNode;
+            }
+            if (!subject.isInteger() && !subject.isFloat())
+                semanticFail(semantic, 4, node);
+            if (!typeAccepts(subject, lower, semantic.genericArguments) ||
+                !typeAccepts(subject, upper, semantic.genericArguments))
+                semanticFail(semantic, 4, node);
+            var typedRange = range;
+            typedRange.typeKind = subject.kind.value;
+            typedRange.typeName = subject.name;
+            typedRange.typePointee = subject.pointee;
+            semantic.nodes.data[rightRoot] = typedRange;
+            return boolType();
+        }
+        val left = expressionType(semantic, leftRoot);
+        val right = expressionType(semantic, rightRoot);
+        var logical = node.aux == TokenKind.AndAnd.value;
+        if (node.aux == TokenKind.OrOr.value) logical = true;
+        if (logical) {
+            if (left.kind != TypeKind.Bool) semanticFail(semantic, 4, node);
+            else {
+                if (right.kind != TypeKind.Bool) semanticFail(semantic, 4, node);
+            }
+            return boolType();
+        }
+        var comparison = node.aux == TokenKind.Less.value;
+        if (node.aux == TokenKind.Greater.value) comparison = true;
+        if (node.aux == TokenKind.EqualEqual.value) comparison = true;
+        if (node.aux == TokenKind.BangEqual.value) comparison = true;
+        if (node.aux == TokenKind.LessEqual.value) comparison = true;
+        if (node.aux == TokenKind.GreaterEqual.value) comparison = true;
+        if (comparison) {
+            if (!typeAccepts(left, right, semantic.genericArguments)) {
+                if (!typeAccepts(right, left, semantic.genericArguments)) {
+                    semanticFail(semantic, 4, node);
+                }
+            }
+            return boolType();
+        }
+        if (typeAccepts(left, right, semantic.genericArguments)) return left;
+        if (typeAccepts(right, left, semantic.genericArguments)) return right;
+        semanticFail(semantic, 4, node);
+        return invalidType();
+    }
+    if (node.kind == AstKind.Assignment) {
+        val rightRoot = root - 1;
+        val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
+        val target = semantic.nodes.data[leftRoot];
+        var targetLocal = semantic.locals.length;
+        if (target.kind == AstKind.Identifier) {
+            targetLocal = localFind(semantic.locals, nodeHash(semantic, target));
+            if (targetLocal == semantic.locals.length) {
+                semanticFail(semantic, 2, target);
+                return invalidType();
+            }
+            if (!semantic.locals.data[targetLocal].mutable) {
+                semanticFail(semantic, 7, target);
+                return invalidType();
+            }
+        }
+        var left = invalidType();
+        if (targetLocal != semantic.locals.length) {
+            left = semantic.locals.data[targetLocal].valueType;
+            var resolvedTarget = target;
+            resolvedTarget.storage = semantic.locals.data[targetLocal].storage;
+            resolvedTarget.typeKind = left.kind.value;
+            resolvedTarget.typeName = left.name;
+            resolvedTarget.typePointee = left.pointee;
+            if (semantic.locals.data[targetLocal].autoDrop)
+                resolvedTarget.ownership = 2;
+            semantic.nodes.data[leftRoot] = resolvedTarget;
+            if (node.aux != TokenKind.Equal.value &&
+                semantic.locals.data[targetLocal].moved) {
+                semanticFail(semantic, 4, target);
+                return left;
+            }
+        } else {
+            left = expressionType(semantic, leftRoot);
+        }
+        var right = expressionType(semantic, rightRoot);
+        right = contextualizeLiteralByteSlice(
+            semantic, rightRoot, left, right);
+        if (!typeAccepts(left, right, semantic.genericArguments)) {
+            semanticFail(semantic, 4, node);
+        } else if (node.aux == TokenKind.Equal.value) {
+            markExpressionMoved(semantic, rightRoot);
+            if (targetLocal != semantic.locals.length) {
+                var reassigned = semantic.locals.data[targetLocal];
+                reassigned.moved = false;
+                semantic.locals.data[targetLocal] = reassigned;
+            }
+        }
+        return left;
+    }
+    if (node.kind == AstKind.Cast) {
+        val typeRoot = root - 1;
+        val valueRoot = semantic.nodes.data[typeRoot].subtreeStart - 1;
+        var source = expressionType(semantic, valueRoot);
+        val target = typeFromNode(semantic, typeRoot);
+        if (source.kind == TypeKind.IntegerLiteral) {
+            source = TypeValue(TypeKind.I32, 0, 0);
+            var valueNode = semantic.nodes.data[valueRoot];
+            valueNode.typeKind = source.kind.value;
+            semantic.nodes.data[valueRoot] = valueNode;
+        }
+        var pointerCast = false;
+        if (source.kind == TypeKind.Pointer) {
+            if (target.kind == TypeKind.Pointer) pointerCast = true;
+        }
+        var integerCast = false;
+        if (source.isInteger()) {
+            if (target.isInteger()) integerCast = true;
+        }
+        if (integerCast) {
+            val constant = integerConstant(semantic, valueRoot);
+            if (constant.ok) {
+                if (!integerConstantFits(constant, target)) {
+                    semanticFail(semantic, 4, node);
+                }
+            }
+            var castNode = semantic.nodes.data[root];
+            castNode.conversionKind = 3;
+            if (integerCastRequiresRangeCheck(source, target)) {
+                castNode.conversionKind = 4;
+            }
+            semantic.nodes.data[root] = castNode;
+        } else {
+            var floatCast = false;
+            if (source.isFloat()) {
+                if (target.isFloat()) floatCast = true;
+            }
+            if (source.isInteger()) {
+                if (target.isFloat()) floatCast = true;
+            }
+            var floatToInteger = false;
+            if (source.isFloat()) {
+                if (target.isInteger()) floatToInteger = true;
+            }
+            if (floatToInteger) {
+                floatCast = true;
+                val constant = floatConstant(semantic, valueRoot);
+                if (constant.ok) {
+                    if (!integerConstantFits(constant, target)) {
+                        semanticFail(semantic, 4, node);
+                    }
+                }
+            }
+            if (floatCast) {
+                var castNode = semantic.nodes.data[root];
+                castNode.conversionKind = 5;
+                if (floatToInteger) {
+                    castNode.conversionKind = 6;
+                }
+                semantic.nodes.data[root] = castNode;
+            } else {
+                if (!pointerCast) semanticFail(semantic, 4, node);
+            }
+        }
+        return target;
+    }
+    if (node.kind == AstKind.Call) {
+        var argumentCount = node.aux % 65536;
+        val callExplicitTypeCount = node.aux / 65536;
+        val argumentRoots =
+            k_boot_alloc(
+                ((argumentCount + 1) as u64) * sizeof(u64)) as u64*;
+        var cursor = root - 1;
+        for (argument in argumentCount>..0) {
+            cursor = semantic.nodes.data[cursor].subtreeStart - 1;
+        }
+        var calleeRoot = cursor;
+        for (explicit in 0..<callExplicitTypeCount) {
+            calleeRoot = semantic.nodes.data[calleeRoot].subtreeStart - 1;
+        }
+        val callee = semantic.nodes.data[calleeRoot];
+        var explicitTypeCount = callExplicitTypeCount;
+        if (callee.kind == AstKind.Member) explicitTypeCount = callee.aux;
+        val explicitTypeRoots =
+            k_boot_alloc(
+                (explicitTypeCount as u64) * sizeof(u64)) as u64*;
+        cursor = root - 1;
+        for (argument in argumentCount>..0) {
+            argumentRoots[argument as u64] = cursor;
+            cursor = semantic.nodes.data[cursor].subtreeStart - 1;
+        }
+        for (explicit in callExplicitTypeCount>..0) {
+            explicitTypeRoots[explicit as u64] = cursor;
+            cursor = semantic.nodes.data[cursor].subtreeStart - 1;
+        }
+        var functionName: u64 = 0;
+        var associated = false;
+        if (callee.kind == AstKind.Identifier) {
+            functionName = nodeHash(semantic, callee);
+        } else {
+            if (callee.kind == AstKind.Member) {
+                val objectRoot = associatedObjectRoot(semantic, cursor);
+                val objectNode = semantic.nodes.data[objectRoot];
+                if (objectNode.kind == AstKind.Identifier) {
+                    val structureIndex = declarationFind(
+                        semantic.structs, nodeHash(semantic, objectNode));
+                    if (structureIndex != semantic.structs.length) {
+                        val candidateName = methodHash(
+                            semantic.structs.data[structureIndex].name,
+                            nodeHash(semantic, callee));
+                        val candidateIndex = declarationFind(
+                            semantic.functions, candidateName);
+                        if (candidateIndex != semantic.functions.length) {
+                            val candidate = semantic.nodes.data[
+                                semantic.functions.data[candidateIndex].node];
+                            if (candidate.conversionKind == 2) {
+                                associated = true;
+                                functionName = candidateName;
+                                for (explicit in 0..<callee.aux) {
+                                    explicitTypeRoots[explicit as u64] =
+                                        associatedTypeArgumentRoot(
+                                            semantic, cursor,
+                                            explicit + 1, callee.aux);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!associated && callExplicitTypeCount == 0 && callee.aux == 0) {
+                    val object = expressionType(semantic, objectRoot);
+                    if (object.kind == TypeKind.Struct) {
+                        for (argument in argumentCount>..0) {
+                            argumentRoots[argument as u64 + 1] =
+                                argumentRoots[argument as u64];
+                        }
+                        argumentRoots[0] = objectRoot;
+                        argumentCount++;
+                        functionName = methodHash(
+                            object.name, nodeHash(semantic, callee));
+                    }
+                }
+            }
+        }
+        if (functionName == 0) {
+            semanticFail(semantic, 2, callee);
+            k_boot_free(explicitTypeRoots as unit*);
+            k_boot_free(argumentRoots as unit*);
+            return invalidType();
+        }
+        val functionIndex = declarationFind(semantic.functions, functionName);
+        if (functionIndex == semantic.functions.length) {
+            if (callee.kind == AstKind.Identifier &&
+                functionName == 210727929557 &&
+                localFind(semantic.locals, functionName) == semantic.locals.length) {
+                if (argumentCount != 2) {
+                    semanticFail(semantic, 3, callee);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                val pointer = expressionType(semantic, argumentRoots[0]);
+                val length = expressionType(semantic, argumentRoots[1]);
+                if (pointer.kind != TypeKind.Pointer || pointer.pointee == TypeKind.Unit.value) {
+                    semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[0]]);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                if (!typeAccepts(
+                        TypeValue(TypeKind.U64, 0, 0), length,
+                        semantic.genericArguments)) {
+                    semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[1]]);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return TypeValue(TypeKind.Slice, pointer.name, pointer.pointee);
+            }
+            if (nodeIsPrint(semantic, callee)) {
+                if (argumentCount != 1) {
+                    semanticFail(semantic, 3, callee);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+                expressionType(semantic, argumentRoots[0]);
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return unitType();
+            }
+            val structureIndex = declarationFind(semantic.structs, nodeHash(semantic, callee));
+            if (structureIndex == semantic.structs.length) {
+                semanticFail(semantic, 2, callee);
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return invalidType();
+            }
+            val structureRoot =
+                semantic.structs.data[structureIndex].node;
+            val structure = semantic.nodes.data[structureRoot];
+            val fieldCount = structFieldCount(structure);
+            val typeCount = structTypeParameterCount(structure);
+            if (fieldCount != argumentCount) {
+                semanticFail(semantic, 3, callee);
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return invalidType();
+            }
+            if (explicitTypeCount > 0) {
+                if (explicitTypeCount != typeCount) {
+                    semanticFail(semantic, 3, callee);
+                    k_boot_free(explicitTypeRoots as unit*);
+                    k_boot_free(argumentRoots as unit*);
+                    return invalidType();
+                }
+            }
+            val typeArguments =
+                k_boot_alloc(
+                    (typeCount as u64) * sizeof(TypeValue)) as TypeValue*;
+            for (explicit in 0..<typeCount) {
+                typeArguments[explicit as u64] = invalidType();
+            }
+            for (explicit in 0..<explicitTypeCount) {
+                typeArguments[explicit as u64] =
+                    typeFromNode(
+                        semantic,
+                        explicitTypeRoots[explicit as u64]);
+            }
+            for (argument in 0..<argumentCount) {
+                var actual = expressionType(
+                    semantic, argumentRoots[argument as u64]);
+                val fieldRoot = fieldRootAt(semantic.nodes, structureRoot, argument);
+                val savedStruct = semantic.currentStruct;
+                semantic.currentStruct = structureRoot;
+                val pattern = typeFromNode(semantic, fieldRoot - 1);
+                semantic.currentStruct = savedStruct;
+                if (pattern.kind == TypeKind.TypeParameter) {
+                    val position = structTypeParameterPosition(
+                        semantic, structureRoot, pattern.name);
+                    if (explicitTypeCount == 0) {
+                        var inferredActual = actual;
+                        if (inferredActual.kind == TypeKind.IntegerLiteral) {
+                            inferredActual = TypeValue(TypeKind.I32, 0, 0);
+                        }
+                        if (typeArguments[position as u64].kind == TypeKind.Invalid) {
+                            typeArguments[position as u64] = inferredActual;
+                        } else {
+                            if (
+                                !typeEquals(
+                                    typeArguments[position as u64],
+                                    inferredActual, semantic.genericArguments
+                                )
+                            ) {
+                                semanticFail(
+                                    semantic, 4,
+                                    semantic.nodes.data[
+                                        argumentRoots[argument as u64]]);
+                            }
+                        }
+                    }
+                } else {
+                    if (actual.kind == TypeKind.IntegerLiteral) {
+                        if (pattern.isInteger()) actual = pattern;
+                    }
+                }
+                val expected = substituteStructType(
+                    semantic, structureRoot, pattern,
+                    List<TypeValue>(
+                        typeArguments, typeCount as u64, typeCount as u64,
+                        sizeof(TypeValue)),
+                    0, typeCount);
+                actual = contextualizeLiteralByteSlice(
+                    semantic, argumentRoots[argument as u64], expected, actual);
+                if (!typeAccepts(expected, actual, semantic.genericArguments)) {
+                    semanticFail(
+                        semantic, 4,
+                        semantic.nodes.data[
+                            argumentRoots[argument as u64]]);
+                }
+                markExpressionMoved(
+                    semantic, argumentRoots[argument as u64]);
+            }
+            for (explicit in 0..<typeCount) {
+                val parameterRoot = structTypeParameterRoot(
+                    semantic, structureRoot, explicit + 1);
+                val parameter = semantic.nodes.data[parameterRoot];
+                var constraint: u32 = 0;
+                if (parameter.aux == 1) {
+                    constraint = constraintFromHash(
+                        nodeHash(
+                            semantic,
+                            semantic.nodes.data[parameterRoot - 1]));
+                }
+
+                if (
+                    !constraintAcceptsType(
+                        constraint,
+                        typeArguments[explicit as u64]
+                    )
+                ) semanticFail(semantic, 4, callee);
+
+            }
+            var start: u32 = 0;
+            if (typeCount > 0) {
+                start = semantic.genericArguments.length as u32;
+                var callNode = semantic.nodes.data[root];
+                callNode.genericArgumentStart = start as u64;
+                callNode.genericArgumentCount = typeCount;
+                for (typeIndex in 0..<typeCount) {
+                    semantic.genericArguments.add(typeArguments[typeIndex as u64]);
+                }
+                semantic.nodes.data[root] = callNode;
+            }
+            k_boot_free(typeArguments as unit*);
+            k_boot_free(explicitTypeRoots as unit*);
+            k_boot_free(argumentRoots as unit*);
+            return TypeValue(
+                TypeKind.Struct, semantic.structs.data[structureIndex].name, start + typeCount * 65536);
+        }
+        val functionRoot = semantic.functions.data[functionIndex].node;
+        val function = semantic.nodes.data[functionRoot];
+        var resolvedCall = semantic.nodes.data[root];
+        resolvedCall.storage = functionRoot;
+        semantic.nodes.data[root] = resolvedCall;
+        if (function.conversionKind == 1) {
+            val receiverParameter = semantic.nodes.data[
+                functionParameterRoot(semantic, functionRoot, 1)];
+            if (parameterMode(receiverParameter) == ParameterMode.MutableBorrow) {
+                val receiverNode = semantic.nodes.data[argumentRoots[0]];
+                if (receiverNode.kind == AstKind.Identifier) {
+                    val receiverLocal =
+                        localFind(semantic.locals, nodeHash(semantic, receiverNode));
+                    if (receiverLocal == semantic.locals.length) {
+                        semanticFail(semantic, 7, receiverNode);
+                    } else {
+                        if (!semantic.locals.data[receiverLocal].mutable)
+                            semanticFail(semantic, 7, receiverNode);
+                    }
+                }
+            }
+        }
+        if (functionParameterCount(function) != argumentCount) {
+            semanticFail(semantic, 3, callee);
+            k_boot_free(explicitTypeRoots as unit*);
+            k_boot_free(argumentRoots as unit*);
+            return invalidType();
+        }
+        val methodOwner = methodOwnerStructRoot(semantic, functionRoot);
+        val typeCount = if (methodOwner != semantic.nodes.length)
+                structTypeParameterCount(semantic.nodes.data[methodOwner])
+            else functionTypeParameterCount(function);
+        if (associated) {
+            if (explicitTypeCount != typeCount) {
+                semanticFail(semantic, 3, callee);
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return invalidType();
+            }
+        } else if (explicitTypeCount > 0) {
+            if (explicitTypeCount != typeCount) {
+                semanticFail(semantic, 3, callee);
+                k_boot_free(explicitTypeRoots as unit*);
+                k_boot_free(argumentRoots as unit*);
+                return invalidType();
+            }
+        }
+        val typeArguments =
+            k_boot_alloc(
+                (typeCount as u64) * sizeof(TypeValue)) as TypeValue*;
+        for (explicit in 0..<typeCount) {
+            typeArguments[explicit as u64] = invalidType();
+        }
+        if (methodOwner != semantic.nodes.length) {
+            if (associated) {
+                for (explicit in 0..<explicitTypeCount) {
+                    typeArguments[explicit as u64] =
+                        typeFromNode(
+                            semantic,
+                            explicitTypeRoots[explicit as u64]);
+                }
+            } else {
+                val receiver = expressionType(semantic, argumentRoots[0]);
+                val start = receiver.pointee % 65536;
+                val count = receiver.pointee / 65536;
+                if (receiver.kind != TypeKind.Struct || count != typeCount) {
+                    semanticFail(semantic, 4, callee);
+                } else {
+                    for (position in 0..<typeCount) {
+                        typeArguments[position as u64] = semantic.genericArguments.data[
+                            start as u64 + position as u64];
+                    }
+                }
+            }
+        } else {
+            for (explicit in 0..<explicitTypeCount) {
+                typeArguments[explicit as u64] =
+                    typeFromNode(
+                        semantic,
+                        explicitTypeRoots[explicit as u64]);
+            }
+        }
+        for (argument in 0..<argumentCount) {
+            var actual = expressionType(
+                semantic, argumentRoots[argument as u64]);
+            val parameterRoot =
+                functionParameterRoot(
+                    semantic, functionRoot, argument + 1);
+            val savedFunction = semantic.currentFunction;
+            val savedStruct = semantic.currentStruct;
+            semantic.currentFunction = functionRoot;
+            if (methodOwner != semantic.nodes.length)
+                semantic.currentStruct = methodOwner;
+            val pattern = typeFromNode(semantic, parameterRoot - 1);
+            semantic.currentFunction = savedFunction;
+            semantic.currentStruct = savedStruct;
+            if (pattern.kind == TypeKind.TypeParameter) {
+                var position = typeParameterPosition(
+                    semantic, functionRoot, pattern.name);
+                if (methodOwner != semantic.nodes.length) {
+                    position = structTypeParameterPosition(
+                        semantic, methodOwner, pattern.name);
+                }
+                if (explicitTypeCount == 0 &&
+                    methodOwner == semantic.nodes.length) {
+                    var inferredActual = actual;
+                    if (inferredActual.kind == TypeKind.IntegerLiteral) {
+                        inferredActual = TypeValue(TypeKind.I32, 0, 0);
+                    }
+                    if (typeArguments[position as u64].kind == TypeKind.Invalid) {
+                        typeArguments[position as u64] = inferredActual;
+                    } else {
+                        if (
+                            !typeEquals(
+                                typeArguments[position as u64],
+                                inferredActual, semantic.genericArguments
+                            )
+                        ) {
+                            semanticFail(
+                                semantic, 4,
+                                semantic.nodes.data[
+                                    argumentRoots[argument as u64]]);
+                        }
+                    }
+                }
+            }
+            var expected = substituteGenericType(
+                semantic, functionRoot, pattern,
+                typeArguments, typeCount);
+            if (methodOwner != semantic.nodes.length) {
+                expected = substituteStructType(
+                    semantic, methodOwner, pattern,
+                    List<TypeValue>(
+                        typeArguments, typeCount as u64, typeCount as u64,
+                        sizeof(TypeValue)),
+                    0, typeCount);
+            }
+            actual = contextualizeLiteralByteSlice(
+                semantic, argumentRoots[argument as u64], expected, actual);
+            if (!typeAccepts(expected, actual, semantic.genericArguments)) {
+                semanticFail(
+                    semantic, 4,
+                    semantic.nodes.data[
+                        argumentRoots[argument as u64]]);
+            }
+            if (parameterMode(semantic.nodes.data[parameterRoot]) ==
+                    ParameterMode.Owned) {
+                markExpressionMoved(
+                    semantic, argumentRoots[argument as u64]);
+            }
+        }
+        for (explicit in 0..<typeCount) {
+            var parameterRoot = functionTypeParameterRoot(
+                semantic, functionRoot, explicit + 1);
+            if (methodOwner != semantic.nodes.length) {
+                parameterRoot = structTypeParameterRoot(
+                    semantic, methodOwner, explicit + 1);
+            }
+            val parameter = semantic.nodes.data[parameterRoot];
+            var constraint: u32 = 0;
+            if (parameter.aux == 1) {
+                constraint = constraintFromHash(
+                    nodeHash(
+                        semantic,
+                        semantic.nodes.data[parameterRoot - 1]));
+            }
+
+            if (
+                !constraintAcceptsType(
+                    constraint,
+                    typeArguments[explicit as u64]
+                )
+            ) semanticFail(semantic, 4, callee);
+
+        }
+        val savedFunction = semantic.currentFunction;
+        val savedStruct = semantic.currentStruct;
+        semantic.currentFunction = functionRoot;
+        if (methodOwner != semantic.nodes.length)
+            semantic.currentStruct = methodOwner;
+        val returnPattern = functionReturnTypeValue(semantic, functionRoot);
+        semantic.currentFunction = savedFunction;
+        semantic.currentStruct = savedStruct;
+        var returnType = substituteGenericType(
+            semantic, functionRoot, returnPattern,
+            typeArguments, typeCount);
+        if (methodOwner != semantic.nodes.length) {
+            returnType = substituteStructType(
+                semantic, methodOwner, returnPattern,
+                List<TypeValue>(
+                    typeArguments, typeCount as u64, typeCount as u64,
+                    sizeof(TypeValue)),
+                0, typeCount);
+        }
+        if (typeCount > 0) {
+            var callNode = semantic.nodes.data[root];
+            callNode.genericArgumentStart =
+                semantic.genericArguments.length;
+            callNode.genericArgumentCount = typeCount;
+            for (typeIndex in 0..<typeCount) {
+                semantic.genericArguments.add(typeArguments[typeIndex as u64]);
+            }
+            semantic.nodes.data[root] = callNode;
+        }
+        k_boot_free(typeArguments as unit*);
+        k_boot_free(explicitTypeRoots as unit*);
+        k_boot_free(argumentRoots as unit*);
+        return returnType;
+    }
+    if (node.kind == AstKind.Member) {
+        val objectRoot = root - 1;
+        val objectNode = semantic.nodes.data[objectRoot];
+        if (objectNode.kind == AstKind.Identifier) {
+            val enumIndex = declarationFind(semantic.enums, nodeHash(semantic, objectNode));
+            if (enumIndex != semantic.enums.length) {
+                val enumRoot = semantic.enums.data[enumIndex].node;
+                val enumeration = semantic.nodes.data[enumRoot];
+                val wanted = nodeHash(semantic, node);
+                for (position in 0..<enumeration.aux) {
+                    val variant = semantic.nodes.data[
+                        enumVariantStart(enumeration) + position as u64];
+                    if (nodeHash(semantic, variant) == wanted) {
+                        var resolvedObject = objectNode;
+                        resolvedObject.typeKind = TypeKind.Enum.value;
+                        resolvedObject.typeName = semantic.enums.data[enumIndex].name;
+                        resolvedObject.typePointee = enumeration.typePointee;
+                        semantic.nodes.data[objectRoot] = resolvedObject;
+                        var resolved = node;
+                        resolved.storage = variant.storage;
+                        resolved.conversionKind = position;
+                        resolved.typeKind = TypeKind.Enum.value;
+                        resolved.typeName = semantic.enums.data[enumIndex].name;
+                        resolved.typePointee = enumeration.typePointee;
+                        semantic.nodes.data[root] = resolved;
+                        return TypeValue(
+                            TypeKind.Enum, resolved.typeName,
+                            enumeration.typePointee);
+                    }
+                }
+                semanticFail(semantic, 2, node);
+                return invalidType();
+            }
+        }
+        val object = expressionType(semantic, objectRoot);
+        if (object.kind == TypeKind.Enum) {
+            if (nodeHash(semantic, node) == 210731095874) {
+                var resolved = node;
+                resolved.typeKind = object.pointee;
+                semantic.nodes.data[root] = resolved;
+                return TypeValue(typeKindFromValue(object.pointee), 0, 0);
+            }
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
+        if (object.kind == TypeKind.String) {
+            if (nodeHash(semantic, node) == 210708248140) {
+                return TypeValue(TypeKind.Slice, 0, TypeKind.U8.value);
+            }
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
+        if (object.kind != TypeKind.Struct) {
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
+        val structureIndex =
+            declarationFind(semantic.structs, object.name);
+        if (structureIndex == semantic.structs.length) {
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
+        val structureRoot = semantic.structs.data[structureIndex].node;
+        val structure = semantic.nodes.data[structureRoot];
+        val wanted = nodeHash(semantic, node);
+        var cursor = rootBeforeStructMethods(semantic.nodes, structureRoot);
+        val remaining = structFieldCount(structure);
+        for (fieldIndex in 0..<remaining) {
+            val field = semantic.nodes.data[cursor];
+            val fieldName = semantic.nodes.data[field.subtreeStart];
+            if (nodeHash(semantic, fieldName) == wanted) {
+                val savedStruct = semantic.currentStruct;
+                semantic.currentStruct = structureRoot;
+                val fieldType = typeFromNode(semantic, cursor - 1);
+                semantic.currentStruct = savedStruct;
+                val start = object.pointee % 65536;
+                val count = object.pointee / 65536;
+                if (count > 0) {
+                    return substituteStructType(
+                        semantic, structureRoot, fieldType,
+                        semantic.genericArguments, start as u64, count);
+                }
+                return fieldType;
+            }
+            cursor = field.subtreeStart - 1;
+        }
+        semanticFail(semantic, 8, node);
+        return invalidType();
+    }
+    if (node.kind == AstKind.Index) {
+        val indexRoot = root - 1;
+        val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
+        val object = expressionType(semantic, objectRoot);
+        expressionType(semantic, indexRoot);
+        if (object.kind == TypeKind.Array) {
+            return object.arrayElement();
+        }
+        if (object.kind == TypeKind.Slice) {
+            return TypeValue(typeKindFromValue(object.pointee), object.name, 0);
+        }
+        if (object.kind != TypeKind.Pointer) {
+            semanticFail(semantic, 8, node);
+            return invalidType();
+        }
+        if (object.pointee == TypeKind.Pointer.value) {
+            return TypeValue(TypeKind.Pointer, 0, object.name as u32);
+        }
+        return TypeValue(typeKindFromValue(object.pointee), object.name, 0);
+    }
+    if (node.kind == AstKind.Postfix) {
+        val operand = expressionType(semantic, root - 1);
+        if (node.aux == TokenKind.PlusPlus.value ||
+            node.aux == TokenKind.MinusMinus.value) {
+            if (semantic.mutationRoot != root) semanticFail(semantic, 4, node);
+            if (!operand.isFloat() && !operand.isInteger())
+                semanticFail(semantic, 4, node);
+            val target = semantic.nodes.data[root - 1];
+            if (target.kind == AstKind.Identifier) {
+                val local = localFind(semantic.locals, nodeHash(semantic, target));
+                if (local == semantic.locals.length) semanticFail(semantic, 2, target);
+                else {
+                    if (!semantic.locals.data[local].mutable)
+                        semanticFail(semantic, 7, target);
+                }
+            }
+            return operand;
+        }
+        if (operand.kind != TypeKind.Nullable) {
+            semanticFail(semantic, 4, node);
+            return invalidType();
+        }
+        return TypeValue(typeKindFromValue(operand.pointee), operand.name, 0);
+    }
+    if (node.kind == AstKind.IfExpression) {
+        val thenCount = node.aux % 65536;
+        val elseCount = node.aux / 65536;
+        val elseValueRoot = root - 1;
+        val elseRoots =
+            k_boot_alloc((elseCount as u64) * sizeof(u64)) as u64*;
+        var childRoot = semantic.nodes.data[elseValueRoot].subtreeStart - 1;
+        for (index in elseCount>..0) {
+            elseRoots[index as u64] = childRoot;
+            childRoot = semantic.nodes.data[childRoot].subtreeStart - 1;
+        }
+        val thenValueRoot = childRoot;
+        val thenRoots =
+            k_boot_alloc((thenCount as u64) * sizeof(u64)) as u64*;
+        childRoot = semantic.nodes.data[thenValueRoot].subtreeStart - 1;
+        for (index in thenCount>..0) {
+            thenRoots[index as u64] = childRoot;
+            childRoot = semantic.nodes.data[childRoot].subtreeStart - 1;
+        }
+        val condition = expressionType(semantic, childRoot);
+        if (condition.kind != TypeKind.Bool) {
+            semanticFail(semantic, 6, semantic.nodes.data[childRoot]);
+        }
+        val savedLocals = semantic.locals.length;
+        val savedScopeStart = semantic.scopeStart;
+        val ownershipBefore = captureOwnership(semantic, savedLocals);
+        semantic.scopeStart = savedLocals;
+        for (index in 0..<thenCount) {
+            checkStatement(semantic, thenRoots[index as u64]);
+        }
+        val thenType = expressionType(semantic, thenValueRoot);
+        semantic.locals.setLength(savedLocals);
+        val thenOwnership = captureOwnership(semantic, savedLocals);
+        restoreOwnership(semantic, ownershipBefore, savedLocals);
+        semantic.scopeStart = savedLocals;
+        for (index in 0..<elseCount) {
+            checkStatement(semantic, elseRoots[index as u64]);
+        }
+        val elseType = expressionType(semantic, elseValueRoot);
+        semantic.locals.setLength(savedLocals);
+        val elseOwnership = captureOwnership(semantic, savedLocals);
+        mergeOwnership(
+            semantic, thenOwnership, elseOwnership, savedLocals);
+        semantic.scopeStart = savedScopeStart;
+        k_boot_free(elseOwnership as unit*);
+        k_boot_free(thenOwnership as unit*);
+        k_boot_free(ownershipBefore as unit*);
+        k_boot_free(thenRoots as unit*);
+        k_boot_free(elseRoots as unit*);
+        if (!typeAccepts(thenType, elseType, semantic.genericArguments)) {
+            semanticFail(semantic, 4, semantic.nodes.data[elseValueRoot]);
+        }
+        var resolved = semantic.nodes.data[root];
+        resolved.typeKind = thenType.kind.value;
+        resolved.typeName = thenType.name;
+        resolved.typePointee = thenType.pointee;
+        semantic.nodes.data[root] = resolved;
+        return thenType;
+    }
+    if (node.kind == AstKind.WhenExpression) {
+        val branchCount = node.aux % 65536;
+        val hasSubject = node.aux / 65536;
+        val roots = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
+        var branchRoot = root - 1;
+        for (index in branchCount>..0) {
+            roots[index as u64] = branchRoot;
+            branchRoot = semantic.nodes.data[branchRoot].subtreeStart - 1;
+        }
+        var subject = invalidType();
+        if (hasSubject == 1) {
+            subject = expressionType(semantic, branchRoot);
+            if (subject.kind == TypeKind.IntegerLiteral) {
+                subject = TypeValue(TypeKind.I32, 0, 0);
+                var subjectNode = semantic.nodes.data[branchRoot];
+                subjectNode.typeKind = TypeKind.I32.value;
+                semantic.nodes.data[branchRoot] = subjectNode;
+            }
+        }
+        var result = invalidType();
+        var hasElse = false;
+        val ownershipCount = semantic.locals.length;
+        val ownershipBefore = captureOwnership(semantic, ownershipCount);
+        val ownershipMerged = k_boot_alloc(ownershipCount) as u8*;
+        for (ownershipIndex in 0..<ownershipCount) {
+            ownershipMerged[ownershipIndex] = 0 as u8;
+        }
+        for (index in 0..<branchCount) {
+            restoreOwnership(semantic, ownershipBefore, ownershipCount);
+            val branch = semantic.nodes.data[roots[index as u64]];
+            if (branch.aux % 2 == 1) hasElse = true;
+            val valueRoot = roots[index as u64] - 1;
+            val statementCount = (branch.aux % 65536) / 2;
+            val statementRoots =
+                k_boot_alloc((statementCount as u64) * sizeof(u64)) as u64*;
+            var beforeValue = semantic.nodes.data[valueRoot].subtreeStart - 1;
+            for (statementIndex in statementCount>..0) {
+                statementRoots[statementIndex as u64] = beforeValue;
+                beforeValue = semantic.nodes.data[beforeValue].subtreeStart - 1;
+            }
+            if (branch.aux % 2 == 0) {
+              val patternCount = branch.aux / 65536;
+              for (patternIndex in 0..<patternCount) {
+                val conditionRoot = whenPatternRoot(
+                    semantic, roots[index as u64], true, patternIndex);
+                val condition = expressionType(semantic, conditionRoot);
+                if (hasSubject == 1) {
+                    if (!typeAccepts(subject, condition, semantic.genericArguments)) {
+                        semanticFail(semantic, 4, semantic.nodes.data[conditionRoot]);
+                    } else {
+                        var conditionNode = semantic.nodes.data[conditionRoot];
+                        conditionNode.typeKind = subject.kind.value;
+                        conditionNode.typeName = subject.name;
+                        conditionNode.typePointee = subject.pointee;
+                        semantic.nodes.data[conditionRoot] = conditionNode;
+                    }
+                } else {
+                    if (condition.kind != TypeKind.Bool) {
+                        semanticFail(semantic, 6, semantic.nodes.data[conditionRoot]);
+                    }
+                }
+              }
+            }
+            val savedLocals = semantic.locals.length;
+            val savedScopeStart = semantic.scopeStart;
+            semantic.scopeStart = savedLocals;
+            for (statementIndex in 0..<statementCount) {
+                checkStatement(semantic, statementRoots[statementIndex as u64]);
+            }
+            var value = expressionType(semantic, valueRoot);
+            semantic.locals.setLength(savedLocals);
+            semantic.scopeStart = savedScopeStart;
+            includeCurrentOwnership(
+                semantic, ownershipMerged, ownershipCount);
+            k_boot_free(statementRoots as unit*);
+            if (result.kind == TypeKind.Invalid) {
+                result = value;
+            } else {
+                if (!typeAccepts(result, value, semantic.genericArguments)) {
+                    semanticFail(semantic, 4, semantic.nodes.data[valueRoot]);
+                } else {
+                    var valueNode = semantic.nodes.data[valueRoot];
+                    valueNode.typeKind = result.kind.value;
+                    valueNode.typeName = result.name;
+                    valueNode.typePointee = result.pointee;
+                    semantic.nodes.data[valueRoot] = valueNode;
+                }
+            }
+        }
+        restoreOwnership(semantic, ownershipMerged, ownershipCount);
+        k_boot_free(ownershipMerged as unit*);
+        k_boot_free(ownershipBefore as unit*);
+        val exhaustive = enumWhenExhaustive(
+            semantic, subject, roots, branchCount, true);
+        if (!hasElse && !exhaustive) {
+            semanticFail(semantic, 4, node);
+        }
+        var resolved = semantic.nodes.data[root];
+        resolved.typeKind = result.kind.value;
+        resolved.typeName = result.name;
+        resolved.typePointee = result.pointee;
+        semantic.nodes.data[root] = resolved;
+        k_boot_free(roots as unit*);
+        return result;
+    }
+    if (node.kind == AstKind.ArrayLiteral) {
+        if (node.aux == 0) return invalidType().array(0);
+        var childRoot = root - 1;
+        var element = expressionType(semantic, childRoot);
+        if (element.kind == TypeKind.IntegerLiteral) element = TypeValue(TypeKind.I32, 0, 0);
+        for (index in 0..<node.aux) {
+            val actual = expressionType(semantic, childRoot);
+            if (!typeAccepts(element, actual, semantic.genericArguments)) {
+                semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
+                return invalidType();
+            }
+            var childNode = semantic.nodes.data[childRoot];
+            childNode.typeKind = element.kind.value;
+            childNode.typeName = element.name;
+            childNode.typePointee = element.pointee;
+            semantic.nodes.data[childRoot] = childNode;
+            childRoot = childNode.subtreeStart - 1;
+        }
+        return element.array(node.aux as u64);
+    }
+    if (node.kind == AstKind.UnitLiteral) return unitType();
+    if (node.kind == AstKind.Sizeof) {
+        typeFromNode(semantic, root - 1);
+        return TypeValue(TypeKind.U64, 0, 0);
+    }
+    return invalidType();
+}
+
+fn resolveWhenResultType(
+    var semantic: Semantic, root: u64, target: TypeValue) {
+    var whenNode = semantic.nodes.data[root];
+    if (whenNode.kind != AstKind.WhenExpression) return;
+    whenNode.typeKind = target.kind.value;
+    whenNode.typeName = target.name;
+    whenNode.typePointee = target.pointee;
+    semantic.nodes.data[root] = whenNode;
+    val branchCount = whenNode.aux % 65536;
+    var branchRoot = root - 1;
+    for (index in 0..<branchCount) {
+        val valueRoot = branchRoot - 1;
+        var valueNode = semantic.nodes.data[valueRoot];
+        if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+            valueNode.typeKind = target.kind.value;
+            valueNode.typeName = target.name;
+            valueNode.typePointee = target.pointee;
+            semantic.nodes.data[valueRoot] = valueNode;
+        }
+        branchRoot = semantic.nodes.data[branchRoot].subtreeStart - 1;
+    }
+}
+
+fn resolveIfResultType(
+    var semantic: Semantic, root: u64, target: TypeValue) {
+    var ifNode = semantic.nodes.data[root];
+    if (ifNode.kind != AstKind.IfExpression) return;
+    ifNode.typeKind = target.kind.value;
+    ifNode.typeName = target.name;
+    ifNode.typePointee = target.pointee;
+    semantic.nodes.data[root] = ifNode;
+    val elseValueRoot = root - 1;
+    var thenValueRoot = semantic.nodes.data[elseValueRoot].subtreeStart - 1;
+    val remaining = ifNode.aux / 65536;
+    for (index in 0..<remaining) {
+        thenValueRoot = semantic.nodes.data[thenValueRoot].subtreeStart - 1;
+    }
+    var valueNode = semantic.nodes.data[thenValueRoot];
+    if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+        valueNode.typeKind = target.kind.value;
+        valueNode.typeName = target.name;
+        valueNode.typePointee = target.pointee;
+        semantic.nodes.data[thenValueRoot] = valueNode;
+    }
+    valueNode = semantic.nodes.data[elseValueRoot];
+    if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+        valueNode.typeKind = target.kind.value;
+        valueNode.typeName = target.name;
+        valueNode.typePointee = target.pointee;
+        semantic.nodes.data[elseValueRoot] = valueNode;
+    }
+}
