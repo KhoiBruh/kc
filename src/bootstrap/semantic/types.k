@@ -509,6 +509,5 @@ fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
     val functionRoot = semantic.functions.data[method].node;
     val function = semantic.nodes.data[functionRoot];
     if (functionParameterCount(function) == 0) return false;
-    return parameterMode(semantic.nodes.data[
-        functionParameterRoot(semantic, functionRoot, 1)]) == ParameterMode.Owned;
+    return semantic.nodes.data[functionParameterRoot(semantic, functionRoot, 1)].mode() == ParameterMode.Owned;
 }

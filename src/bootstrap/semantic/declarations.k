@@ -44,7 +44,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
             LocalInfo(
                 semantic.hash(nameNode),
                 typeFromNode(semantic, parameterRoot - 1),
-                parameterMode(parameter) != ParameterMode.ImmutableBorrow,
+                parameter.mode() != ParameterMode.ImmutableBorrow,
                 nameNode.start, false, false
             )
 		);
@@ -201,7 +201,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
         val mutable =
-            parameterMode(parameter) != ParameterMode.ImmutableBorrow;
+            parameter.mode() != ParameterMode.ImmutableBorrow;
         val parameterName = semantic.hash(nameNode);
         if (localFindFrom(semantic.locals, parameterName, 0) !=
                 semantic.locals.length) {
@@ -210,7 +210,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         }
         val parameterType = typeFromNode(semantic, parameterRoot - 1);
         var automaticDrop =
-            parameterMode(parameter) == ParameterMode.Owned &&
+            parameter.mode() == ParameterMode.Owned &&
             parameterType.kind == TypeKind.Struct &&
             typeNeedsOwnership(semantic, parameterType);
         val functionName = semantic.nodes.data[function.subtreeStart];

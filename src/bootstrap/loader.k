@@ -71,21 +71,11 @@ fn loaderReport(path: LoadedPath, source: Source, offset: u64, category: u32) {
     message.append(": error: ");
 
     when (category) {
-        1 -> {
-            message.append("cannot resolve import");
-        }
-        2 -> {
-            message.append("module import depth exceeded");
-        }
-        3 -> {
-            message.append("unterminated string");
-        }
-        4 -> {
-            message.append("invalid character");
-        }
-        else -> {
-            message.append("invalid source");
-        }
+        1 -> message.append("cannot resolve import");
+        2 -> message.append("module import depth exceeded");
+        3 -> message.append("unterminated string");
+        4 -> message.append("invalid character");
+        else -> message.append("invalid source");
     }
     
     message.append("\n");

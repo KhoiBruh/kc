@@ -1,6 +1,6 @@
 module bootstrap.token;
 
-enum TokenKind: u32 {
+enum TokenKind : u32 {
     EndOfFile,
     Identifier,
     IntegerLiteral,
@@ -97,6 +97,5 @@ enum TokenKind: u32 {
     RangeExclusiveStart,
     RangeExclusiveBoth
 }
-
 
 struct Token(kind: TokenKind, start: u64, end: u64)

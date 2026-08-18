@@ -1191,7 +1191,7 @@ fn emitExpression(
                 val parameter = nodes.data[
                     parameterRoot(
                         nodes, functionRoot, index + 1)];
-                if (parameterMode(parameter) == ParameterMode.MutableBorrow)
+                if (parameter.mode() == ParameterMode.MutableBorrow)
                     byReference = true;
             }
             if (byReference) {
@@ -1223,7 +1223,7 @@ fn emitExpression(
                 if (functionRoot != nodes.length) {
                     val ownedParameter = nodes.data[
                         parameterRoot(nodes, functionRoot, index + 1)];
-                    if (parameterMode(ownedParameter) == ParameterMode.Owned)
+                    if (ownedParameter.mode() == ParameterMode.Owned)
                         emitClearAutomaticDrop(
                             buffer, nodes, arguments[index as u64]);
                 }
@@ -1386,7 +1386,7 @@ fn emitExpression(
                 val callParameter = nodes.data[
                     parameterRoot(
                         nodes, functionRoot, index + 1)];
-                if (parameterMode(callParameter) == ParameterMode.MutableBorrow) {
+                if (callParameter.mode() == ParameterMode.MutableBorrow) {
                     appendType(buffer, genericArguments, 9, 0, 0);
                 } else {
                     val parameterType =

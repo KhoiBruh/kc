@@ -569,7 +569,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (function.conversionKind == 1) {
             val receiverParameter = semantic.nodes.data[
                 functionParameterRoot(semantic, functionRoot, 1)];
-            if (parameterMode(receiverParameter) == ParameterMode.MutableBorrow) {
+            if (receiverParameter.mode() == ParameterMode.MutableBorrow) {
                 val receiverNode = semantic.nodes.data[argumentRoots[0]];
                 if (receiverNode.kind == AstKind.Identifier) {
                     val receiverLocal =
@@ -706,7 +706,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     semantic.nodes.data[
                         argumentRoots[argument as u64]]);
             }
-            if (parameterMode(semantic.nodes.data[parameterRoot]) ==
+            if (semantic.nodes.data[parameterRoot].mode() ==
                     ParameterMode.Owned) {
                 markExpressionMoved(
                     semantic, argumentRoots[argument as u64]);

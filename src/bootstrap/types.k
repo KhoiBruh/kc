@@ -4,7 +4,7 @@ import bootstrap.ast.AstNode;
 import bootstrap.list.List;
 import bootstrap.token.TokenKind;
 
-enum TypeKind: u32 {
+enum TypeKind : u32 {
     Invalid,
     Unit,
     Bool,
@@ -27,7 +27,6 @@ enum TypeKind: u32 {
     Array,
     Enum
 }
-
 
 fn typeKindFromValue(value: u32): TypeKind => when (value) {
     1 -> TypeKind.Unit;

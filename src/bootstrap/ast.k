@@ -1,6 +1,6 @@
 module bootstrap.ast;
 
-enum AstKind: u32 {
+enum AstKind : u32 {
     Invalid,
     NamedType,
     PointerType,
@@ -54,12 +54,11 @@ enum AstKind: u32 {
     ConstantDeclaration
 }
 
-enum ParameterMode: u32 {
-    Owned = 0,
-    ImmutableBorrow = 1,
-    MutableBorrow = 2
+enum ParameterMode : u32 {
+    Owned,
+    ImmutableBorrow,
+    MutableBorrow
 }
-
 
 struct AstNode(
     kind: AstKind,
@@ -75,10 +74,12 @@ struct AstNode(
     genericArgumentCount: u32,
     conversionKind: u32,
     ownership: u32
-)
+) {
 
-fn parameterMode(node: AstNode): ParameterMode => when (node.aux) {
-    ParameterMode.ImmutableBorrow.value -> ParameterMode.ImmutableBorrow;
-    ParameterMode.MutableBorrow.value -> ParameterMode.MutableBorrow;
-    else -> ParameterMode.Owned;
-};
+    fn mode(val self) => when (self.aux) {
+        ParameterMode.ImmutableBorrow.value -> ParameterMode.ImmutableBorrow;
+        ParameterMode.MutableBorrow.value -> ParameterMode.MutableBorrow;
+        else -> ParameterMode.Owned;
+    };
+
+}
