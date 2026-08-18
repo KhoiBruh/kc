@@ -40,7 +40,7 @@ fn structRootByName(
         val node = nodes.data[root];
         if (node.kind == AstKind.StructDeclaration) {
             val nameNode = nodes.data[node.subtreeStart];
-            if (sourceHash(source, nameNode.start, nameNode.end) == name) {
+            if (source.hash(nameNode.start, nameNode.end) == name) {
                 found = root;
             }
         }
@@ -59,7 +59,7 @@ fn functionRootByName(
         val node = nodes.data[root];
         if (node.kind == AstKind.FunctionOrDefer) {
             val nameNode = nodes.data[node.subtreeStart];
-            if (sourceHash(source, nameNode.start, nameNode.end) == name) {
+            if (source.hash(nameNode.start, nameNode.end) == name) {
                 found = root;
             }
         }
@@ -76,7 +76,7 @@ fn emitterDropFunctionRoot(
     for (index in 0..<emitterStructMethodCount(nodes.data[structureRoot])) {
         val method = nodes.data[methodRoot];
         val name = nodes.data[method.subtreeStart];
-        if (sourceHash(source, name.start, name.end) == 6385234055)
+        if (source.hash(name.start, name.end) == 6385234055)
             return methodRoot;
         methodRoot = method.subtreeStart - 1;
     }
@@ -145,13 +145,13 @@ fn emitterFieldRootAt(
 fn fieldIndexByName(
     source: Source, val nodes: List<AstNode>, structureRoot: u64,
     nameNode: AstNode): u32 {
-    val wanted = sourceHash(source, nameNode.start, nameNode.end);
+    val wanted = source.hash(nameNode.start, nameNode.end);
     val structure = nodes.data[structureRoot];
     val fieldCount = emitterStructFieldCount(structure);
     for (index in 0..<fieldCount) {
         val field = nodes.data[emitterFieldRootAt(nodes, structureRoot, index)];
         val fieldName = nodes.data[field.subtreeStart];
-        if (sourceHash(source, fieldName.start, fieldName.end) == wanted) {
+        if (source.hash(fieldName.start, fieldName.end) == wanted) {
             return index;
         }
     }
@@ -566,7 +566,7 @@ fn emitStruct(
     val name = nodes.data[structure.subtreeStart];
     buffer.append("%s");
     appendDecimal(
-        buffer, sourceHash(source, name.start, name.end));
+        buffer, source.hash(name.start, name.end));
     appendEquals(buffer);
     buffer.append("type {");
     val fieldCount = structFieldCount(structure);
@@ -625,7 +625,7 @@ fn emitSpecializedStruct(
     val name = nodes.data[structure.subtreeStart];
     buffer.append("%s");
     appendDecimal(
-        buffer, sourceHash(source, name.start, name.end));
+        buffer, source.hash(name.start, name.end));
     appendStructSpecializationSuffix(buffer, genericArguments, argumentStart, argumentCount);
     appendEquals(buffer);
     buffer.append("type {");
@@ -806,8 +806,7 @@ fn emitModule(
                 var functionRoot =
                     functionRootByName(
                         source, nodes,
-                        sourceHash(
-                            source, callee.start, callee.end));
+                        source.hash(callee.start, callee.end));
                 if (callee.kind == AstKind.Member) functionRoot = call.storage;
                 if (functionRoot != nodes.length) {
                     if (
@@ -845,8 +844,7 @@ fn emitModule(
                 var nestedFunctionRoot =
                     functionRootByName(
                         source, nodes,
-                        sourceHash(
-                            source, callee.start, callee.end));
+                        source.hash(callee.start, callee.end));
                 if (callee.kind == AstKind.Member)
                     nestedFunctionRoot = nestedCall.storage;
                 if (nestedFunctionRoot != nodes.length) {

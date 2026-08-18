@@ -191,7 +191,7 @@ fn structTypeParameterPosition(val semantic: Semantic, structureRoot: u64, name:
     for (position in 0..<count) {
         val root = structTypeParameterRoot(semantic, structureRoot, position + 1);
         val parameter = semantic.nodes.data[root];
-        if (nodeHash(semantic, semantic.nodes.data[parameter.subtreeStart]) == name) {
+        if (semantic.hash(semantic.nodes.data[parameter.subtreeStart]) == name) {
             return position;
         }
     }
@@ -256,13 +256,11 @@ fn findCurrentTypeParameter(
             val parameter = semantic.nodes.data[root];
             val nameNode =
                 semantic.nodes.data[parameter.subtreeStart];
-            if (nodeHash(semantic, nameNode) == name) {
+            if (semantic.hash(nameNode) == name) {
                 var constraint: u32 = 0;
                 if (parameter.aux == 1) {
                     constraint = constraintFromHash(
-                        nodeHash(
-                            semantic,
-                            semantic.nodes.data[root - 1]));
+                        semantic.hash(semantic.nodes.data[root - 1]));
                 }
                 return TypeValue(TypeKind.TypeParameter, name, constraint);
             }
@@ -278,13 +276,11 @@ fn findCurrentTypeParameter(
             val parameter = semantic.nodes.data[root];
             val nameNode =
                 semantic.nodes.data[parameter.subtreeStart];
-            if (nodeHash(semantic, nameNode) == name) {
+            if (semantic.hash(nameNode) == name) {
                 var constraint: u32 = 0;
                 if (parameter.aux == 1) {
                     constraint = constraintFromHash(
-                        nodeHash(
-                            semantic,
-                            semantic.nodes.data[root - 1]));
+                        semantic.hash(semantic.nodes.data[root - 1]));
                 }
                 return TypeValue(TypeKind.TypeParameter, name, constraint);
             }
@@ -301,9 +297,7 @@ fn typeParameterPosition(
         val root = functionTypeParameterRoot(
             semantic, functionRoot, position + 1);
         val parameter = semantic.nodes.data[root];
-        if (nodeHash(
-                semantic,
-                semantic.nodes.data[parameter.subtreeStart]) == name) {
+        if (semantic.hash(semantic.nodes.data[parameter.subtreeStart]) == name) {
             return position;
         }
     }
@@ -379,14 +373,13 @@ fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
                         val nameNode = semantic.nodes.data[parameter.subtreeStart];
                         var constraint: u32 = 0;
                         if (parameter.aux == 1) {
-                            constraint = constraintFromHash(nodeHash(
-                                semantic, semantic.nodes.data[parameterRoot - 1]));
+                            constraint = constraintFromHash(semantic.hash(semantic.nodes.data[parameterRoot - 1]));
                         }
-                        semantic.genericArguments.add(TypeValue(TypeKind.TypeParameter, nodeHash(semantic, nameNode), constraint));
+                        semantic.genericArguments.add(TypeValue(TypeKind.TypeParameter, semantic.hash(nameNode), constraint));
                     }
                     val ownerName = semantic.nodes.data[structure.subtreeStart];
                     value = TypeValue(
-                        TypeKind.Struct, nodeHash(semantic, ownerName),
+                        TypeKind.Struct, semantic.hash(ownerName),
                         start as u32 + count * 65536);
                 }
             }
@@ -419,7 +412,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         val primitive = primitiveType(tokenKind);
         if (primitive.kind != TypeKind.Invalid) return primitive;
         val parameter = findCurrentTypeParameter(
-            semantic, nodeHash(semantic, node));
+            semantic, semantic.hash(node));
         if (parameter.kind != TypeKind.Invalid) return parameter;
         
         val typeArgumentCount = node.aux / 256;
@@ -434,10 +427,10 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
                 semantic.genericArguments.add(typeArguments[index as u64]);
             }
             k_boot_free(typeArguments as unit*);
-            return TypeValue(TypeKind.Struct, nodeHash(semantic, node), start as u32 + typeArgumentCount * 65536);
+            return TypeValue(TypeKind.Struct, semantic.hash(node), start as u32 + typeArgumentCount * 65536);
         }
         
-        val name = nodeHash(semantic, node);
+        val name = semantic.hash(node);
         val enumIndex = declarationFind(semantic.enums, name);
         if (enumIndex != semantic.enums.length) {
             val enumeration = semantic.nodes.data[semantic.enums.data[enumIndex].node];

@@ -20,7 +20,7 @@ import bootstrap.token.TokenKind;
 fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
     val node = semantic.nodes.data[root];
     if (node.kind == AstKind.Identifier) {
-        val local = localFind(semantic.locals, nodeHash(semantic, node));
+        val local = localFind(semantic.locals, semantic.hash(node));
         if (local != semantic.locals.length) {
             var value = semantic.locals.data[local];
             value.moved = true;

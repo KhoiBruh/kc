@@ -172,13 +172,13 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val savedLocals = semantic.locals.length;
         val nameNode = semantic.nodes.data[node.subtreeStart];
         semantic.locals.add(LocalInfo(
-            nodeHash(semantic, nameNode), valueType, false, nameNode.start,
+            semantic.hash(nameNode), valueType, false, nameNode.start,
             false, false));
         if (node.aux == 1) {
             val indexNode = semantic.nodes.data[node.subtreeStart + 1];
             semantic.locals.add(
                 LocalInfo(
-                    nodeHash(semantic, indexNode),
+                    semantic.hash(indexNode),
                     TypeValue(TypeKind.U64, 0, 0), false, indexNode.start, false, false
 				)
 			);
@@ -302,7 +302,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val initializerRoot = root - 1;
         var initializer = expressionType(semantic, initializerRoot);
         val nameNode = semantic.nodes.data[node.subtreeStart];
-        val name = nodeHash(semantic, nameNode);
+        val name = semantic.hash(nameNode);
         if (localFindFrom(semantic.locals, name, semantic.scopeStart) !=
                 semantic.locals.length) {
             semantic.fail(1, nameNode);

@@ -49,7 +49,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (!semantic.result.ok) return invalidType();
     val node = semantic.nodes.data[root];
     if (node.kind == AstKind.Identifier) {
-        val name = nodeHash(semantic, node);
+        val name = semantic.hash(node);
         val local = localFind(semantic.locals, name);
         if (local != semantic.locals.length) {
             if (semantic.locals.data[local].moved) {
@@ -198,7 +198,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val target = semantic.nodes.data[leftRoot];
         var targetLocal = semantic.locals.length;
         if (target.kind == AstKind.Identifier) {
-            targetLocal = localFind(semantic.locals, nodeHash(semantic, target));
+            targetLocal = localFind(semantic.locals, semantic.hash(target));
             if (targetLocal == semantic.locals.length) {
                 semantic.fail(2, target);
                 return invalidType();
@@ -340,18 +340,18 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         var functionName: u64 = 0;
         var associated = false;
         if (callee.kind == AstKind.Identifier) {
-            functionName = nodeHash(semantic, callee);
+            functionName = semantic.hash(callee);
         } else {
             if (callee.kind == AstKind.Member) {
                 val objectRoot = associatedObjectRoot(semantic, cursor);
                 val objectNode = semantic.nodes.data[objectRoot];
                 if (objectNode.kind == AstKind.Identifier) {
                     val structureIndex = declarationFind(
-                        semantic.structs, nodeHash(semantic, objectNode));
+                        semantic.structs, semantic.hash(objectNode));
                     if (structureIndex != semantic.structs.length) {
                         val candidateName = methodHash(
                             semantic.structs.data[structureIndex].name,
-                            nodeHash(semantic, callee));
+                            semantic.hash(callee));
                         val candidateIndex = declarationFind(
                             semantic.functions, candidateName);
                         if (candidateIndex != semantic.functions.length) {
@@ -380,7 +380,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         argumentRoots[0] = objectRoot;
                         argumentCount++;
                         functionName = methodHash(
-                            object.name, nodeHash(semantic, callee));
+                            object.name, semantic.hash(callee));
                     }
                 }
             }
@@ -434,7 +434,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 k_boot_free(argumentRoots as unit*);
                 return unitType();
             }
-            val structureIndex = declarationFind(semantic.structs, nodeHash(semantic, callee));
+            val structureIndex = declarationFind(semantic.structs, semantic.hash(callee));
             if (structureIndex == semantic.structs.length) {
                 semantic.fail(2, callee);
                 k_boot_free(explicitTypeRoots as unit*);
@@ -533,9 +533,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 var constraint: u32 = 0;
                 if (parameter.aux == 1) {
                     constraint = constraintFromHash(
-                        nodeHash(
-                            semantic,
-                            semantic.nodes.data[parameterRoot - 1]));
+                        semantic.hash(semantic.nodes.data[parameterRoot - 1]));
                 }
 
                 if (
@@ -575,7 +573,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val receiverNode = semantic.nodes.data[argumentRoots[0]];
                 if (receiverNode.kind == AstKind.Identifier) {
                     val receiverLocal =
-                        localFind(semantic.locals, nodeHash(semantic, receiverNode));
+                        localFind(semantic.locals, semantic.hash(receiverNode));
                     if (receiverLocal == semantic.locals.length) {
                         semantic.fail(7, receiverNode);
                     } else {
@@ -725,9 +723,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             var constraint: u32 = 0;
             if (parameter.aux == 1) {
                 constraint = constraintFromHash(
-                    nodeHash(
-                        semantic,
-                        semantic.nodes.data[parameterRoot - 1]));
+                    semantic.hash(semantic.nodes.data[parameterRoot - 1]));
             }
 
             if (
@@ -776,15 +772,15 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val objectRoot = root - 1;
         val objectNode = semantic.nodes.data[objectRoot];
         if (objectNode.kind == AstKind.Identifier) {
-            val enumIndex = declarationFind(semantic.enums, nodeHash(semantic, objectNode));
+            val enumIndex = declarationFind(semantic.enums, semantic.hash(objectNode));
             if (enumIndex != semantic.enums.length) {
                 val enumRoot = semantic.enums.data[enumIndex].node;
                 val enumeration = semantic.nodes.data[enumRoot];
-                val wanted = nodeHash(semantic, node);
+                val wanted = semantic.hash(node);
                 for (position in 0..<enumeration.aux) {
                     val variant = semantic.nodes.data[
                         enumVariantStart(enumeration) + position as u64];
-                    if (nodeHash(semantic, variant) == wanted) {
+                    if (semantic.hash(variant) == wanted) {
                         var resolvedObject = objectNode;
                         resolvedObject.typeKind = TypeKind.Enum.value;
                         resolvedObject.typeName = semantic.enums.data[enumIndex].name;
@@ -808,7 +804,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val object = expressionType(semantic, objectRoot);
         if (object.kind == TypeKind.Enum) {
-            if (nodeHash(semantic, node) == 210731095874) {
+            if (semantic.hash(node) == 210731095874) {
                 var resolved = node;
                 resolved.typeKind = object.pointee;
                 semantic.nodes.data[root] = resolved;
@@ -818,7 +814,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             return invalidType();
         }
         if (object.kind == TypeKind.String) {
-            if (nodeHash(semantic, node) == 210708248140) {
+            if (semantic.hash(node) == 210708248140) {
                 return TypeValue(TypeKind.Slice, 0, TypeKind.U8.value);
             }
             semantic.fail(8, node);
@@ -836,13 +832,13 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val structureRoot = semantic.structs.data[structureIndex].node;
         val structure = semantic.nodes.data[structureRoot];
-        val wanted = nodeHash(semantic, node);
+        val wanted = semantic.hash(node);
         var cursor = rootBeforeStructMethods(semantic.nodes, structureRoot);
         val remaining = structFieldCount(structure);
         for (fieldIndex in 0..<remaining) {
             val field = semantic.nodes.data[cursor];
             val fieldName = semantic.nodes.data[field.subtreeStart];
-            if (nodeHash(semantic, fieldName) == wanted) {
+            if (semantic.hash(fieldName) == wanted) {
                 val savedStruct = semantic.currentStruct;
                 semantic.currentStruct = structureRoot;
                 val fieldType = typeFromNode(semantic, cursor - 1);
@@ -890,7 +886,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 semantic.fail(4, node);
             val target = semantic.nodes.data[root - 1];
             if (target.kind == AstKind.Identifier) {
-                val local = localFind(semantic.locals, nodeHash(semantic, target));
+                val local = localFind(semantic.locals, semantic.hash(target));
                 if (local == semantic.locals.length) semantic.fail(2, target);
                 else {
                     if (!semantic.locals.data[local].mutable)

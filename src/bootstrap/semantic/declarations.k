@@ -42,7 +42,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
         semantic.locals.add(
             LocalInfo(
-                nodeHash(semantic, nameNode),
+                semantic.hash(nameNode),
                 typeFromNode(semantic, parameterRoot - 1),
                 parameterMode(parameter) != ParameterMode.ImmutableBorrow,
                 nameNode.start, false, false
@@ -126,7 +126,7 @@ fn methodOwnerStructRoot(
         val receiverType = semantic.nodes.data[
             functionParameterRoot(semantic, functionRoot, 1) - 1];
         val structure = declarationFind(
-            semantic.structs, nodeHash(semantic, receiverType));
+            semantic.structs, semantic.hash(receiverType));
         if (structure == semantic.structs.length) return semantic.nodes.length;
         return semantic.structs.data[structure].node;
     }
@@ -202,7 +202,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
         val mutable =
             parameterMode(parameter) != ParameterMode.ImmutableBorrow;
-        val parameterName = nodeHash(semantic, nameNode);
+        val parameterName = semantic.hash(nameNode);
         if (localFindFrom(semantic.locals, parameterName, 0) !=
                 semantic.locals.length) {
             semantic.fail(1, nameNode);
@@ -215,7 +215,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
             typeNeedsOwnership(semantic, parameterType);
         val functionName = semantic.nodes.data[function.subtreeStart];
         if (function.conversionKind == 1 && position == 0 &&
-            nodeHash(semantic, functionName) == 6385234055)
+            semantic.hash(functionName) == 6385234055)
             automaticDrop = false;
         if (automaticDrop) {
             var parameterNode = semantic.nodes.data[parameterRoot];
@@ -239,7 +239,7 @@ fn isConstantExpression(val semantic: Semantic, root: u64): bool {
     val node = semantic.nodes.data[root];
     if (node.kind == AstKind.Literal) return true;
     if (node.kind == AstKind.Identifier) {
-        return declarationFind(semantic.constants, nodeHash(semantic, node)) !=
+        return declarationFind(semantic.constants, semantic.hash(node)) !=
             semantic.constants.length;
     }
     if (node.kind == AstKind.Unary)
@@ -272,7 +272,7 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
         val declaration = semantic.nodes.data[root];
         if (declaration.kind == AstKind.EnumDeclaration) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
-            val name = nodeHash(semantic, nameNode);
+            val name = semantic.hash(nameNode);
             if (declarationFind(semantic.enums, name) != semantic.enums.length) {
                 semantic.fail(1, nameNode);
             } else {
@@ -311,7 +311,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
         val declaration = semantic.nodes.data[root];
         if (declaration.kind == AstKind.StructDeclaration) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
-            val name = nodeHash(semantic, nameNode);
+            val name = semantic.hash(nameNode);
             if (declarationFind(semantic.structs, name) !=
                     semantic.structs.length ||
                 declarationFind(semantic.enums, name) != semantic.enums.length) {
@@ -324,7 +324,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             for (methodIndex in 0..<methods) {
                 val method = semantic.nodes.data[methodRoot];
                 val methodNameNode = semantic.nodes.data[method.subtreeStart];
-                val methodName = methodHash(name, nodeHash(semantic, methodNameNode));
+                val methodName = methodHash(name, semantic.hash(methodNameNode));
                 if (functionTypeParameterCount(method) != 0) {
                     semantic.fail(4, methodNameNode);
                 } else {
@@ -332,7 +332,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         val receiverRoot = functionParameterRoot(semantic, methodRoot, 1);
                         val receiver = semantic.nodes.data[receiverRoot];
                         val receiverName = semantic.nodes.data[receiver.subtreeStart];
-                        if (nodeHash(semantic, receiverName) != 6385687311) {
+                        if (semantic.hash(receiverName) != 6385687311) {
                             semantic.fail(4, receiverName);
                         } else {
                             semantic.functions.add(DeclarationInfo(methodName, methodRoot));
@@ -358,7 +358,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
         } else {
             if (declaration.kind == AstKind.ConstantDeclaration) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
-                val name = nodeHash(semantic, nameNode);
+                val name = semantic.hash(nameNode);
                 val initializerRoot = root - 1;
                 var actual = expressionType(semantic, initializerRoot);
                 if (declaration.aux == 0) {
@@ -441,14 +441,14 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                             enumVariantStart(declaration) + left as u64];
                         val rightNode = semantic.nodes.data[
                             enumVariantStart(declaration) + right as u64];
-                        if (nodeHash(semantic, leftNode) == nodeHash(semantic, rightNode)) {
+                        if (semantic.hash(leftNode) == semantic.hash(rightNode)) {
                             semantic.fail(1, rightNode);
                         }
                     }
                 }
             } else if (declaration.kind == AstKind.FunctionOrDefer) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
-                val name = nodeHash(semantic, nameNode);
+                val name = semantic.hash(nameNode);
                 if (declarationFind(semantic.functions, name) !=
                         semantic.functions.length) {
                     semantic.fail(1, nameNode);

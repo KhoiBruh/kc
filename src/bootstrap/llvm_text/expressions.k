@@ -1167,8 +1167,7 @@ fn emitExpression(
         }
         val callee = nodes.data[cursor];
         val isMember = callee.kind == AstKind.Member;
-        val calleeHash =
-            sourceHash(source, callee.start, callee.end);
+        val calleeHash = source.hash(callee.start, callee.end);
         var functionRoot = functionRootByName(source, nodes, calleeHash);
         if (isMember) functionRoot = node.storage;
         var isInstanceMethod = false;

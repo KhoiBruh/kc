@@ -145,7 +145,7 @@ fn emitterStructTypeParameterPosition(
             source, nodes, structureRoot, position + 1);
         val parameter = nodes.data[root];
         val nameNode = nodes.data[parameter.subtreeStart];
-        if (sourceHash(source, nameNode.start, nameNode.end) == name) {
+        if (source.hash(nameNode.start, nameNode.end) == name) {
             return position;
         }
     }
@@ -320,7 +320,7 @@ fn emitterTypeParameterPosition(
             emitterTypeParameterRoot(nodes, functionRoot, position + 1);
         val parameter = nodes.data[root];
         val nameNode = nodes.data[parameter.subtreeStart];
-        if (sourceHash(source, nameNode.start, nameNode.end) == name) {
+        if (source.hash(nameNode.start, nameNode.end) == name) {
             return position;
         }
     }
@@ -331,7 +331,7 @@ fn emitterTypeParameterPosition(
                 parameterRoot(nodes, functionRoot, 1) - 1];
             val ownerRoot = structRootByName(
                 source, nodes,
-                sourceHash(source, receiverType.start, receiverType.end));
+                source.hash(receiverType.start, receiverType.end));
             if (ownerRoot != nodes.length) {
                 return emitterStructTypeParameterPosition(
                     source, nodes, ownerRoot, name);
