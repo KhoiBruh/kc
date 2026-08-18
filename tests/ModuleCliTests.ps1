@@ -21,3 +21,11 @@ Pop-Location
 if ($enumCompileExit -ne 0) { Write-Error "imported enum fixture did not compile" }
 & $Output
 if ($LASTEXITCODE -ne 42) { Write-Error "imported enum fixture returned $LASTEXITCODE" }
+
+Push-Location $moduleRoot
+& $Compiler "flat_visibility/main.k" -o $Output
+$flatVisibilityCompileExit = $LASTEXITCODE
+Pop-Location
+if ($flatVisibilityCompileExit -ne 0) { Write-Error "flat visibility fixture did not compile" }
+& $Output
+if ($LASTEXITCODE -ne 42) { Write-Error "flat visibility fixture returned $LASTEXITCODE" }

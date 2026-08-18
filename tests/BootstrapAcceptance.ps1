@@ -329,7 +329,7 @@ foreach ($moduleStage in $moduleStages) {
         $missingRuntime, $BootstrapRuntime, $exe) 2 "linker diagnostic"
 }
 
-foreach ($moduleFixture in @("diamond", "wildcard", "cycle")) {
+foreach ($moduleFixture in @("diamond", "wildcard", "cycle", "flat_visibility")) {
     $moduleEntry = Join-Path $moduleRoot "$moduleFixture/main.k"
     $moduleResults = @()
     Push-Location $moduleRoot

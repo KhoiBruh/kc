@@ -20,6 +20,7 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include <unordered_set>
 
 namespace {
 
@@ -135,6 +136,66 @@ int main(int argc, char** argv) {
             }
             analyzer.importExports(*parsedModules[j].semantic);
         }
+        module.semantic = std::make_unique<k::SemanticResult>(analyzer.analyze());
+    }
+    std::vector<std::unordered_set<std::string>> ownFunctions(
+        parsedModules.size());
+    std::vector<std::unordered_set<std::string>> ownStructs(
+        parsedModules.size());
+    std::vector<std::unordered_set<std::string>> ownEnums(
+        parsedModules.size());
+    std::unordered_set<std::string> seenFunctions;
+    std::unordered_set<std::string> seenStructs;
+    std::unordered_set<std::string> seenEnums;
+    for (std::size_t idx = 0; idx < parsedModules.size(); ++idx) {
+        const auto& result = *parsedModules[idx].semantic;
+        for (const auto& [name, symbol] : result.functions) {
+            if (!seenFunctions.contains(name)) ownFunctions[idx].insert(name);
+            seenFunctions.insert(name);
+        }
+        for (const auto& [name, symbol] : result.structs) {
+            if (!seenStructs.contains(name)) ownStructs[idx].insert(name);
+            seenStructs.insert(name);
+        }
+        for (const auto& [name, symbol] : result.enums) {
+            if (!seenEnums.contains(name)) ownEnums[idx].insert(name);
+            seenEnums.insert(name);
+        }
+    }
+    k::SemanticResult universe;
+    for (std::size_t idx = 0; idx < parsedModules.size(); ++idx) {
+        const auto& result = *parsedModules[idx].semantic;
+        for (const auto& name : ownFunctions[idx]) {
+            universe.functions.insert_or_assign(name,
+                                                result.functions.at(name));
+        }
+        for (const auto& name : ownStructs[idx]) {
+            universe.structs.insert_or_assign(name, result.structs.at(name));
+        }
+        for (const auto& name : ownEnums[idx]) {
+            universe.enums.insert_or_assign(name, result.enums.at(name));
+        }
+    }
+    for (std::size_t idx = 0; idx < parsedModules.size(); ++idx) {
+        auto& module = parsedModules[idx];
+        k::SemanticAnalyzer analyzer{*module.source, *module.program};
+        k::SemanticResult extras;
+        for (const auto& [name, symbol] : universe.functions) {
+            if (!ownFunctions[idx].contains(name)) {
+                extras.functions.insert_or_assign(name, symbol);
+            }
+        }
+        for (const auto& [name, symbol] : universe.structs) {
+            if (!ownStructs[idx].contains(name)) {
+                extras.structs.insert_or_assign(name, symbol);
+            }
+        }
+        for (const auto& [name, symbol] : universe.enums) {
+            if (!ownEnums[idx].contains(name)) {
+                extras.enums.insert_or_assign(name, symbol);
+            }
+        }
+        analyzer.importExports(extras);
         module.semantic = std::make_unique<k::SemanticResult>(analyzer.analyze());
     }
     if (outputMode == OutputMode::Ast) {
