@@ -80,6 +80,12 @@ source.k
   generic specializations, tracked by `src/codegen/Reachability.*`). Semantic
   analysis stays whole-program; without a `main` entry all declarations are
   emitted. `mod.k` is not a compilation registry.
+- Wildcard imports (`import foo.*`) are a permanent name-resolution feature:
+  they bring module names into scope but never make the imported module
+  reachable. Only declarations actually referenced from the entry point are
+  compiled; unused wildcard imports are legal. Import resolution
+  (`ModuleSystem`, bootstrap `loader.k`) and compilation reachability
+  (`src/codegen/Reachability.*`) are separate concerns.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order
