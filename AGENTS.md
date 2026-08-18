@@ -79,7 +79,7 @@ source.k
   non-extern `main` are emitted (functions, structs, enums, constants, and
   generic specializations, tracked by `src/codegen/Reachability.*`). Semantic
   analysis stays whole-program; without a `main` entry all declarations are
-  emitted. `mod.k` and `manifest.txt` are not compilation registries.
+  emitted. `mod.k` is not a compilation registry.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order
@@ -234,8 +234,7 @@ Static move-ownership self-hosting is complete for the current contract.
   runtime paths before source loading or process launch.
 - Bootstrap acceptance requires stable CLI failure messages exactly once across
   `kc1` through `kc4`, plus exact semantic diagnostic parity.
-- Bootstrap stages compile `src/bootstrap/main.k` as a real module graph;
-  `manifest.txt` only verifies that every compiler source remains reachable.
+- Bootstrap stages compile `src/bootstrap/main.k` as a real module graph.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,

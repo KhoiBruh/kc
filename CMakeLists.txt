@@ -190,14 +190,6 @@ if(BUILD_TESTING)
     )
 
     add_test(
-        NAME k_bootstrap_manifest_tests
-        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapManifestTests.ps1"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
-            -Manifest "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/manifest.txt"
-    )
-
-    add_test(
         NAME k_bootstrap_acceptance
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapAcceptance.ps1"

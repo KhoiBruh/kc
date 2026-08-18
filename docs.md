@@ -897,9 +897,7 @@ IR hợp lệ và fixed-point `kc3.ll == kc4.ll`.
 `Enum.Variant`, backing value, `.value`, truyền/trả enum, và exhaustive enum `when` có
 diagnostic span/category parity đều được compiler K tự biên dịch qua `kc1`–`kc4`.
 
-The bootstrap subset lives in `src/bootstrap/`; `manifest.txt` is an inventory
-and the bootstrap-manifest test requires every listed K source to be reachable
-from `main.k` through imports. It currently supports the
+The bootstrap subset lives in `src/bootstrap/`; it supports the
 dependency-first module loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,
 textual LLVM IR, LLVM verification, and Windows x64 linking.
 
