@@ -191,7 +191,8 @@ void visitConstant(const ConstantDecl* constant,
                     visitStatement(*child, source, semantic, worklist);
         } else if (const auto* whenStatement =
                        std::get_if<WhenStmt>(&statement.node)) {
-            visitExpr(*whenStatement->subject, source, semantic, worklist);
+            if (whenStatement->subject)
+                visitExpr(*whenStatement->subject, source, semantic, worklist);
             for (const auto& branch : whenStatement->branches) {
                 for (const auto& condition : branch.conditions)
                     visitExpr(*condition, source, semantic, worklist);
@@ -292,7 +293,7 @@ void visitConstant(const ConstantDecl* constant,
                 visitExpr(*element, source, semantic, worklist);
         } else if (const auto* when =
                        std::get_if<WhenExpr>(&expression.node)) {
-            visitExpr(*when->subject, source, semantic, worklist);
+            if (when->subject) visitExpr(*when->subject, source, semantic, worklist);
             for (const auto& branch : when->branches) {
                 for (const auto& condition : branch.conditions)
                     visitExpr(*condition, source, semantic, worklist);

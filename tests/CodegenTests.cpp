@@ -685,6 +685,27 @@ TEST(codegen_lowers_when_with_first_match_control_flow) {
     EXPECT_TRUE(ir.find("icmp eq i32") != std::string::npos);
 }
 
+TEST(codegen_walks_subjectless_when_statement_in_reachable_function) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn unused(): i32 { return 1; }"
+        "fn main(): i32 {"
+        "val code = 7;"
+        "when {"
+        "code == 1 -> return 10;"
+        "code == 7 -> return 20;"
+        "else -> return 12;"
+        "}"
+        "return 0;"
+        "}",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("when.branch") != std::string::npos);
+    EXPECT_TRUE(ir.find("when.next") != std::string::npos);
+    EXPECT_TRUE(ir.find("@main") != std::string::npos);
+    EXPECT_TRUE(ir.find("@unused") == std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
