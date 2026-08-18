@@ -102,7 +102,7 @@ fn enumWhenExhaustive(
                             var diagnostic = condition;
                             diagnostic.start = semantic.nodes.data[
                                 condition.subtreeStart].start;
-                            semanticFail(semantic, 1, diagnostic);
+                            semantic.fail(1, diagnostic);
                             return false;
                         }
                       }

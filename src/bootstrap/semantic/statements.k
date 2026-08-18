@@ -77,8 +77,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val conditionRoot =
             semantic.nodes.data[thenRoot].subtreeStart - 1;
         if (expressionType(semantic, conditionRoot).kind != TypeKind.Bool) {
-            semanticFail(
-                semantic, 6, semantic.nodes.data[conditionRoot]);
+            semantic.fail(
+                6, semantic.nodes.data[conditionRoot]);
         }
         val count = semantic.locals.length;
         val before = captureOwnership(semantic, count);
@@ -110,8 +110,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val conditionRoot =
             semantic.nodes.data[bodyRoot].subtreeStart - 1;
         if (expressionType(semantic, conditionRoot).kind != TypeKind.Bool) {
-            semanticFail(
-                semantic, 6, semantic.nodes.data[conditionRoot]);
+            semantic.fail(
+                6, semantic.nodes.data[conditionRoot]);
         }
         return;
     }
@@ -130,8 +130,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         if (range) {
             if (node.aux == 1) {
-                semanticFail(
-                    semantic, 4,
+                semantic.fail(
+                    4,
                     semantic.nodes.data[node.subtreeStart + 1]);
                 return;
             }
@@ -139,7 +139,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             var collection = valueType.kind == TypeKind.Slice;
             if (valueType.kind == TypeKind.Array) collection = true;
             if (!collection) {
-                semanticFail(semantic, 4, collectionNode);
+                semantic.fail(4, collectionNode);
                 return;
             }
             if (valueType.kind == TypeKind.Slice) {
@@ -165,7 +165,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         if (range) {
             if (!valueType.isInteger()) {
-                semanticFail(semantic, 4, collectionNode);
+                semantic.fail(4, collectionNode);
                 return;
             }
         }
@@ -193,7 +193,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val branchCount = node.aux % 65536;
         val hasSubject = node.aux / 65536;
         if (branchCount == 0) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
             return;
         }
         val roots =
@@ -217,7 +217,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             if (subject.isInteger()) comparable = true;
             if (subject.kind == TypeKind.Enum) comparable = true;
             if (!comparable) {
-                semanticFail(semantic, 6, semantic.nodes.data[subjectRoot]);
+                semantic.fail(6, semantic.nodes.data[subjectRoot]);
             }
         }
         var hasElse = false;
@@ -245,8 +245,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                             semantic.genericArguments
                         )
                     ) {
-                        semanticFail(
-                            semantic, 4,
+                        semantic.fail(
+                            4,
                             semantic.nodes.data[conditionRoot]);
                     } else {
                         var conditionNode = semantic.nodes.data[conditionRoot];
@@ -257,8 +257,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                     }
                 } else {
                     if (condition.kind != TypeKind.Bool) {
-                        semanticFail(
-                            semantic, 6,
+                        semantic.fail(
+                            6,
                             semantic.nodes.data[conditionRoot]);
                     }
                 }
@@ -274,7 +274,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val exhaustive = enumWhenExhaustive(
             semantic, subject, roots, branchCount, false);
         if (subject.kind == TypeKind.Enum && !hasElse && !exhaustive) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
         }
         k_boot_free(roots as unit*);
         return;
@@ -288,13 +288,13 @@ fn checkStatement(var semantic: Semantic, root: u64) {
     }
     if (node.kind == AstKind.BreakStatement) {
         if (semantic.loopDepth == 0) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
         }
         return;
     }
     if (node.kind == AstKind.ContinueStatement) {
         if (semantic.loopDepth == 0) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
         }
         return;
     }
@@ -305,7 +305,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         val name = nodeHash(semantic, nameNode);
         if (localFindFrom(semantic.locals, name, semantic.scopeStart) !=
                 semantic.locals.length) {
-            semanticFail(semantic, 1, nameNode);
+            semantic.fail(1, nameNode);
             return;
         }
         var valueType = initializer;
@@ -325,8 +325,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             initializer = contextualizeLiteralByteSlice(
                 semantic, initializerRoot, valueType, initializer);
             if (!typeAccepts(valueType, initializer, semantic.genericArguments)) {
-                semanticFail(
-                    semantic, 4, semantic.nodes.data[initializerRoot]);
+                semantic.fail(
+                    4, semantic.nodes.data[initializerRoot]);
             }
             resolveWhenResultType(semantic, initializerRoot, valueType);
             resolveIfResultType(semantic, initializerRoot, valueType);
@@ -366,7 +366,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 statementLike = true;
             if (statementLike) {
                 if (semantic.returnType.kind != TypeKind.Unit)
-                    semanticFail(semantic, 5, semantic.nodes.data[root - 1]);
+                    semantic.fail(5, semantic.nodes.data[root - 1]);
                 else {
                     var expressionStatement = node;
                     expressionStatement.kind = AstKind.ExpressionStatement;
@@ -377,10 +377,10 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         if (!typeAccepts(semantic.returnType, actual, semantic.genericArguments)) {
             if (node.aux == 1) {
-                semanticFail(
-                    semantic, 5, semantic.nodes.data[root - 1]);
+                semantic.fail(
+                    5, semantic.nodes.data[root - 1]);
             } else {
-                semanticFail(semantic, 5, node);
+                semantic.fail(5, node);
             }
         } else {
             if (node.aux == 1) {

@@ -462,7 +462,7 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
         if (node.aux == 1) {
             val constant = integerConstant(semantic, childRoot);
             if (!constant.ok) {
-                semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
+                semantic.fail(4, semantic.nodes.data[childRoot]);
                 return invalidType();
             }
             size = constant.magnitude;

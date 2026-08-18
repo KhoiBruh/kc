@@ -26,7 +26,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
     if ((function.storage / 8) % 2 == 1)
         return TypeValue(typeKindFromValue(function.typeKind), function.typeName, function.typePointee);
     if ((function.storage / 4) % 2 == 1) {
-        semanticFail(semantic, 4, function);
+        semantic.fail(4, function);
         return invalidType();
     }
     function.storage = function.storage + 4;
@@ -205,7 +205,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         val parameterName = nodeHash(semantic, nameNode);
         if (localFindFrom(semantic.locals, parameterName, 0) !=
                 semantic.locals.length) {
-            semanticFail(semantic, 1, nameNode);
+            semantic.fail(1, nameNode);
             return;
         }
         val parameterType = typeFromNode(semantic, parameterRoot - 1);
@@ -274,7 +274,7 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = nodeHash(semantic, nameNode);
             if (declarationFind(semantic.enums, name) != semantic.enums.length) {
-                semanticFail(semantic, 1, nameNode);
+                semantic.fail(1, nameNode);
             } else {
                 semantic.enums.add(DeclarationInfo(name, root));
                 var backing = TypeValue(TypeKind.U32, 0, 0);
@@ -282,8 +282,8 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
                     backing = typeFromNode(
                         semantic, enumVariantStart(declaration) - 1);
                     if (!backing.isInteger()) {
-                        semanticFail(
-                            semantic, 4,
+                        semantic.fail(
+                            4,
                             semantic.nodes.data[enumVariantStart(declaration) - 1]);
                         backing = TypeValue(TypeKind.U32, 0, 0);
                     }
@@ -315,7 +315,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             if (declarationFind(semantic.structs, name) !=
                     semantic.structs.length ||
                 declarationFind(semantic.enums, name) != semantic.enums.length) {
-                semanticFail(semantic, 1, nameNode);
+                semantic.fail(1, nameNode);
             } else {
                 semantic.structs.add(DeclarationInfo(name, root));
             }
@@ -326,21 +326,21 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 val methodNameNode = semantic.nodes.data[method.subtreeStart];
                 val methodName = methodHash(name, nodeHash(semantic, methodNameNode));
                 if (functionTypeParameterCount(method) != 0) {
-                    semanticFail(semantic, 4, methodNameNode);
+                    semantic.fail(4, methodNameNode);
                 } else {
                     if (method.conversionKind == 1) {
                         val receiverRoot = functionParameterRoot(semantic, methodRoot, 1);
                         val receiver = semantic.nodes.data[receiverRoot];
                         val receiverName = semantic.nodes.data[receiver.subtreeStart];
                         if (nodeHash(semantic, receiverName) != 6385687311) {
-                            semanticFail(semantic, 4, receiverName);
+                            semantic.fail(4, receiverName);
                         } else {
                             semantic.functions.add(DeclarationInfo(methodName, methodRoot));
                         }
                     } else if (method.conversionKind == 2) {
                         semantic.functions.add(DeclarationInfo(methodName, methodRoot));
                     } else {
-                        semanticFail(semantic, 4, methodNameNode);
+                        semantic.fail(4, methodNameNode);
                     }
                 }
                 methodRoot = method.subtreeStart - 1;
@@ -364,11 +364,11 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 if (declaration.aux == 0) {
                     if (actual.kind == TypeKind.Array) {
                         if (actual.arrayElement().kind == TypeKind.Invalid)
-                            semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
+                            semantic.fail(4, semantic.nodes.data[initializerRoot]);
                     }
                 }
                 if (!isConstantExpression(semantic, initializerRoot))
-                    semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
+                    semantic.fail(4, semantic.nodes.data[initializerRoot]);
                 if (declaration.aux == 1) {
                     val expected = typeFromNode(
                         semantic, semantic.nodes.data[initializerRoot].subtreeStart - 1);
@@ -386,7 +386,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                             semantic.genericArguments);
                     }
                     if (!accepted)
-                        semanticFail(semantic, 4, semantic.nodes.data[initializerRoot]);
+                        semantic.fail(4, semantic.nodes.data[initializerRoot]);
                     if (expected.kind == TypeKind.Array &&
                         typeNode.kind == AstKind.ArrayType &&
                         typeNode.aux == 0 && actual.kind == TypeKind.Array) {
@@ -413,14 +413,14 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                     if (leftNode.conversionKind == 1)
                         constant = enumExplicitConstant(semantic, leftNode);
                     if (!constant.ok || !integerConstantFits(constant, backing))
-                        semanticFail(semantic, 4, leftNode);
+                        semantic.fail(4, leftNode);
                     var value = constant.magnitude;
                     if (constant.negative) value = 0 - value;
                     for (prior in 0..<left) {
                         val priorNode = semantic.nodes.data[
                             enumVariantStart(declaration) + prior as u64];
                         if (priorNode.storage == value)
-                            semanticFail(semantic, 1, leftNode);
+                            semantic.fail(1, leftNode);
                     }
                     leftNode.storage = value;
                     leftNode.conversionKind = left;
@@ -442,7 +442,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         val rightNode = semantic.nodes.data[
                             enumVariantStart(declaration) + right as u64];
                         if (nodeHash(semantic, leftNode) == nodeHash(semantic, rightNode)) {
-                            semanticFail(semantic, 1, rightNode);
+                            semantic.fail(1, rightNode);
                         }
                     }
                 }
@@ -451,7 +451,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 val name = nodeHash(semantic, nameNode);
                 if (declarationFind(semantic.functions, name) !=
                         semantic.functions.length) {
-                    semanticFail(semantic, 1, nameNode);
+                    semantic.fail(1, nameNode);
                 } else {
                     semantic.functions.add(DeclarationInfo(name, root));
                 }

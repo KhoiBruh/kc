@@ -53,7 +53,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val local = localFind(semantic.locals, name);
         if (local != semantic.locals.length) {
             if (semantic.locals.data[local].moved) {
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
                 return semantic.locals.data[local].valueType;
             }
             var resolved = semantic.nodes.data[root];
@@ -77,7 +77,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val declaration = semantic.nodes.data[declarationRoot];
             return TypeValue(typeKindFromValue(declaration.typeKind), declaration.typeName, declaration.typePointee);
         }
-        semanticFail(semantic, 2, node);
+        semantic.fail(2, node);
         return invalidType();
     }
     if (node.kind == AstKind.Literal) {
@@ -94,7 +94,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val operand = expressionType(semantic, root - 1);
         if (node.aux == TokenKind.Star.value) {
             if (operand.kind != TypeKind.Pointer) {
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
                 return invalidType();
             }
             if (operand.pointee == TypeKind.Pointer.value) {
@@ -110,7 +110,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         if (node.aux == TokenKind.Bang.value) {
             if (operand.kind != TypeKind.Bool) {
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
                 return invalidType();
             }
             return TypeValue(TypeKind.Bool, 0, 0);
@@ -130,7 +130,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     range.aux == TokenKind.RangeExclusiveBoth.value;
             }
             if (!validRange) {
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
                 return boolType();
             }
             val upperRoot = rightRoot - 1;
@@ -151,10 +151,10 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 semantic.nodes.data[upperRoot] = upperNode;
             }
             if (!subject.isInteger() && !subject.isFloat())
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
             if (!typeAccepts(subject, lower, semantic.genericArguments) ||
                 !typeAccepts(subject, upper, semantic.genericArguments))
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
             var typedRange = range;
             typedRange.typeKind = subject.kind.value;
             typedRange.typeName = subject.name;
@@ -167,9 +167,9 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         var logical = node.aux == TokenKind.AndAnd.value;
         if (node.aux == TokenKind.OrOr.value) logical = true;
         if (logical) {
-            if (left.kind != TypeKind.Bool) semanticFail(semantic, 4, node);
+            if (left.kind != TypeKind.Bool) semantic.fail(4, node);
             else {
-                if (right.kind != TypeKind.Bool) semanticFail(semantic, 4, node);
+                if (right.kind != TypeKind.Bool) semantic.fail(4, node);
             }
             return boolType();
         }
@@ -182,14 +182,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (comparison) {
             if (!typeAccepts(left, right, semantic.genericArguments)) {
                 if (!typeAccepts(right, left, semantic.genericArguments)) {
-                    semanticFail(semantic, 4, node);
+                    semantic.fail(4, node);
                 }
             }
             return boolType();
         }
         if (typeAccepts(left, right, semantic.genericArguments)) return left;
         if (typeAccepts(right, left, semantic.genericArguments)) return right;
-        semanticFail(semantic, 4, node);
+        semantic.fail(4, node);
         return invalidType();
     }
     if (node.kind == AstKind.Assignment) {
@@ -200,11 +200,11 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         if (target.kind == AstKind.Identifier) {
             targetLocal = localFind(semantic.locals, nodeHash(semantic, target));
             if (targetLocal == semantic.locals.length) {
-                semanticFail(semantic, 2, target);
+                semantic.fail(2, target);
                 return invalidType();
             }
             if (!semantic.locals.data[targetLocal].mutable) {
-                semanticFail(semantic, 7, target);
+                semantic.fail(7, target);
                 return invalidType();
             }
         }
@@ -221,7 +221,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             semantic.nodes.data[leftRoot] = resolvedTarget;
             if (node.aux != TokenKind.Equal.value &&
                 semantic.locals.data[targetLocal].moved) {
-                semanticFail(semantic, 4, target);
+                semantic.fail(4, target);
                 return left;
             }
         } else {
@@ -231,7 +231,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         right = contextualizeLiteralByteSlice(
             semantic, rightRoot, left, right);
         if (!typeAccepts(left, right, semantic.genericArguments)) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
         } else if (node.aux == TokenKind.Equal.value) {
             markExpressionMoved(semantic, rightRoot);
             if (targetLocal != semantic.locals.length) {
@@ -265,7 +265,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val constant = integerConstant(semantic, valueRoot);
             if (constant.ok) {
                 if (!integerConstantFits(constant, target)) {
-                    semanticFail(semantic, 4, node);
+                    semantic.fail(4, node);
                 }
             }
             var castNode = semantic.nodes.data[root];
@@ -291,7 +291,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val constant = floatConstant(semantic, valueRoot);
                 if (constant.ok) {
                     if (!integerConstantFits(constant, target)) {
-                        semanticFail(semantic, 4, node);
+                        semantic.fail(4, node);
                     }
                 }
             }
@@ -303,7 +303,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
                 semantic.nodes.data[root] = castNode;
             } else {
-                if (!pointerCast) semanticFail(semantic, 4, node);
+                if (!pointerCast) semantic.fail(4, node);
             }
         }
         return target;
@@ -386,7 +386,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         if (functionName == 0) {
-            semanticFail(semantic, 2, callee);
+            semantic.fail(2, callee);
             k_boot_free(explicitTypeRoots as unit*);
             k_boot_free(argumentRoots as unit*);
             return invalidType();
@@ -397,7 +397,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 functionName == 210727929557 &&
                 localFind(semantic.locals, functionName) == semantic.locals.length) {
                 if (argumentCount != 2) {
-                    semanticFail(semantic, 3, callee);
+                    semantic.fail(3, callee);
                     k_boot_free(explicitTypeRoots as unit*);
                     k_boot_free(argumentRoots as unit*);
                     return invalidType();
@@ -405,7 +405,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val pointer = expressionType(semantic, argumentRoots[0]);
                 val length = expressionType(semantic, argumentRoots[1]);
                 if (pointer.kind != TypeKind.Pointer || pointer.pointee == TypeKind.Unit.value) {
-                    semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[0]]);
+                    semantic.fail(4, semantic.nodes.data[argumentRoots[0]]);
                     k_boot_free(explicitTypeRoots as unit*);
                     k_boot_free(argumentRoots as unit*);
                     return invalidType();
@@ -413,7 +413,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 if (!typeAccepts(
                         TypeValue(TypeKind.U64, 0, 0), length,
                         semantic.genericArguments)) {
-                    semanticFail(semantic, 4, semantic.nodes.data[argumentRoots[1]]);
+                    semantic.fail(4, semantic.nodes.data[argumentRoots[1]]);
                     k_boot_free(explicitTypeRoots as unit*);
                     k_boot_free(argumentRoots as unit*);
                     return invalidType();
@@ -424,7 +424,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             if (nodeIsPrint(semantic, callee)) {
                 if (argumentCount != 1) {
-                    semanticFail(semantic, 3, callee);
+                    semantic.fail(3, callee);
                     k_boot_free(explicitTypeRoots as unit*);
                     k_boot_free(argumentRoots as unit*);
                     return invalidType();
@@ -436,7 +436,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             val structureIndex = declarationFind(semantic.structs, nodeHash(semantic, callee));
             if (structureIndex == semantic.structs.length) {
-                semanticFail(semantic, 2, callee);
+                semantic.fail(2, callee);
                 k_boot_free(explicitTypeRoots as unit*);
                 k_boot_free(argumentRoots as unit*);
                 return invalidType();
@@ -447,14 +447,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             val fieldCount = structFieldCount(structure);
             val typeCount = structTypeParameterCount(structure);
             if (fieldCount != argumentCount) {
-                semanticFail(semantic, 3, callee);
+                semantic.fail(3, callee);
                 k_boot_free(explicitTypeRoots as unit*);
                 k_boot_free(argumentRoots as unit*);
                 return invalidType();
             }
             if (explicitTypeCount > 0) {
                 if (explicitTypeCount != typeCount) {
-                    semanticFail(semantic, 3, callee);
+                    semantic.fail(3, callee);
                     k_boot_free(explicitTypeRoots as unit*);
                     k_boot_free(argumentRoots as unit*);
                     return invalidType();
@@ -497,8 +497,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                                     inferredActual, semantic.genericArguments
                                 )
                             ) {
-                                semanticFail(
-                                    semantic, 4,
+                                semantic.fail(
+                                    4,
                                     semantic.nodes.data[
                                         argumentRoots[argument as u64]]);
                             }
@@ -518,8 +518,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 actual = contextualizeLiteralByteSlice(
                     semantic, argumentRoots[argument as u64], expected, actual);
                 if (!typeAccepts(expected, actual, semantic.genericArguments)) {
-                    semanticFail(
-                        semantic, 4,
+                    semantic.fail(
+                        4,
                         semantic.nodes.data[
                             argumentRoots[argument as u64]]);
                 }
@@ -543,7 +543,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                         constraint,
                         typeArguments[explicit as u64]
                     )
-                ) semanticFail(semantic, 4, callee);
+                ) semantic.fail(4, callee);
 
             }
             var start: u32 = 0;
@@ -577,16 +577,16 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     val receiverLocal =
                         localFind(semantic.locals, nodeHash(semantic, receiverNode));
                     if (receiverLocal == semantic.locals.length) {
-                        semanticFail(semantic, 7, receiverNode);
+                        semantic.fail(7, receiverNode);
                     } else {
                         if (!semantic.locals.data[receiverLocal].mutable)
-                            semanticFail(semantic, 7, receiverNode);
+                            semantic.fail(7, receiverNode);
                     }
                 }
             }
         }
         if (functionParameterCount(function) != argumentCount) {
-            semanticFail(semantic, 3, callee);
+            semantic.fail(3, callee);
             k_boot_free(explicitTypeRoots as unit*);
             k_boot_free(argumentRoots as unit*);
             return invalidType();
@@ -597,14 +597,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             else functionTypeParameterCount(function);
         if (associated) {
             if (explicitTypeCount != typeCount) {
-                semanticFail(semantic, 3, callee);
+                semantic.fail(3, callee);
                 k_boot_free(explicitTypeRoots as unit*);
                 k_boot_free(argumentRoots as unit*);
                 return invalidType();
             }
         } else if (explicitTypeCount > 0) {
             if (explicitTypeCount != typeCount) {
-                semanticFail(semantic, 3, callee);
+                semantic.fail(3, callee);
                 k_boot_free(explicitTypeRoots as unit*);
                 k_boot_free(argumentRoots as unit*);
                 return invalidType();
@@ -629,7 +629,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val start = receiver.pointee % 65536;
                 val count = receiver.pointee / 65536;
                 if (receiver.kind != TypeKind.Struct || count != typeCount) {
-                    semanticFail(semantic, 4, callee);
+                    semantic.fail(4, callee);
                 } else {
                     for (position in 0..<typeCount) {
                         typeArguments[position as u64] = semantic.genericArguments.data[
@@ -681,8 +681,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                                 inferredActual, semantic.genericArguments
                             )
                         ) {
-                            semanticFail(
-                                semantic, 4,
+                            semantic.fail(
+                                4,
                                 semantic.nodes.data[
                                     argumentRoots[argument as u64]]);
                         }
@@ -703,8 +703,8 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             actual = contextualizeLiteralByteSlice(
                 semantic, argumentRoots[argument as u64], expected, actual);
             if (!typeAccepts(expected, actual, semantic.genericArguments)) {
-                semanticFail(
-                    semantic, 4,
+                semantic.fail(
+                    4,
                     semantic.nodes.data[
                         argumentRoots[argument as u64]]);
             }
@@ -735,7 +735,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     constraint,
                     typeArguments[explicit as u64]
                 )
-            ) semanticFail(semantic, 4, callee);
+            ) semantic.fail(4, callee);
 
         }
         val savedFunction = semantic.currentFunction;
@@ -802,7 +802,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                             enumeration.typePointee);
                     }
                 }
-                semanticFail(semantic, 2, node);
+                semantic.fail(2, node);
                 return invalidType();
             }
         }
@@ -814,24 +814,24 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 semantic.nodes.data[root] = resolved;
                 return TypeValue(typeKindFromValue(object.pointee), 0, 0);
             }
-            semanticFail(semantic, 8, node);
+            semantic.fail(8, node);
             return invalidType();
         }
         if (object.kind == TypeKind.String) {
             if (nodeHash(semantic, node) == 210708248140) {
                 return TypeValue(TypeKind.Slice, 0, TypeKind.U8.value);
             }
-            semanticFail(semantic, 8, node);
+            semantic.fail(8, node);
             return invalidType();
         }
         if (object.kind != TypeKind.Struct) {
-            semanticFail(semantic, 8, node);
+            semantic.fail(8, node);
             return invalidType();
         }
         val structureIndex =
             declarationFind(semantic.structs, object.name);
         if (structureIndex == semantic.structs.length) {
-            semanticFail(semantic, 8, node);
+            semantic.fail(8, node);
             return invalidType();
         }
         val structureRoot = semantic.structs.data[structureIndex].node;
@@ -858,7 +858,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             cursor = field.subtreeStart - 1;
         }
-        semanticFail(semantic, 8, node);
+        semantic.fail(8, node);
         return invalidType();
     }
     if (node.kind == AstKind.Index) {
@@ -873,7 +873,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             return TypeValue(typeKindFromValue(object.pointee), object.name, 0);
         }
         if (object.kind != TypeKind.Pointer) {
-            semanticFail(semantic, 8, node);
+            semantic.fail(8, node);
             return invalidType();
         }
         if (object.pointee == TypeKind.Pointer.value) {
@@ -885,22 +885,22 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val operand = expressionType(semantic, root - 1);
         if (node.aux == TokenKind.PlusPlus.value ||
             node.aux == TokenKind.MinusMinus.value) {
-            if (semantic.mutationRoot != root) semanticFail(semantic, 4, node);
+            if (semantic.mutationRoot != root) semantic.fail(4, node);
             if (!operand.isFloat() && !operand.isInteger())
-                semanticFail(semantic, 4, node);
+                semantic.fail(4, node);
             val target = semantic.nodes.data[root - 1];
             if (target.kind == AstKind.Identifier) {
                 val local = localFind(semantic.locals, nodeHash(semantic, target));
-                if (local == semantic.locals.length) semanticFail(semantic, 2, target);
+                if (local == semantic.locals.length) semantic.fail(2, target);
                 else {
                     if (!semantic.locals.data[local].mutable)
-                        semanticFail(semantic, 7, target);
+                        semantic.fail(7, target);
                 }
             }
             return operand;
         }
         if (operand.kind != TypeKind.Nullable) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
             return invalidType();
         }
         return TypeValue(typeKindFromValue(operand.pointee), operand.name, 0);
@@ -926,7 +926,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         }
         val condition = expressionType(semantic, childRoot);
         if (condition.kind != TypeKind.Bool) {
-            semanticFail(semantic, 6, semantic.nodes.data[childRoot]);
+            semantic.fail(6, semantic.nodes.data[childRoot]);
         }
         val savedLocals = semantic.locals.length;
         val savedScopeStart = semantic.scopeStart;
@@ -955,7 +955,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         k_boot_free(thenRoots as unit*);
         k_boot_free(elseRoots as unit*);
         if (!typeAccepts(thenType, elseType, semantic.genericArguments)) {
-            semanticFail(semantic, 4, semantic.nodes.data[elseValueRoot]);
+            semantic.fail(4, semantic.nodes.data[elseValueRoot]);
         }
         var resolved = semantic.nodes.data[root];
         resolved.typeKind = thenType.kind.value;
@@ -1012,7 +1012,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
                     if (!typeAccepts(subject, condition, semantic.genericArguments)) {
-                        semanticFail(semantic, 4, semantic.nodes.data[conditionRoot]);
+                        semantic.fail(4, semantic.nodes.data[conditionRoot]);
                     } else {
                         var conditionNode = semantic.nodes.data[conditionRoot];
                         conditionNode.typeKind = subject.kind.value;
@@ -1022,7 +1022,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                     }
                 } else {
                     if (condition.kind != TypeKind.Bool) {
-                        semanticFail(semantic, 6, semantic.nodes.data[conditionRoot]);
+                        semantic.fail(6, semantic.nodes.data[conditionRoot]);
                     }
                 }
               }
@@ -1043,7 +1043,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 result = value;
             } else {
                 if (!typeAccepts(result, value, semantic.genericArguments)) {
-                    semanticFail(semantic, 4, semantic.nodes.data[valueRoot]);
+                    semantic.fail(4, semantic.nodes.data[valueRoot]);
                 } else {
                     var valueNode = semantic.nodes.data[valueRoot];
                     valueNode.typeKind = result.kind.value;
@@ -1059,7 +1059,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         val exhaustive = enumWhenExhaustive(
             semantic, subject, roots, branchCount, true);
         if (!hasElse && !exhaustive) {
-            semanticFail(semantic, 4, node);
+            semantic.fail(4, node);
         }
         var resolved = semantic.nodes.data[root];
         resolved.typeKind = result.kind.value;
@@ -1077,7 +1077,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         for (index in 0..<node.aux) {
             val actual = expressionType(semantic, childRoot);
             if (!typeAccepts(element, actual, semantic.genericArguments)) {
-                semanticFail(semantic, 4, semantic.nodes.data[childRoot]);
+                semantic.fail(4, semantic.nodes.data[childRoot]);
                 return invalidType();
             }
             var childNode = semantic.nodes.data[childRoot];

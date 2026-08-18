@@ -43,6 +43,11 @@ struct Semantic(
 		k_boot_free(self.enums.data as unit*);
 		k_boot_free(self.structs.data as unit*);
 	}
+
+	fn fail(var self, category: u32, node: AstNode) {
+		if (self.result.ok)
+			self.result = semanticError(category, node, self.genericArguments);
+	}
 }
 
 struct IntegerConstant(ok: bool, negative: bool, overflow: bool, magnitude: u64)
@@ -55,7 +60,3 @@ fn sourceHash(source: Source, start: u64, end: u64): u64 {
 
 fn nodeHash(val semantic: Semantic, node: AstNode) =>
     sourceHash(semantic.source, node.start, node.end);
-
-fn semanticFail(var semantic: Semantic, category: u32, node: AstNode) =>
-    if (semantic.result.ok) 
-        semantic.result = semanticError(category, node, semantic.genericArguments);
