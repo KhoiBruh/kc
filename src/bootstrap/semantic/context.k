@@ -36,7 +36,7 @@ struct Semantic(
     suppressMoves: bool
 ) {
 
-	fn free(var self) {
+	fn free(self) {
 		k_boot_free(self.locals.data as unit*);
 		k_boot_free(self.functions.data as unit*);
 		k_boot_free(self.constants.data as unit*);
