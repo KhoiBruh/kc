@@ -13,6 +13,16 @@
 
 namespace k {
 
+struct Source;
+struct Program;
+struct SemanticResult;
+
+struct ParsedModule {
+    std::unique_ptr<Source> source;
+    std::unique_ptr<Program> program;
+    std::unique_ptr<SemanticResult> semantic;
+};
+
 struct ModuleSource {
     std::filesystem::path path;
     std::unique_ptr<Source> source;

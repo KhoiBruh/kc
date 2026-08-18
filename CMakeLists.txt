@@ -65,6 +65,7 @@ add_library(k_codegen STATIC
     src/codegen/ClangLinker.cpp
     src/codegen/LlvmCodegen.cpp
     src/codegen/NativeEmitter.cpp
+    src/codegen/Reachability.cpp
 )
 target_compile_definitions(k_codegen PRIVATE
     K_CONFIGURED_CLANG_PATH="${LLVM_TOOLS_BINARY_DIR}/clang.exe"

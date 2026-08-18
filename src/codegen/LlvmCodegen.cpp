@@ -8,6 +8,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <algorithm>
+#include <bit>
 #include <charconv>
 #include <cstdint>
 #include <optional>
@@ -76,9 +77,11 @@ public:
     const Program& program() const { return *current_->program; }
     Generator(
         std::vector<ParsedModule> modules,
-        llvm::LLVMContext& context)
+        llvm::LLVMContext& context,
+        ReachableDeclarations reachable)
         : modules_{std::move(modules)},
           context_{context},
+          reachable_{std::move(reachable)},
           builder_{context} {
         const auto& entry = modules_.back();
         result_.module = std::make_unique<llvm::Module>(
@@ -98,16 +101,23 @@ public:
             current_ = &module;
             for (const auto& specialization :
                  current_->semantic->requestedSpecializations)
-                getOrDeclareSpecialization(specialization);
+                if (!reachable_.filtered ||
+                    reachable_.functions.count(
+                        specialization.declaration) != 0)
+                    getOrDeclareSpecialization(specialization);
         }
         if (result_.diagnostics.empty()) {
             for (auto& module : modules_) {
                 current_ = &module;
                 for (const auto& function : current_->program->functions)
-                    emitFunction(function);
+                    if (!reachable_.filtered ||
+                        reachable_.functions.count(&function) != 0)
+                        emitFunction(function);
                 for (const auto& structure : current_->program->structs)
                     for (const auto& method : structure.methods)
-                        emitFunction(method);
+                        if (!reachable_.filtered ||
+                            reachable_.functions.count(&method) != 0)
+                            emitFunction(method);
             }
             std::size_t next = 0;
             while (next < pendingSpecializations_.size()) {
@@ -306,11 +316,17 @@ private:
     void declareStructs() {
         for (const auto& structure : current_->program->structs) {
             if (!structure.typeParameters.empty()) continue;
+            if (reachable_.filtered &&
+                reachable_.structs.count(&structure) == 0)
+                continue;
             const auto name = spelling(source(), structure.name);
             structs_.emplace(
                 name, llvm::StructType::create(context_, name));
         }
         for (const auto& [name, symbol] : current_->semantic->structs) {
+            if (reachable_.filtered &&
+                reachable_.structs.count(symbol.declaration) == 0)
+                continue;
             const auto found = structs_.find(name);
             if (found == structs_.end()) continue;
             std::vector<llvm::Type*> fields;
@@ -361,11 +377,18 @@ private:
 
     void declareFunctions() {
         for (const auto& function : current_->program->functions) {
+            if (reachable_.filtered &&
+                reachable_.functions.count(&function) == 0)
+                continue;
             declareFunction(function);
         }
         for (const auto& structure : current_->program->structs) {
-            for (const auto& method : structure.methods)
+            for (const auto& method : structure.methods) {
+                if (reachable_.filtered &&
+                    reachable_.functions.count(&method) == 0)
+                    continue;
                 declareFunction(method);
+            }
         }
     }
 
@@ -1652,8 +1675,21 @@ private:
             const auto found = locals_.find(name);
             if (found == locals_.end()) {
                 const auto constant = semantic().constants.find(name);
-                if (constant != semantic().constants.end())
+                if (constant != semantic().constants.end()) {
+                    if (constant->second.evaluated) {
+                        auto* type = lowerType(
+                            constant->second.type, identifier->name);
+                        if (!type) return nullptr;
+                        if (constant->second.evaluated->isFloat)
+                            return llvm::ConstantFP::get(
+                                type, std::bit_cast<double>(
+                                    constant->second.evaluated->bits));
+                        return llvm::ConstantInt::get(
+                            type, constant->second.evaluated->bits,
+                            isSignedInteger(constant->second.type));
+                    }
                     return emitExpr(*constant->second.declaration->initializer);
+                }
                 diagnose("unknown local during LLVM codegen", identifier->name);
                 return nullptr;
             }
@@ -2219,6 +2255,7 @@ private:
 
     std::vector<ParsedModule> modules_;
     ParsedModule* current_ = nullptr;
+    ReachableDeclarations reachable_;
     llvm::LLVMContext& context_;
     llvm::IRBuilder<> builder_;
     CodegenResult result_;
@@ -2245,12 +2282,15 @@ private:
 
 LlvmCodegen::LlvmCodegen(
     std::vector<ParsedModule> modules,
-    llvm::LLVMContext& context)
-    : modules_{std::move(modules)}, context_{context} {}
+    llvm::LLVMContext& context,
+    ReachableDeclarations reachable)
+    : modules_{std::move(modules)},
+      context_{context},
+      reachable_{std::move(reachable)} {}
 
 CodegenResult LlvmCodegen::generate() {
     if (modules_.empty()) return {};
-    return Generator{std::move(modules_), context_}.run();
+    return Generator{std::move(modules_), context_, reachable_}.run();
 }
 
 }

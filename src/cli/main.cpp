@@ -236,8 +236,10 @@ int main(int argc, char** argv) {
             }
         }
         llvm::LLVMContext context;
+        const auto reachable = k::computeReachable(parsedModules);
         auto generated =
-            k::LlvmCodegen{std::move(parsedModules), context}.generate();
+            k::LlvmCodegen{std::move(parsedModules), context, reachable}
+            .generate();
         if (!generated.diagnostics.empty()) {
             for (const auto& diagnostic : generated.diagnostics) {
                 k::Source fallback{inputPath.string(), ""};
