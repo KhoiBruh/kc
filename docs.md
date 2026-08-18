@@ -338,7 +338,8 @@ when (optional) {
 * **Suy luận kiểu (Type Inference):** Hỗ trợ suy luận kiểu khi khởi tạo rõ ràng (VD: `val a = true`, `val b = "text"`). Literal số nguyên không có ngữ cảnh mặc định là `i32`, còn literal số thực mặc định là `f64`.
 * **Quy tắc phạm vi:** KHÔNG có biến toàn cục (global variables). `const` chỉ được khai báo ở cấp module: `const MAX_SIZE: i32 = 100;`.
 * Kiểu của `const` có thể được suy luận. Literal số nguyên mặc định là `i32`, nên `const MAX_SIZE = 100;` có kiểu `i32`; dùng `const MAX_SIZE: i64 = 100;` khi cần kiểu khác.
-* Initializer của `const` là biểu thức compile-time gồm literal, toán tử/cast hợp lệ và tham chiếu tới `const` đã khai báo trước. Scalar constant được inline khi sinh IR và không có storage runtime riêng.
+* Initializer của `const` là biểu thức compile-time gồm literal, toán tử/cast hợp lệ và tham chiếu tới `const` đã khai báo trước. Không được gọi hàm (kể cả bên trong biểu thức lồng nhau hay generic) và không được tham chiếu tới `const` khai báo sau; vi phạm bị báo lỗi semantic. Biểu thức được đánh giá (fold) hoàn toàn ở compile-time theo thứ tự khai báo; vòng lặp tham chiếu, chia/lấy dư cho 0 bị báo lỗi. Scalar constant được inline khi sinh IR và không có storage runtime riêng; hằng không fold được (vd mảng, chuỗi) vẫn fallback về emit biểu thức khởi tạo như trước.
+* **Reachability:** Trình biên dịch chỉ sinh code cho các declaration reachable từ entry `main` (hàm, generic specialization, struct tham chiếu qua kiểu, const) theo đồ thị phụ thuộc BFS; diagnostic vẫn dựa trên toàn bộ chương trình. Nếu entry không có `main` non-extern, toàn bộ module được sinh (compat với codegen library-style).
 * Fixed array constant hỗ trợ cả suy luận đầy đủ (`const A = [1, 2];`), suy luận kích thước (`const B: i32[] = [1, 2];`) và kích thước tường minh (`const C: i32[2] = [1, 2];`). Mảng rỗng phải có kiểu phần tử, ví dụ `const EMPTY: i32[] = [];`.
 
 ### Ownership, Move và Borrow

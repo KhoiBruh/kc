@@ -874,6 +874,58 @@ TEST(semantic_accepts_prior_constants_and_rejects_runtime_initializers) {
               "constant initializer must be a compile-time expression");
 }
 
+TEST(semantic_rejects_const_initializers_with_indirect_calls) {
+    SemanticFixture nested{
+        "fn value(): i32 { return 1; }"
+        "fn wrap(): i32 { return value(); }"
+        "const BAD = 1 + wrap();"
+        "fn main(): i32 { return BAD; }"};
+    EXPECT_EQ(nested.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(nested.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+
+    SemanticFixture genericCall{
+        "fn make<T>(val value: T): T { return value; }"
+        "const BAD = make(3);"
+        "fn main(): i32 { return BAD; }"};
+    EXPECT_EQ(genericCall.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(genericCall.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+
+    SemanticFixture parenthesized{
+        "fn value(): i32 { return 1; }"
+        "const BAD: i32 = (2 * value());"
+        "fn main(): i32 { return BAD; }"};
+    EXPECT_EQ(parenthesized.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(parenthesized.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+}
+
+TEST(semantic_rejects_constant_cycles_without_recursion) {
+    SemanticFixture cycle{
+        "const A = B + 1; const B = A + 1;"
+        "fn main(): i32 { return 0; }"};
+    EXPECT_EQ(cycle.semantic.diagnostics.size(), 4u);
+    EXPECT_EQ(cycle.semantic.diagnostics[0].message,
+              "unknown identifier 'B'");
+}
+
+TEST(semantic_rejects_constant_division_by_zero) {
+    SemanticFixture divide{
+        "const A = 10 / 0;"
+        "fn main(): i32 { return A; }"};
+    EXPECT_EQ(divide.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(divide.semantic.diagnostics[0].message,
+              "division by zero in constant expression");
+
+    SemanticFixture modulo{
+        "const A = 10 % 0;"
+        "fn main(): i32 { return A; }"};
+    EXPECT_EQ(modulo.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(modulo.semantic.diagnostics[0].message,
+              "division by zero in constant expression");
+}
+
 TEST(semantic_infers_constant_array_sizes) {
     SemanticFixture valid{
         "const A = [1, 2, 3, 4];"

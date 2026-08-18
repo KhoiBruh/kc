@@ -68,6 +68,18 @@ source.k
   resource structs with exact `fn free(self)` receive deterministic automatic
   drop; resource owned parameters are also dropped. Automatic `.copy()` is not
   implemented yet.
+- `const` initializers are compile-time expressions: literals, operators,
+  casts, and references to previously declared `const` only. Function calls
+  (including inside nested expressions or generics) and forward references are
+  rejected semantically. Scalar constants are evaluated and folded at
+  compile time in declaration order; circular references and division/remainder
+  by zero are diagnosed. Non-foldable constants fall back to emitting their
+  initializer expression.
+- Native code emission is demand-driven: only declarations reachable from a
+  non-extern `main` are emitted (functions, structs, enums, constants, and
+  generic specializations, tracked by `src/codegen/Reachability.*`). Semantic
+  analysis stays whole-program; without a `main` entry all declarations are
+  emitted. `mod.k` and `manifest.txt` are not compilation registries.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order

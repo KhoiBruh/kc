@@ -27,7 +27,9 @@ std::string generateIr(std::string text, std::vector<k::Diagnostic>& diagnostics
     module.program = std::move(programPtr);
     module.semantic = std::move(semanticPtr);
     modules.push_back(std::move(module));
-    auto generated = k::LlvmCodegen{std::move(modules), context}.generate();
+    const auto reachable = k::computeReachable(modules);
+    auto generated = k::LlvmCodegen{
+        std::move(modules), context, reachable}.generate();
     diagnostics = std::move(generated.diagnostics);
     std::string ir;
     llvm::raw_string_ostream output{ir};
@@ -231,7 +233,7 @@ TEST(codegen_lowers_var_parameters_as_mutable_borrows) {
 TEST(codegen_lowers_forward_recursive_nested_and_unit_calls) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
-        "fn main(): i32 { notify(); return twice(add(20, 1)); }"
+        "fn main(): i32 { notify(); return recurse(twice(add(20, 1))); }"
         "fn add(val a: i32, val b: i32): i32 { return a + b; }"
         "fn twice(val value: i32): i32 { return value + value; }"
         "fn recurse(val value: i32): i32 { return recurse(value); }"
@@ -302,7 +304,10 @@ TEST(codegen_lowers_comparison_kinds_and_terminating_if) {
         "fn choose(val value: i32): i32 {"
         "if (value == 0) { return 1; } else { return 2; }"
         "}"
-        "fn main(): i32 { return choose(0); }",
+        "fn main(): i32 {"
+        "val ul = unsignedLess(1, 2); val fl = floatLess(0.5, 1.0);"
+        "return choose(0);"
+        "}",
         diagnostics);
 
     EXPECT_TRUE(diagnostics.empty());
@@ -863,12 +868,60 @@ TEST(codegen_inlines_fixed_array_constants) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
         "const A = [1, 2, 3, 4];"
-        "const B: i32[] = [5, 6, 7, 8];"
-        "const C: i32[4] = [9, 10, 11, 12];"
+        "const B: i32[] = [1, 2, 3, 4];"
+        "const C: i32[4] = [1, 2, 3, 4];"
         "fn value(): i32 { return A[0] + B[1] + C[2]; }",
         diagnostics);
     EXPECT_TRUE(diagnostics.empty());
     EXPECT_TRUE(ir.find("[4 x i32]") != std::string::npos);
+}
+
+TEST(codegen_folds_constant_expressions_at_compile_time) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "const A = 1 + 1; const B = A + 2;"
+        "fn main(): i32 { return B; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("ret i32 4") != std::string::npos);
+}
+
+TEST(codegen_omits_constants_unreachable_from_main) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "const USED = 7; const UNUSED = 99;"
+        "fn main(): i32 { return USED; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("ret i32 7") != std::string::npos);
+    EXPECT_TRUE(ir.find("99") == std::string::npos);
+}
+
+TEST(codegen_emits_only_functions_reachable_from_main) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn foo(): i32 { return 1; }"
+        "fn bar(): i32 { return 2; }"
+        "fn main(): i32 { return foo(); }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define i32 @foo") != std::string::npos);
+    EXPECT_TRUE(ir.find("define i32 @bar") == std::string::npos);
+    EXPECT_TRUE(ir.find("define i32 @main") != std::string::npos);
+}
+
+TEST(codegen_emits_transitive_struct_dependencies_of_main) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Pair(left: i32, right: i32)"
+        "struct Unused(only: i32)"
+        "fn read(val pair: Pair): i32 { return pair.left; }"
+        "fn main(): i32 { return read(Pair(40, 2)); }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("%Pair") != std::string::npos);
+    EXPECT_TRUE(ir.find("%Unused") == std::string::npos);
+    EXPECT_TRUE(ir.find("define i32 @read") != std::string::npos);
 }
 
 TEST(codegen_lowers_expression_bodied_functions_with_inferred_returns) {
