@@ -7,146 +7,131 @@ import bootstrap.ast.AstKind;
 import bootstrap.ast.AstNode;
 import bootstrap.ast.ParameterMode;
 
-fn arrowIfHasElseAhead(parser: Parser): bool {
-    for (cursor in parser.current..<parser.tokens.length) {
-        val kind = parser.tokens.data[cursor].kind;
-        if (kind == TokenKind.KwElse) return true;
-        var declaration = kind == TokenKind.EndOfFile;
-        if (kind == TokenKind.KwConst) declaration = true;
-        if (kind == TokenKind.KwExtern) declaration = true;
-        if (kind == TokenKind.KwFn) declaration = true;
-        if (kind == TokenKind.KwStruct) declaration = true;
-        if (kind == TokenKind.KwEnum) declaration = true;
-        if (declaration) return false;
-    }
-    return false;
-}
-
 fn parseFunction(
     var parser: Parser, isExtern: bool, start: u64,
     ownerStart: u64, ownerEnd: u64
 ): u64 {
     val subtreeStart = parser.nodes.length;
-    if (!parserExpect(parser, TokenKind.KwFn)) return 0;
-    if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-    val functionName = parserPrevious(parser);
-    parserAdd(
-        parser, AstKind.Name, functionName.start, functionName.end,
+    if (!parser.expect(TokenKind.KwFn)) return 0;
+    if (!parser.expect(TokenKind.Identifier)) return 0;
+    val functionName = parser.previous();
+    parser.add(
+        AstKind.Name, functionName.start, functionName.end,
         parser.nodes.length, 0);
     var typeParameterCount: u32 = 0;
-    if (parserMatch(parser, TokenKind.Less)) {
+    if (parser.match(TokenKind.Less)) {
         var typeParameters = true;
         while (typeParameters) {
             val parameterSubtree = parser.nodes.length;
-            val parameterStart = parserPeek(parser).start;
-            if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-            val parameterName = parserPrevious(parser);
-            parserAdd(
-                parser, AstKind.Name, parameterName.start, parameterName.end,
+            val parameterStart = parser.peek().start;
+            if (!parser.expect(TokenKind.Identifier)) return 0;
+            val parameterName = parser.previous();
+            parser.add(
+                AstKind.Name, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var hasConstraint: u32 = 0;
-            if (parserMatch(parser, TokenKind.Colon)) {
-                if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-                val constraint = parserPrevious(parser);
-                parserAdd(
-                    parser, AstKind.Name, constraint.start, constraint.end,
+            if (parser.match(TokenKind.Colon)) {
+                if (!parser.expect(TokenKind.Identifier)) return 0;
+                val constraint = parser.previous();
+                parser.add(
+                    AstKind.Name, constraint.start, constraint.end,
                     parser.nodes.length, 0);
                 hasConstraint = 1;
             }
-            parserAdd(
-                parser, AstKind.TypeParameter, parameterStart, parserPrevious(parser).end,
+            parser.add(
+                AstKind.TypeParameter, parameterStart, parser.previous().end,
                 parameterSubtree, hasConstraint);
             typeParameterCount++;
-            if (!parserMatch(parser, TokenKind.Comma)) {
+            if (!parser.match(TokenKind.Comma)) {
                 typeParameters = false;
             }
         }
-        if (!parserExpect(parser, TokenKind.Greater)) return 0;
+        if (!parser.expect(TokenKind.Greater)) return 0;
     }
-    if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
+    if (!parser.expect(TokenKind.LeftParen)) return 0;
     var parameterCount: u32 = 0;
     var associated: u32 = 0;
     if (ownerEnd != ownerStart) associated = 1;
-    if (!parserCheck(parser, TokenKind.RightParen)) {
+    if (!parser.check(TokenKind.RightParen)) {
         var parameters = true;
         while (parameters) {
             val parameterSubtree = parser.nodes.length;
-            val parameterStart = parserPeek(parser).start;
+            val parameterStart = parser.peek().start;
             var mode = ParameterMode.Owned;
-            if (parserMatch(parser, TokenKind.KwVal))
+            if (parser.match(TokenKind.KwVal))
                 mode = ParameterMode.ImmutableBorrow;
             else {
-                if (parserMatch(parser, TokenKind.KwVar))
+                if (parser.match(TokenKind.KwVar))
                     mode = ParameterMode.MutableBorrow;
             }
-            if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-            val parameterName = parserPrevious(parser);
-            parserAdd(
-                parser, AstKind.Name, parameterName.start, parameterName.end,
+            if (!parser.expect(TokenKind.Identifier)) return 0;
+            val parameterName = parser.previous();
+            parser.add(
+                AstKind.Name, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var typeNode: u64 = 0;
             if (ownerEnd != ownerStart && parameterCount == 0) {
-                if (!parserCheck(parser, TokenKind.Colon)) {
+                if (!parser.check(TokenKind.Colon)) {
                     associated = 0;
-                    typeNode = parserAdd(
-                        parser, AstKind.NamedType, ownerStart, ownerEnd,
+                    typeNode = parser.add(
+                        AstKind.NamedType, ownerStart, ownerEnd,
                         parser.nodes.length, 1);
                 } else {
                     parser.current++;
                     typeNode = parseType(parser);
                 }
             } else {
-                if (!parserExpect(parser, TokenKind.Colon)) return 0;
+                if (!parser.expect(TokenKind.Colon)) return 0;
                 typeNode = parseType(parser);
             }
-            parserAdd(
-                parser, AstKind.ParameterOrWhenBranch, parameterStart, parser.nodes.data[typeNode].end,
+            parser.add(
+                AstKind.ParameterOrWhenBranch, parameterStart, parser.nodes.data[typeNode].end,
                 parameterSubtree, mode.value);
             parameterCount++;
-            if (!parserMatch(parser, TokenKind.Comma)) parameters = false;
+            if (!parser.match(TokenKind.Comma)) parameters = false;
         }
     }
-    if (!parserExpect(parser, TokenKind.RightParen)) return 0;
+    if (!parser.expect(TokenKind.RightParen)) return 0;
     var infersReturn: u32 = 0;
-    if (parserMatch(parser, TokenKind.Colon)) {
+    if (parser.match(TokenKind.Colon)) {
         parseType(parser);
     } else {
-        parserAdd(
-            parser, AstKind.NamedType, parserPrevious(parser).end,
-            parserPrevious(parser).end, parser.nodes.length, 49);
-        if (parserCheck(parser, TokenKind.FatArrow)) infersReturn = 1;
+        parser.add(
+            AstKind.NamedType, parser.previous().end,
+            parser.previous().end, parser.nodes.length, 49);
+        if (parser.check(TokenKind.FatArrow)) infersReturn = 1;
     }
     var end: u64 = 0;
     var expressionBody: u32 = 0;
     if (isExtern) {
-        if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-        end = parserPrevious(parser).end;
+        if (!parser.expect(TokenKind.Semicolon)) return 0;
+        end = parser.previous().end;
     } else {
-        if (parserMatch(parser, TokenKind.FatArrow)) {
+        if (parser.match(TokenKind.FatArrow)) {
             expressionBody = 1;
             val bodyStart = parser.nodes.length;
-            if (parserCheck(parser, TokenKind.KwIf) && !arrowIfHasElseAhead(parser)) {
+            if (parser.check(TokenKind.KwIf) && !parser.arrowIfHasElseAhead()) {
                 parseStatement(parser);
             } else {
                 val expressionRoot = parseExpression(parser, 0);
-                if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-                parserAdd(
-                    parser, AstKind.ReturnStatement,
+                if (!parser.expect(TokenKind.Semicolon)) return 0;
+                parser.add(
+                    AstKind.ReturnStatement,
                     parser.nodes.data[expressionRoot].start,
                     parser.nodes.data[expressionRoot].end,
                     bodyStart, 1);
             }
-            parserAdd(parser, AstKind.Block, 0, 0, bodyStart, 1);
-            end = parserPrevious(parser).end;
+            parser.add(AstKind.Block, 0, 0, bodyStart, 1);
+            end = parser.previous().end;
         } else {
         parseBlock(parser);
-        end = parserPrevious(parser).end;
+        end = parser.previous().end;
         }
     }
     var aux = parameterCount;
     if (isExtern) aux += 65536;
     aux += typeParameterCount * 131072;
-    val root = parserAdd(parser, AstKind.FunctionOrDefer, start, end, subtreeStart, aux);
+    val root = parser.add(AstKind.FunctionOrDefer, start, end, subtreeStart, aux);
     var function = parser.nodes.data[root];
     function.storage = (expressionBody + infersReturn * 2) as u64;
     if (ownerEnd > ownerStart) {
@@ -158,77 +143,77 @@ fn parseFunction(
 
 fn parseStruct(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val start = parserPeek(parser).start;
+    val start = parser.peek().start;
     parser.current++;
-    if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-    val structName = parserPrevious(parser);
-    parserAdd(
-        parser, AstKind.Name, structName.start, structName.end,
+    if (!parser.expect(TokenKind.Identifier)) return 0;
+    val structName = parser.previous();
+    parser.add(
+        AstKind.Name, structName.start, structName.end,
         parser.nodes.length, 0);
     var typeParameterCount: u32 = 0;
-    if (parserMatch(parser, TokenKind.Less)) {
+    if (parser.match(TokenKind.Less)) {
         var typeParameters = true;
         while (typeParameters) {
             val parameterSubtree = parser.nodes.length;
-            val parameterStart = parserPeek(parser).start;
-            if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-            val parameterName = parserPrevious(parser);
-            parserAdd(
-                parser, AstKind.Name, parameterName.start, parameterName.end,
+            val parameterStart = parser.peek().start;
+            if (!parser.expect(TokenKind.Identifier)) return 0;
+            val parameterName = parser.previous();
+            parser.add(
+                AstKind.Name, parameterName.start, parameterName.end,
                 parser.nodes.length, 0);
             var hasConstraint: u32 = 0;
-            if (parserMatch(parser, TokenKind.Colon)) {
-                if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-                val constraint = parserPrevious(parser);
-                parserAdd(
-                    parser, AstKind.Name, constraint.start, constraint.end,
+            if (parser.match(TokenKind.Colon)) {
+                if (!parser.expect(TokenKind.Identifier)) return 0;
+                val constraint = parser.previous();
+                parser.add(
+                    AstKind.Name, constraint.start, constraint.end,
                     parser.nodes.length, 0);
                 hasConstraint = 1;
             }
-            parserAdd(
-                parser, AstKind.TypeParameter, parameterStart, parserPrevious(parser).end,
+            parser.add(
+                AstKind.TypeParameter, parameterStart, parser.previous().end,
                 parameterSubtree, hasConstraint);
             typeParameterCount++;
-            if (!parserMatch(parser, TokenKind.Comma)) {
+            if (!parser.match(TokenKind.Comma)) {
                 typeParameters = false;
             }
         }
-        if (!parserExpect(parser, TokenKind.Greater)) return 0;
+        if (!parser.expect(TokenKind.Greater)) return 0;
     }
-    if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
+    if (!parser.expect(TokenKind.LeftParen)) return 0;
     var fieldCount: u32 = 0;
-    if (!parserCheck(parser, TokenKind.RightParen)) {
+    if (!parser.check(TokenKind.RightParen)) {
         var fields = true;
         while (fields) {
             val fieldSubtree = parser.nodes.length;
-            val fieldStart = parserPeek(parser).start;
-            if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-            val fieldName = parserPrevious(parser);
-            parserAdd(
-                parser, AstKind.Name, fieldName.start, fieldName.end,
+            val fieldStart = parser.peek().start;
+            if (!parser.expect(TokenKind.Identifier)) return 0;
+            val fieldName = parser.previous();
+            parser.add(
+                AstKind.Name, fieldName.start, fieldName.end,
                 parser.nodes.length, 0);
-            if (!parserExpect(parser, TokenKind.Colon)) return 0;
+            if (!parser.expect(TokenKind.Colon)) return 0;
             val typeNode = parseType(parser);
-            parserAdd(
-                parser, AstKind.StructField, fieldStart, parser.nodes.data[typeNode].end,
+            parser.add(
+                AstKind.StructField, fieldStart, parser.nodes.data[typeNode].end,
                 fieldSubtree, 0);
             fieldCount++;
-            if (!parserMatch(parser, TokenKind.Comma)) fields = false;
+            if (!parser.match(TokenKind.Comma)) fields = false;
         }
     }
-    if (!parserExpect(parser, TokenKind.RightParen)) return 0;
+    if (!parser.expect(TokenKind.RightParen)) return 0;
     var methodCount: u32 = 0;
-    if (parserMatch(parser, TokenKind.LeftBrace)) {
-        while (!parserCheck(parser, TokenKind.RightBrace)) {
-            if (!parserCheck(parser, TokenKind.KwFn)) return 0;
-            parseFunction(parser, false, parserPeek(parser).start,
+    if (parser.match(TokenKind.LeftBrace)) {
+        while (!parser.check(TokenKind.RightBrace)) {
+            if (!parser.check(TokenKind.KwFn)) return 0;
+            parseFunction(parser, false, parser.peek().start,
                 structName.start, structName.end);
             methodCount++;
         }
-        if (!parserExpect(parser, TokenKind.RightBrace)) return 0;
+        if (!parser.expect(TokenKind.RightBrace)) return 0;
     }
-    val root = parserAdd(
-        parser, AstKind.StructDeclaration, start, parserPrevious(parser).end,
+    val root = parser.add(
+        AstKind.StructDeclaration, start, parser.previous().end,
         subtreeStart, fieldCount + typeParameterCount * 65536);
     var structure = parser.nodes.data[root];
     structure.storage = methodCount as u64;
@@ -238,37 +223,37 @@ fn parseStruct(var parser: Parser): u64 {
 
 fn parseEnum(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val start = parserPeek(parser).start;
+    val start = parser.peek().start;
     parser.current++;
-    if (parserExpect(parser, TokenKind.Identifier) == false) return 0;
-    val name = parserPrevious(parser);
-    parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
+    if (!parser.expect(TokenKind.Identifier)) return 0;
+    val name = parser.previous();
+    parser.add(AstKind.Name, name.start, name.end, parser.nodes.length, 0);
     var hasBacking: u64 = 0;
-    if (parserMatch(parser, TokenKind.Colon)) {
+    if (parser.match(TokenKind.Colon)) {
         parseType(parser);
         hasBacking = parser.nodes.length - subtreeStart - 1;
     }
-    if (parserExpect(parser, TokenKind.LeftBrace) == false) return 0;
-    if (parserCheck(parser, TokenKind.RightBrace)) {
+    if (!parser.expect(TokenKind.LeftBrace)) return 0;
+    if (parser.check(TokenKind.RightBrace)) {
         parser.ok = false;
         return 0;
     }
     var count: u32 = 0;
     var parsing = true;
     while (parsing) {
-        if (parserExpect(parser, TokenKind.Identifier) == false) return 0;
-        val variant = parserPrevious(parser);
-        val variantRoot = parserAdd(
-            parser, AstKind.Name, variant.start, variant.end,
+        if (!parser.expect(TokenKind.Identifier)) return 0;
+        val variant = parser.previous();
+        val variantRoot = parser.add(
+            AstKind.Name, variant.start, variant.end,
             parser.nodes.length, 0);
-        if (parserMatch(parser, TokenKind.Equal)) {
+        if (parser.match(TokenKind.Equal)) {
             var negative: u32 = 0;
-            if (parserMatch(parser, TokenKind.Plus)) {
-            } else if (parserMatch(parser, TokenKind.Minus)) {
+            if (parser.match(TokenKind.Plus)) {
+            } else if (parser.match(TokenKind.Minus)) {
                 negative = 1;
             }
-            if (!parserExpect(parser, TokenKind.IntegerLiteral)) return 0;
-            val value = parserPrevious(parser);
+            if (!parser.expect(TokenKind.IntegerLiteral)) return 0;
+            val value = parser.previous();
             var variantNode = parser.nodes.data[variantRoot];
             variantNode.conversionKind = 1;
             variantNode.storage = value.start;
@@ -277,8 +262,8 @@ fn parseEnum(var parser: Parser): u64 {
             parser.nodes.data[variantRoot] = variantNode;
         }
         count++;
-        if (parserMatch(parser, TokenKind.Comma)) {
-            if (parserCheck(parser, TokenKind.RightBrace)) {
+        if (parser.match(TokenKind.Comma)) {
+            if (parser.check(TokenKind.RightBrace)) {
                 parser.ok = false;
                 return 0;
             }
@@ -286,9 +271,9 @@ fn parseEnum(var parser: Parser): u64 {
             parsing = false;
         }
     }
-    if (parserExpect(parser, TokenKind.RightBrace) == false) return 0;
-    val root = parserAdd(
-        parser, AstKind.EnumDeclaration, start, parserPrevious(parser).end,
+    if (!parser.expect(TokenKind.RightBrace)) return 0;
+    val root = parser.add(
+        AstKind.EnumDeclaration, start, parser.previous().end,
         subtreeStart, count);
     var enumeration = parser.nodes.data[root];
     enumeration.storage = hasBacking;
@@ -298,71 +283,71 @@ fn parseEnum(var parser: Parser): u64 {
 
 fn parseModule(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val start = parserPeek(parser).start;
+    val start = parser.peek().start;
     parser.current++;
-    if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-    val firstName = parserPrevious(parser);
-    parserAdd(
-        parser, AstKind.Name, firstName.start, firstName.end,
+    if (!parser.expect(TokenKind.Identifier)) return 0;
+    val firstName = parser.previous();
+    parser.add(
+        AstKind.Name, firstName.start, firstName.end,
         parser.nodes.length, 0);
     var partCount: u32 = 1;
-    while (parserMatch(parser, TokenKind.Dot)) {
-        if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-        val name = parserPrevious(parser);
-        parserAdd(
-            parser, AstKind.Name, name.start, name.end,
+    while (parser.match(TokenKind.Dot)) {
+        if (!parser.expect(TokenKind.Identifier)) return 0;
+        val name = parser.previous();
+        parser.add(
+            AstKind.Name, name.start, name.end,
             parser.nodes.length, 0);
         partCount++;
     }
-    if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-    return parserAdd(
-        parser, AstKind.ModuleDeclaration, start, parserPrevious(parser).end,
+    if (!parser.expect(TokenKind.Semicolon)) return 0;
+    return parser.add(
+        AstKind.ModuleDeclaration, start, parser.previous().end,
         subtreeStart, partCount);
 }
 
 fn parseImport(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val start = parserPeek(parser).start;
+    val start = parser.peek().start;
     parser.current++;
-    if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-    val firstName = parserPrevious(parser);
-    parserAdd(
-        parser, AstKind.Name, firstName.start, firstName.end,
+    if (!parser.expect(TokenKind.Identifier)) return 0;
+    val firstName = parser.previous();
+    parser.add(
+        AstKind.Name, firstName.start, firstName.end,
         parser.nodes.length, 0);
     var partCount: u32 = 1;
     var isWildcard: u32 = 0;
-    while (parserMatch(parser, TokenKind.Dot)) {
-        if (parserMatch(parser, TokenKind.Star)) {
+    while (parser.match(TokenKind.Dot)) {
+        if (parser.match(TokenKind.Star)) {
             isWildcard = 1;
             partCount++;
             break;
         }
-        if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-        val name = parserPrevious(parser);
-        parserAdd(
-            parser, AstKind.Name, name.start, name.end,
+        if (!parser.expect(TokenKind.Identifier)) return 0;
+        val name = parser.previous();
+        parser.add(
+            AstKind.Name, name.start, name.end,
             parser.nodes.length, 0);
         partCount++;
     }
-    if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-    return parserAdd(
-        parser, AstKind.ImportDeclaration, start, parserPrevious(parser).end,
+    if (!parser.expect(TokenKind.Semicolon)) return 0;
+    return parser.add(
+        AstKind.ImportDeclaration, start, parser.previous().end,
         subtreeStart, partCount + isWildcard * 65536);
 }
 
 fn parseConstant(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val start = parserPeek(parser).start;
+    val start = parser.peek().start;
     parser.current++;
-    if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-    val name = parserPrevious(parser);
-    parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
+    if (!parser.expect(TokenKind.Identifier)) return 0;
+    val name = parser.previous();
+    parser.add(AstKind.Name, name.start, name.end, parser.nodes.length, 0);
     var hasType: u32 = 0;
-    if (parserMatch(parser, TokenKind.Colon)) { parseType(parser); hasType = 1; }
-    if (!parserExpect(parser, TokenKind.Equal)) return 0;
+    if (parser.match(TokenKind.Colon)) { parseType(parser); hasType = 1; }
+    if (!parser.expect(TokenKind.Equal)) return 0;
     parseExpression(parser, 0);
-    if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-    return parserAdd(
-        parser, AstKind.ConstantDeclaration, start,
-        parserPrevious(parser).end, subtreeStart, hasType);
+    if (!parser.expect(TokenKind.Semicolon)) return 0;
+    return parser.add(
+        AstKind.ConstantDeclaration, start,
+        parser.previous().end, subtreeStart, hasType);
 }

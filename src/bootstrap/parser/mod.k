@@ -14,32 +14,32 @@ import bootstrap.parser.declarations.parseFunction;
 
 fn parse(val tokens: List<Token>): ParseResult {
     var parser = Parser(tokens, List<AstNode>.new(), 0, true, 0);
-    val start = parserPeek(parser).start;
+    val start = parser.peek().start;
     var declarationCount: u32 = 0;
-    if (parserCheck(parser, TokenKind.KwModule)) {
+    if (parser.check(TokenKind.KwModule)) {
         parseModule(parser);
         declarationCount++;
     }
-    while (parserCheck(parser, TokenKind.KwImport)) {
+    while (parser.check(TokenKind.KwImport)) {
         parseImport(parser);
         declarationCount++;
     }
     while (parser.ok) {
-        if (parserCheck(parser, TokenKind.EndOfFile)) break;
-        if (parserCheck(parser, TokenKind.KwModule)) {
+        if (parser.check(TokenKind.EndOfFile)) break;
+        if (parser.check(TokenKind.KwModule)) {
             parseModule(parser);
-        } else if (parserCheck(parser, TokenKind.KwImport)) {
+        } else if (parser.check(TokenKind.KwImport)) {
             parseImport(parser);
-        } else if (parserCheck(parser, TokenKind.KwEnum)) {
+        } else if (parser.check(TokenKind.KwEnum)) {
             parseEnum(parser);
-        } else if (parserCheck(parser, TokenKind.KwConst)) {
+        } else if (parser.check(TokenKind.KwConst)) {
             parseConstant(parser);
-        } else if (parserCheck(parser, TokenKind.KwStruct)) {
+        } else if (parser.check(TokenKind.KwStruct)) {
             parseStruct(parser);
         } else {
             var isExtern = false;
-            val declarationStart = parserPeek(parser).start;
-            if (parserMatch(parser, TokenKind.KwExtern)) isExtern = true;
+            val declarationStart = parser.peek().start;
+            if (parser.match(TokenKind.KwExtern)) isExtern = true;
             parseFunction(parser, isExtern, declarationStart, 0, 0);
         }
         declarationCount++;
@@ -47,12 +47,12 @@ fn parse(val tokens: List<Token>): ParseResult {
     var ok = false;
     var errorStart: u64 = 0;
     var expectedKind: u32 = 0;
-    if (parserCheck(parser, TokenKind.EndOfFile)) {
-        val end = parserPeek(parser).end;
-        parserAdd(parser, AstKind.Program, start, end, 0, declarationCount);
+    if (parser.check(TokenKind.EndOfFile)) {
+        val end = parser.peek().end;
+        parser.add(AstKind.Program, start, end, 0, declarationCount);
         ok = true;
     } else {
-        errorStart = parserPeek(parser).start;
+        errorStart = parser.peek().start;
         expectedKind = parser.expectedKind;
     }
     return ParseResult(parser.nodes, ok, errorStart, expectedKind);

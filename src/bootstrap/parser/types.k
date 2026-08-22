@@ -32,12 +32,12 @@ fn isTypeStart(kind: TokenKind): bool => when (kind) {
 
 fn parseType(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val first = parserPeek(parser);
-    if (parserMatch(parser, TokenKind.LeftBracket)) {
-        if (!parserExpect(parser, TokenKind.RightBracket)) return 0;
+    val first = parser.peek();
+    if (parser.match(TokenKind.LeftBracket)) {
+        if (!parser.expect(TokenKind.RightBracket)) return 0;
         val element = parseType(parser);
-        return parserAdd(
-            parser, AstKind.SliceType, first.start, parser.nodes.data[element].end,
+        return parser.add(
+            AstKind.SliceType, first.start, parser.nodes.data[element].end,
             subtreeStart, 0);
     }
     if (!isTypeStart(first.kind)) {
@@ -47,43 +47,43 @@ fn parseType(var parser: Parser): u64 {
     val typeToken = first;
     parser.current++;
     var typeArgumentCount: u32 = 0;
-    if (parserMatch(parser, TokenKind.Less)) {
+    if (parser.match(TokenKind.Less)) {
         var typeArguments = true;
         while (typeArguments) {
             parseType(parser);
             typeArgumentCount++;
-            if (!parserMatch(parser, TokenKind.Comma)) {
+            if (!parser.match(TokenKind.Comma)) {
                 typeArguments = false;
             }
         }
-        if (!parserExpect(parser, TokenKind.Greater)) return 0;
+        if (!parser.expect(TokenKind.Greater)) return 0;
     }
-    var end = parserPrevious(parser).end;
-    var root = parserAdd(
-        parser, AstKind.NamedType, typeToken.start, typeToken.end, subtreeStart,
+    var end = parser.previous().end;
+    var root = parser.add(
+        AstKind.NamedType, typeToken.start, typeToken.end, subtreeStart,
         typeToken.kind.value + typeArgumentCount * 256);
-    while (parserMatch(parser, TokenKind.Star)) {
-        end = parserPrevious(parser).end;
-        root = parserAdd(parser, AstKind.PointerType, typeToken.start, end, subtreeStart, 0);
+    while (parser.match(TokenKind.Star)) {
+        end = parser.previous().end;
+        root = parser.add(AstKind.PointerType, typeToken.start, end, subtreeStart, 0);
     }
-    while (parserMatch(parser, TokenKind.LeftBracket)) {
+    while (parser.match(TokenKind.LeftBracket)) {
         var hasSize: u32 = 0;
-        if (!parserCheck(parser, TokenKind.RightBracket)) {
+        if (!parser.check(TokenKind.RightBracket)) {
             parseExpression(parser, 0);
             hasSize = 1;
         }
-        if (!parserExpect(parser, TokenKind.RightBracket)) return 0;
-        end = parserPrevious(parser).end;
-        root = parserAdd(
-            parser, AstKind.ArrayType, typeToken.start, end, subtreeStart, hasSize);
+        if (!parser.expect(TokenKind.RightBracket)) return 0;
+        end = parser.previous().end;
+        root = parser.add(
+            AstKind.ArrayType, typeToken.start, end, subtreeStart, hasSize);
     }
-    if (parserMatch(parser, TokenKind.Question)) {
+    if (parser.match(TokenKind.Question)) {
         if (parser.nodes.data[root].kind == AstKind.NullableType) {
             parser.ok = false;
             return 0;
         }
-        end = parserPrevious(parser).end;
-        root = parserAdd(parser, AstKind.NullableType, typeToken.start, end, subtreeStart, 0);
+        end = parser.previous().end;
+        root = parser.add(AstKind.NullableType, typeToken.start, end, subtreeStart, 0);
     }
     return root;
 }

@@ -9,15 +9,15 @@ import bootstrap.ast.ParameterMode;
 
 fn parseBlock(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val start = parserPeek(parser).start;
-    if (!parserExpect(parser, TokenKind.LeftBrace)) return 0;
+    val start = parser.peek().start;
+    if (!parser.expect(TokenKind.LeftBrace)) return 0;
     var count: u32 = 0;
     while (parser.ok) {
-        if (parserCheck(parser, TokenKind.RightBrace)) {
+        if (parser.check(TokenKind.RightBrace)) {
             parser.current++;
-            return parserAdd(parser, AstKind.Block, 0, 0, subtreeStart, count);
+            return parser.add(AstKind.Block, 0, 0, subtreeStart, count);
         }
-        if (parserCheck(parser, TokenKind.EndOfFile)) {
+        if (parser.check(TokenKind.EndOfFile)) {
             parser.ok = false;
         } else {
             parseStatement(parser);
@@ -28,36 +28,36 @@ fn parseBlock(var parser: Parser): u64 {
 }
 
 fn parseControlBody(var parser: Parser): u64 {
-    if (parserCheck(parser, TokenKind.LeftBrace)) return parseBlock(parser);
+    if (parser.check(TokenKind.LeftBrace)) return parseBlock(parser);
     val subtreeStart = parser.nodes.length;
     parseStatement(parser);
-    return parserAdd(parser, AstKind.Block, 0, 0, subtreeStart, 1);
+    return parser.add(AstKind.Block, 0, 0, subtreeStart, 1);
 }
 
 fn parseStatement(var parser: Parser): u64 {
     val subtreeStart = parser.nodes.length;
-    val first = parserPeek(parser);
-    if (parserMatch(parser, TokenKind.KwWhen)) {
+    val first = parser.peek();
+    if (parser.match(TokenKind.KwWhen)) {
         var hasSubject: u32 = 0;
-        if (parserMatch(parser, TokenKind.LeftParen)) {
+        if (parser.match(TokenKind.LeftParen)) {
             parseExpression(parser, 0);
-            if (!parserExpect(parser, TokenKind.RightParen)) return 0;
+            if (!parser.expect(TokenKind.RightParen)) return 0;
             hasSubject = 1;
         }
-        if (!parserExpect(parser, TokenKind.LeftBrace)) return 0;
+        if (!parser.expect(TokenKind.LeftBrace)) return 0;
         var branchCount: u32 = 0;
         var hasElse = false;
         while (parser.ok) {
-            if (parserCheck(parser, TokenKind.RightBrace)) {
+            if (parser.check(TokenKind.RightBrace)) {
                 parser.current++;
-                return parserAdd(
-                    parser, AstKind.WhenStatement, first.start, parserPrevious(parser).end,
+                return parser.add(
+                    AstKind.WhenStatement, first.start, parser.previous().end,
                     subtreeStart, branchCount + hasSubject * 65536);
             }
             val branchStart = parser.nodes.length;
             var isElse: u32 = 0;
             var patternCount: u32 = 0;
-            if (parserMatch(parser, TokenKind.KwElse)) {
+            if (parser.match(TokenKind.KwElse)) {
                 if (hasElse) {
                     parser.ok = false;
                     return 0;
@@ -74,114 +74,114 @@ fn parseStatement(var parser: Parser): u64 {
                     parseExpression(parser, 0);
                     patternCount++;
                     if (hasSubject == 0) patterns = false;
-                    else if (!parserMatch(parser, TokenKind.Comma)) patterns = false;
+                    else if (!parser.match(TokenKind.Comma)) patterns = false;
                 }
             }
-            if (!parserExpect(parser, TokenKind.Arrow)) return 0;
+            if (!parser.expect(TokenKind.Arrow)) return 0;
             parseControlBody(parser);
-            parserAdd(
-                parser, AstKind.ParameterOrWhenBranch, first.start, parserPrevious(parser).end,
+            parser.add(
+                AstKind.ParameterOrWhenBranch, first.start, parser.previous().end,
                 branchStart, isElse + patternCount * 65536);
             branchCount++;
         }
         return 0;
     }
-    if (parserMatch(parser, TokenKind.KwIf)) {
-        if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
+    if (parser.match(TokenKind.KwIf)) {
+        if (!parser.expect(TokenKind.LeftParen)) return 0;
         parseExpression(parser, 0);
-        if (!parserExpect(parser, TokenKind.RightParen)) return 0;
+        if (!parser.expect(TokenKind.RightParen)) return 0;
         parseControlBody(parser);
-        var end = parserPrevious(parser).end;
+        var end = parser.previous().end;
         var hasElse: u32 = 0;
-        if (parserMatch(parser, TokenKind.KwElse)) {
+        if (parser.match(TokenKind.KwElse)) {
             parseControlBody(parser);
-            end = parserPrevious(parser).end;
+            end = parser.previous().end;
             hasElse = 1;
         }
-        return parserAdd(parser, AstKind.IfStatement, first.start, end, subtreeStart, hasElse);
+        return parser.add(AstKind.IfStatement, first.start, end, subtreeStart, hasElse);
     }
-    if (parserMatch(parser, TokenKind.KwWhile)) {
-        if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
+    if (parser.match(TokenKind.KwWhile)) {
+        if (!parser.expect(TokenKind.LeftParen)) return 0;
         parseExpression(parser, 0);
-        if (!parserExpect(parser, TokenKind.RightParen)) return 0;
+        if (!parser.expect(TokenKind.RightParen)) return 0;
         parseControlBody(parser);
-        val end = parserPrevious(parser).end;
-        return parserAdd(
-            parser, AstKind.WhileStatement, first.start, end,
+        val end = parser.previous().end;
+        return parser.add(
+            AstKind.WhileStatement, first.start, end,
             subtreeStart, 0);
     }
-    if (parserMatch(parser, TokenKind.KwBreak)) {
-        if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-        return parserAdd(
-            parser, AstKind.BreakStatement, first.start, parserPrevious(parser).end,
+    if (parser.match(TokenKind.KwBreak)) {
+        if (!parser.expect(TokenKind.Semicolon)) return 0;
+        return parser.add(
+            AstKind.BreakStatement, first.start, parser.previous().end,
             subtreeStart, 0);
     }
-    if (parserMatch(parser, TokenKind.KwFor)) {
-        if (!parserExpect(parser, TokenKind.LeftParen)) return 0;
-        if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-        val name = parserPrevious(parser);
-        parserAdd(parser, AstKind.Name, name.start, name.end, parser.nodes.length, 0);
+    if (parser.match(TokenKind.KwFor)) {
+        if (!parser.expect(TokenKind.LeftParen)) return 0;
+        if (!parser.expect(TokenKind.Identifier)) return 0;
+        val name = parser.previous();
+        parser.add(AstKind.Name, name.start, name.end, parser.nodes.length, 0);
         var hasIndex: u32 = 0;
-        if (parserMatch(parser, TokenKind.Comma)) {
-            if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-            val indexName = parserPrevious(parser);
-            parserAdd(
-                parser, AstKind.Name, indexName.start, indexName.end,
+        if (parser.match(TokenKind.Comma)) {
+            if (!parser.expect(TokenKind.Identifier)) return 0;
+            val indexName = parser.previous();
+            parser.add(
+                AstKind.Name, indexName.start, indexName.end,
                 parser.nodes.length, 0);
             hasIndex = 1;
         }
-        if (!parserExpect(parser, TokenKind.KwIn)) return 0;
+        if (!parser.expect(TokenKind.KwIn)) return 0;
         parseExpression(parser, 0);
-        if (!parserExpect(parser, TokenKind.RightParen)) return 0;
+        if (!parser.expect(TokenKind.RightParen)) return 0;
         parseControlBody(parser);
-        return parserAdd(
-            parser, AstKind.ForStatement, first.start, parserPrevious(parser).end,
+        return parser.add(
+            AstKind.ForStatement, first.start, parser.previous().end,
             subtreeStart, hasIndex);
     }
-    if (parserMatch(parser, TokenKind.KwContinue)) {
-        if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-        return parserAdd(
-            parser, AstKind.ContinueStatement, first.start, parserPrevious(parser).end,
+    if (parser.match(TokenKind.KwContinue)) {
+        if (!parser.expect(TokenKind.Semicolon)) return 0;
+        return parser.add(
+            AstKind.ContinueStatement, first.start, parser.previous().end,
             subtreeStart, 0);
     }
     var isVariable = first.kind == TokenKind.KwVal;
     if (first.kind == TokenKind.KwVar) isVariable = true;
     if (isVariable) {
         parser.current++;
-        if (!parserExpect(parser, TokenKind.Identifier)) return 0;
-        val variableName = parserPrevious(parser);
-        parserAdd(
-            parser, AstKind.Name, variableName.start, variableName.end,
+        if (!parser.expect(TokenKind.Identifier)) return 0;
+        val variableName = parser.previous();
+        parser.add(
+            AstKind.Name, variableName.start, variableName.end,
             parser.nodes.length, 0);
-        if (parserMatch(parser, TokenKind.Colon)) parseType(parser);
-        if (!parserExpect(parser, TokenKind.Equal)) return 0;
+        if (parser.match(TokenKind.Colon)) parseType(parser);
+        if (!parser.expect(TokenKind.Equal)) return 0;
         parseExpression(parser, 0);
-        if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-        return parserAdd(
-            parser, AstKind.VariableDeclaration, first.start, parserPrevious(parser).end,
+        if (!parser.expect(TokenKind.Semicolon)) return 0;
+        return parser.add(
+            AstKind.VariableDeclaration, first.start, parser.previous().end,
             subtreeStart, first.kind.value);
     }
-    if (parserMatch(parser, TokenKind.KwDefer)) {
+    if (parser.match(TokenKind.KwDefer)) {
         parseStatement(parser);
-        return parserAdd(
-            parser, AstKind.FunctionOrDefer, first.start, parserPrevious(parser).end,
+        return parser.add(
+            AstKind.FunctionOrDefer, first.start, parser.previous().end,
             subtreeStart, 0);
     }
-    if (parserMatch(parser, TokenKind.KwReturn)) {
+    if (parser.match(TokenKind.KwReturn)) {
         var hasValue: u32 = 0;
-        if (!parserCheck(parser, TokenKind.Semicolon)) {
+        if (!parser.check(TokenKind.Semicolon)) {
             parseExpression(parser, 0);
             hasValue = 1;
         }
-        if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-        return parserAdd(
-            parser, AstKind.ReturnStatement, first.start, parserPrevious(parser).end,
+        if (!parser.expect(TokenKind.Semicolon)) return 0;
+        return parser.add(
+            AstKind.ReturnStatement, first.start, parser.previous().end,
             subtreeStart, hasValue);
     }
-    if (parserCheck(parser, TokenKind.LeftBrace)) return parseBlock(parser);
+    if (parser.check(TokenKind.LeftBrace)) return parseBlock(parser);
     parseExpression(parser, 0);
-    if (!parserExpect(parser, TokenKind.Semicolon)) return 0;
-    return parserAdd(
-        parser, AstKind.ExpressionStatement, first.start, parserPrevious(parser).end,
+    if (!parser.expect(TokenKind.Semicolon)) return 0;
+    return parser.add(
+        AstKind.ExpressionStatement, first.start, parser.previous().end,
         subtreeStart, 0);
 }
