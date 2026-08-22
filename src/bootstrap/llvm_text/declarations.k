@@ -38,7 +38,7 @@ fn structRootByName(
     for (index in 0..<program.aux) {
         val root = roots[index as u64];
         val node = nodes.data[root];
-        if (node.kind == AstKind.StructDeclaration) {
+        if (node.kind == AstKind.STRUCT_DECLARATION) {
             val nameNode = nodes.data[node.subtreeStart];
             if (source.hash(nameNode.start, nameNode.end) == name) {
                 found = root;
@@ -57,7 +57,7 @@ fn functionRootByName(
     for (index in 0..<program.aux) {
         val root = roots[index as u64];
         val node = nodes.data[root];
-        if (node.kind == AstKind.FunctionOrDefer) {
+        if (node.kind == AstKind.FUNCTION_OR_DEFER) {
             val nameNode = nodes.data[node.subtreeStart];
             if (source.hash(nameNode.start, nameNode.end) == name) {
                 found = root;
@@ -87,7 +87,7 @@ fn emitterVariableRootByStorage(
     val nodes: List<AstNode>, storage: u64): u64 {
     for (root in 0..<nodes.length) {
         val node = nodes.data[root];
-        if (node.kind == AstKind.VariableDeclaration) {
+        if (node.kind == AstKind.VARIABLE_DECLARATION) {
             val name = nodes.data[node.subtreeStart];
             if (name.start == storage) return root;
         }
@@ -112,7 +112,7 @@ fn emitterAssociatedOwnerStructRoot(
     var owner = nodes.length;
     for (index in 0..<program.aux) {
         val structureRoot = roots[index as u64];
-        if (nodes.data[structureRoot].kind == AstKind.StructDeclaration) {
+        if (nodes.data[structureRoot].kind == AstKind.STRUCT_DECLARATION) {
             var methodRoot = structureRoot - 1;
             val methodCount = emitterStructMethodCount(
                 nodes.data[structureRoot]);
@@ -217,13 +217,13 @@ fn emitBlockAllocas(
     for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
         val statement = nodes.data[root];
-        if (statement.kind == AstKind.VariableDeclaration) {
+        if (statement.kind == AstKind.VARIABLE_DECLARATION) {
             emitVariableAlloca(buffer, genericArguments, nodes, root);
         }
-        if (statement.kind == AstKind.Block) {
+        if (statement.kind == AstKind.BLOCK) {
             emitBlockAllocas(buffer, genericArguments, nodes, root);
         }
-        if (statement.kind == AstKind.IfStatement) {
+        if (statement.kind == AstKind.IF_STATEMENT) {
             var branchRoot = root - 1;
             if (statement.aux == 1) {
                 emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
@@ -231,20 +231,20 @@ fn emitBlockAllocas(
             }
             emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
         }
-        if (statement.kind == AstKind.WhileStatement) {
+        if (statement.kind == AstKind.WHILE_STATEMENT) {
             emitBlockAllocas(buffer, genericArguments, nodes, root - 1);
         }
-        if (statement.kind == AstKind.ForStatement) {
+        if (statement.kind == AstKind.FOR_STATEMENT) {
             val bodyRoot = root - 1;
             val collectionRoot = expressionChildBefore(nodes, bodyRoot);
             val name = nodes.data[statement.subtreeStart];
             val collection = nodes.data[collectionRoot];
-            var range = collection.kind == AstKind.Binary;
+            var range = collection.kind == AstKind.BINARY;
             if (range) {
-                range = collection.aux == TokenKind.Range.value;
-                if (collection.aux == TokenKind.RangeExclusive.value) range = true;
-                if (collection.aux == TokenKind.RangeExclusiveStart.value) range = true;
-                if (collection.aux == TokenKind.RangeExclusiveBoth.value) range = true;
+                range = collection.aux == TokenKind.RANGE.value;
+                if (collection.aux == TokenKind.RANGE_EXCLUSIVE.value) range = true;
+                if (collection.aux == TokenKind.RANGE_EXCLUSIVE_START.value) range = true;
+                if (collection.aux == TokenKind.RANGE_EXCLUSIVE_BOTH.value) range = true;
             }
             appendValuePrefix(buffer); appendLocalPrefix(buffer);
             appendDecimal(buffer, name.start); appendEquals(buffer);
@@ -253,7 +253,7 @@ fn emitBlockAllocas(
                 appendNodeType(buffer, genericArguments, collection);
             } else {
                 var elementKind = collection.typePointee;
-                if (collection.typeKind == TypeKind.Array.value) {
+                if (collection.typeKind == TypeKind.ARRAY.value) {
                     elementKind = collection.typePointee % 256;
                 }
                 appendType(
@@ -272,7 +272,7 @@ fn emitBlockAllocas(
             }
             emitBlockAllocas(buffer, genericArguments, nodes, bodyRoot);
         }
-        if (statement.kind == AstKind.WhenStatement) {
+        if (statement.kind == AstKind.WHEN_STATEMENT) {
             val branchCount = statement.aux % 65536;
             var branchRoot = root - 1;
             for (branchIndex in 0..<branchCount) {
@@ -347,18 +347,18 @@ fn emitFunction(
         val parameterName = nodes.data[parameter.subtreeStart];
         val parameterType = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition) - 1];
-        if (parameter.mode() == ParameterMode.MutableBorrow) {
+        if (parameter.mode() == ParameterMode.MUTABLE_BORROW) {
             appendType(buffer, genericArguments, 9, 0, parameterType.typeKind);
         } else {
             appendNodeType(buffer, genericArguments, parameterType);
         }
         buffer.append(" %");
-        if (parameter.mode() != ParameterMode.MutableBorrow) {
+        if (parameter.mode() != ParameterMode.MUTABLE_BORROW) {
             buffer.append("arg.");
         } else {
             appendLocalPrefix(buffer);
         }
-        if (parameter.mode() == ParameterMode.MutableBorrow) {
+        if (parameter.mode() == ParameterMode.MUTABLE_BORROW) {
             appendDecimal(buffer, parameterName.start);
         } else {
             appendSource(
@@ -385,7 +385,7 @@ fn emitFunction(
         val parameter = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition)];
         val parameterName = nodes.data[parameter.subtreeStart];
-        if (parameter.mode() != ParameterMode.MutableBorrow) {
+        if (parameter.mode() != ParameterMode.MUTABLE_BORROW) {
         val parameterType = nodes.data[
             parameterRoot(nodes, functionRoot, parameterPosition) - 1];
         appendValuePrefix(buffer);
@@ -426,10 +426,10 @@ fn emitFunction(
             buffer, source, nodes, genericArguments,
             blockRoot, counter, defers);
     if (!terminated) {
-        var returnsUnit = returnType.typeKind == TypeKind.Unit.value;
-        if (returnType.kind == AstKind.NamedType &&
-            returnType.aux == TokenKind.KwUnit.value) returnsUnit = true;
-        if (function.infersReturn() && function.typeKind == TypeKind.Unit.value)
+        var returnsUnit = returnType.typeKind == TypeKind.UNIT.value;
+        if (returnType.kind == AstKind.NAMED_TYPE &&
+            returnType.aux == TokenKind.UNIT.value) returnsUnit = true;
+        if (function.infersReturn() && function.typeKind == TypeKind.UNIT.value)
             returnsUnit = true;
         if (returnsUnit) {
             buffer.append("  ret void");
@@ -454,9 +454,9 @@ fn emitSpecializedFunction(
     for (offset in 0..<count) {
         saved[offset] = nodes.data[start + offset];
         var node = nodes.data[start + offset];
-        if (node.typeKind == TypeKind.TypeParameter.value || node.typeKind == TypeKind.Struct.value ||
-                node.typeKind == TypeKind.Pointer.value || node.typeKind == TypeKind.Slice.value ||
-                node.typeKind == TypeKind.Nullable.value) {
+        if (node.typeKind == TypeKind.TYPE_PARAMETER.value || node.typeKind == TypeKind.STRUCT.value ||
+                node.typeKind == TypeKind.POINTER.value || node.typeKind == TypeKind.SLICE.value ||
+                node.typeKind == TypeKind.NULLABLE.value) {
             val concrete = substituteEmitterType(
                 source, nodes, functionRoot,
                 TypeValue(
@@ -466,7 +466,7 @@ fn emitSpecializedFunction(
             node.typeName = concrete.name;
             node.typePointee = concrete.pointee;
         }
-        if (node.kind == AstKind.Call) {
+        if (node.kind == AstKind.CALL) {
             val genericCount = node.genericArgumentCount;
             if (genericCount > 0) {
                 val substituted =
@@ -535,17 +535,17 @@ fn emitSimpleFunction(
     if (function.parameterCount() != 0) return false;
     if (function.typeParameterCount() != 0) return false;
     val returnTypeRoot = nodes.data[functionRoot - 1].subtreeStart - 1;
-    if (nodes.data[returnTypeRoot].aux != TokenKind.KwI32.value) return false;
+    if (nodes.data[returnTypeRoot].aux != TokenKind.I32.value) return false;
     val name = nodes.data[function.subtreeStart];
     val blockRoot = functionRoot - 1;
     if (nodes.data[blockRoot].aux != 1) return false;
     val statementRoot = firstStatementRoot(nodes, blockRoot);
     val statement = nodes.data[statementRoot];
-    if (statement.kind != AstKind.ReturnStatement) return false;
+    if (statement.kind != AstKind.RETURN_STATEMENT) return false;
     if (statement.aux != 1) return false;
     val literal = nodes.data[statementRoot - 1];
-    if (literal.kind != AstKind.Literal) return false;
-    if (literal.aux != TokenKind.IntegerLiteral.value) return false;
+    if (literal.kind != AstKind.LITERAL) return false;
+    if (literal.aux != TokenKind.INTEGER_LITERAL.value) return false;
 
     appendDefine(buffer);
     appendI32(buffer);
@@ -610,7 +610,7 @@ fn structSpecializationRequestExists(
 fn structArgumentsAreConcrete(
     val arguments: List<TypeValue>, start: u64, count: u32): bool {
     for (index in 0..<count) {
-        if (arguments.data[start + index as u64].kind == TypeKind.TypeParameter) {
+        if (arguments.data[start + index as u64].kind == TypeKind.TYPE_PARAMETER) {
             return false;
         }
     }
@@ -696,7 +696,7 @@ fn callArgumentsAreConcrete(
     if (call.genericArgumentCount == 0) return false;
     for (index in 0..<call.genericArgumentCount) {
         if (arguments.data[
-                call.genericArgumentStart + index as u64].kind == TypeKind.TypeParameter) {
+                call.genericArgumentStart + index as u64].kind == TypeKind.TYPE_PARAMETER) {
             return false;
         }
     }
@@ -713,9 +713,9 @@ fn emitModule(
     appendOwnedStringDeclarations(buffer);
     for (literalIndex in 0..<nodes.length) {
         val literal = nodes.data[literalIndex];
-        if (literal.kind == AstKind.Literal &&
-            literal.aux == TokenKind.StringLiteral.value &&
-            (literal.typeKind == TypeKind.String.value || literal.typeKind == TypeKind.Slice.value))
+        if (literal.kind == AstKind.LITERAL &&
+            literal.aux == TokenKind.STRING_LITERAL.value &&
+            (literal.typeKind == TypeKind.STR.value || literal.typeKind == TypeKind.SLICE.value))
             appendStringGlobal(buffer, source, literal, literalIndex);
     }
     appendNewline(buffer);
@@ -730,7 +730,7 @@ fn emitModule(
     }
     for (index in 0..<program.aux) {
         root = roots[index as u64];
-        if (nodes.data[root].kind == AstKind.StructDeclaration) {
+        if (nodes.data[root].kind == AstKind.STRUCT_DECLARATION) {
             if (nodes.data[root].structTypeParameterCount() == 0) {
                 emitStruct(buffer, source, nodes, genericArguments, root);
             }
@@ -741,7 +741,7 @@ fn emitModule(
     defer structRequests.free();
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
-        if (node.typeKind == TypeKind.Struct.value) {
+        if (node.typeKind == TypeKind.STRUCT.value) {
             val start = node.typePointee % 65536;
             val count = node.typePointee / 65536;
             if (count > 0) {
@@ -772,14 +772,14 @@ fn emitModule(
     appendNewline(buffer);
     for (index in 0..<program.aux) {
         root = roots[index as u64];
-        if (nodes.data[root].kind == AstKind.FunctionOrDefer) {
+        if (nodes.data[root].kind == AstKind.FUNCTION_OR_DEFER) {
             if (nodes.data[root].typeParameterCount() == 0) {
                 emitFunction(
                     buffer, source, nodes, genericArguments,
                     root, 0, 0);
             }
         } else {
-            if (nodes.data[root].kind == AstKind.StructDeclaration) {
+            if (nodes.data[root].kind == AstKind.STRUCT_DECLARATION) {
                 var methodRoot = root - 1;
                 val methods = nodes.data[root].methodCount();
                 for (method in 0..<methods) {
@@ -797,7 +797,7 @@ fn emitModule(
     defer requests.free();
     for (callIndex in 0..<nodes.length) {
         val call = nodes.data[callIndex];
-        if (call.kind == AstKind.Call) {
+        if (call.kind == AstKind.CALL) {
             if (callArgumentsAreConcrete(call, genericArguments)) {
                 val calleeRoot = callCalleeRoot(nodes, callIndex);
                 val callee = nodes.data[calleeRoot];
@@ -805,7 +805,7 @@ fn emitModule(
                     functionRootByName(
                         source, nodes,
                         source.hash(callee.start, callee.end));
-                if (callee.kind == AstKind.Member) functionRoot = call.storage;
+                if (callee.kind == AstKind.MEMBER) functionRoot = call.storage;
                 if (functionRoot != nodes.length) {
                     if (
                         !specializationRequestExists(
@@ -834,7 +834,7 @@ fn emitModule(
             nodes.data[request.functionRoot].subtreeStart;
         for (nestedIndex in functionStart..<request.functionRoot) {
             val nestedCall = nodes.data[nestedIndex];
-            if (nestedCall.kind == AstKind.Call) {
+            if (nestedCall.kind == AstKind.CALL) {
             if (nestedCall.genericArgumentCount > 0) {
                 val calleeRoot =
                     callCalleeRoot(nodes, nestedIndex);
@@ -843,7 +843,7 @@ fn emitModule(
                     functionRootByName(
                         source, nodes,
                         source.hash(callee.start, callee.end));
-                if (callee.kind == AstKind.Member)
+                if (callee.kind == AstKind.MEMBER)
                     nestedFunctionRoot = nestedCall.storage;
                 if (nestedFunctionRoot != nodes.length) {
                     val nestedCount = nestedCall.genericArgumentCount;

@@ -16,30 +16,30 @@ fn parse(val tokens: List<Token>): ParseResult {
     var parser = Parser(tokens, List<AstNode>.new(), 0, true, 0);
     val start = parser.peek().start;
     var declarationCount: u32 = 0;
-    if (parser.check(TokenKind.KwModule)) {
+    if (parser.check(TokenKind.MODULE)) {
         parseModule(parser);
         declarationCount++;
     }
-    while (parser.check(TokenKind.KwImport)) {
+    while (parser.check(TokenKind.IMPORT)) {
         parseImport(parser);
         declarationCount++;
     }
     while (parser.ok) {
-        if (parser.check(TokenKind.EndOfFile)) break;
-        if (parser.check(TokenKind.KwModule)) {
+        if (parser.check(TokenKind.EOF)) break;
+        if (parser.check(TokenKind.MODULE)) {
             parseModule(parser);
-        } else if (parser.check(TokenKind.KwImport)) {
+        } else if (parser.check(TokenKind.IMPORT)) {
             parseImport(parser);
-        } else if (parser.check(TokenKind.KwEnum)) {
+        } else if (parser.check(TokenKind.ENUM)) {
             parseEnum(parser);
-        } else if (parser.check(TokenKind.KwConst)) {
+        } else if (parser.check(TokenKind.CONST)) {
             parseConstant(parser);
-        } else if (parser.check(TokenKind.KwStruct)) {
+        } else if (parser.check(TokenKind.STRUCT)) {
             parseStruct(parser);
         } else {
             var isExtern = false;
             val declarationStart = parser.peek().start;
-            if (parser.match(TokenKind.KwExtern)) isExtern = true;
+            if (parser.match(TokenKind.EXTERN)) isExtern = true;
             parseFunction(parser, isExtern, declarationStart, 0, 0);
         }
         declarationCount++;
@@ -47,9 +47,9 @@ fn parse(val tokens: List<Token>): ParseResult {
     var ok = false;
     var errorStart: u64 = 0;
     var expectedKind: u32 = 0;
-    if (parser.check(TokenKind.EndOfFile)) {
+    if (parser.check(TokenKind.EOF)) {
         val end = parser.peek().end;
-        parser.add(AstKind.Program, start, end, 0, declarationCount);
+        parser.add(AstKind.PROGRAM, start, end, 0, declarationCount);
         ok = true;
     } else {
         errorStart = parser.peek().start;

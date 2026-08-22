@@ -5,57 +5,57 @@ import bootstrap.list.List;
 import bootstrap.token.TokenKind;
 
 enum TypeKind : u32 {
-    Invalid,
-    Unit,
-    Bool,
+    INVALID,
+    UNIT,
+    BOOL,
     I32,
     I64,
     U8,
     U32,
     U64,
-    Struct,
-    Pointer,
-    String,
-    IntegerLiteral,
-    Function,
-    Slice,
-    TypeParameter,
-    Nullable,
-    NullLiteral,
+    STRUCT,
+    POINTER,
+    STR,
+    INTEGER_LITERAL,
+    FUNCTION,
+    SLICE,
+    TYPE_PARAMETER,
+    NULLABLE,
+    NULL_LITERAL,
     F32,
     F64,
-    Array,
-    Enum
+    ARRAY,
+    ENUM
 }
 
 fn typeKindFromValue(value: u32): TypeKind => when (value) {
-    1 -> TypeKind.Unit;
-    2 -> TypeKind.Bool;
+    1 -> TypeKind.UNIT;
+    2 -> TypeKind.BOOL;
     3 -> TypeKind.I32;
     4 -> TypeKind.I64;
     5 -> TypeKind.U8;
     6 -> TypeKind.U32;
     7 -> TypeKind.U64;
-    8 -> TypeKind.Struct;
-    9 -> TypeKind.Pointer;
-    10 -> TypeKind.String;
-    11 -> TypeKind.IntegerLiteral;
-    12 -> TypeKind.Function;
-    13 -> TypeKind.Slice;
-    14 -> TypeKind.TypeParameter;
-    15 -> TypeKind.Nullable;
-    16 -> TypeKind.NullLiteral;
+    8 -> TypeKind.STRUCT;
+    9 -> TypeKind.POINTER;
+    10 -> TypeKind.STR;
+    11 -> TypeKind.INTEGER_LITERAL;
+    12 -> TypeKind.FUNCTION;
+    13 -> TypeKind.SLICE;
+    14 -> TypeKind.TYPE_PARAMETER;
+    15 -> TypeKind.NULLABLE;
+    16 -> TypeKind.NULL_LITERAL;
     17 -> TypeKind.F32;
     18 -> TypeKind.F64;
-    19 -> TypeKind.Array;
-    20 -> TypeKind.Enum;
-    else -> TypeKind.Invalid;
+    19 -> TypeKind.ARRAY;
+    20 -> TypeKind.ENUM;
+    else -> TypeKind.INVALID;
 };
 
 struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 
 	fn array(val self, size: u64) => TypeValue(
-        TypeKind.Array, self.name,
+        TypeKind.ARRAY, self.name,
         self.kind.value + (size as u32) * 256);
 
 	fn arrayElement(val self) => TypeValue(
@@ -103,7 +103,7 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 	fn equals(val self, right: TypeValue, val genericArguments: List<TypeValue>): bool {
 		if (self.kind != right.kind) return false;
 		if (self.name != right.name) return false;
-		if (self.kind == TypeKind.Struct) {
+		if (self.kind == TypeKind.STRUCT) {
 			val leftCount = self.pointee / 65536;
 			val rightCount = right.pointee / 65536;
 			if (leftCount != rightCount) return false;
@@ -125,20 +125,20 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 	fn accepts(val self, actual: TypeValue, val genericArguments: List<TypeValue>): bool {
 		if (self.equals(actual, genericArguments)) return true;
 		if (actual.implicitlyWidensTo(self)) return true;
-		if (self.kind == TypeKind.Nullable) {
-			if (actual.kind == TypeKind.NullLiteral) return true;
+		if (self.kind == TypeKind.NULLABLE) {
+			if (actual.kind == TypeKind.NULL_LITERAL) return true;
 			return TypeValue(typeKindFromValue(self.pointee), self.name, 0).equals(actual, genericArguments);
 		}
-		if (actual.kind == TypeKind.IntegerLiteral) {
+		if (actual.kind == TypeKind.INTEGER_LITERAL) {
 			if (self.isInteger()) return true;
 		}
 		if (actual.kind == TypeKind.F64) {
 			if (self.isFloat()) return true;
 		}
-		if (self.kind == TypeKind.Array) {
-			if (actual.kind == TypeKind.Array) {
+		if (self.kind == TypeKind.ARRAY) {
+			if (actual.kind == TypeKind.ARRAY) {
 				if (self.arraySize() == actual.arraySize()) {
-					if (actual.arrayElement().kind == TypeKind.Invalid) return true;
+					if (actual.arrayElement().kind == TypeKind.INVALID) return true;
 				}
 			}
 		}
@@ -146,25 +146,25 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 	}
 }
 
-fn invalidType() => TypeValue(TypeKind.Invalid, 0, 0);
+fn invalidType() => TypeValue(TypeKind.INVALID, 0, 0);
 
-fn unitType() => TypeValue(TypeKind.Unit, 0, 0);
+fn unitType() => TypeValue(TypeKind.UNIT, 0, 0);
 
-fn boolType() => TypeValue(TypeKind.Bool, 0, 0);
+fn boolType() => TypeValue(TypeKind.BOOL, 0, 0);
 
-fn integerLiteralType() => TypeValue(TypeKind.IntegerLiteral, 0, 0);
+fn integerLiteralType() => TypeValue(TypeKind.INTEGER_LITERAL, 0, 0);
 
 fn primitiveType(tokenKind: u32): TypeValue => when (tokenKind) {
-    TokenKind.KwUnit.value -> unitType();
-    TokenKind.KwBool.value -> boolType();
-    TokenKind.KwI32.value -> TypeValue(TypeKind.I32, 0, 0);
-    TokenKind.KwI64.value -> TypeValue(TypeKind.I64, 0, 0);
-    TokenKind.KwU8.value -> TypeValue(TypeKind.U8, 0, 0);
-    TokenKind.KwU32.value -> TypeValue(TypeKind.U32, 0, 0);
-    TokenKind.KwU64.value -> TypeValue(TypeKind.U64, 0, 0);
-    TokenKind.KwF32.value -> TypeValue(TypeKind.F32, 0, 0);
-    TokenKind.KwF64.value -> TypeValue(TypeKind.F64, 0, 0);
-    TokenKind.KwString.value -> TypeValue(TypeKind.String, 0, 0);
+    TokenKind.UNIT.value -> unitType();
+    TokenKind.BOOL.value -> boolType();
+    TokenKind.I32.value -> TypeValue(TypeKind.I32, 0, 0);
+    TokenKind.I64.value -> TypeValue(TypeKind.I64, 0, 0);
+    TokenKind.U8.value -> TypeValue(TypeKind.U8, 0, 0);
+    TokenKind.U32.value -> TypeValue(TypeKind.U32, 0, 0);
+    TokenKind.U64.value -> TypeValue(TypeKind.U64, 0, 0);
+    TokenKind.F32.value -> TypeValue(TypeKind.F32, 0, 0);
+    TokenKind.F64.value -> TypeValue(TypeKind.F64, 0, 0);
+    TokenKind.STR.value -> TypeValue(TypeKind.STR, 0, 0);
     else -> invalidType();
 };
 

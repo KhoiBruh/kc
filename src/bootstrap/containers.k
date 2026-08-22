@@ -33,8 +33,6 @@ struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
     fn free(self) => k_boot_free(self.data as unit*);
 }
 
-struct StringLayout(data: u8*, length: u64, capacity: u64)
-
 struct StringBuilder(data: u8*, length: u64, capacity: u64) {
 
     fn new() => StringBuilder(k_boot_alloc(2) as u8*, 0, 2);
@@ -58,12 +56,12 @@ struct StringBuilder(data: u8*, length: u64, capacity: u64) {
         for (byte in bytes) self.add(byte);
     }
 
-    fn append(var self, val text: string) {
+    fn append(var self, val text: str) {
         val bytes = text.bytes;
         for (value in bytes) self.add(value);
     }
 
-    fn toString(val self): string {
+    fn toString(val self): str {
         var result = "";
         k_boot_string_copy(
             self.data, self.length, (&result) as unit*);
@@ -73,6 +71,7 @@ struct StringBuilder(data: u8*, length: u64, capacity: u64) {
     fn free(self) => k_boot_free(self.data as unit*);
 }
 
+struct StrLayout(data: u8*, length: u64, capacity: u64)
 struct StringRef(data: u8*, length: u64)
 
 struct SymbolEntry(key: u64, value: unit*)

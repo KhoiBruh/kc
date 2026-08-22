@@ -36,44 +36,49 @@ fn matches2(source: Source, start: u64, a: u8, b: u8) => when {
 fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
     val length = end - start;
     if (length == 2) {
-        if (matches2(source, start, 102, 110)) return TokenKind.KwFn;
-        if (matches2(source, start, 105, 102)) return TokenKind.KwIf;
-        if (matches2(source, start, 105, 110)) return TokenKind.KwIn;
-        if (matches2(source, start, 117, 56)) return TokenKind.KwU8;
-        if (matches2(source, start, 97, 115)) return TokenKind.KwAs;
+        if (matches2(source, start, 102, 110)) return TokenKind.FN;
+        if (matches2(source, start, 105, 102)) return TokenKind.IF;
+        if (matches2(source, start, 105, 110)) return TokenKind.IN;
+        if (matches2(source, start, 117, 56)) return TokenKind.U8;
+        if (matches2(source, start, 97, 115)) return TokenKind.AS;
     }
     if (length == 3) {
         if (source.data[start] == 118) {
             if (source.data[start + 1] == 97) {
-                if (source.data[start + 2] == 108) return TokenKind.KwVal;
-                if (source.data[start + 2] == 114) return TokenKind.KwVar;
+                if (source.data[start + 2] == 108) return TokenKind.VAL;
+                if (source.data[start + 2] == 114) return TokenKind.VAR;
             }
         }
         if (source.data[start] == 105) {
             if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) return TokenKind.KwI32;
+                if (source.data[start + 2] == 50) return TokenKind.I32;
             }
             if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) return TokenKind.KwI64;
+                if (source.data[start + 2] == 52) return TokenKind.I64;
             }
         }
         if (source.data[start] == 117) {
             if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) return TokenKind.KwU32;
+                if (source.data[start + 2] == 50) return TokenKind.U32;
             }
             if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) return TokenKind.KwU64;
+                if (source.data[start + 2] == 52) return TokenKind.U64;
             }
         }
         if (source.data[start] == 102) {
             if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 114) return TokenKind.KwFor;
+                if (source.data[start + 2] == 114) return TokenKind.FOR;
             }
             if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) return TokenKind.KwF32;
+                if (source.data[start + 2] == 50) return TokenKind.F32;
             }
             if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) return TokenKind.KwF64;
+                if (source.data[start + 2] == 52) return TokenKind.F64;
+            }
+        }
+        if (source.data[start] == 115) {
+            if (source.data[start + 1] == 116) {
+                if (source.data[start + 2] == 114) return TokenKind.STR;
             }
         }
     }
@@ -81,49 +86,49 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
         if (source.data[start] == 119) {
             if (source.data[start + 1] == 104) {
                 if (source.data[start + 2] == 101) {
-                    if (source.data[start + 3] == 110) return TokenKind.KwWhen;
+                    if (source.data[start + 3] == 110) return TokenKind.WHEN;
                 }
             }
         }
         if (source.data[start] == 101) {
             if (source.data[start + 1] == 108) {
                 if (source.data[start + 2] == 115) {
-                    if (source.data[start + 3] == 101) return TokenKind.KwElse;
+                    if (source.data[start + 3] == 101) return TokenKind.ELSE;
                 }
             }
         }
         if (source.data[start] == 117) {
             if (source.data[start + 1] == 110) {
                 if (source.data[start + 2] == 105) {
-                    if (source.data[start + 3] == 116) return TokenKind.KwUnit;
+                    if (source.data[start + 3] == 116) return TokenKind.UNIT;
                 }
             }
         }
         if (source.data[start] == 98) {
             if (source.data[start + 1] == 111) {
                 if (source.data[start + 2] == 111) {
-                    if (source.data[start + 3] == 108) return TokenKind.KwBool;
+                    if (source.data[start + 3] == 108) return TokenKind.BOOL;
                 }
             }
         }
         if (source.data[start] == 116) {
             if (source.data[start + 1] == 114) {
                 if (source.data[start + 2] == 117) {
-                    if (source.data[start + 3] == 101) return TokenKind.KwTrue;
+                    if (source.data[start + 3] == 101) return TokenKind.TRUE;
                 }
             }
         }
         if (source.data[start] == 110) {
             if (source.data[start + 1] == 117) {
                 if (source.data[start + 2] == 108) {
-                    if (source.data[start + 3] == 108) return TokenKind.KwNull;
+                    if (source.data[start + 3] == 108) return TokenKind.NULL;
                 }
             }
         }
         if (source.data[start] == 101) {
             if (source.data[start + 1] == 110) {
                 if (source.data[start + 2] == 117) {
-                    if (source.data[start + 3] == 109) return TokenKind.KwEnum;
+                    if (source.data[start + 3] == 109) return TokenKind.ENUM;
                 }
             }
         }
@@ -133,7 +138,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
             if (source.data[start + 1] == 111) {
                 if (source.data[start + 2] == 110) {
                     if (source.data[start + 3] == 115) {
-                        if (source.data[start + 4] == 116) return TokenKind.KwConst;
+                        if (source.data[start + 4] == 116) return TokenKind.CONST;
                     }
                 }
             }
@@ -142,7 +147,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
             if (source.data[start + 1] == 114) {
                 if (source.data[start + 2] == 101) {
                     if (source.data[start + 3] == 97) {
-                        if (source.data[start + 4] == 107) return TokenKind.KwBreak;
+                        if (source.data[start + 4] == 107) return TokenKind.BREAK;
                     }
                 }
             }
@@ -151,7 +156,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
             if (source.data[start + 1] == 104) {
                 if (source.data[start + 2] == 105) {
                     if (source.data[start + 3] == 108) {
-                        if (source.data[start + 4] == 101) return TokenKind.KwWhile;
+                        if (source.data[start + 4] == 101) return TokenKind.WHILE;
                     }
                 }
             }
@@ -160,7 +165,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
             if (source.data[start + 1] == 101) {
                 if (source.data[start + 2] == 102) {
                     if (source.data[start + 3] == 101) {
-                        if (source.data[start + 4] == 114) return TokenKind.KwDefer;
+                        if (source.data[start + 4] == 114) return TokenKind.DEFER;
                     }
                 }
             }
@@ -169,7 +174,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
             if (source.data[start + 1] == 97) {
                 if (source.data[start + 2] == 108) {
                     if (source.data[start + 3] == 115) {
-                        if (source.data[start + 4] == 101) return TokenKind.KwFalse;
+                        if (source.data[start + 4] == 101) return TokenKind.FALSE;
                     }
                 }
             }
@@ -181,7 +186,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                 if (source.data[start + 2] == 100) {
                     if (source.data[start + 3] == 117) {
                         if (source.data[start + 4] == 108) {
-                            if (source.data[start + 5] == 101) return TokenKind.KwModule;
+                            if (source.data[start + 5] == 101) return TokenKind.MODULE;
                         }
                     }
                 }
@@ -192,7 +197,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                 if (source.data[start + 2] == 112) {
                     if (source.data[start + 3] == 111) {
                         if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 116) return TokenKind.KwImport;
+                            if (source.data[start + 5] == 116) return TokenKind.IMPORT;
                         }
                     }
                 }
@@ -203,7 +208,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                 if (source.data[start + 2] == 116) {
                     if (source.data[start + 3] == 117) {
                         if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 110) return TokenKind.KwReturn;
+                            if (source.data[start + 5] == 110) return TokenKind.RETURN;
                         }
                     }
                 }
@@ -214,12 +219,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                 if (source.data[start + 2] == 114) {
                     if (source.data[start + 3] == 117) {
                         if (source.data[start + 4] == 99) {
-                            if (source.data[start + 5] == 116) return TokenKind.KwStruct;
-                        }
-                    }
-                    if (source.data[start + 3] == 105) {
-                        if (source.data[start + 4] == 110) {
-                            if (source.data[start + 5] == 103) return TokenKind.KwString;
+                            if (source.data[start + 5] == 116) return TokenKind.STRUCT;
                         }
                     }
                 }
@@ -230,7 +230,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                 if (source.data[start + 2] == 116) {
                     if (source.data[start + 3] == 101) {
                         if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 110) return TokenKind.KwExtern;
+                            if (source.data[start + 5] == 110) return TokenKind.EXTERN;
                         }
                     }
                 }
@@ -241,7 +241,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                 if (source.data[start + 2] == 122) {
                     if (source.data[start + 3] == 101) {
                         if (source.data[start + 4] == 111) {
-                            if (source.data[start + 5] == 102) return TokenKind.KwSizeof;
+                            if (source.data[start + 5] == 102) return TokenKind.SIZEOF;
                         }
                     }
                 }
@@ -256,7 +256,7 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
                         if (source.data[start + 4] == 105) {
                             if (source.data[start + 5] == 110) {
                                 if (source.data[start + 6] == 117) {
-                                    if (source.data[start + 7] == 101) return TokenKind.KwContinue;
+                                    if (source.data[start + 7] == 101) return TokenKind.CONTINUE;
                                 }
                             }
                         }
@@ -266,57 +266,57 @@ fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
         }
     }
 
-    return TokenKind.Identifier;
+    return TokenKind.IDENTIFIER;
 }
 
 fn punctuationKind(value: u8): TokenKind => when (value) {
-    40 -> TokenKind.LeftParen;
-    41 -> TokenKind.RightParen;
-    123 -> TokenKind.LeftBrace;
-    125 -> TokenKind.RightBrace;
-    91 -> TokenKind.LeftBracket;
-    93 -> TokenKind.RightBracket;
-    44 -> TokenKind.Comma;
-    58 -> TokenKind.Colon;
-    59 -> TokenKind.Semicolon;
-    46 -> TokenKind.Dot;
-    43 -> TokenKind.Plus;
-    45 -> TokenKind.Minus;
-    42 -> TokenKind.Star;
-    47 -> TokenKind.Slash;
-    37 -> TokenKind.Percent;
-    61 -> TokenKind.Equal;
-    60 -> TokenKind.Less;
-    62 -> TokenKind.Greater;
-    38 -> TokenKind.Ampersand;
-    124 -> TokenKind.Pipe;
-    94 -> TokenKind.Caret;
-    126 -> TokenKind.Tilde;
-    63 -> TokenKind.Question;
-    33 -> TokenKind.Bang;
-    else -> TokenKind.EndOfFile;
+    40 -> TokenKind.LEFT_PAREN;
+    41 -> TokenKind.RIGHT_PAREN;
+    123 -> TokenKind.LEFT_BRACE;
+    125 -> TokenKind.RIGHT_BRACE;
+    91 -> TokenKind.LEFT_BRACKET;
+    93 -> TokenKind.RIGHT_BRACKET;
+    44 -> TokenKind.COMMA;
+    58 -> TokenKind.COLON;
+    59 -> TokenKind.SEMICOLON;
+    46 -> TokenKind.DOT;
+    43 -> TokenKind.PLUS;
+    45 -> TokenKind.MINUS;
+    42 -> TokenKind.STAR;
+    47 -> TokenKind.SLASH;
+    37 -> TokenKind.PERCENT;
+    61 -> TokenKind.EQUAL;
+    60 -> TokenKind.LESS;
+    62 -> TokenKind.GREATER;
+    38 -> TokenKind.AMPERSAND;
+    124 -> TokenKind.PIPE;
+    94 -> TokenKind.CARET;
+    126 -> TokenKind.TILDE;
+    63 -> TokenKind.QUESTION;
+    33 -> TokenKind.BANG;
+    else -> TokenKind.EOF;
 };
 
 fn doublePunctuationKind(first: u8, second: u8): TokenKind {
-    if (first == 43 && second == 43) return TokenKind.PlusPlus;
-    if (first == 45 && second == 45) return TokenKind.MinusMinus;
+    if (first == 43 && second == 43) return TokenKind.PLUS_PLUS;
+    if (first == 45 && second == 45) return TokenKind.MINUS_MINUS;
     if (second == 61) {
-        if (first == 43) return TokenKind.PlusEqual;
-        if (first == 45) return TokenKind.MinusEqual;
-        if (first == 42) return TokenKind.StarEqual;
-        if (first == 47) return TokenKind.SlashEqual;
-        if (first == 37) return TokenKind.PercentEqual;
-        if (first == 61) return TokenKind.EqualEqual;
-        if (first == 33) return TokenKind.BangEqual;
-        if (first == 60) return TokenKind.LessEqual;
-        if (first == 62) return TokenKind.GreaterEqual;
+        if (first == 43) return TokenKind.PLUS_EQUAL;
+        if (first == 45) return TokenKind.MINUS_EQUAL;
+        if (first == 42) return TokenKind.STAR_EQUAL;
+        if (first == 47) return TokenKind.SLASH_EQUAL;
+        if (first == 37) return TokenKind.PERCENT_EQUAL;
+        if (first == 61) return TokenKind.EQUAL_EQUAL;
+        if (first == 33) return TokenKind.BANG_EQUAL;
+        if (first == 60) return TokenKind.LESS_EQUAL;
+        if (first == 62) return TokenKind.GREATER_EQUAL;
     }
-    if (first == 38 && second == 38) return TokenKind.AndAnd;
-    if (first == 124 && second == 124) return TokenKind.OrOr;
-    if (first == 45 && second == 62) return TokenKind.Arrow;
-    if (first == 61 && second == 62) return TokenKind.FatArrow;
-    if (first == 46 && second == 46) return TokenKind.Range;
-    return TokenKind.EndOfFile;
+    if (first == 38 && second == 38) return TokenKind.AND_AND;
+    if (first == 124 && second == 124) return TokenKind.OR_OR;
+    if (first == 45 && second == 62) return TokenKind.ARROW;
+    if (first == 61 && second == 62) return TokenKind.FAT_ARROW;
+    if (first == 46 && second == 46) return TokenKind.RANGE;
+    return TokenKind.EOF;
 }
 
 struct Lexer(
@@ -356,13 +356,13 @@ struct Lexer(
         val start = self.offset;
         self.offset++;
         self.scanInteger();
-        var kind = TokenKind.IntegerLiteral;
+        var kind = TokenKind.INTEGER_LITERAL;
 
         if (self.offset < self.source.length) {
             if (self.source.data[self.offset] == 46) {
                 if (self.offset + 1 < self.source.length) {
                     if (isDigit(self.source.data[self.offset + 1])) {
-                        kind = TokenKind.FloatLiteral;
+                        kind = TokenKind.FLOAT_LITERAL;
                         self.offset = self.offset + 2;
                         self.scanInteger();
                     }
@@ -374,7 +374,7 @@ struct Lexer(
             var exponentMarker = self.source.data[self.offset] == 101;
             if (self.source.data[self.offset] == 69) exponentMarker = true;
             if (exponentMarker) {
-                kind = TokenKind.FloatLiteral;
+                kind = TokenKind.FLOAT_LITERAL;
                 self.offset++;
                 if (self.offset < self.source.length) {
                     var exponentSign = self.source.data[self.offset] == 43;
@@ -402,7 +402,7 @@ struct Lexer(
                     escaped = true;
                 } else if (value == 34) {
                     self.offset = i + 1;
-                    self.tokens.add(Token(TokenKind.StringLiteral, start, self.offset));
+                    self.tokens.add(Token(TokenKind.STRING_LITERAL, start, self.offset));
                     foundEnd = true;
                     break;
                 }
@@ -424,9 +424,9 @@ struct Lexer(
                 if (self.offset < self.source.length) self.offset++;
             } else {
                 val pairKind = doublePunctuationKind(47, self.source.data[self.offset + 1]);
-                if (pairKind == TokenKind.EndOfFile) {
+                if (pairKind == TokenKind.EOF) {
                     self.offset++;
-                    self.tokens.add(Token(TokenKind.Slash, start, self.offset));
+                    self.tokens.add(Token(TokenKind.SLASH, start, self.offset));
                 } else {
                     self.offset = self.offset + 2;
                     self.tokens.add(Token(pairKind, start, self.offset));
@@ -434,7 +434,7 @@ struct Lexer(
             }
         } else {
             self.offset++;
-            self.tokens.add(Token(TokenKind.Slash, start, self.offset));
+            self.tokens.add(Token(TokenKind.SLASH, start, self.offset));
         }
     }
 
@@ -447,11 +447,11 @@ struct Lexer(
                     self.source.data[self.offset + 1] == 46 &&
                     self.source.data[self.offset + 2] == 46
                 ) {
-                    kind = TokenKind.RangeExclusiveStart;
+                    kind = TokenKind.RANGE_EXCLUSIVE_START;
                     self.offset = self.offset + 2;
                     if (self.offset + 1 < self.source.length) {
                         if (self.source.data[self.offset + 1] == 60) {
-                            kind = TokenKind.RangeExclusiveBoth;
+                            kind = TokenKind.RANGE_EXCLUSIVE_BOTH;
                             self.offset++;
                         }
                     }
@@ -462,24 +462,24 @@ struct Lexer(
             if (self.offset + 2 < self.source.length) {
                 if (self.source.data[self.offset + 1] == 46) {
                     if (self.source.data[self.offset + 2] == 60) {
-                        kind = TokenKind.RangeExclusive;
+                        kind = TokenKind.RANGE_EXCLUSIVE;
                         self.offset = self.offset + 2;
                     }
                 }
             }
         }
-        if (kind != TokenKind.RangeExclusive &&
-            kind != TokenKind.RangeExclusiveStart &&
-            kind != TokenKind.RangeExclusiveBoth) {
+        if (kind != TokenKind.RANGE_EXCLUSIVE &&
+            kind != TokenKind.RANGE_EXCLUSIVE_START &&
+            kind != TokenKind.RANGE_EXCLUSIVE_BOTH) {
             if (self.offset + 1 < self.source.length) {
                 val pairKind = doublePunctuationKind(value, self.source.data[self.offset + 1]);
-                if (pairKind != TokenKind.EndOfFile) {
+                if (pairKind != TokenKind.EOF) {
                     kind = pairKind;
                     self.offset++;
                 }
             }
         }
-        if (kind == TokenKind.EndOfFile) {
+        if (kind == TokenKind.EOF) {
             self.failed = true;
             self.errorStart = start;
             self.errorKind = 2;
@@ -513,7 +513,7 @@ struct Lexer(
         if (self.failed) {
             ok = false;
         } else {
-            self.tokens.add(Token(TokenKind.EndOfFile, self.source.length, self.source.length));
+            self.tokens.add(Token(TokenKind.EOF, self.source.length, self.source.length));
         }
         val errorStart = self.errorStart;
         val errorKind = self.errorKind;

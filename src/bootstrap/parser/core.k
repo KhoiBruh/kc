@@ -55,19 +55,19 @@ struct Parser(
         var depth: u32 = 1;
         for (cursor in self.current + 1..<self.tokens.length) {
             val kind = self.tokens.data[cursor].kind;
-            if (kind == TokenKind.Less) {
+            if (kind == TokenKind.LESS) {
                 depth++;
             } else {
-                if (kind == TokenKind.Greater) {
+                if (kind == TokenKind.GREATER) {
                     depth--;
                     if (depth == 0) {
                         if (cursor + 1 >= self.tokens.length) return false;
                         val next = self.tokens.data[cursor + 1].kind;
-                        if (next == TokenKind.LeftParen) return true;
-                        if (next != TokenKind.Dot) return false;
+                        if (next == TokenKind.LEFT_PAREN) return true;
+                        if (next != TokenKind.DOT) return false;
                         if (cursor + 3 >= self.tokens.length) return false;
-                        if (self.tokens.data[cursor + 2].kind != TokenKind.Identifier) return false;
-                        return self.tokens.data[cursor + 3].kind == TokenKind.LeftParen;
+                        if (self.tokens.data[cursor + 2].kind != TokenKind.IDENTIFIER) return false;
+                        return self.tokens.data[cursor + 3].kind == TokenKind.LEFT_PAREN;
                     }
                 }
             }
@@ -78,13 +78,13 @@ struct Parser(
     fn arrowIfHasElseAhead(val self): bool {
         for (cursor in self.current..<self.tokens.length) {
             val kind = self.tokens.data[cursor].kind;
-            if (kind == TokenKind.KwElse) return true;
-            var declaration = kind == TokenKind.EndOfFile;
-            if (kind == TokenKind.KwConst) declaration = true;
-            if (kind == TokenKind.KwExtern) declaration = true;
-            if (kind == TokenKind.KwFn) declaration = true;
-            if (kind == TokenKind.KwStruct) declaration = true;
-            if (kind == TokenKind.KwEnum) declaration = true;
+            if (kind == TokenKind.ELSE) return true;
+            var declaration = kind == TokenKind.EOF;
+            if (kind == TokenKind.CONST) declaration = true;
+            if (kind == TokenKind.EXTERN) declaration = true;
+            if (kind == TokenKind.FN) declaration = true;
+            if (kind == TokenKind.STRUCT) declaration = true;
+            if (kind == TokenKind.ENUM) declaration = true;
             if (declaration) return false;
         }
         return false;

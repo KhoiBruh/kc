@@ -656,7 +656,8 @@ private:
             }
             const std::pair<std::string_view, SemanticTypeKind> primitives[] = {
                 {"bool", SemanticTypeKind::Bool}, {"char", SemanticTypeKind::Char},
-                {"string", SemanticTypeKind::String}, {"i8", SemanticTypeKind::I8},
+                {"str", SemanticTypeKind::String}, {"string", SemanticTypeKind::String},
+                {"i8", SemanticTypeKind::I8},
                 {"i16", SemanticTypeKind::I16}, {"i32", SemanticTypeKind::I32},
                 {"i64", SemanticTypeKind::I64}, {"i128", SemanticTypeKind::I128},
                 {"u8", SemanticTypeKind::U8}, {"u16", SemanticTypeKind::U16},

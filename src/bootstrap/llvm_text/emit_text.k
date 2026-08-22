@@ -108,16 +108,16 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
     var floating = typeKind == TypeKind.F32.value;
     if (typeKind == TypeKind.F64.value) floating = true;
     if (floating) buffer.append("f");
-    if (kind == TokenKind.Plus.value) {
+    if (kind == TokenKind.PLUS.value) {
         buffer.append("add");
     }
-    if (kind == TokenKind.Minus.value) {
+    if (kind == TokenKind.MINUS.value) {
         buffer.append("sub");
     }
-    if (kind == TokenKind.Star.value) {
+    if (kind == TokenKind.STAR.value) {
         buffer.append("mul");
     }
-    if (kind == TokenKind.Slash.value) {
+    if (kind == TokenKind.SLASH.value) {
         if (floating) {
             buffer.append("di");
             buffer.append("v"); return;
@@ -132,7 +132,7 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
         }
         buffer.append("div");
     }
-    if (kind == TokenKind.Percent.value) {
+    if (kind == TokenKind.PERCENT.value) {
         if (floating) {
             buffer.append("re");
             buffer.append("m"); return;
@@ -286,17 +286,17 @@ fn appendUnreachable(var buffer: StringBuilder) {
 fn appendComparison(
     var buffer: StringBuilder, kind: u32, typeKind: u32) {
     buffer.append("icmp ");
-    if (kind == TokenKind.EqualEqual.value) {
+    if (kind == TokenKind.EQUAL_EQUAL.value) {
         buffer.append("eq");
     }
-    if (kind == TokenKind.BangEqual.value) {
+    if (kind == TokenKind.BANG_EQUAL.value) {
         buffer.append("ne");
     }
     var unsigned = typeKind == TypeKind.U8.value;
     if (typeKind == TypeKind.U32.value) unsigned = true;
     if (typeKind == TypeKind.U64.value) unsigned = true;
-    if (typeKind == TypeKind.Enum.value) unsigned = true;
-    if (kind == TokenKind.Less.value) {
+    if (typeKind == TypeKind.ENUM.value) unsigned = true;
+    if (kind == TokenKind.LESS.value) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -304,7 +304,7 @@ fn appendComparison(
         }
         buffer.append("lt");
     }
-    if (kind == TokenKind.LessEqual.value) {
+    if (kind == TokenKind.LESS_EQUAL.value) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -312,7 +312,7 @@ fn appendComparison(
         }
         buffer.append("le");
     }
-    if (kind == TokenKind.Greater.value) {
+    if (kind == TokenKind.GREATER.value) {
         if (unsigned) {
             buffer.append("u");
         } else {
@@ -320,7 +320,7 @@ fn appendComparison(
         }
         buffer.append("gt");
     }
-    if (kind == TokenKind.GreaterEqual.value) {
+    if (kind == TokenKind.GREATER_EQUAL.value) {
         if (unsigned) {
             buffer.append("u");
         } else {

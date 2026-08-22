@@ -16,7 +16,7 @@ bool isPrimitiveType(TokenKind kind) noexcept {
     case TokenKind::KwU8: case TokenKind::KwU16: case TokenKind::KwU32:
     case TokenKind::KwU64: case TokenKind::KwU128:
     case TokenKind::KwF8: case TokenKind::KwF16: case TokenKind::KwF32:
-    case TokenKind::KwF64: case TokenKind::KwChar: case TokenKind::KwString:
+    case TokenKind::KwF64: case TokenKind::KwChar: case TokenKind::KwStr:
     case TokenKind::KwUnit:
         return true;
     default:

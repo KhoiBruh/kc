@@ -67,7 +67,7 @@ fn enumWhenExhaustive(
     var semantic: Semantic, subject: TypeValue, 
     roots: u64*, branchCount: u32, valueForm: bool
 ): bool {
-    if (subject.kind != TypeKind.Enum) return false;
+    if (subject.kind != TypeKind.ENUM) return false;
     val enumIndex = declarationFind(semantic.enums, subject.name);
     if (enumIndex == semantic.enums.length) return false;
     val declaration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
@@ -82,7 +82,7 @@ fn enumWhenExhaustive(
             val conditionRoot = whenPatternRoot(
                 semantic, roots[index as u64], valueForm, patternIndex);
             val condition = semantic.nodes.data[conditionRoot];
-            if (condition.kind == AstKind.Member && condition.typeKind == TypeKind.Enum.value &&
+            if (condition.kind == AstKind.MEMBER && condition.typeKind == TypeKind.ENUM.value &&
                     condition.typeName == subject.name) {
                 for (prior in 0..index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
@@ -95,8 +95,8 @@ fn enumWhenExhaustive(
                             semantic, roots[prior as u64], valueForm,
                             priorPattern);
                         val priorCondition = semantic.nodes.data[priorRoot];
-                        if (priorCondition.kind == AstKind.Member &&
-                                priorCondition.typeKind == TypeKind.Enum.value &&
+                        if (priorCondition.kind == AstKind.MEMBER &&
+                                priorCondition.typeKind == TypeKind.ENUM.value &&
                                 priorCondition.typeName == subject.name &&
                                 priorCondition.conversionKind == condition.conversionKind) {
                             var diagnostic = condition;

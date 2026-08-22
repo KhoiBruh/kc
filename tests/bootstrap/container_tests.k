@@ -1,14 +1,14 @@
 fn main(): i32 {
-    if (TokenKind.EndOfFile.value != 0) return 10;
-    if (TokenKind.Identifier.value != 1) return 11;
-    if (TokenKind.StringLiteral.value != 5) return 12;
-    if (TokenKind.KwFn.value != 10) return 13;
-    if (TokenKind.LeftParen.value != 50) return 14;
-    if (TokenKind.Equal.value != 65) return 15;
-    if (TokenKind.Range.value != 87) return 16;
-    if (TokenKind.RangeExclusive.value != 88) return 17;
-    if (TokenKind.RangeExclusiveStart.value != 93) return 18;
-    if (TokenKind.RangeExclusiveBoth.value != 94) return 19;
+    if (TokenKind.EOF.value != 0) return 10;
+    if (TokenKind.IDENTIFIER.value != 1) return 11;
+    if (TokenKind.STRING_LITERAL.value != 5) return 12;
+    if (TokenKind.FN.value != 10) return 13;
+    if (TokenKind.LEFT_PAREN.value != 50) return 14;
+    if (TokenKind.EQUAL.value != 65) return 15;
+    if (TokenKind.RANGE.value != 87) return 16;
+    if (TokenKind.RANGE_EXCLUSIVE.value != 88) return 17;
+    if (TokenKind.RANGE_EXCLUSIVE_START.value != 93) return 18;
+    if (TokenKind.RANGE_EXCLUSIVE_BOTH.value != 94) return 19;
 
     var bytes = ByteBuffer.new();
     bytes.append("");
@@ -22,10 +22,10 @@ fn main(): i32 {
     bytes.free();
 
     var tokens = List<Token>.new();
-    tokens.add(Token(TokenKind.CharLiteral, 10, 12));
-    tokens.add(Token(TokenKind.StringLiteral, 12, 14));
-    tokens.add(Token(TokenKind.KwVal, 14, 16));
-    if (tokens.data[2].kind != TokenKind.KwVal) {
+    tokens.add(Token(TokenKind.CHAR_LITERAL, 10, 12));
+    tokens.add(Token(TokenKind.STRING_LITERAL, 12, 14));
+    tokens.add(Token(TokenKind.VAL, 14, 16));
+    if (tokens.data[2].kind != TokenKind.VAL) {
         return 3;
     }
     tokens.free();
@@ -74,7 +74,7 @@ fn main(): i32 {
         builder.append("A ");
         builder.append("😀");
         var built = builder.toString();
-        val view = (&built) as StringLayout*;
+        val view = (&built) as StrLayout*;
         if ((*view).length != 9) {
             return 9;
         }

@@ -36,10 +36,10 @@ fn appendStructSpecializationSuffix(
 fn appendType(
     var buffer: StringBuilder, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32) {
-    if (kind == TypeKind.Unit.value) {
+    if (kind == TypeKind.UNIT.value) {
         buffer.append("void");
     }
-    if (kind == TypeKind.Bool.value) {
+    if (kind == TypeKind.BOOL.value) {
         buffer.append("i1");
     }
     if (kind == TypeKind.I32.value) appendI32(buffer);
@@ -53,7 +53,7 @@ fn appendType(
     if (kind == TypeKind.U64.value) {
         buffer.append("i64");
     }
-    if (kind == TypeKind.Struct.value) {
+    if (kind == TypeKind.STRUCT.value) {
         buffer.append("%s");
         appendDecimal(buffer, name);
         val start = pointee % 65536;
@@ -62,10 +62,10 @@ fn appendType(
             appendStructSpecializationSuffix(buffer, genericArguments, start as u64, count);
         }
     }
-    if (kind == TypeKind.Pointer.value) {
+    if (kind == TypeKind.POINTER.value) {
         buffer.append("ptr");
     }
-    if (kind == TypeKind.String.value) {
+    if (kind == TypeKind.STR.value) {
         appendStringType(buffer);
     }
     if (kind == TypeKind.F32.value) {
@@ -74,18 +74,18 @@ fn appendType(
     if (kind == TypeKind.F64.value) {
         buffer.append("double");
     }
-    if (kind == TypeKind.IntegerLiteral.value) appendI32(buffer);
-    if (kind == TypeKind.Enum.value)
+    if (kind == TypeKind.INTEGER_LITERAL.value) appendI32(buffer);
+    if (kind == TypeKind.ENUM.value)
         appendType(buffer, genericArguments, pointee, 0, 0);
-    if (kind == TypeKind.Slice.value) {
+    if (kind == TypeKind.SLICE.value) {
         buffer.append("{ ptr, i64 }");
     }
-    if (kind == TypeKind.Nullable.value) {
+    if (kind == TypeKind.NULLABLE.value) {
         buffer.append("{ i1, ");
         appendType(buffer, genericArguments, pointee, name, 0);
         buffer.append(" }");
     }
-    if (kind == TypeKind.Array.value) {
+    if (kind == TypeKind.ARRAY.value) {
         buffer.append("[");
         appendDecimal(buffer, (pointee / 256) as u64);
         buffer.append(" x ");
@@ -156,32 +156,32 @@ fn substituteStructEmitterType(
     source: Source, val nodes: List<AstNode>, structureRoot: u64,
     pattern: TypeValue, val arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
-    if (pattern.kind == TypeKind.TypeParameter) {
+    if (pattern.kind == TypeKind.TYPE_PARAMETER) {
         val position = emitterStructTypeParameterPosition(
             source, nodes, structureRoot, pattern.name);
         if (position >= count) return invalidType();
         return arguments.data[argumentStart + position as u64];
     }
-    if (pattern.kind == TypeKind.Nullable) {
+    if (pattern.kind == TypeKind.NULLABLE) {
         val inner = substituteStructEmitterType(
             source, nodes, structureRoot,
             TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.NULLABLE, inner.name, inner.kind.value);
     }
-    if (pattern.kind == TypeKind.Pointer) {
+    if (pattern.kind == TypeKind.POINTER) {
         val inner = substituteStructEmitterType(
             source, nodes, structureRoot,
             TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(TypeKind.Pointer, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.POINTER, inner.name, inner.kind.value);
     }
-    if (pattern.kind == TypeKind.Slice) {
+    if (pattern.kind == TypeKind.SLICE) {
         val inner = substituteStructEmitterType(
             source, nodes, structureRoot,
             TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(TypeKind.Slice, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.SLICE, inner.name, inner.kind.value);
     }
     return pattern;
 }
@@ -192,26 +192,26 @@ fn alignUp(value: u64, alignment: u64) =>
 fn typeAlignment(
     source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32): u64 {
-    if (kind == TypeKind.Bool.value) return 1;
+    if (kind == TypeKind.BOOL.value) return 1;
     if (kind == TypeKind.U8.value) return 1;
     if (kind == TypeKind.I32.value) return 4;
     if (kind == TypeKind.U32.value) return 4;
-    if (kind == TypeKind.IntegerLiteral.value) return 4;
-    if (kind == TypeKind.Enum.value)
+    if (kind == TypeKind.INTEGER_LITERAL.value) return 4;
+    if (kind == TypeKind.ENUM.value)
         return typeAlignment(source, nodes, genericArguments, pointee, 0, 0);
     if (kind == TypeKind.F32.value) return 4;
     if (kind == TypeKind.I64.value) return 8;
     if (kind == TypeKind.U64.value) return 8;
-    if (kind == TypeKind.Pointer.value) return 8;
-    if (kind == TypeKind.String.value) return 24;
+    if (kind == TypeKind.POINTER.value) return 8;
+    if (kind == TypeKind.STR.value) return 24;
     if (kind == TypeKind.F64.value) return 8;
-    if (kind == TypeKind.Slice.value) return 8;
-    if (kind == TypeKind.Array.value) {
+    if (kind == TypeKind.SLICE.value) return 8;
+    if (kind == TypeKind.ARRAY.value) {
         return typeAlignment(
             source, nodes, genericArguments,
             pointee % 256, name, 0);
     }
-    if (kind == TypeKind.Struct.value) {
+    if (kind == TypeKind.STRUCT.value) {
         val structureRoot = structRootByName(source, nodes, name);
         val structure = nodes.data[structureRoot];
         val fieldCount = emitterStructFieldCount(structure);
@@ -242,29 +242,29 @@ fn typeAlignment(
 fn typeSize(
     source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32): u64 {
-    if (kind == TypeKind.Unit.value) return 0;
-    if (kind == TypeKind.Bool.value) return 1;
+    if (kind == TypeKind.UNIT.value) return 0;
+    if (kind == TypeKind.BOOL.value) return 1;
     if (kind == TypeKind.U8.value) return 1;
     if (kind == TypeKind.I32.value) return 4;
     if (kind == TypeKind.U32.value) return 4;
-    if (kind == TypeKind.IntegerLiteral.value) return 4;
-    if (kind == TypeKind.Enum.value)
+    if (kind == TypeKind.INTEGER_LITERAL.value) return 4;
+    if (kind == TypeKind.ENUM.value)
         return typeSize(source, nodes, genericArguments, pointee, 0, 0);
     if (kind == TypeKind.F32.value) return 4;
     if (kind == TypeKind.I64.value) return 8;
     if (kind == TypeKind.U64.value) return 8;
-    if (kind == TypeKind.Pointer.value) return 8;
-    if (kind == TypeKind.String.value) return 8;
+    if (kind == TypeKind.POINTER.value) return 8;
+    if (kind == TypeKind.STR.value) return 8;
     if (kind == TypeKind.F64.value) return 8;
-    if (kind == TypeKind.Slice.value) return 16;
-    if (kind == TypeKind.Array.value) {
+    if (kind == TypeKind.SLICE.value) return 16;
+    if (kind == TypeKind.ARRAY.value) {
         val elementSize = typeSize(
             source, nodes, genericArguments,
             pointee % 256, name, 0);
         val count = (pointee / 256) as u64;
         return count * elementSize;
     }
-    if (kind == TypeKind.Struct.value) {
+    if (kind == TypeKind.STRUCT.value) {
         val structureRoot = structRootByName(source, nodes, name);
         val structure = nodes.data[structureRoot];
         val fieldCount = emitterStructFieldCount(structure);
@@ -352,7 +352,7 @@ fn substituteEmitterType(
     source: Source, val nodes: List<AstNode>, functionRoot: u64,
     pattern: TypeValue, var arguments: List<TypeValue>,
     argumentStart: u64, count: u32): TypeValue {
-    if (pattern.kind == TypeKind.Struct) {
+    if (pattern.kind == TypeKind.STRUCT) {
         val start = pattern.pointee % 65536;
         val argumentCount = pattern.pointee / 65536;
         if (argumentCount == 0) return pattern;
@@ -371,31 +371,31 @@ fn substituteEmitterType(
         }
         k_boot_free(substituted as unit*);
         return TypeValue(
-            TypeKind.Struct, pattern.name,
+            TypeKind.STRUCT, pattern.name,
             newStart as u32 + argumentCount * 65536);
     }
-    if (pattern.kind == TypeKind.Nullable) {
+    if (pattern.kind == TypeKind.NULLABLE) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
             TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.NULLABLE, inner.name, inner.kind.value);
     }
-    if (pattern.kind == TypeKind.Pointer) {
+    if (pattern.kind == TypeKind.POINTER) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
             TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(TypeKind.Pointer, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.POINTER, inner.name, inner.kind.value);
     }
-    if (pattern.kind == TypeKind.Slice) {
+    if (pattern.kind == TypeKind.SLICE) {
         val inner = substituteEmitterType(
             source, nodes, functionRoot,
             TypeValue(typeKindFromValue(pattern.pointee), pattern.name, 0),
             arguments, argumentStart, count);
-        return TypeValue(TypeKind.Slice, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.SLICE, inner.name, inner.kind.value);
     }
-    if (pattern.kind != TypeKind.TypeParameter) return pattern;
+    if (pattern.kind != TypeKind.TYPE_PARAMETER) return pattern;
     val position = emitterTypeParameterPosition(
         source, nodes, functionRoot, pattern.name);
     if (position >= count) return invalidType();

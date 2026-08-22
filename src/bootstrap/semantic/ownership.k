@@ -19,7 +19,7 @@ import bootstrap.token.TokenKind;
 
 fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
     val node = semantic.nodes.data[root];
-    if (node.kind == AstKind.Identifier) {
+    if (node.kind == AstKind.IDENTIFIER) {
         val local = localFind(semantic.locals, semantic.hash(node));
         if (local != semantic.locals.length) {
             var value = semantic.locals.data[local];
@@ -31,14 +31,14 @@ fn markOwnerRootMoved(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == AstKind.Member || node.kind == AstKind.Postfix) {
+    if (node.kind == AstKind.MEMBER || node.kind == AstKind.POSTFIX) {
         markOwnerRootMoved(semantic, root - 1);
         return;
     }
-    if (node.kind == AstKind.Index) {
+    if (node.kind == AstKind.INDEX) {
         val indexRoot = root - 1;
         val objectRoot = semantic.nodes.data[indexRoot].subtreeStart - 1;
-        if (semantic.nodes.data[objectRoot].typeKind == TypeKind.Array.value) {
+        if (semantic.nodes.data[objectRoot].typeKind == TypeKind.ARRAY.value) {
             markOwnerRootMoved(semantic, objectRoot);
         }
     }
@@ -49,7 +49,7 @@ fn markExpressionMoved(var semantic: Semantic, root: u64) {
     val node = semantic.nodes.data[root];
     val value = TypeValue(typeKindFromValue(node.typeKind), node.typeName, node.typePointee);
     if (!typeNeedsOwnership(semantic, value)) return;
-    if (node.kind == AstKind.IfExpression) {
+    if (node.kind == AstKind.IF_EXPRESSION) {
         val elseValueRoot = root - 1;
         var thenValueRoot = semantic.nodes.data[elseValueRoot].subtreeStart - 1;
         for (index in 0..<node.aux / 65536) {
@@ -59,7 +59,7 @@ fn markExpressionMoved(var semantic: Semantic, root: u64) {
         markExpressionMoved(semantic, elseValueRoot);
         return;
     }
-    if (node.kind == AstKind.WhenExpression) {
+    if (node.kind == AstKind.WHEN_EXPRESSION) {
         var branchRoot = root - 1;
         for (index in node.aux % 65536>..0) {
             markExpressionMoved(semantic, branchRoot - 1);
@@ -67,7 +67,7 @@ fn markExpressionMoved(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == AstKind.ArrayLiteral) {
+    if (node.kind == AstKind.ARRAY_LITERAL) {
         var childRoot = root - 1;
         for (index in 0..<node.aux) {
             markExpressionMoved(semantic, childRoot);

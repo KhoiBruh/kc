@@ -143,9 +143,9 @@ struct ModuleLoader(
         }
 
         var current: u64 = 0;
-        if (lexed.tokens.data[current].kind == TokenKind.KwModule) {
-            while (lexed.tokens.data[current].kind != TokenKind.Semicolon) {
-                if (lexed.tokens.data[current].kind == TokenKind.EndOfFile) {
+        if (lexed.tokens.data[current].kind == TokenKind.MODULE) {
+            while (lexed.tokens.data[current].kind != TokenKind.SEMICOLON) {
+                if (lexed.tokens.data[current].kind == TokenKind.EOF) {
                     return false;
                 }
                 current++;
@@ -153,21 +153,21 @@ struct ModuleLoader(
             current++;
         }
 
-        while (lexed.tokens.data[current].kind == TokenKind.KwImport) {
+        while (lexed.tokens.data[current].kind == TokenKind.IMPORT) {
             val start = lexed.tokens.data[current].start;
             current++;
             val first = current;
             var partCount: u64 = 0;
             var wildcard = false;
 
-            while (lexed.tokens.data[current].kind == TokenKind.Identifier) {
+            while (lexed.tokens.data[current].kind == TokenKind.IDENTIFIER) {
                 partCount++;
                 current++;
 
-                if (lexed.tokens.data[current].kind == TokenKind.Dot) {
+                if (lexed.tokens.data[current].kind == TokenKind.DOT) {
                     current++;
 
-                    if (lexed.tokens.data[current].kind == TokenKind.Star) {
+                    if (lexed.tokens.data[current].kind == TokenKind.STAR) {
                         wildcard = true;
                         current++;
                         break;
@@ -178,7 +178,7 @@ struct ModuleLoader(
             }
 
             val end = lexed.tokens.data[current].end;
-            if (lexed.tokens.data[current].kind != TokenKind.Semicolon) {
+            if (lexed.tokens.data[current].kind != TokenKind.SEMICOLON) {
                 self.failureKind = 2;
                 return false;
             }

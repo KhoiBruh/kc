@@ -18,12 +18,12 @@ import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
 enum IrValueKind: u32 {
-    Invalid = 0,
-    SourceLiteral = 1,
-    Temporary = 2,
-    ImmediateConstant = 3,
-    LocalAddress = 4,
-    ZeroInitializer = 5
+    INVALID = 0,
+    SOURCE_LITERAL = 1,
+    TEMPORARY = 2,
+    IMMEDIATE_CONSTANT = 3,
+    LOCAL_ADDRESS = 4,
+    ZERO_INITIALIZER = 5
 }
 
 struct IrValue(
@@ -39,20 +39,20 @@ struct IrCounter(
 
 fn appendIrValue(
     var buffer: StringBuilder, source: Source, value: IrValue) {
-    if (value.kind == IrValueKind.SourceLiteral) {
+    if (value.kind == IrValueKind.SOURCE_LITERAL) {
         appendSource(buffer, source, value.start, value.end);
     } else {
-        if (value.kind == IrValueKind.LocalAddress) {
+        if (value.kind == IrValueKind.LOCAL_ADDRESS) {
             buffer.append("%");
             appendLocalPrefix(buffer);
             appendDecimal(buffer, value.temporary);
             return;
         }
-        if (value.kind == IrValueKind.ImmediateConstant) {
+        if (value.kind == IrValueKind.IMMEDIATE_CONSTANT) {
             appendDecimal(buffer, value.temporary);
             return;
         }
-        if (value.kind == IrValueKind.ZeroInitializer) {
+        if (value.kind == IrValueKind.ZERO_INITIALIZER) {
             buffer.append("zeroinitializer");
             return;
         }
@@ -64,7 +64,7 @@ fn appendIrValue(
 fn appendPointerValue(
     var buffer: StringBuilder, source: Source, value: IrValue) {
     buffer.append(", ptr ");
-    if (value.kind == IrValueKind.SourceLiteral) {
+    if (value.kind == IrValueKind.SOURCE_LITERAL) {
         buffer.append("%");
         appendSource(buffer, source, value.start, value.end);
     } else {
@@ -99,7 +99,7 @@ fn emitImplicitIntegerWiden(
     appendType(buffer, genericArguments, targetKind, targetName, targetPointee);
     appendNewline(buffer);
     return IrValue(
-        IrValueKind.Temporary, 0, 0, temporary, targetKind, targetName, targetPointee);
+        IrValueKind.TEMPORARY, 0, 0, temporary, targetKind, targetName, targetPointee);
 }
 
 fn nextBlock(var counter: IrCounter): u64 {

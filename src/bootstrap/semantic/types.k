@@ -20,17 +20,17 @@ import bootstrap.token.TokenKind;
 fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
-    if (node.kind == AstKind.Unary) {
-        if (node.aux != TokenKind.Plus.value) {
-            if (node.aux != TokenKind.Minus.value) {
+    if (node.kind == AstKind.UNARY) {
+        if (node.aux != TokenKind.PLUS.value) {
+            if (node.aux != TokenKind.MINUS.value) {
                 return IntegerConstant(false, false, false, 0);
             }
         }
-        negative = node.aux == TokenKind.Minus.value;
+        negative = node.aux == TokenKind.MINUS.value;
         node = semantic.nodes.data[root - 1];
     }
-    if (node.kind != AstKind.Literal) return IntegerConstant(false, false, false, 0);
-    if (node.aux != TokenKind.IntegerLiteral.value)
+    if (node.kind != AstKind.LITERAL) return IntegerConstant(false, false, false, 0);
+    if (node.aux != TokenKind.INTEGER_LITERAL.value)
         return IntegerConstant(false, false, false, 0);
     var magnitude: u64 = 0;
     var overflow = false;
@@ -53,19 +53,19 @@ fn integerConstant(val semantic: Semantic, root: u64): IntegerConstant {
 fn floatConstant(val semantic: Semantic, root: u64): IntegerConstant {
     var node = semantic.nodes.data[root];
     var negative = false;
-    if (node.kind == AstKind.Unary) {
-        if (node.aux != TokenKind.Plus.value) {
-            if (node.aux != TokenKind.Minus.value) {
+    if (node.kind == AstKind.UNARY) {
+        if (node.aux != TokenKind.PLUS.value) {
+            if (node.aux != TokenKind.MINUS.value) {
                 return IntegerConstant(false, false, false, 0);
             }
         }
-        negative = node.aux == TokenKind.Minus.value;
+        negative = node.aux == TokenKind.MINUS.value;
         node = semantic.nodes.data[root - 1];
     }
-    if (node.kind != AstKind.Literal) {
+    if (node.kind != AstKind.LITERAL) {
         return IntegerConstant(false, false, false, 0);
     }
-    if (node.aux != TokenKind.FloatLiteral.value)
+    if (node.aux != TokenKind.FLOAT_LITERAL.value)
         return IntegerConstant(false, false, false, 0);
     var exponentStart = node.end;
     var decimalDigits: i64 = 0;
@@ -201,13 +201,13 @@ fn substituteStructType(
     type: TypeValue, val arguments: List<TypeValue>,
     argumentStart: u64, count: u32
 ): TypeValue {
-    if (type.kind == TypeKind.TypeParameter) {
+    if (type.kind == TypeKind.TYPE_PARAMETER) {
         val position =
             structTypeParameterPosition(semantic, structureRoot, type.name);
         if (position >= count) return invalidType();
         return arguments.data[argumentStart + position as u64];
     }
-    if (type.kind == TypeKind.Struct) {
+    if (type.kind == TypeKind.STRUCT) {
         val start = type.pointee % 65536;
         val argCount = type.pointee / 65536;
         if (argCount == 0) return type;
@@ -219,25 +219,25 @@ fn substituteStructType(
                 semantic, structureRoot, arg, arguments, argumentStart, count);
             semantic.genericArguments.add(substituted);
         }
-        return TypeValue(TypeKind.Struct, type.name, newStart as u32 + argCount * 65536);
+        return TypeValue(TypeKind.STRUCT, type.name, newStart as u32 + argCount * 65536);
     }
-    if (type.kind == TypeKind.Nullable) {
+    if (type.kind == TypeKind.NULLABLE) {
         val inner = substituteStructType(
             semantic, structureRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, argumentStart, count);
-        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.NULLABLE, inner.name, inner.kind.value);
     }
-    if (type.kind == TypeKind.Pointer) {
+    if (type.kind == TypeKind.POINTER) {
         val inner = substituteStructType(
             semantic, structureRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, argumentStart, count);
-        return TypeValue(TypeKind.Pointer, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.POINTER, inner.name, inner.kind.value);
     }
-    if (type.kind == TypeKind.Slice) {
+    if (type.kind == TypeKind.SLICE) {
         val inner = substituteStructType(
             semantic, structureRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, argumentStart, count);
-        return TypeValue(TypeKind.Slice, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.SLICE, inner.name, inner.kind.value);
     }
     return type;
 }
@@ -260,7 +260,7 @@ fn findCurrentTypeParameter(
                     constraint = constraintFromHash(
                         semantic.hash(semantic.nodes.data[root - 1]));
                 }
-                return TypeValue(TypeKind.TypeParameter, name, constraint);
+                return TypeValue(TypeKind.TYPE_PARAMETER, name, constraint);
             }
         }
     }
@@ -280,7 +280,7 @@ fn findCurrentTypeParameter(
                     constraint = constraintFromHash(
                         semantic.hash(semantic.nodes.data[root - 1]));
                 }
-                return TypeValue(TypeKind.TypeParameter, name, constraint);
+                return TypeValue(TypeKind.TYPE_PARAMETER, name, constraint);
             }
         }
     }
@@ -304,7 +304,7 @@ fn typeParameterPosition(
 fn substituteGenericType(
     var semantic: Semantic, functionRoot: u64,
     type: TypeValue, arguments: TypeValue*, count: u32): TypeValue {
-    if (type.kind == TypeKind.Struct) {
+    if (type.kind == TypeKind.STRUCT) {
         val start = type.pointee % 65536;
         val argumentCount = type.pointee / 65536;
         if (argumentCount == 0) return type;
@@ -316,16 +316,16 @@ fn substituteGenericType(
                 semantic, functionRoot, argument, arguments, count);
             semantic.genericArguments.add(substituted);
         }
-        return TypeValue(TypeKind.Struct, type.name, newStart as u32 + argumentCount * 65536);
+        return TypeValue(TypeKind.STRUCT, type.name, newStart as u32 + argumentCount * 65536);
     }
-    if (type.kind == TypeKind.Nullable) {
+    if (type.kind == TypeKind.NULLABLE) {
         val inner = substituteGenericType(
             semantic, functionRoot,
             TypeValue(typeKindFromValue(type.pointee), type.name, 0), arguments, count);
-        if (inner.kind == TypeKind.Invalid) return inner;
-        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
+        if (inner.kind == TypeKind.INVALID) return inner;
+        return TypeValue(TypeKind.NULLABLE, inner.name, inner.kind.value);
     }
-    if (type.kind != TypeKind.TypeParameter) return type;
+    if (type.kind != TypeKind.TYPE_PARAMETER) return type;
     val position =
         typeParameterPosition(semantic, functionRoot, type.name);
     if (position >= count) return invalidType();
@@ -334,19 +334,19 @@ fn substituteGenericType(
 
 fn constraintAcceptsType(constraint: u32, type: TypeValue): bool {
     if (constraint == 0) {
-        if (type.kind == TypeKind.Invalid) return false;
-        if (type.kind == TypeKind.Unit) return false;
+        if (type.kind == TypeKind.INVALID) return false;
+        if (type.kind == TypeKind.UNIT) return false;
         return true;
     }
-    if (type.kind == TypeKind.TypeParameter) {
+    if (type.kind == TypeKind.TYPE_PARAMETER) {
         return type.pointee >= constraint;
     }
-    val integer = type.isInteger() || type.kind == TypeKind.IntegerLiteral;
+    val integer = type.isInteger() || type.kind == TypeKind.INTEGER_LITERAL;
     return when (constraint) {
-        1 -> type.kind == TypeKind.Bool || integer;
+        1 -> type.kind == TypeKind.BOOL || integer;
         2, 3, 4 -> integer;
         5 -> type.kind == TypeKind.U8 || type.kind == TypeKind.U32 ||
-            type.kind == TypeKind.U64 || type.kind == TypeKind.IntegerLiteral;
+            type.kind == TypeKind.U64 || type.kind == TypeKind.INTEGER_LITERAL;
         else -> false;
     };
 }
@@ -372,18 +372,18 @@ fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
                         if (parameter.aux == 1) {
                             constraint = constraintFromHash(semantic.hash(semantic.nodes.data[parameterRoot - 1]));
                         }
-                        semantic.genericArguments.add(TypeValue(TypeKind.TypeParameter, semantic.hash(nameNode), constraint));
+                        semantic.genericArguments.add(TypeValue(TypeKind.TYPE_PARAMETER, semantic.hash(nameNode), constraint));
                     }
                     val ownerName = semantic.nodes.data[structure.subtreeStart];
                     value = TypeValue(
-                        TypeKind.Struct, semantic.hash(ownerName),
+                        TypeKind.STRUCT, semantic.hash(ownerName),
                         start as u32 + count * 65536);
                 }
             }
         }
         }
     }
-    if (value.kind == TypeKind.Invalid) value = inferTypeFromNode(semantic, root);
+    if (value.kind == TypeKind.INVALID) value = inferTypeFromNode(semantic, root);
     var node = semantic.nodes.data[root];
     node.typeKind = value.kind.value;
     node.typeName = value.name;
@@ -404,13 +404,13 @@ fn structTypeArgumentRoot(
 
 fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
     val node = semantic.nodes.data[root];
-    if (node.kind == AstKind.NamedType) {
+    if (node.kind == AstKind.NAMED_TYPE) {
         val tokenKind = node.aux % 256;
         val primitive = primitiveType(tokenKind);
-        if (primitive.kind != TypeKind.Invalid) return primitive;
+        if (primitive.kind != TypeKind.INVALID) return primitive;
         val parameter = findCurrentTypeParameter(
             semantic, semantic.hash(node));
-        if (parameter.kind != TypeKind.Invalid) return parameter;
+        if (parameter.kind != TypeKind.INVALID) return parameter;
         
         val typeArgumentCount = node.aux / 256;
         if (typeArgumentCount > 0) {
@@ -424,29 +424,29 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
                 semantic.genericArguments.add(typeArguments[index as u64]);
             }
             k_boot_free(typeArguments as unit*);
-            return TypeValue(TypeKind.Struct, semantic.hash(node), start as u32 + typeArgumentCount * 65536);
+            return TypeValue(TypeKind.STRUCT, semantic.hash(node), start as u32 + typeArgumentCount * 65536);
         }
         
         val name = semantic.hash(node);
         val enumIndex = declarationFind(semantic.enums, name);
         if (enumIndex != semantic.enums.length) {
             val enumeration = semantic.nodes.data[semantic.enums.data[enumIndex].node];
-            return TypeValue(TypeKind.Enum, name, enumeration.typePointee);
+            return TypeValue(TypeKind.ENUM, name, enumeration.typePointee);
         }
-        return TypeValue(TypeKind.Struct, name, 0);
+        return TypeValue(TypeKind.STRUCT, name, 0);
     }
-    if (node.kind == AstKind.PointerType) {
+    if (node.kind == AstKind.POINTER_TYPE) {
         val inner = typeFromNode(semantic, root - 1);
-        if (inner.kind == TypeKind.Pointer) {
-            return TypeValue(TypeKind.Pointer, inner.pointee as u64, TypeKind.Pointer.value);
+        if (inner.kind == TypeKind.POINTER) {
+            return TypeValue(TypeKind.POINTER, inner.pointee as u64, TypeKind.POINTER.value);
         }
-        return TypeValue(TypeKind.Pointer, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.POINTER, inner.name, inner.kind.value);
     }
-    if (node.kind == AstKind.SliceType) {
+    if (node.kind == AstKind.SLICE_TYPE) {
         val inner = typeFromNode(semantic, root - 1);
-        return TypeValue(TypeKind.Slice, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.SLICE, inner.name, inner.kind.value);
     }
-    if (node.kind == AstKind.ArrayType) {
+    if (node.kind == AstKind.ARRAY_TYPE) {
         var childRoot = root - 1;
         var size: u64 = 0;
         if (node.aux == 1) {
@@ -461,9 +461,9 @@ fn inferTypeFromNode(var semantic: Semantic, root: u64): TypeValue {
 
         return typeFromNode(semantic, childRoot).array(size);
     }
-    if (node.kind == AstKind.NullableType) {
+    if (node.kind == AstKind.NULLABLE_TYPE) {
         val inner = typeFromNode(semantic, root - 1);
-        return TypeValue(TypeKind.Nullable, inner.name, inner.kind.value);
+        return TypeValue(TypeKind.NULLABLE, inner.name, inner.kind.value);
     }
     return invalidType();
 }
@@ -482,9 +482,9 @@ fn contextualizeLiteralByteSlice(
     var semantic: Semantic, root: u64,
     expected: TypeValue, actual: TypeValue): TypeValue {
     val node = semantic.nodes.data[root];
-    if (node.kind != AstKind.Literal ||
-        node.aux != TokenKind.StringLiteral.value) return actual;
-    if (expected.kind != TypeKind.Slice || expected.pointee != TypeKind.U8.value) return actual;
+    if (node.kind != AstKind.LITERAL ||
+        node.aux != TokenKind.STRING_LITERAL.value) return actual;
+    if (expected.kind != TypeKind.SLICE || expected.pointee != TypeKind.U8.value) return actual;
     var typed = node;
     typed.typeKind = expected.kind.value;
     typed.typeName = expected.name;
@@ -494,17 +494,17 @@ fn contextualizeLiteralByteSlice(
 }
 
 fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
-    if (value.kind == TypeKind.String || value.kind == TypeKind.TypeParameter || value.kind == TypeKind.Array) return true;
-    if (value.kind == TypeKind.Nullable) {
+    if (value.kind == TypeKind.STR || value.kind == TypeKind.TYPE_PARAMETER || value.kind == TypeKind.ARRAY) return true;
+    if (value.kind == TypeKind.NULLABLE) {
         return typeNeedsOwnership(
             semantic, TypeValue(typeKindFromValue(value.pointee), value.name, 0));
     }
-    if (value.kind != TypeKind.Struct) return false;
+    if (value.kind != TypeKind.STRUCT) return false;
     val method = declarationFind(
         semantic.functions, methodHash(value.name, 6385234055));
     if (method == semantic.functions.length) return false;
     val functionRoot = semantic.functions.data[method].node;
     val function = semantic.nodes.data[functionRoot];
     if (function.parameterCount() == 0) return false;
-    return semantic.nodes.data[functionParameterRoot(semantic, functionRoot, 1)].mode() == ParameterMode.Owned;
+    return semantic.nodes.data[functionParameterRoot(semantic, functionRoot, 1)].mode() == ParameterMode.OWNED;
 }

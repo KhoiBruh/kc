@@ -1,63 +1,63 @@
 module bootstrap.ast;
 
 enum AstKind : u32 {
-    Invalid,
-    NamedType,
-    PointerType,
-    NullableType,
-    SliceType,
-    ArrayType,
-    Reserved6,
-    Reserved7,
-    Reserved8,
-    Reserved9,
-    Identifier,
-    Literal,
-    Unary,
-    Binary,
-    Assignment,
-    Cast,
-    Call,
-    Member,
-    Index,
-    Postfix,
-    UnitLiteral,
-    Sizeof,
-    ArrayLiteral,
-    WhenExpression,
-    WhenExpressionBranch,
-    IfExpression,
-    Reserved26,
-    Reserved27,
-    Reserved28,
-    Reserved29,
-    Block,
-    IfStatement,
-    WhileStatement,
-    VariableDeclaration,
-    ReturnStatement,
-    ExpressionStatement,
-    BreakStatement,
-    ContinueStatement,
-    ForStatement,
-    WhenStatement,
-    ParameterOrWhenBranch,
-    FunctionOrDefer,
-    StructField,
-    StructDeclaration,
-    Program,
-    Name,
-    TypeParameter,
-    ModuleDeclaration,
-    ImportDeclaration,
-    EnumDeclaration,
-    ConstantDeclaration
+    INVALID,
+    NAMED_TYPE,
+    POINTER_TYPE,
+    NULLABLE_TYPE,
+    SLICE_TYPE,
+    ARRAY_TYPE,
+    RESERVED_6,
+    RESERVED_7,
+    RESERVED_8,
+    RESERVED_9,
+    IDENTIFIER,
+    LITERAL,
+    UNARY,
+    BINARY,
+    ASSIGNMENT,
+    CAST,
+    CALL,
+    MEMBER,
+    INDEX,
+    POSTFIX,
+    UNIT_LITERAL,
+    SIZEOF,
+    ARRAY_LITERAL,
+    WHEN_EXPRESSION,
+    WHEN_EXPRESSION_BRANCH,
+    IF_EXPRESSION,
+    RESERVED_26,
+    RESERVED_27,
+    RESERVED_28,
+    RESERVED_29,
+    BLOCK,
+    IF_STATEMENT,
+    WHILE_STATEMENT,
+    VARIABLE_DECLARATION,
+    RETURN_STATEMENT,
+    EXPRESSION_STATEMENT,
+    BREAK_STATEMENT,
+    CONTINUE_STATEMENT,
+    FOR_STATEMENT,
+    WHEN_STATEMENT,
+    PARAMETER_OR_WHEN_BRANCH,
+    FUNCTION_OR_DEFER,
+    STRUCT_FIELD,
+    STRUCT_DECLARATION,
+    PROGRAM,
+    NAME,
+    TYPE_PARAMETER,
+    MODULE_DECLARATION,
+    IMPORT_DECLARATION,
+    ENUM_DECLARATION,
+    CONSTANT_DECLARATION
 }
 
 enum ParameterMode : u32 {
-    Owned,
-    ImmutableBorrow,
-    MutableBorrow
+    OWNED,
+    IMMUTABLE_BORROW,
+    MUTABLE_BORROW
 }
 
 struct AstNode(
@@ -77,9 +77,9 @@ struct AstNode(
 ) {
 
     fn mode(val self) => when (self.aux) {
-        ParameterMode.ImmutableBorrow.value -> ParameterMode.ImmutableBorrow;
-        ParameterMode.MutableBorrow.value -> ParameterMode.MutableBorrow;
-        else -> ParameterMode.Owned;
+        ParameterMode.IMMUTABLE_BORROW.value -> ParameterMode.IMMUTABLE_BORROW;
+        ParameterMode.MUTABLE_BORROW.value -> ParameterMode.MUTABLE_BORROW;
+        else -> ParameterMode.OWNED;
     };
 
     fn isExtern(val self): bool => (self.aux / 65536) % 2 == 1;

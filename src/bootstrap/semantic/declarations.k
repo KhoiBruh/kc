@@ -40,7 +40,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
             LocalInfo(
                 semantic.hash(nameNode),
                 typeFromNode(semantic, parameterRoot - 1),
-                parameter.mode() != ParameterMode.ImmutableBorrow,
+                parameter.mode() != ParameterMode.IMMUTABLE_BORROW,
                 nameNode.start, false, false
             )
 		);
@@ -48,14 +48,14 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
     val statementRoot = functionRoot - 2;
     val statement = semantic.nodes.data[statementRoot];
     var inferred = unitType();
-    if (statement.kind == AstKind.ReturnStatement) {
+    if (statement.kind == AstKind.RETURN_STATEMENT) {
         val expressionRoot = statementRoot - 1;
         inferred = expressionType(semantic, expressionRoot);
-        if (inferred.kind == TypeKind.Unit ||
-            semantic.nodes.data[expressionRoot].kind == AstKind.Assignment) {
+        if (inferred.kind == TypeKind.UNIT ||
+            semantic.nodes.data[expressionRoot].kind == AstKind.ASSIGNMENT) {
             inferred = unitType();
             var expressionStatement = statement;
-            expressionStatement.kind = AstKind.ExpressionStatement;
+            expressionStatement.kind = AstKind.EXPRESSION_STATEMENT;
             semantic.nodes.data[statementRoot] = expressionStatement;
         }
     } else {
@@ -189,7 +189,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
         val mutable =
-            parameter.mode() != ParameterMode.ImmutableBorrow;
+            parameter.mode() != ParameterMode.IMMUTABLE_BORROW;
         val parameterName = semantic.hash(nameNode);
         if (localFindFrom(semantic.locals, parameterName, 0) !=
                 semantic.locals.length) {
@@ -198,8 +198,8 @@ fn checkFunction(var semantic: Semantic, root: u64) {
         }
         val parameterType = typeFromNode(semantic, parameterRoot - 1);
         var automaticDrop =
-            parameter.mode() == ParameterMode.Owned &&
-            parameterType.kind == TypeKind.Struct &&
+            parameter.mode() == ParameterMode.OWNED &&
+            parameterType.kind == TypeKind.STRUCT &&
             typeNeedsOwnership(semantic, parameterType);
         val functionName = semantic.nodes.data[function.subtreeStart];
         if (function.conversionKind == 1 && position == 0 &&
@@ -225,25 +225,25 @@ fn checkFunction(var semantic: Semantic, root: u64) {
 
 fn isConstantExpression(val semantic: Semantic, root: u64): bool {
     val node = semantic.nodes.data[root];
-    if (node.kind == AstKind.Literal) return true;
-    if (node.kind == AstKind.Identifier) {
+    if (node.kind == AstKind.LITERAL) return true;
+    if (node.kind == AstKind.IDENTIFIER) {
         return declarationFind(semantic.constants, semantic.hash(node)) !=
             semantic.constants.length;
     }
-    if (node.kind == AstKind.Unary)
+    if (node.kind == AstKind.UNARY)
         return isConstantExpression(semantic, root - 1);
-    if (node.kind == AstKind.Binary) {
+    if (node.kind == AstKind.BINARY) {
         val rightRoot = root - 1;
         val leftRoot = semantic.nodes.data[rightRoot].subtreeStart - 1;
         return isConstantExpression(semantic, leftRoot) &&
             isConstantExpression(semantic, rightRoot);
     }
-    if (node.kind == AstKind.Cast) {
+    if (node.kind == AstKind.CAST) {
         val typeRoot = root - 1;
         return isConstantExpression(
             semantic, semantic.nodes.data[typeRoot].subtreeStart - 1);
     }
-    if (node.kind == AstKind.ArrayLiteral) {
+    if (node.kind == AstKind.ARRAY_LITERAL) {
         var childRoot = root - 1;
         for (index in 0..<node.aux) {
             if (!isConstantExpression(semantic, childRoot)) return false;
@@ -258,7 +258,7 @@ fn predeclareEnums(var semantic: Semantic, roots: u64*, count: u32) {
     for (index in 0..<count) {
         val root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
-        if (declaration.kind == AstKind.EnumDeclaration) {
+        if (declaration.kind == AstKind.ENUM_DECLARATION) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = semantic.hash(nameNode);
             if (declarationFind(semantic.enums, name) != semantic.enums.length) {
@@ -297,7 +297,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
     for (index in 0..<program.aux) {
         root = roots[index as u64];
         val declaration = semantic.nodes.data[root];
-        if (declaration.kind == AstKind.StructDeclaration) {
+        if (declaration.kind == AstKind.STRUCT_DECLARATION) {
             val nameNode = semantic.nodes.data[declaration.subtreeStart];
             val name = semantic.hash(nameNode);
             if (declarationFind(semantic.structs, name) !=
@@ -344,14 +344,14 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
             }
             semantic.currentStruct = savedStruct;
         } else {
-            if (declaration.kind == AstKind.ConstantDeclaration) {
+            if (declaration.kind == AstKind.CONSTANT_DECLARATION) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = semantic.hash(nameNode);
                 val initializerRoot = root - 1;
                 var actual = expressionType(semantic, initializerRoot);
                 if (declaration.aux == 0) {
-                    if (actual.kind == TypeKind.Array) {
-                        if (actual.arrayElement().kind == TypeKind.Invalid)
+                    if (actual.kind == TypeKind.ARRAY) {
+                        if (actual.arrayElement().kind == TypeKind.INVALID)
                             semantic.fail(4, semantic.nodes.data[initializerRoot]);
                     }
                 }
@@ -366,17 +366,17 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         semantic.nodes.data[initializerRoot].subtreeStart - 1];
                     var accepted = expected.accepts(
                         actual, semantic.genericArguments);
-                    if (expected.kind == TypeKind.Array &&
-                        typeNode.kind == AstKind.ArrayType &&
-                        typeNode.aux == 0 && actual.kind == TypeKind.Array) {
+                    if (expected.kind == TypeKind.ARRAY &&
+                        typeNode.kind == AstKind.ARRAY_TYPE &&
+                        typeNode.aux == 0 && actual.kind == TypeKind.ARRAY) {
                         accepted = expected.arrayElement().accepts(
                             actual.arrayElement(), semantic.genericArguments);
                     }
                     if (!accepted)
                         semantic.fail(4, semantic.nodes.data[initializerRoot]);
-                    if (expected.kind == TypeKind.Array &&
-                        typeNode.kind == AstKind.ArrayType &&
-                        typeNode.aux == 0 && actual.kind == TypeKind.Array) {
+                    if (expected.kind == TypeKind.ARRAY &&
+                        typeNode.kind == AstKind.ARRAY_TYPE &&
+                        typeNode.aux == 0 && actual.kind == TypeKind.ARRAY) {
                         actual = expected.arrayElement().array(actual.arraySize());
                     } else actual = expected;
                 }
@@ -386,7 +386,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 typed.typePointee = actual.pointee;
                 semantic.nodes.data[root] = typed;
                 semantic.constants.add(DeclarationInfo(name, root));
-            } else if (declaration.kind == AstKind.EnumDeclaration) {
+            } else if (declaration.kind == AstKind.ENUM_DECLARATION) {
                 val backing = TypeValue(
                     typeKindFromValue(declaration.typePointee), 0, 0);
                 var nextNegative = false;
@@ -433,7 +433,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         }
                     }
                 }
-            } else if (declaration.kind == AstKind.FunctionOrDefer) {
+            } else if (declaration.kind == AstKind.FUNCTION_OR_DEFER) {
                 val nameNode = semantic.nodes.data[declaration.subtreeStart];
                 val name = semantic.hash(nameNode);
                 if (declarationFind(semantic.functions, name) !=
@@ -468,10 +468,10 @@ fn analyze(source: Source, val nodes: List<AstNode>): SemanticResult {
         val program = semantic.nodes.data[programRoot];
         var root = programRoot - 1;
         for (index in 0..<program.aux) {
-            if (semantic.nodes.data[root].kind == AstKind.FunctionOrDefer) {
+            if (semantic.nodes.data[root].kind == AstKind.FUNCTION_OR_DEFER) {
                 checkFunction(semantic, root);
             } else {
-                if (semantic.nodes.data[root].kind == AstKind.StructDeclaration) {
+                if (semantic.nodes.data[root].kind == AstKind.STRUCT_DECLARATION) {
                     var methodRoot = root - 1;
                     val methods = semantic.nodes.data[root].methodCount();
                     for (method in 0..<methods) {

@@ -189,6 +189,6 @@ fn emitOwnedStringLiteral(
     appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
     appendI64Prefix(buffer); appendDecimal(buffer, capacity);
     buffer.append(", 2"); appendNewline(buffer);
-    return IrValue(IrValueKind.Temporary, 0, 0, temporary, TypeKind.String.value, 0, 0);
+    return IrValue(IrValueKind.TEMPORARY, 0, 0, temporary, TypeKind.STR.value, 0, 0);
 }
 

@@ -18,7 +18,7 @@ import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
 fn checkBlock(var semantic: Semantic, root: u64) {
-    if (semantic.nodes.data[root].kind != AstKind.Block) {
+    if (semantic.nodes.data[root].kind != AstKind.BLOCK) {
         checkStatement(semantic, root);
         return;
     }
@@ -44,14 +44,14 @@ fn checkBlock(var semantic: Semantic, root: u64) {
 
 fn statementTerminates(val nodes: List<AstNode>, root: u64): bool {
     val node = nodes.data[root];
-    if (node.kind == AstKind.ReturnStatement ||
-        node.kind == AstKind.BreakStatement ||
-        node.kind == AstKind.ContinueStatement) return true;
-    if (node.kind == AstKind.Block) {
+    if (node.kind == AstKind.RETURN_STATEMENT ||
+        node.kind == AstKind.BREAK_STATEMENT ||
+        node.kind == AstKind.CONTINUE_STATEMENT) return true;
+    if (node.kind == AstKind.BLOCK) {
         if (node.aux == 0) return false;
         return statementTerminates(nodes, root - 1);
     }
-    if (node.kind == AstKind.IfStatement && node.aux == 1) {
+    if (node.kind == AstKind.IF_STATEMENT && node.aux == 1) {
         val elseRoot = root - 1;
         val thenRoot = nodes.data[elseRoot].subtreeStart - 1;
         return statementTerminates(nodes, thenRoot) &&
@@ -63,11 +63,11 @@ fn statementTerminates(val nodes: List<AstNode>, root: u64): bool {
 fn checkStatement(var semantic: Semantic, root: u64) {
     if (!semantic.result.ok) return;
     val node = semantic.nodes.data[root];
-    if (node.kind == AstKind.Block) {
+    if (node.kind == AstKind.BLOCK) {
         checkBlock(semantic, root);
         return;
     }
-    if (node.kind == AstKind.IfStatement) {
+    if (node.kind == AstKind.IF_STATEMENT) {
         var thenRoot = root - 1;
         var elseRoot = semantic.nodes.length;
         if (node.aux == 1) {
@@ -76,7 +76,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         val conditionRoot =
             semantic.nodes.data[thenRoot].subtreeStart - 1;
-        if (expressionType(semantic, conditionRoot).kind != TypeKind.Bool) {
+        if (expressionType(semantic, conditionRoot).kind != TypeKind.BOOL) {
             semantic.fail(
                 6, semantic.nodes.data[conditionRoot]);
         }
@@ -102,31 +102,31 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         k_boot_free(before as unit*);
         return;
     }
-    if (node.kind == AstKind.WhileStatement) {
+    if (node.kind == AstKind.WHILE_STATEMENT) {
         val bodyRoot = root - 1;
         semantic.loopDepth++;
         checkBlock(semantic, bodyRoot);
         semantic.loopDepth--;
         val conditionRoot =
             semantic.nodes.data[bodyRoot].subtreeStart - 1;
-        if (expressionType(semantic, conditionRoot).kind != TypeKind.Bool) {
+        if (expressionType(semantic, conditionRoot).kind != TypeKind.BOOL) {
             semantic.fail(
                 6, semantic.nodes.data[conditionRoot]);
         }
         return;
     }
-    if (node.kind == AstKind.ForStatement) {
+    if (node.kind == AstKind.FOR_STATEMENT) {
         val bodyRoot = root - 1;
         val collectionRoot =
             semantic.nodes.data[bodyRoot].subtreeStart - 1;
         var collectionNode = semantic.nodes.data[collectionRoot];
         var valueType = expressionType(semantic, collectionRoot);
-        var range = collectionNode.kind == AstKind.Binary;
+        var range = collectionNode.kind == AstKind.BINARY;
         if (range) {
-            range = collectionNode.aux == TokenKind.Range.value;
-            if (collectionNode.aux == TokenKind.RangeExclusive.value) range = true;
-            if (collectionNode.aux == TokenKind.RangeExclusiveStart.value) range = true;
-            if (collectionNode.aux == TokenKind.RangeExclusiveBoth.value) range = true;
+            range = collectionNode.aux == TokenKind.RANGE.value;
+            if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE.value) range = true;
+            if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_START.value) range = true;
+            if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_BOTH.value) range = true;
         }
         if (range) {
             if (node.aux == 1) {
@@ -136,20 +136,20 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 return;
             }
         } else {
-            var collection = valueType.kind == TypeKind.Slice;
-            if (valueType.kind == TypeKind.Array) collection = true;
+            var collection = valueType.kind == TypeKind.SLICE;
+            if (valueType.kind == TypeKind.ARRAY) collection = true;
             if (!collection) {
                 semantic.fail(4, collectionNode);
                 return;
             }
-            if (valueType.kind == TypeKind.Slice) {
+            if (valueType.kind == TypeKind.SLICE) {
                 valueType = TypeValue(
                     typeKindFromValue(valueType.pointee), valueType.name, 0);
             } else {
                 valueType = valueType.arrayElement();
             }
         }
-        if (valueType.kind == TypeKind.IntegerLiteral) {
+        if (valueType.kind == TypeKind.INTEGER_LITERAL) {
             valueType = TypeValue(TypeKind.I32, 0, 0);
             collectionNode.typeKind = TypeKind.I32.value;
             semantic.nodes.data[collectionRoot] = collectionNode;
@@ -189,7 +189,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         semantic.locals.setLength(savedLocals);
         return;
     }
-    if (node.kind == AstKind.WhenStatement) {
+    if (node.kind == AstKind.WHEN_STATEMENT) {
         val branchCount = node.whenBranchCount();
         val hasSubject = if (node.whenHasSubject()) 1 else 0;
         if (branchCount == 0) {
@@ -207,15 +207,15 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         if (hasSubject == 1) {
             val subjectRoot = branchRoot;
             subject = expressionType(semantic, subjectRoot);
-            if (subject.kind == TypeKind.IntegerLiteral) {
+            if (subject.kind == TypeKind.INTEGER_LITERAL) {
                 subject = TypeValue(TypeKind.I32, 0, 0);
                 var subjectNode = semantic.nodes.data[subjectRoot];
                 subjectNode.typeKind = TypeKind.I32.value;
                 semantic.nodes.data[subjectRoot] = subjectNode;
             }
-            var comparable = subject.kind == TypeKind.Bool;
+            var comparable = subject.kind == TypeKind.BOOL;
             if (subject.isInteger()) comparable = true;
-            if (subject.kind == TypeKind.Enum) comparable = true;
+            if (subject.kind == TypeKind.ENUM) comparable = true;
             if (!comparable) {
                 semantic.fail(6, semantic.nodes.data[subjectRoot]);
             }
@@ -256,7 +256,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                         semantic.nodes.data[conditionRoot] = conditionNode;
                     }
                 } else {
-                    if (condition.kind != TypeKind.Bool) {
+                    if (condition.kind != TypeKind.BOOL) {
                         semantic.fail(
                             6,
                             semantic.nodes.data[conditionRoot]);
@@ -278,32 +278,32 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         k_boot_free(ownershipBefore as unit*);
         val exhaustive = enumWhenExhaustive(
             semantic, subject, roots, branchCount, false);
-        if (subject.kind == TypeKind.Enum && !hasElse && !exhaustive) {
+        if (subject.kind == TypeKind.ENUM && !hasElse && !exhaustive) {
             semantic.fail(4, node);
         }
         k_boot_free(roots as unit*);
         return;
     }
-    if (node.kind == AstKind.FunctionOrDefer) {
+    if (node.kind == AstKind.FUNCTION_OR_DEFER) {
         val savedSuppressMoves = semantic.suppressMoves;
         semantic.suppressMoves = true;
         checkStatement(semantic, root - 1);
         semantic.suppressMoves = savedSuppressMoves;
         return;
     }
-    if (node.kind == AstKind.BreakStatement) {
+    if (node.kind == AstKind.BREAK_STATEMENT) {
         if (semantic.loopDepth == 0) {
             semantic.fail(4, node);
         }
         return;
     }
-    if (node.kind == AstKind.ContinueStatement) {
+    if (node.kind == AstKind.CONTINUE_STATEMENT) {
         if (semantic.loopDepth == 0) {
             semantic.fail(4, node);
         }
         return;
     }
-    if (node.kind == AstKind.VariableDeclaration) {
+    if (node.kind == AstKind.VARIABLE_DECLARATION) {
         val initializerRoot = root - 1;
         var initializer = expressionType(semantic, initializerRoot);
         val nameNode = semantic.nodes.data[node.subtreeStart];
@@ -314,7 +314,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             return;
         }
         var valueType = initializer;
-        if (valueType.kind == TypeKind.IntegerLiteral) {
+        if (valueType.kind == TypeKind.INTEGER_LITERAL) {
             valueType = TypeValue(TypeKind.I32, 0, 0);
             var initializerNode = semantic.nodes.data[initializerRoot];
             initializerNode.typeKind = TypeKind.I32.value;
@@ -335,8 +335,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
             }
             resolveWhenResultType(semantic, initializerRoot, valueType);
             resolveIfResultType(semantic, initializerRoot, valueType);
-            if (initializer.kind == TypeKind.Array) {
-                if (initializer.arrayElement().kind == TypeKind.Invalid) {
+            if (initializer.kind == TypeKind.ARRAY) {
+                if (initializer.arrayElement().kind == TypeKind.INVALID) {
                     var initializerNode = semantic.nodes.data[initializerRoot];
                     initializerNode.typeKind = valueType.kind.value;
                     initializerNode.typeName = valueType.name;
@@ -347,17 +347,17 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         markExpressionMoved(semantic, initializerRoot);
         val automaticDrop =
-            (valueType.kind == TypeKind.Struct || valueType.kind == TypeKind.String) &&
+            (valueType.kind == TypeKind.STRUCT || valueType.kind == TypeKind.STR) &&
             typeNeedsOwnership(semantic, valueType);
         var declarationNode = semantic.nodes.data[root];
         if (automaticDrop) declarationNode.ownership = 2;
         semantic.nodes.data[root] = declarationNode;
         semantic.locals.add(LocalInfo(
-            name, valueType, node.aux == TokenKind.KwVar.value, nameNode.start,
+            name, valueType, node.aux == TokenKind.VAR.value, nameNode.start,
             false, automaticDrop));
         return;
     }
-    if (node.kind == AstKind.ReturnStatement) {
+    if (node.kind == AstKind.RETURN_STATEMENT) {
         var actual = unitType();
         if (node.aux == 1) {
             actual = expressionType(semantic, root - 1);
@@ -366,15 +366,15 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         val function = semantic.nodes.data[semantic.currentFunction];
         if (function.storage % 2 == 1 && node.aux == 1) {
-            var statementLike = actual.kind == TypeKind.Unit;
-            if (semantic.nodes.data[root - 1].kind == AstKind.Assignment)
+            var statementLike = actual.kind == TypeKind.UNIT;
+            if (semantic.nodes.data[root - 1].kind == AstKind.ASSIGNMENT)
                 statementLike = true;
             if (statementLike) {
-                if (semantic.returnType.kind != TypeKind.Unit)
+                if (semantic.returnType.kind != TypeKind.UNIT)
                     semantic.fail(5, semantic.nodes.data[root - 1]);
                 else {
                     var expressionStatement = node;
-                    expressionStatement.kind = AstKind.ExpressionStatement;
+                    expressionStatement.kind = AstKind.EXPRESSION_STATEMENT;
                     semantic.nodes.data[root] = expressionStatement;
                 }
                 return;
@@ -393,18 +393,18 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 returnNode.typeKind = semantic.returnType.kind.value;
                 returnNode.typeName = semantic.returnType.name;
                 returnNode.typePointee = semantic.returnType.pointee;
-                if (semantic.returnType.kind == TypeKind.Nullable) {
-                    if (actual.kind == TypeKind.NullLiteral) {
+                if (semantic.returnType.kind == TypeKind.NULLABLE) {
+                    if (actual.kind == TypeKind.NULL_LITERAL) {
                         returnNode.conversionKind = 2;
                     } else {
-                        if (actual.kind != TypeKind.Nullable) {
+                        if (actual.kind != TypeKind.NULLABLE) {
                             returnNode.conversionKind = 1;
                         }
                     }
                 }
                 semantic.nodes.data[root] = returnNode;
                 var valueNode = semantic.nodes.data[root - 1];
-                if (valueNode.typeKind == TypeKind.IntegerLiteral.value) {
+                if (valueNode.typeKind == TypeKind.INTEGER_LITERAL.value) {
                     valueNode.typeKind = semantic.returnType.kind.value;
                     valueNode.typeName = semantic.returnType.name;
                     valueNode.typePointee = semantic.returnType.pointee;
@@ -419,7 +419,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         }
         return;
     }
-    if (node.kind == AstKind.ExpressionStatement) {
+    if (node.kind == AstKind.EXPRESSION_STATEMENT) {
         val previousMutationRoot = semantic.mutationRoot;
         semantic.mutationRoot = root - 1;
         expressionType(semantic, root - 1);
