@@ -297,70 +297,6 @@ fn punctuationKind(value: u8): TokenKind => when (value) {
     else -> TokenKind.EndOfFile;
 };
 
-fn scanIdentifier(source: Source, start: u64): u64 {
-    var offset = start;
-    while ((offset < source.length) && isIdentifierContinue(source.data[offset])) offset++;
-
-    return offset;
-}
-
-fn scanInteger(source: Source, start: u64): u64 {
-    var offset = start;
-    while ((offset < source.length) && isDigit(source.data[offset])) offset++;
-
-    return offset;
-}
-
-struct NumberScan(end: u64, kind: TokenKind)
-
-fn scanNumber(source: Source, start: u64): NumberScan {
-    var offset = scanInteger(source, start);
-    var kind = TokenKind.IntegerLiteral;
-
-    if (offset < source.length) {
-        if (source.data[offset] == 46) {
-            if (offset + 1 < source.length) {
-                if (isDigit(source.data[offset + 1])) {
-                    kind = TokenKind.FloatLiteral;
-                    offset = scanInteger(source, offset + 2);
-                }
-            }
-        }
-    }
-
-    if (offset < source.length) {
-        var exponentMarker = source.data[offset] == 101;
-        if (source.data[offset] == 69) exponentMarker = true;
-        if (exponentMarker) {
-            kind = TokenKind.FloatLiteral;
-            offset++;
-            if (offset < source.length) {
-                var exponentSign = source.data[offset] == 43;
-                if (source.data[offset] == 45) exponentSign = true;
-                if (exponentSign) offset++;
-            }
-
-            offset = scanInteger(source, offset);
-        }
-    }
-
-    return NumberScan(offset, kind);
-}
-
-fn scanString(source: Source, start: u64): u64 {
-    var escaped = false;
-    for (i in start..<source.length) {
-        val value = source.data[i];
-        if (escaped) escaped = false;
-        else {
-            if (value == 92) escaped = true;
-            else if (value == 34) return i + 1;
-        }
-    }
-
-    return start;
-}
-
 fn doublePunctuationKind(first: u8, second: u8): TokenKind {
     if (first == 43 && second == 43) return TokenKind.PlusPlus;
     if (first == 45 && second == 45) return TokenKind.MinusMinus;
@@ -383,117 +319,209 @@ fn doublePunctuationKind(first: u8, second: u8): TokenKind {
     return TokenKind.EndOfFile;
 }
 
-fn lex(source: Source): LexResult {
-    var tokens = List<Token>.new();
-    var offset: u64 = 0;
-    var failed = false;
-    var errorStart: u64 = 0;
-    var errorKind: u32 = 0;
-    while (offset < source.length) {
-        val value = source.data[offset];
-        if (isWhitespace(value)) offset++;
-        else {
-            val start = offset;
-            when {
-                value == 47 -> {
-					if (offset + 1 < source.length) {
-	                    if (source.data[offset + 1] == 47) {
-                        offset += 2;
-                        while ((offset < source.length) && source.data[offset] != 10) offset++;
-	                    if (offset < source.length) offset++;
-	                    } else {
-	                        val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
-                        if (pairKind == TokenKind.EndOfFile) {
-	                            offset++;
-                            tokens.add(Token(TokenKind.Slash, start, offset));
-	                        } else {
-	                            offset = offset + 2;
-	                            tokens.add(Token(pairKind, start, offset));
-	                        }
-	                    }
-                    } else {
-                        offset++;
-                        tokens.add(Token(TokenKind.Slash, start, offset));
-                    }
-                }
-                value == 34 -> {
-                    val end = scanString(source, offset + 1);
-                    if (end == offset + 1) {
-                        failed = true;
-                        errorStart = start;
-                        errorKind = 1;
-                    } else {
-                        offset = end;
-                        tokens.add(Token(TokenKind.StringLiteral, start, offset));
-                    }
-                }
-                isIdentifierStart(value) -> {
-                    offset = scanIdentifier(source, offset + 1);
-                    tokens.add(Token(keywordKind(source, start, offset), start, offset));
-                }
-                isDigit(value) -> {
-                    val number = scanNumber(source, offset + 1);
-                    offset = number.end;
-                    tokens.add(Token(number.kind, start, offset));
-                }
-                else -> {
-                	var kind = punctuationKind(value);
-                    if (value == 62) {
-                        if (offset + 2 < source.length) {
-                            if (
-                                source.data[offset + 1] == 46 &&
-                                source.data[offset + 2] == 46
-							) {
-                                kind = TokenKind.RangeExclusiveStart;
-                                offset = offset + 2;
-                                if (offset + 1 < source.length) {
-                                    if (source.data[offset + 1] == 60) {
-                                        kind = TokenKind.RangeExclusiveBoth;
-                                        offset++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                	if (value == 46) {
-                		if (offset + 2 < source.length) {
-                			if (source.data[offset + 1] == 46) {
-                				if (source.data[offset + 2] == 60) {
-                                    kind = TokenKind.RangeExclusive;
-                					offset = offset + 2;
-                                }
-                			}
-                		}
-                	}
-                    if (kind != TokenKind.RangeExclusive &&
-                        kind != TokenKind.RangeExclusiveStart &&
-                        kind != TokenKind.RangeExclusiveBoth) {
-                		if (offset + 1 < source.length) {
-                		    val pairKind = doublePunctuationKind(value, source.data[offset + 1]);
-                            if (pairKind != TokenKind.EndOfFile) {
-                		        kind = pairKind;
-                		        offset++;
-                		    }
-                	    }
-                	}
-                    if (kind == TokenKind.EndOfFile) {
-                        failed = true;
-                        errorStart = start;
-                        errorKind = 2;
-                    } else {
-                        offset++;
-                        tokens.add(Token(kind, start, offset));
+struct Lexer(
+    source: Source,
+    tokens: List<Token>,
+    offset: u64,
+    failed: bool,
+    errorStart: u64,
+    errorKind: u32
+) {
+
+    fn isAtEnd(val self): bool => self.offset >= self.source.length;
+
+    fn peek(val self): u8 =>
+        if (self.isAtEnd()) 0 as u8 else self.source.data[self.offset];
+
+    fn peekAhead(val self, distance: u64): u8 =>
+        if (self.offset + distance >= self.source.length) 0 as u8
+        else self.source.data[self.offset + distance];
+
+    fn scanInteger(var self) {
+        while ((self.offset < self.source.length) && isDigit(self.source.data[self.offset])) {
+            self.offset++;
+        }
+    }
+
+    fn scanIdentifier(var self) {
+        val start = self.offset;
+        self.offset++;
+        while ((self.offset < self.source.length) && isIdentifierContinue(self.source.data[self.offset])) {
+            self.offset++;
+        }
+        self.tokens.add(Token(keywordKind(self.source, start, self.offset), start, self.offset));
+    }
+
+    fn scanNumber(var self) {
+        val start = self.offset;
+        self.offset++;
+        self.scanInteger();
+        var kind = TokenKind.IntegerLiteral;
+
+        if (self.offset < self.source.length) {
+            if (self.source.data[self.offset] == 46) {
+                if (self.offset + 1 < self.source.length) {
+                    if (isDigit(self.source.data[self.offset + 1])) {
+                        kind = TokenKind.FloatLiteral;
+                        self.offset = self.offset + 2;
+                        self.scanInteger();
                     }
                 }
             }
-            if (failed) break;
+        }
+
+        if (self.offset < self.source.length) {
+            var exponentMarker = self.source.data[self.offset] == 101;
+            if (self.source.data[self.offset] == 69) exponentMarker = true;
+            if (exponentMarker) {
+                kind = TokenKind.FloatLiteral;
+                self.offset++;
+                if (self.offset < self.source.length) {
+                    var exponentSign = self.source.data[self.offset] == 43;
+                    if (self.source.data[self.offset] == 45) exponentSign = true;
+                    if (exponentSign) self.offset++;
+                }
+
+                self.scanInteger();
+            }
+        }
+
+        self.tokens.add(Token(kind, start, self.offset));
+    }
+
+    fn scanString(var self) {
+        val start = self.offset;
+        var escaped = false;
+        var foundEnd = false;
+        for (i in (start + 1)..<self.source.length) {
+            val value = self.source.data[i];
+            if (escaped) {
+                escaped = false;
+            } else {
+                if (value == 92) {
+                    escaped = true;
+                } else if (value == 34) {
+                    self.offset = i + 1;
+                    self.tokens.add(Token(TokenKind.StringLiteral, start, self.offset));
+                    foundEnd = true;
+                    break;
+                }
+            }
+        }
+        if (!foundEnd) {
+            self.failed = true;
+            self.errorStart = start;
+            self.errorKind = 1;
         }
     }
-    var ok = true;
-    if (failed) {
-        ok = false;
-    } else {
-        tokens.add(Token(TokenKind.EndOfFile, source.length, source.length));
+
+    fn scanSlash(var self) {
+        val start = self.offset;
+        if (self.offset + 1 < self.source.length) {
+            if (self.source.data[self.offset + 1] == 47) {
+                self.offset = self.offset + 2;
+                while ((self.offset < self.source.length) && self.source.data[self.offset] != 10) self.offset++;
+                if (self.offset < self.source.length) self.offset++;
+            } else {
+                val pairKind = doublePunctuationKind(47, self.source.data[self.offset + 1]);
+                if (pairKind == TokenKind.EndOfFile) {
+                    self.offset++;
+                    self.tokens.add(Token(TokenKind.Slash, start, self.offset));
+                } else {
+                    self.offset = self.offset + 2;
+                    self.tokens.add(Token(pairKind, start, self.offset));
+                }
+            }
+        } else {
+            self.offset++;
+            self.tokens.add(Token(TokenKind.Slash, start, self.offset));
+        }
     }
-    return LexResult(tokens, ok, errorStart, errorKind);
+
+    fn scanPunctuation(var self, value: u8) {
+        val start = self.offset;
+        var kind = punctuationKind(value);
+        if (value == 62) {
+            if (self.offset + 2 < self.source.length) {
+                if (
+                    self.source.data[self.offset + 1] == 46 &&
+                    self.source.data[self.offset + 2] == 46
+                ) {
+                    kind = TokenKind.RangeExclusiveStart;
+                    self.offset = self.offset + 2;
+                    if (self.offset + 1 < self.source.length) {
+                        if (self.source.data[self.offset + 1] == 60) {
+                            kind = TokenKind.RangeExclusiveBoth;
+                            self.offset++;
+                        }
+                    }
+                }
+            }
+        }
+        if (value == 46) {
+            if (self.offset + 2 < self.source.length) {
+                if (self.source.data[self.offset + 1] == 46) {
+                    if (self.source.data[self.offset + 2] == 60) {
+                        kind = TokenKind.RangeExclusive;
+                        self.offset = self.offset + 2;
+                    }
+                }
+            }
+        }
+        if (kind != TokenKind.RangeExclusive &&
+            kind != TokenKind.RangeExclusiveStart &&
+            kind != TokenKind.RangeExclusiveBoth) {
+            if (self.offset + 1 < self.source.length) {
+                val pairKind = doublePunctuationKind(value, self.source.data[self.offset + 1]);
+                if (pairKind != TokenKind.EndOfFile) {
+                    kind = pairKind;
+                    self.offset++;
+                }
+            }
+        }
+        if (kind == TokenKind.EndOfFile) {
+            self.failed = true;
+            self.errorStart = start;
+            self.errorKind = 2;
+        } else {
+            self.offset++;
+            self.tokens.add(Token(kind, start, self.offset));
+        }
+    }
+
+    fn scanToken(var self) {
+        val value = self.source.data[self.offset];
+        if (isWhitespace(value)) {
+            self.offset++;
+            return;
+        }
+        when {
+            value == 47 -> self.scanSlash();
+            value == 34 -> self.scanString();
+            isIdentifierStart(value) -> self.scanIdentifier();
+            isDigit(value) -> self.scanNumber();
+            else -> self.scanPunctuation(value);
+        }
+    }
+
+    fn lex(var self): LexResult {
+        while (self.offset < self.source.length) {
+            self.scanToken();
+            if (self.failed) break;
+        }
+        var ok = true;
+        if (self.failed) {
+            ok = false;
+        } else {
+            self.tokens.add(Token(TokenKind.EndOfFile, self.source.length, self.source.length));
+        }
+        val errorStart = self.errorStart;
+        val errorKind = self.errorKind;
+        return LexResult(self.tokens, ok, errorStart, errorKind);
+    }
+}
+
+fn lex(source: Source): LexResult {
+    var lexer = Lexer(source, List<Token>.new(), 0, false, 0, 0);
+    return lexer.lex();
 }
