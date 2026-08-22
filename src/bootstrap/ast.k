@@ -82,4 +82,32 @@ struct AstNode(
         else -> ParameterMode.Owned;
     };
 
+    fn isExtern(val self): bool => (self.aux / 65536) % 2 == 1;
+
+    fn infersReturn(val self): bool => (self.storage / 2) % 2 == 1;
+
+    fn isExpressionBody(val self): bool => self.storage % 2 == 1;
+
+    fn methodCount(val self): u32 => self.storage as u32;
+
+    fn fieldCount(val self): u32 => self.aux % 65536;
+
+    fn parameterCount(val self): u32 => self.aux % 65536;
+
+    fn typeParameterCount(val self): u32 => (self.aux / 131072) % 65536;
+
+    fn structTypeParameterCount(val self): u32 => self.aux / 65536;
+
+    fn callTypeArgumentCount(val self): u32 => self.aux / 65536;
+
+    fn callArgumentCount(val self): u32 => self.aux % 65536;
+
+    fn whenBranchCount(val self): u32 => self.aux % 65536;
+
+    fn whenHasSubject(val self): bool => (self.aux / 65536) % 2 == 1;
+
+    fn whenBranchIsElse(val self): bool => self.aux % 2 == 1;
+
+    fn whenBranchPatternCount(val self): u32 => self.aux / 65536;
+
 }

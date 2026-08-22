@@ -306,8 +306,8 @@ fn emitExpression(
             node.typeKind, node.typeName, node.typePointee);
     }
     if (node.kind == AstKind.WhenExpression) {
-        val branchCount = node.aux % 65536;
-        val hasSubject = node.aux / 65536;
+        val branchCount = node.whenBranchCount();
+        val hasSubject = if (node.whenHasSubject()) 1 else 0;
         val roots = k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
         val values =
             k_boot_alloc((branchCount as u64) * sizeof(IrValue)) as IrValue*;
@@ -345,9 +345,9 @@ fn emitExpression(
             }
             val bodyBlock = nextBlock(counter);
             var nextBlockValue = mergeBlock;
-            if (branch.aux % 2 == 0) {
+            if (!branch.whenBranchIsElse()) {
                 nextBlockValue = nextBlock(counter);
-                val patternCount = branch.aux / 65536;
+                val patternCount = branch.whenBranchPatternCount();
                 val patternRoots =
                     k_boot_alloc((patternCount as u64) * sizeof(u64)) as u64*;
                 var patternRoot = beforeValue;
@@ -363,22 +363,25 @@ fn emitExpression(
                         val compared = nextTemporary(counter);
                         appendValuePrefix(buffer); appendDecimal(buffer, compared);
                         appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
-                        buffer.append(" ");
-                        appendType(
+                        buffer.append(" "); appendType(
                             buffer, genericArguments,
                             subject.typeKind, subject.typeName, subject.typePointee);
                         buffer.append(" "); appendIrValue(buffer, source, subject);
-                        buffer.append(", ");
-                        appendIrValue(buffer, source, condition); appendNewline(buffer);
-                        condition = IrValue(IrValueKind.Temporary, 0, 0, compared, TypeKind.Bool.value, 0, 0);
+                        buffer.append(", "); appendIrValue(buffer, source, condition);
+                        appendNewline(buffer);
+                        condition = IrValue(
+                            IrValueKind.Temporary, 0, 0, compared,
+                            TypeKind.Bool.value, 0, 0);
                     }
-                    var missBlock = nextBlockValue;
-                    val hasNextPattern = patternIndex + 1 < patternCount;
-                    if (hasNextPattern) missBlock = nextBlock(counter);
+                    var branchTarget = bodyBlock;
+                    var branchElse = nextBlockValue;
+                    if (patternIndex + 1 < patternCount) {
+                        branchElse = nextBlock(counter);
+                    }
                     appendConditionalBranch(
-                        buffer, source, condition, bodyBlock, missBlock);
-                    if (hasNextPattern) {
-                        appendBlockLabel(buffer, counter, missBlock);
+                        buffer, source, condition, branchTarget, branchElse);
+                    if (patternIndex + 1 < patternCount) {
+                        appendBlockLabel(buffer, counter, branchElse);
                     }
                 }
                 k_boot_free(patternRoots as unit*);
@@ -401,7 +404,7 @@ fn emitExpression(
                 counter, branchDefers, branchDefers.length, 0);
             blocks[index as u64] = counter.currentBlock;
             appendBranch(buffer, mergeBlock);
-            if (branch.aux % 2 == 0) {
+            if (!branch.whenBranchIsElse()) {
                 appendBlockLabel(buffer, counter, nextBlockValue);
             }
             k_boot_free(statementRoots as unit*);
@@ -666,12 +669,12 @@ fn emitExpression(
         if (comparison) {
             val leftType = TypeValue(typeKindFromValue(left.typeKind), left.typeName, left.typePointee);
             val rightType = TypeValue(typeKindFromValue(right.typeKind), right.typeName, right.typePointee);
-            if (integerImplicitlyWidens(leftType, rightType)) {
+            if (leftType.implicitlyWidensTo(rightType)) {
                 left = emitImplicitIntegerWiden(
                     buffer, source, genericArguments, left,
                     right.typeKind, right.typeName, right.typePointee, counter);
             } else {
-                if (integerImplicitlyWidens(rightType, leftType)) {
+                if (rightType.implicitlyWidensTo(leftType)) {
                     right = emitImplicitIntegerWiden(
                         buffer, source, genericArguments, right,
                         left.typeKind, left.typeName, left.typePointee, counter);

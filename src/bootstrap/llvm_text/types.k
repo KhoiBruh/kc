@@ -115,11 +115,11 @@ fn appendSpecializationSuffix(
     }
 }
 
-fn emitterStructTypeParameterCount(structure: AstNode) => structure.aux / 65536;
+fn emitterStructTypeParameterCount(structure: AstNode) => structure.structTypeParameterCount();
 
-fn emitterStructFieldCount(structure: AstNode) => structure.aux % 65536;
+fn emitterStructFieldCount(structure: AstNode) => structure.fieldCount();
 
-fn emitterStructMethodCount(structure: AstNode) => structure.storage;
+fn emitterStructMethodCount(structure: AstNode) => structure.methodCount();
 
 fn emitterStructTypeParameterRoot(
     source: Source, val nodes: List<AstNode>, structureRoot: u64, position: u32): u64 {
@@ -298,12 +298,12 @@ fn emitterTypeParameterRoot(
     val nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
     var root = returnTypeRoot(nodes, functionRoot);
     val parameters =
-        functionParameterCount(nodes.data[functionRoot]);
+        nodes.data[functionRoot].parameterCount();
     for (parameter in 0..<parameters) {
         root = nodes.data[root].subtreeStart - 1;
     }
     val remaining =
-        functionTypeParameterCount(nodes.data[functionRoot]);
+        nodes.data[functionRoot].typeParameterCount();
     for (index in position - 1..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
     }
@@ -314,7 +314,7 @@ fn emitterTypeParameterPosition(
     source: Source, val nodes: List<AstNode>,
     functionRoot: u64, name: u64): u32 {
     val count =
-        functionTypeParameterCount(nodes.data[functionRoot]);
+        nodes.data[functionRoot].typeParameterCount();
     for (position in 0..<count) {
         val root =
             emitterTypeParameterRoot(nodes, functionRoot, position + 1);
@@ -326,7 +326,7 @@ fn emitterTypeParameterPosition(
     }
     val function = nodes.data[functionRoot];
     if (function.conversionKind == 1) {
-        if (functionParameterCount(function) > 0) {
+        if (function.parameterCount() > 0) {
             val receiverType = nodes.data[
                 parameterRoot(nodes, functionRoot, 1) - 1];
             val ownerRoot = structRootByName(

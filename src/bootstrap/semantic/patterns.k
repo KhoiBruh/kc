@@ -54,7 +54,7 @@ fn whenPatternRoot(
     valueForm: bool, patternIndex: u32
 ): u64 {
     val branch = semantic.nodes.data[branchRoot];
-    val patternCount = branch.aux / 65536;
+    val patternCount = branch.whenBranchPatternCount();
     var root = whenConditionRoot(semantic, branchRoot, valueForm);
     val remaining = patternCount - patternIndex - 1;
     for (index in 0..<remaining) {
@@ -74,10 +74,10 @@ fn enumWhenExhaustive(
     var unique: u32 = 0;
     for (index in 0..<branchCount) {
         val branch = semantic.nodes.data[roots[index as u64]];
-        val isElse = branch.aux % 2 == 1;
+        val isElse = branch.whenBranchIsElse();
 
         if (!isElse) {
-          val patternCount = branch.aux / 65536;
+          val patternCount = branch.whenBranchPatternCount();
           for (patternIndex in 0..<patternCount) {
             val conditionRoot = whenPatternRoot(
                 semantic, roots[index as u64], valueForm, patternIndex);
@@ -86,9 +86,9 @@ fn enumWhenExhaustive(
                     condition.typeName == subject.name) {
                 for (prior in 0..index) {
                     val priorBranch = semantic.nodes.data[roots[prior as u64]];
-                    val priorElse = priorBranch.aux % 2 == 1;
+                    val priorElse = priorBranch.whenBranchIsElse();
                     if (!priorElse) {
-                      var priorCount = priorBranch.aux / 65536;
+                      var priorCount = priorBranch.whenBranchPatternCount();
                       if (prior == index) priorCount = patternIndex;
                       for (priorPattern in 0..<priorCount) {
                         val priorRoot = whenPatternRoot(

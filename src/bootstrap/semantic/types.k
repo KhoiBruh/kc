@@ -170,16 +170,14 @@ fn constraintFromHash(hash: u64): u32 => when (hash) {
     else -> 0;
 };
 
-fn structTypeParameterCount(structure: AstNode) => structure.aux / 65536;
-
 fn structTypeParameterRoot(val semantic: Semantic, structureRoot: u64, position: u32): u64 {
     val structure = semantic.nodes.data[structureRoot];
     var root = rootBeforeStructMethods(semantic.nodes, structureRoot);
-    val fields = structFieldCount(structure);
+    val fields = structure.fieldCount();
     for (field in 0..<fields) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
-    val remaining = structTypeParameterCount(structure);
+    val remaining = structure.structTypeParameterCount();
     for (index in position..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
@@ -187,7 +185,7 @@ fn structTypeParameterRoot(val semantic: Semantic, structureRoot: u64, position:
 }
 
 fn structTypeParameterPosition(val semantic: Semantic, structureRoot: u64, name: u64): u32 {
-    val count = structTypeParameterCount(semantic.nodes.data[structureRoot]);
+    val count = semantic.nodes.data[structureRoot].structTypeParameterCount();
     for (position in 0..<count) {
         val root = structTypeParameterRoot(semantic, structureRoot, position + 1);
         val parameter = semantic.nodes.data[root];
@@ -249,7 +247,7 @@ fn findCurrentTypeParameter(
     if (semantic.currentFunction < semantic.nodes.length) {
         val function =
             semantic.nodes.data[semantic.currentFunction];
-        val count = functionTypeParameterCount(function);
+        val count = function.typeParameterCount();
         for (position in 0..<count) {
             val root = functionTypeParameterRoot(
                 semantic, semantic.currentFunction, position + 1);
@@ -269,7 +267,7 @@ fn findCurrentTypeParameter(
     if (semantic.currentStruct < semantic.nodes.length) {
         val structure =
             semantic.nodes.data[semantic.currentStruct];
-        val count = structTypeParameterCount(structure);
+        val count = structure.structTypeParameterCount();
         for (position in 0..<count) {
             val root = structTypeParameterRoot(
                 semantic, semantic.currentStruct, position + 1);
@@ -291,8 +289,7 @@ fn findCurrentTypeParameter(
 
 fn typeParameterPosition(
     val semantic: Semantic, functionRoot: u64, name: u64): u32 {
-    val count = functionTypeParameterCount(
-        semantic.nodes.data[functionRoot]);
+    val count = semantic.nodes.data[functionRoot].typeParameterCount();
     for (position in 0..<count) {
         val root = functionTypeParameterRoot(
             semantic, functionRoot, position + 1);
@@ -361,10 +358,10 @@ fn typeFromNode(var semantic: Semantic, root: u64): TypeValue {
         val function = semantic.nodes.data[semantic.currentFunction];
         val structure = semantic.nodes.data[semantic.currentStruct];
         if (function.conversionKind == 1) {
-            if (structTypeParameterCount(structure) > 0) {
+            if (structure.structTypeParameterCount() > 0) {
                 if (root == functionParameterRoot(
                         semantic, semantic.currentFunction, 1) - 1) {
-                    val count = structTypeParameterCount(structure);
+                    val count = structure.structTypeParameterCount();
                     val start = semantic.genericArguments.length;
                     for (position in 0..<count) {
                         val parameterRoot = structTypeParameterRoot(
@@ -508,6 +505,6 @@ fn typeNeedsOwnership(val semantic: Semantic, value: TypeValue): bool {
     if (method == semantic.functions.length) return false;
     val functionRoot = semantic.functions.data[method].node;
     val function = semantic.nodes.data[functionRoot];
-    if (functionParameterCount(function) == 0) return false;
+    if (function.parameterCount() == 0) return false;
     return semantic.nodes.data[functionParameterRoot(semantic, functionRoot, 1)].mode() == ParameterMode.Owned;
 }

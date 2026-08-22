@@ -17,10 +17,6 @@ import bootstrap.semantic.mod.analyze;
 import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
-fn functionIsExtern(function: AstNode) => (function.aux / 65536) % 2 == 1;
-
-fn functionInfersReturn(function: AstNode) => (function.storage / 2) % 2 == 1;
-
 fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
     var function = semantic.nodes.data[functionRoot];
     if ((function.storage / 8) % 2 == 1)
@@ -36,7 +32,7 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
     val savedFunction = semantic.currentFunction;
     val savedReturn = semantic.returnType;
     semantic.currentFunction = functionRoot;
-    for (position in 0..<functionParameterCount(function)) {
+    for (position in 0..<function.parameterCount()) {
         val parameterRoot = functionParameterRoot(semantic, functionRoot, position + 1);
         val parameter = semantic.nodes.data[parameterRoot];
         val nameNode = semantic.nodes.data[parameter.subtreeStart];
@@ -82,34 +78,28 @@ fn inferFunctionReturn(var semantic: Semantic, functionRoot: u64): TypeValue {
 fn functionReturnTypeValue(var semantic: Semantic, functionRoot: u64): TypeValue {
     val function = semantic.nodes.data[functionRoot];
     
-    return if (functionInfersReturn(function))
+    return if (function.infersReturn())
             inferFunctionReturn(semantic, functionRoot)
         else typeFromNode(semantic, functionReturnRoot(semantic, functionRoot));
 }
 
-fn functionTypeParameterCount(function: AstNode) => function.aux / 131072;
-
 fn functionTypeParameterRoot(val semantic: Semantic, functionRoot: u64, position: u32): u64 {
     val function = semantic.nodes.data[functionRoot];
     var root = functionReturnRoot(semantic, functionRoot);
-    val parameters = functionParameterCount(function);
+    val parameters = function.parameterCount();
     for (parameter in 0..<parameters) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
-    val remaining = functionTypeParameterCount(function);
+    val remaining = function.typeParameterCount();
     for (index in position - 1..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
     return root;
 }
 
-fn structFieldCount(structure: AstNode) => structure.aux % 65536;
-
-fn structMethodCount(structure: AstNode) => structure.storage;
-
 fn rootBeforeStructMethods(val nodes: List<AstNode>, structureRoot: u64): u64 {
     var root = structureRoot - 1;
-    val remaining = structMethodCount(nodes.data[structureRoot]);
+    val remaining = nodes.data[structureRoot].methodCount();
     for (method in 0..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
     }
@@ -122,7 +112,7 @@ fn methodOwnerStructRoot(
     val semantic: Semantic, functionRoot: u64): u64 {
     val function = semantic.nodes.data[functionRoot];
     if (function.conversionKind == 1) {
-        if (functionParameterCount(function) == 0) return semantic.nodes.length;
+        if (function.parameterCount() == 0) return semantic.nodes.length;
         val receiverType = semantic.nodes.data[
             functionParameterRoot(semantic, functionRoot, 1) - 1];
         val structure = declarationFind(
@@ -134,7 +124,7 @@ fn methodOwnerStructRoot(
     for (structureIndex in 0..<semantic.structs.length) {
         val structureRoot = semantic.structs.data[structureIndex].node;
         var methodRoot = structureRoot - 1;
-        val methodCount = structMethodCount(semantic.nodes.data[structureRoot]);
+        val methodCount = semantic.nodes.data[structureRoot].methodCount();
         for (methodIndex in 0..<methodCount) {
             if (methodRoot == functionRoot) return structureRoot;
             methodRoot = semantic.nodes.data[methodRoot].subtreeStart - 1;
@@ -145,9 +135,9 @@ fn methodOwnerStructRoot(
 
 fn fieldRootAt(val nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
     val structure = nodes.data[structureRoot];
-    var roots = k_boot_alloc((structFieldCount(structure) as u64) * sizeof(u64)) as u64*;
+    var roots = k_boot_alloc((structure.fieldCount() as u64) * sizeof(u64)) as u64*;
     var root = rootBeforeStructMethods(nodes, structureRoot);
-    val remaining = structFieldCount(structure);
+    val remaining = structure.fieldCount();
     for (index in remaining>..0) {
         roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
@@ -159,7 +149,7 @@ fn fieldRootAt(val nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
 
 fn functionReturnRoot(val semantic: Semantic, functionRoot: u64): u64 {
     val function = semantic.nodes.data[functionRoot];
-    if (functionIsExtern(function)) return functionRoot - 1;
+    if (function.isExtern()) return functionRoot - 1;
     val body = semantic.nodes.data[functionRoot - 1];
     return body.subtreeStart - 1;
 }
@@ -168,21 +158,19 @@ fn functionParameterRoot(
     val semantic: Semantic, functionRoot: u64, position: u32): u64 {
     val function = semantic.nodes.data[functionRoot];
     var root = functionReturnRoot(semantic, functionRoot);
-    val remaining = functionParameterCount(function);
+    val remaining = function.parameterCount();
     for (index in position - 1..<remaining) {
         root = semantic.nodes.data[root].subtreeStart - 1;
     }
     return root;
 }
 
-fn functionParameterCount(function: AstNode) => function.aux % 65536;
-
 fn checkFunction(var semantic: Semantic, root: u64) {
     val function = semantic.nodes.data[root];
     semantic.currentFunction = root;
-    if (functionIsExtern(function)) {
+    if (function.isExtern()) {
         typeFromNode(semantic, functionReturnRoot(semantic, root));
-        val externCount = functionParameterCount(function);
+        val externCount = function.parameterCount();
         for (externPosition in 0..<externCount) {
             val externParameterRoot =
                 functionParameterRoot(
@@ -194,7 +182,7 @@ fn checkFunction(var semantic: Semantic, root: u64) {
     semantic.locals.setLength(0);
     semantic.scopeStart = 0;
     semantic.returnType = functionReturnTypeValue(semantic, root);
-    val count = functionParameterCount(function);
+    val count = function.parameterCount();
     for (position in 0..<count) {
         val parameterRoot =
             functionParameterRoot(semantic, root, position + 1);
@@ -320,12 +308,12 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 semantic.structs.add(DeclarationInfo(name, root));
             }
             var methodRoot = root - 1;
-            val methods = structMethodCount(declaration);
+            val methods = declaration.methodCount();
             for (methodIndex in 0..<methods) {
                 val method = semantic.nodes.data[methodRoot];
                 val methodNameNode = semantic.nodes.data[method.subtreeStart];
                 val methodName = methodHash(name, semantic.hash(methodNameNode));
-                if (functionTypeParameterCount(method) != 0) {
+                if (method.typeParameterCount() != 0) {
                     semantic.fail(4, methodNameNode);
                 } else {
                     if (method.conversionKind == 1) {
@@ -346,7 +334,7 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                 methodRoot = method.subtreeStart - 1;
             }
             var fieldRoot = rootBeforeStructMethods(semantic.nodes, root);
-            val fields = structFieldCount(declaration);
+            val fields = declaration.fieldCount();
             val savedStruct = semantic.currentStruct;
             semantic.currentStruct = root;
             for (fieldIndex in 0..<fields) {
@@ -376,14 +364,13 @@ fn collectDeclarations(var semantic: Semantic, programRoot: u64) {
                         semantic, initializerRoot, expected, actual);
                     val typeNode = semantic.nodes.data[
                         semantic.nodes.data[initializerRoot].subtreeStart - 1];
-                    var accepted = typeAccepts(
-                        expected, actual, semantic.genericArguments);
+                    var accepted = expected.accepts(
+                        actual, semantic.genericArguments);
                     if (expected.kind == TypeKind.Array &&
                         typeNode.kind == AstKind.ArrayType &&
                         typeNode.aux == 0 && actual.kind == TypeKind.Array) {
-                        accepted = typeAccepts(
-                            expected.arrayElement(), actual.arrayElement(),
-                            semantic.genericArguments);
+                        accepted = expected.arrayElement().accepts(
+                            actual.arrayElement(), semantic.genericArguments);
                     }
                     if (!accepted)
                         semantic.fail(4, semantic.nodes.data[initializerRoot]);
@@ -486,7 +473,7 @@ fn analyze(source: Source, val nodes: List<AstNode>): SemanticResult {
             } else {
                 if (semantic.nodes.data[root].kind == AstKind.StructDeclaration) {
                     var methodRoot = root - 1;
-                    val methods = structMethodCount(semantic.nodes.data[root]);
+                    val methods = semantic.nodes.data[root].methodCount();
                     for (method in 0..<methods) {
                         val savedStruct = semantic.currentStruct;
                         semantic.currentStruct = root;

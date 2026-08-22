@@ -190,8 +190,8 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         return;
     }
     if (node.kind == AstKind.WhenStatement) {
-        val branchCount = node.aux % 65536;
-        val hasSubject = node.aux / 65536;
+        val branchCount = node.whenBranchCount();
+        val hasSubject = if (node.whenHasSubject()) 1 else 0;
         if (branchCount == 0) {
             semantic.fail(4, node);
             return;
@@ -230,18 +230,18 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         for (index in 0..<branchCount) {
             restoreOwnership(semantic, ownershipBefore, ownershipCount);
             val current = semantic.nodes.data[roots[index as u64]];
-            if (current.aux % 2 == 1) hasElse = true;
+            if (current.whenBranchIsElse()) hasElse = true;
             val bodyRoot = roots[index as u64] - 1;
-            if (current.aux % 2 == 0) {
-              val patternCount = current.aux / 65536;
+            if (!current.whenBranchIsElse()) {
+              val patternCount = current.whenBranchPatternCount();
               for (patternIndex in 0..<patternCount) {
                 val conditionRoot = whenPatternRoot(
                     semantic, roots[index as u64], false, patternIndex);
                 val condition = expressionType(semantic, conditionRoot);
                 if (hasSubject == 1) {
                     if (
-                        !typeAccepts(
-                            subject, condition,
+                        !subject.accepts(
+                            condition,
                             semantic.genericArguments
                         )
                     ) {
@@ -264,7 +264,12 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 }
               }
             }
-            checkBlock(semantic, bodyRoot);
+            val savedLocals = semantic.locals.length;
+            val savedScopeStart = semantic.scopeStart;
+            semantic.scopeStart = savedLocals;
+            checkStatement(semantic, bodyRoot);
+            semantic.locals.setLength(savedLocals);
+            semantic.scopeStart = savedScopeStart;
             includeCurrentOwnership(
                 semantic, ownershipMerged, ownershipCount);
         }
@@ -324,7 +329,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 semantic.nodes.data[initializerRoot].subtreeStart - 1);
             initializer = contextualizeLiteralByteSlice(
                 semantic, initializerRoot, valueType, initializer);
-            if (!typeAccepts(valueType, initializer, semantic.genericArguments)) {
+            if (!valueType.accepts(initializer, semantic.genericArguments)) {
                 semantic.fail(
                     4, semantic.nodes.data[initializerRoot]);
             }
@@ -375,7 +380,7 @@ fn checkStatement(var semantic: Semantic, root: u64) {
                 return;
             }
         }
-        if (!typeAccepts(semantic.returnType, actual, semantic.genericArguments)) {
+        if (!semantic.returnType.accepts(actual, semantic.genericArguments)) {
             if (node.aux == 1) {
                 semantic.fail(
                     5, semantic.nodes.data[root - 1]);

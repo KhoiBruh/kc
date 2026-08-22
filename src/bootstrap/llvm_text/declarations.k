@@ -162,10 +162,10 @@ fn parameterRoot(
     val nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
     val function = nodes.data[functionRoot];
     var root = functionRoot - 1;
-    if (!functionIsExtern(function)) {
+    if (!function.isExtern()) {
         root = nodes.data[root].subtreeStart - 1;
     }
-    val remaining = functionParameterCount(function);
+    val remaining = function.parameterCount();
     for (index in position - 1..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
     }
@@ -173,7 +173,7 @@ fn parameterRoot(
 }
 
 fn returnTypeRoot(val nodes: List<AstNode>, functionRoot: u64): u64 {
-    if (functionIsExtern(nodes.data[functionRoot])) {
+    if (nodes.data[functionRoot].isExtern()) {
         return functionRoot - 1;
     }
     return nodes.data[functionRoot - 1].subtreeStart - 1;
@@ -296,13 +296,13 @@ fn emitFunction(
     val function = nodes.data[functionRoot];
     val name = nodes.data[function.subtreeStart];
     val returnType = nodes.data[returnTypeRoot(nodes, functionRoot)];
-    val parameterCount = functionParameterCount(function);
-    if (functionIsExtern(function)) {
+    val parameterCount = function.parameterCount();
+    if (function.isExtern()) {
         buffer.append("declare ");
     } else {
         appendDefine(buffer);
     }
-    if (functionInfersReturn(function)) {
+    if (function.infersReturn()) {
         var inferred = TypeValue(
             typeKindFromValue(function.typeKind), function.typeName, function.typePointee);
         if (specializationCount > 0) {
@@ -366,7 +366,7 @@ fn emitFunction(
         }
     }
     buffer.append(")");
-    if (functionIsExtern(function)) {
+    if (function.isExtern()) {
         appendNewline(buffer);
         return true;
     }
@@ -429,7 +429,7 @@ fn emitFunction(
         var returnsUnit = returnType.typeKind == TypeKind.Unit.value;
         if (returnType.kind == AstKind.NamedType &&
             returnType.aux == TokenKind.KwUnit.value) returnsUnit = true;
-        if (functionInfersReturn(function) && function.typeKind == TypeKind.Unit.value)
+        if (function.infersReturn() && function.typeKind == TypeKind.Unit.value)
             returnsUnit = true;
         if (returnsUnit) {
             buffer.append("  ret void");
@@ -501,11 +501,11 @@ fn emitSpecializedFunction(
 fn callCalleeRoot(val nodes: List<AstNode>, callRoot: u64): u64 {
     val call = nodes.data[callRoot];
     var cursor = callRoot - 1;
-    val argumentCount = call.aux % 65536;
+    val argumentCount = call.callArgumentCount();
     for (argument in 0..<argumentCount) {
         cursor = expressionChildBefore(nodes, cursor);
     }
-    val explicitTypeCount = call.aux / 65536;
+    val explicitTypeCount = call.callTypeArgumentCount();
     for (explicitType in 0..<explicitTypeCount) {
         cursor = expressionChildBefore(nodes, cursor);
     }
@@ -532,8 +532,8 @@ fn emitSimpleFunction(
     val nodes: List<AstNode>,
     functionRoot: u64): bool {
     val function = nodes.data[functionRoot];
-    if (functionParameterCount(function) != 0) return false;
-    if (functionTypeParameterCount(function) != 0) return false;
+    if (function.parameterCount() != 0) return false;
+    if (function.typeParameterCount() != 0) return false;
     val returnTypeRoot = nodes.data[functionRoot - 1].subtreeStart - 1;
     if (nodes.data[returnTypeRoot].aux != TokenKind.KwI32.value) return false;
     val name = nodes.data[function.subtreeStart];
@@ -569,7 +569,7 @@ fn emitStruct(
         buffer, source.hash(name.start, name.end));
     appendEquals(buffer);
     buffer.append("type {");
-    val fieldCount = structFieldCount(structure);
+    val fieldCount = structure.fieldCount();
     for (index in 0..<fieldCount) {
         if (index > 0) {
             buffer.append(",");
@@ -629,7 +629,7 @@ fn emitSpecializedStruct(
     appendStructSpecializationSuffix(buffer, genericArguments, argumentStart, argumentCount);
     appendEquals(buffer);
     buffer.append("type {");
-    val fieldCount = structFieldCount(structure);
+    val fieldCount = structure.fieldCount();
     for (index in 0..<fieldCount) {
         if (index > 0) {
             buffer.append(",");
@@ -661,8 +661,7 @@ fn specializationArgumentsEqual(
     if (leftCount != rightCount) return false;
     for (index in 0..<leftCount) {
         if (
-            !typeEquals(
-                arguments.data[leftStart + index as u64],
+            !arguments.data[leftStart + index as u64].equals(
                 arguments.data[rightStart + index as u64], arguments
             )
         ) {
@@ -732,7 +731,7 @@ fn emitModule(
     for (index in 0..<program.aux) {
         root = roots[index as u64];
         if (nodes.data[root].kind == AstKind.StructDeclaration) {
-            if (structTypeParameterCount(nodes.data[root]) == 0) {
+            if (nodes.data[root].structTypeParameterCount() == 0) {
                 emitStruct(buffer, source, nodes, genericArguments, root);
             }
         }
@@ -774,7 +773,7 @@ fn emitModule(
     for (index in 0..<program.aux) {
         root = roots[index as u64];
         if (nodes.data[root].kind == AstKind.FunctionOrDefer) {
-            if (functionTypeParameterCount(nodes.data[root]) == 0) {
+            if (nodes.data[root].typeParameterCount() == 0) {
                 emitFunction(
                     buffer, source, nodes, genericArguments,
                     root, 0, 0);
@@ -782,10 +781,9 @@ fn emitModule(
         } else {
             if (nodes.data[root].kind == AstKind.StructDeclaration) {
                 var methodRoot = root - 1;
-                val methods = emitterStructMethodCount(nodes.data[root]);
+                val methods = nodes.data[root].methodCount();
                 for (method in 0..<methods) {
-                    if (emitterStructTypeParameterCount(
-                            nodes.data[root]) == 0) {
+                    if (nodes.data[root].structTypeParameterCount() == 0) {
                         emitFunction(
                             buffer, source, nodes, genericArguments,
                             methodRoot, 0, 0);

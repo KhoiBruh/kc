@@ -151,8 +151,8 @@ fn emitWhen(
     var genericArguments: List<TypeValue>, root: u64,
     var counter: IrCounter, var defers: List<u64>): bool {
     val statement = nodes.data[root];
-    val branchCount = statement.aux % 65536;
-    val hasSubject = statement.aux / 65536;
+    val branchCount = statement.whenBranchCount();
+    val hasSubject = if (statement.whenHasSubject()) 1 else 0;
     val roots =
         k_boot_alloc((branchCount as u64) * sizeof(u64)) as u64*;
     var branchRoot = root - 1;
@@ -172,12 +172,12 @@ fn emitWhen(
         val branch = nodes.data[roots[index as u64]];
         val bodyRoot = roots[index as u64] - 1;
         val bodyBlock = nextBlock(counter);
-        if (branch.aux % 2 == 0) {
+        if (!branch.whenBranchIsElse()) {
             var nextBlockValue = mergeBlock;
             if (index + 1 < branchCount) {
                 nextBlockValue = nextBlock(counter);
             }
-            val patternCount = branch.aux / 65536;
+            val patternCount = branch.whenBranchPatternCount();
             val patternRoots =
                 k_boot_alloc((patternCount as u64) * sizeof(u64)) as u64*;
             var patternRoot = expressionChildBefore(nodes, bodyRoot);

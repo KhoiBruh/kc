@@ -85,7 +85,7 @@ fn emitImplicitIntegerWiden(
     var counter: IrCounter): IrValue {
     val sourceType = TypeValue(typeKindFromValue(value.typeKind), value.typeName, value.typePointee);
     val targetType = TypeValue(typeKindFromValue(targetKind), targetName, targetPointee);
-    if (!integerImplicitlyWidens(sourceType, targetType)) return value;
+    if (!sourceType.implicitlyWidensTo(targetType)) return value;
     val temporary = nextTemporary(counter);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     var opcode: u32 = 2;

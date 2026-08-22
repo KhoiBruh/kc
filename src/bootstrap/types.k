@@ -79,6 +79,71 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 		TypeKind.I64, TypeKind.U64 -> 64;
 		else -> 32;
 	};
+
+	fn requiresRangeCheck(val self, target: TypeValue): bool {
+		if (self.kind == target.kind) return false;
+		val sourceWidth = self.intWidth();
+		val targetWidth = target.intWidth();
+		if (self.isSigned() == target.isSigned()) {
+			return targetWidth < sourceWidth;
+		}
+		if (self.isSigned()) return true;
+		return targetWidth <= sourceWidth;
+	}
+
+	fn implicitlyWidensTo(val self, target: TypeValue): bool {
+		if (!self.isInteger()) return false;
+		if (!target.isInteger()) return false;
+		if (self.kind == target.kind) return false;
+		if (target.intWidth() <= self.intWidth()) return false;
+		if (self.isSigned() && !target.isSigned()) return false;
+		return true;
+	}
+
+	fn equals(val self, right: TypeValue, val genericArguments: List<TypeValue>): bool {
+		if (self.kind != right.kind) return false;
+		if (self.name != right.name) return false;
+		if (self.kind == TypeKind.Struct) {
+			val leftCount = self.pointee / 65536;
+			val rightCount = right.pointee / 65536;
+			if (leftCount != rightCount) return false;
+			if (leftCount == 0) return true;
+			val leftStart = self.pointee % 65536;
+			val rightStart = right.pointee % 65536;
+			for (index in 0..<leftCount) {
+				val leftArg = genericArguments.data[leftStart as u64 + index as u64];
+				val rightArg = genericArguments.data[rightStart as u64 + index as u64];
+				if (!leftArg.equals(rightArg, genericArguments)) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return self.pointee == right.pointee;
+	}
+
+	fn accepts(val self, actual: TypeValue, val genericArguments: List<TypeValue>): bool {
+		if (self.equals(actual, genericArguments)) return true;
+		if (actual.implicitlyWidensTo(self)) return true;
+		if (self.kind == TypeKind.Nullable) {
+			if (actual.kind == TypeKind.NullLiteral) return true;
+			return TypeValue(typeKindFromValue(self.pointee), self.name, 0).equals(actual, genericArguments);
+		}
+		if (actual.kind == TypeKind.IntegerLiteral) {
+			if (self.isInteger()) return true;
+		}
+		if (actual.kind == TypeKind.F64) {
+			if (self.isFloat()) return true;
+		}
+		if (self.kind == TypeKind.Array) {
+			if (actual.kind == TypeKind.Array) {
+				if (self.arraySize() == actual.arraySize()) {
+					if (actual.arrayElement().kind == TypeKind.Invalid) return true;
+				}
+			}
+		}
+		return false;
+	}
 }
 
 fn invalidType() => TypeValue(TypeKind.Invalid, 0, 0);
@@ -88,72 +153,6 @@ fn unitType() => TypeValue(TypeKind.Unit, 0, 0);
 fn boolType() => TypeValue(TypeKind.Bool, 0, 0);
 
 fn integerLiteralType() => TypeValue(TypeKind.IntegerLiteral, 0, 0);
-
-fn integerCastRequiresRangeCheck(source: TypeValue, target: TypeValue): bool {
-    if (source.kind == target.kind) return false;
-    val sourceWidth = source.intWidth();
-    val targetWidth = target.intWidth();
-    if (source.isSigned() == target.isSigned()) {
-        return targetWidth < sourceWidth;
-    }
-    if (source.isSigned()) return true;
-    return targetWidth <= sourceWidth;
-}
-
-fn integerImplicitlyWidens(source: TypeValue, target: TypeValue): bool {
-    if (!source.isInteger()) return false;
-    if (!target.isInteger()) return false;
-    if (source.kind == target.kind) return false;
-    if (target.intWidth() <= source.intWidth()) return false;
-    if (source.isSigned() && !target.isSigned()) return false;
-    return true;
-}
-
-fn typeEquals(left: TypeValue, right: TypeValue, val genericArguments: List<TypeValue>): bool {
-    if (left.kind != right.kind) return false;
-    if (left.name != right.name) return false;
-    if (left.kind == TypeKind.Struct) {
-        val leftCount = left.pointee / 65536;
-        val rightCount = right.pointee / 65536;
-        if (leftCount != rightCount) return false;
-        if (leftCount == 0) return true;
-        val leftStart = left.pointee % 65536;
-        val rightStart = right.pointee % 65536;
-        for (index in 0..<leftCount) {
-            val leftArg = genericArguments.data[leftStart as u64 + index as u64];
-            val rightArg = genericArguments.data[rightStart as u64 + index as u64];
-            if (!typeEquals(leftArg, rightArg, genericArguments)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    return left.pointee == right.pointee;
-}
-
-fn typeAccepts(expected: TypeValue, actual: TypeValue, val genericArguments: List<TypeValue>): bool {
-    if (typeEquals(expected, actual, genericArguments)) return true;
-    if (integerImplicitlyWidens(actual, expected)) return true;
-    if (expected.kind == TypeKind.Nullable) {
-        if (actual.kind == TypeKind.NullLiteral) return true;
-        return typeEquals(
-            TypeValue(typeKindFromValue(expected.pointee), expected.name, 0), actual, genericArguments);
-    }
-    if (actual.kind == TypeKind.IntegerLiteral) {
-        if (expected.isInteger()) return true;
-    }
-    if (actual.kind == TypeKind.F64) {
-        if (expected.isFloat()) return true;
-    }
-    if (expected.kind == TypeKind.Array) {
-        if (actual.kind == TypeKind.Array) {
-            if (expected.arraySize() == actual.arraySize()) {
-                if (actual.arrayElement().kind == TypeKind.Invalid) return true;
-            }
-        }
-    }
-    return false;
-}
 
 fn primitiveType(tokenKind: u32): TypeValue => when (tokenKind) {
     TokenKind.KwUnit.value -> unitType();
