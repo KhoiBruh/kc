@@ -56,7 +56,7 @@ fn compilerFailure(kind: u32) {
 fn compileToLl(
     sourceData: u8*,
     sourceLength: u64,
-    val sourceMap: List<SourceMapSegment>,
+    val sources: List<SourceMapSegment>,
     outputPath: u8*,
     outputPathLength: u64,
     optPath: u8*,
@@ -67,7 +67,7 @@ fn compileToLl(
     defer lexed.tokens.free();
     if (!lexed.ok) {
         printDiagnostic(
-            source, sourceMap, 99 + lexed.errorKind,
+            source, sources, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1
         );
         return 2;
@@ -77,7 +77,7 @@ fn compileToLl(
     defer parsed.nodes.free();
     if (!parsed.ok) {
         printDiagnostic(
-            source, sourceMap, 1000 + parsed.expectedKind,
+            source, sources, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1
 		);
         return 2;
@@ -86,7 +86,7 @@ fn compileToLl(
     var checked = analyze(source, parsed.nodes);
     if (!checked.ok) {
         printDiagnostic(
-            source, sourceMap, checked.category,
+            source, sources, checked.category,
             checked.start, checked.end
         );
         return 2;
@@ -155,21 +155,6 @@ fn linkLl(
     return 2;
 }
 
-fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
-    var line: u64 = 1;
-    for (i in sourceStart..<offset) if (source.data[i] == 10) line++;
-    return line;
-}
-
-fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
-    var col: u64 = 1;
-    for (index in offset>..sourceStart) {
-        if (source.data[index] == 10) return col;
-        col++;
-    }
-    return col;
-}
-
 fn stderrNumber(value: u64): StringBuilder {
     var buf = StringBuilder.new();
     var v = value;
@@ -231,14 +216,15 @@ fn appendErrorMessage(var buffer: StringBuilder, category: u32) {
 }
 
 fn printDiagnostic(
-    source: Source, val sourceMap: List<SourceMapSegment>,
+    source: Source, val sources: List<SourceMapSegment>,
     category: u32, start: u64, end: u64
 ) {
     var buf = StringBuilder.new();
     defer buf.free();
+
     var sourceStart: u64 = 0;
-    for (i in 0..<sourceMap.length) {
-        val segment = sourceMap.data[i];
+    for (i in 0..<sources.length) {
+        val segment = sources.data[i];
         val total = segment.sourceStart + segment.sourceLength;
         if (start in segment.sourceStart..total) {
 			buf.appendBytes(slice(segment.path, segment.pathLength));
@@ -248,12 +234,15 @@ fn printDiagnostic(
         }
     }
     
-    val lineNum = stderrNumber(findLine(source, sourceStart, start));
+    val lineNum = stderrNumber(source.line(sourceStart, start));
     defer lineNum.free();
+
     buf.appendBytes(slice(lineNum.data, lineNum.length));
     buf.append(":");
-    val colNum = stderrNumber(findColumn(source, sourceStart, start));
+
+    val colNum = stderrNumber(source.column(sourceStart, start));
     defer colNum.free();
+
     buf.appendBytes(slice(colNum.data, colNum.length));
     buf.append(": ");
     buf.append("error: ");
