@@ -530,7 +530,11 @@ return when (code) {
 };
 ```
 
-Mọi arm phải có kiểu tương thích. Subject chỉ được đánh giá một lần và nhánh
+Kiểu của biểu thức `when` là kiểu của arm đầu tiên; mọi arm sau phải được kiểu
+đó chấp nhận theo quy tắc gán thông thường (widening số nguyên hẹp sang rộng
+được cho phép). Không có suy diễn kiểu từ ngữ cảnh bao quanh: literal trong arm
+mặc định là `i32`, nên khi cần kiểu rộng hơn hãy dùng arm đầu với giá trị đã có
+kiểu hoặc cast tường minh. Subject chỉ được đánh giá một lần và nhánh
 khớp đầu tiên thắng. Arm cũng có thể là block; các statement vẫn cần `;`, còn
 tail expression cuối block không có `;` và là giá trị của arm:
 

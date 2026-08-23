@@ -8,16 +8,17 @@ import bootstrap.ast.AstNode;
 import bootstrap.ast.ParameterMode;
 
 fn prefixBindingPower(kind: TokenKind): u32 {
-    return when (kind) {
+    val power = when (kind) {
         TokenKind.PLUS, TokenKind.MINUS, TokenKind.AMPERSAND,
         TokenKind.TILDE, TokenKind.BANG -> 90;
         else -> 0;
     };
+    return power as u32;
 }
 
 fn leftBindingPower(kind: TokenKind): u32 {
     if (isAssignmentKind(kind)) return 10;
-    return when (kind) {
+    val power = when (kind) {
 		TokenKind.IN -> 50;
         TokenKind.OR_OR -> 20;
         TokenKind.AND_AND -> 30;
@@ -30,6 +31,7 @@ fn leftBindingPower(kind: TokenKind): u32 {
         TokenKind.STAR, TokenKind.SLASH, TokenKind.PERCENT -> 80;
         else -> 0;
     };
+    return power as u32;
 }
 
 fn rightBindingPower(kind: TokenKind): u32 {

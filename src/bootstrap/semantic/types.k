@@ -160,15 +160,18 @@ fn integerConstantFits(value: IntegerConstant, target: TypeValue): bool {
     };
 }
 
-fn constraintFromHash(hash: u64): u32 => when (hash) {
-    8246182162010039579 -> 1;
-    229477778387914 -> 2;
-    6953836814478 -> 3;
-    229469892001299 -> 4;
-    7573017822976354 -> 5;
-    210712519067 -> 6;
-    else -> 0;
-};
+fn constraintFromHash(hash: u64): u32 {
+    val constraint = when (hash) {
+        8246182162010039579 -> 1;
+        229477778387914 -> 2;
+        6953836814478 -> 3;
+        229469892001299 -> 4;
+        7573017822976354 -> 5;
+        210712519067 -> 6;
+        else -> 0;
+    };
+    return constraint as u32;
+}
 
 fn structTypeParameterRoot(val semantic: Semantic, structureRoot: u64, position: u32): u64 {
     val structure = semantic.nodes.data[structureRoot];

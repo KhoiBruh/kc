@@ -198,7 +198,7 @@ fn typeAlignment(
         }
         return alignment;
     }
-    return when (kind) {
+    val alignment = when (kind) {
         TypeKind.BOOL.value,
         TypeKind.U8.value -> 1;
         TypeKind.I32.value,
@@ -213,6 +213,7 @@ fn typeAlignment(
         TypeKind.STR.value -> 24;
         else -> 1;
     };
+    return alignment as u64;
 }
 
 fn typeSize(
@@ -256,7 +257,7 @@ fn typeSize(
         return alignUp(
             size, typeAlignment(source, nodes, genericArguments, kind, name, pointee));
     }
-    return when (kind) {
+    val size = when (kind) {
         TypeKind.UNIT.value -> 0;
         TypeKind.BOOL.value,
         TypeKind.U8.value -> 1;
@@ -272,6 +273,7 @@ fn typeSize(
         TypeKind.SLICE.value -> 16;
         else -> 0;
     };
+    return size as u64;
 }
 
 fn emitterTypeParameterRoot(

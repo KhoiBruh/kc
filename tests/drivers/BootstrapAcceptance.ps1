@@ -543,7 +543,8 @@ $invalidFixtures = @(
     "bootstrap-semantic-move-array.k",
     "bootstrap-semantic-enum-overflow.k",
     "bootstrap-semantic-enum-duplicate-value.k",
-    "bootstrap-semantic-enum-conversion.k"
+    "bootstrap-semantic-enum-conversion.k",
+    "bootstrap-semantic-when-common-type.k"
 )
 foreach ($fixtureName in $invalidFixtures) {
     $fixture = Join-Path $InvalidFixtureDirectory $fixtureName

@@ -9,7 +9,7 @@ Status values: `open` · `fixed-kc1` · `fixed-kc0` · `intentional`
 | ID | Summary | kc0 behavior | kc1 behavior | Status | Discovered |
 | --- | --- | --- | --- | --- | --- |
 | D1 | Method call on a constructor temporary inside an expression-bodied function (`fn f() => AstView(n).walk();`) | Builds | Rejected by semantic ("type mismatch") | fixed-kc1 (2026-08-23) | 2026-08-23, AstView refactor |
-| D2 | `when` expression arm-type unification with mixed literal / call arms | Accepts | Requires uniform arm types (first-arm typing; literals default `i32`) | open | 2026-08-23, types.k conversion |
+| D2 | `when` expression arm-type unification with mixed literal / call arms | Accepts | Requires uniform arm types (first-arm typing; literals default `i32`) | fixed-kc0 (2026-08-23, rule standardized) | 2026-08-23, types.k conversion |
 | D3 | Checked integer-cast lowering strategy | Direct range check against target-type bounds | Value round-trip (`trunc/sext/zext` back + `icmp eq`, panic on mismatch) | intentional | 2026-08-23, cast_widening_checks fixture |
 
 Closure notes:
@@ -24,6 +24,16 @@ Closure notes:
   needed `registerDropRequests` so auto-dropped resource parameters register
   their `List<T>.free` specializations before body emission. Regression case:
   `tests/cases/temporary_receiver_method.k`.
+* **D2 (fixed in kc0, rule standardized).** Canonical rule adopted from kc1:
+  a value-form `when` takes the type of its first arm; every later arm must be
+  accepted by that type (narrow-to-wide integer widening only); integer
+  literal arms default to `i32`; no context-expected typing propagates into
+  arms. kc0 dropped the blanket numeric-pair exemption and stopped propagating
+  the context-expected type into arm analysis (`Semantic.cpp` when-expression
+  block); the five bootstrap sites that relied on context typing now bind the
+  `when` result and convert explicitly. Regression fixture:
+  `tests/fixtures/bootstrap-semantic-when-common-type.k` (acceptance
+  invalid list). Rule documented in `docs.md`, `when` expression section.
 
 Rules:
 

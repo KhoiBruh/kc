@@ -1288,8 +1288,7 @@ private:
                             "when value block cannot terminate before its tail expression",
                             statement->span);
                 }
-                const auto value = analyzeExpr(
-                    *branch.value, expected ? expected : branchType);
+                const auto value = analyzeExpr(*branch.value);
                 scopes_.pop_back();
                 const auto branchState = captureOwnershipState();
                 if (!mergedState)
@@ -1299,8 +1298,7 @@ private:
                     *mergedState = captureOwnershipState();
                 }
                 if (!branchType) branchType = value;
-                else if (!compatible(*branchType, value) &&
-                         !(isNumeric(*branchType) && isNumeric(value)))
+                else if (!compatible(*branchType, value))
                     diagnose("when branches must have a common type",
                              branch.value->span);
             }
@@ -1311,7 +1309,7 @@ private:
                              subject->kind != SemanticTypeKind::Enum))
                 diagnose("when expression requires else", expression.span);
             if (mergedState) restoreOwnershipState(*mergedState);
-            type = expected ? *expected : branchType.value_or(SemanticType{});
+            type = branchType.value_or(SemanticType{});
         } else if (const auto* call = std::get_if<CallExpr>(&expression.node)) {
             type = analyzeCall(*call);
         } else if (const auto* member = std::get_if<MemberExpr>(&expression.node)) {
