@@ -1,0 +1,2 @@
+module std.collections.map;
+
