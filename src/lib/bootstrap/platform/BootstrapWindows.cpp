@@ -295,11 +295,27 @@ extern "C" std::int32_t k_boot_run(
         wideCommand->begin(), wideCommand->end());
     commandLine.push_back(L'\0');
 
+    const HANDLE standardHandles[] = {
+        GetStdHandle(STD_INPUT_HANDLE),
+        GetStdHandle(STD_OUTPUT_HANDLE),
+        GetStdHandle(STD_ERROR_HANDLE),
+    };
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
+    startup.dwFlags = STARTF_USESTDHANDLES;
+    startup.hStdInput = standardHandles[0];
+    startup.hStdOutput = standardHandles[1];
+    startup.hStdError = standardHandles[2];
+    for (const HANDLE handle : standardHandles) {
+        if (handle != nullptr && handle != INVALID_HANDLE_VALUE) {
+            SetHandleInformation(
+                handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+        }
+    }
+
     PROCESS_INFORMATION process{};
     if (!CreateProcessW(
-            nullptr, commandLine.data(), nullptr, nullptr, FALSE,
+            nullptr, commandLine.data(), nullptr, nullptr, TRUE,
             CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process))
         return -1;
     const DWORD waitResult = WaitForSingleObject(process.hProcess, INFINITE);
