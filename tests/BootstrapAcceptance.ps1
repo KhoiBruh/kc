@@ -78,7 +78,8 @@ if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
     "generics.k", "generics_multiple.k", "generic_nullable.k",
-    "generic_structs.k", "generic_struct_methods.k", "generic_list.k", "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
+    "generic_structs.k", "generic_struct_methods.k", "generic_list.k",     "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
+    "cast_widening_checks.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
@@ -124,6 +125,9 @@ foreach ($fixtureName in $validFixtures) {
         $stage1Output -cne $stage3Output -or
         $stage1Output -cne $stage4Output) {
         Write-Error "bootstrap stage behavior differs for $fixtureName"
+    }
+    if ($fixtureName -eq "cast_widening_checks.k" -and $stage1Exit -ne 42) {
+        Write-Error "checked widening cast fixture did not return 42"
     }
     if ($fixtureName -eq "integer_casts.k" -and $stage1Exit -ne 42) {
         Write-Error "checked integer cast fixture did not return 42"

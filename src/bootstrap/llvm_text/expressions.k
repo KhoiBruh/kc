@@ -878,8 +878,11 @@ fn emitExpression(
                 check = counter.next_value();
                 appendValuePrefix(buffer); appendDecimal(buffer, roundTrip);
                 appendEquals(buffer);
-                var reverseOpcode: u32 = 2;
-                if (targetType.isSigned()) reverseOpcode = 1;
+                var reverseOpcode: u32 = 3;
+                if (targetWidth <= sourceWidth) {
+                    reverseOpcode = 2;
+                    if (targetType.isSigned()) reverseOpcode = 1;
+                }
                 appendCastOpcode(buffer, reverseOpcode);
                 buffer.append(" ");
                 appendNodeType(buffer, genericArguments, node);
