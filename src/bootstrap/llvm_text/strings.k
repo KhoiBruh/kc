@@ -152,7 +152,7 @@ fn emitOwnedStringLiteral(
     defer decoded.free();
     var capacity = decoded.length;
     if (capacity == 0) capacity = 1;
-    val data = nextTemporary(counter);
+    val data = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, data); appendEquals(buffer);
     appendCall(buffer); buffer.append("ptr");
     appendFunctionOpen(buffer);
@@ -160,7 +160,7 @@ fn emitOwnedStringLiteral(
     appendI64(buffer); buffer.append(" "); appendDecimal(buffer, capacity);
     buffer.append(")"); appendNewline(buffer);
     for (index in 0..<decoded.length) {
-        val address = nextTemporary(counter);
+        val address = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, address); appendEquals(buffer);
         appendGetElementPtr(buffer); buffer.append(" ");
         buffer.append("i8, ptr ");
@@ -172,18 +172,18 @@ fn emitOwnedStringLiteral(
         appendPtr(buffer); appendDecimal(buffer, address);
         appendNewline(buffer);
     }
-    var temporary = nextTemporary(counter);
+    var temporary = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     appendInsertValue(buffer); appendSpacedStringType(buffer);
     buffer.append("undef, ptr ");
     buffer.append("%"); appendDecimal(buffer, data); appendIndexZero(buffer);
-    temporary = nextTemporary(counter);
+    temporary = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     appendInsertValue(buffer); appendSpacedStringType(buffer);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
     appendI64Prefix(buffer); appendDecimal(buffer, decoded.length);
     appendIndexOne(buffer);
-    temporary = nextTemporary(counter);
+    temporary = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     appendInsertValue(buffer); appendSpacedStringType(buffer);
     appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);

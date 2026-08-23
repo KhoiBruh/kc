@@ -61,10 +61,9 @@ struct StringBuilder(data: u8*, length: u64, capacity: u64) {
         for (value in bytes) self.add(value);
     }
 
-    fn toString(val self): str {
+    fn to_str(val self): str {
         var result = "";
-        k_boot_string_copy(
-            self.data, self.length, (&result) as unit*);
+        k_boot_string_copy(self.data, self.length, (&result) as unit*);
         return result;
     }
 

@@ -18,24 +18,41 @@ import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
 enum IrValueKind: u32 {
-    INVALID = 0,
-    SOURCE_LITERAL = 1,
-    TEMPORARY = 2,
-    IMMEDIATE_CONSTANT = 3,
-    LOCAL_ADDRESS = 4,
-    ZERO_INITIALIZER = 5
+    INVALID,
+    SOURCE_LITERAL,
+    TEMPORARY,
+    IMMEDIATE_CONSTANT,
+    LOCAL_ADDRESS,
+    ZERO_INITIALIZER
 }
 
 struct IrValue(
     kind: IrValueKind, start: u64, end: u64, temporary: u64,
-    typeKind: u32, typeName: u64, typePointee: u32)
+    typeKind: u32, typeName: u64, typePointee: u32
+)
+
 struct IrCounter(
     value: u64,
     block: u64,
     currentBlock: u64,
     continueBlock: u64,
     breakBlock: u64,
-    loopDeferDepth: u64)
+    loopDeferDepth: u64
+) {
+
+	fn next_value(var self): u64 {
+        val value = self.value;
+        self.value++;
+        return value;
+    }
+
+    fn next_block(var self): u64 {
+        val block = self.block;
+        self.block++;
+        return block;
+    }
+
+}
 
 fn appendIrValue(
     var buffer: StringBuilder, source: Source, value: IrValue) {
@@ -72,12 +89,6 @@ fn appendPointerValue(
     }
 }
 
-fn nextTemporary(var counter: IrCounter): u64 {
-    val value = counter.value;
-    counter.value++;
-    return value;
-}
-
 fn emitImplicitIntegerWiden(
     var buffer: StringBuilder, source: Source,
     var genericArguments: List<TypeValue>, value: IrValue,
@@ -86,7 +97,7 @@ fn emitImplicitIntegerWiden(
     val sourceType = TypeValue(typeKindFromValue(value.typeKind), value.typeName, value.typePointee);
     val targetType = TypeValue(typeKindFromValue(targetKind), targetName, targetPointee);
     if (!sourceType.implicitlyWidensTo(targetType)) return value;
-    val temporary = nextTemporary(counter);
+    val temporary = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
     var opcode: u32 = 2;
     if (sourceType.isSigned()) opcode = 1;
@@ -100,12 +111,6 @@ fn emitImplicitIntegerWiden(
     appendNewline(buffer);
     return IrValue(
         IrValueKind.TEMPORARY, 0, 0, temporary, targetKind, targetName, targetPointee);
-}
-
-fn nextBlock(var counter: IrCounter): u64 {
-    val value = counter.block;
-    counter.block = value + 1;
-    return value;
 }
 
 fn appendBlockName(var buffer: StringBuilder, block: u64) {
@@ -148,7 +153,5 @@ fn appendConditionalBranch(
     appendNewline(buffer);
 }
 
-
 fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
     nodes.data[root].subtreeStart - 1;
-

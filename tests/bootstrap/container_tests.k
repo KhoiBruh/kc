@@ -73,7 +73,7 @@ fn main(): i32 {
         k_boot_free(raw as unit*);
         builder.append("A ");
         builder.append("😀");
-        var built = builder.toString();
+        var built = builder.to_str();
         val view = (&built) as StrLayout*;
         if ((*view).length != 9) {
             return 9;

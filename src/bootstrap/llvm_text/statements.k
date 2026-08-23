@@ -62,12 +62,12 @@ fn emitAutomaticDrop(
         freeRoot = emitterDropFunctionRoot(source, nodes, valueType.name);
         if (freeRoot == nodes.length) return;
     }
-    val live = nextTemporary(counter);
+    val live = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, live); appendEquals(buffer);
     appendLoad(buffer); buffer.append("i1");
     appendPtr(buffer); appendDropFlagName(buffer, name.start); appendNewline(buffer);
-    val runBlock = nextBlock(counter);
-    val endBlock = nextBlock(counter);
+    val runBlock = counter.next_block();
+    val endBlock = counter.next_block();
     appendConditionalBranch(
         buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, live, TypeKind.BOOL.value, 0, 0),
         runBlock, endBlock);
@@ -75,7 +75,7 @@ fn emitAutomaticDrop(
     appendStore(buffer); buffer.append("i1 ");
     buffer.append("false");
     appendPtr(buffer); appendDropFlagName(buffer, name.start); appendNewline(buffer);
-    val loaded = nextTemporary(counter);
+    val loaded = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
     appendLoad(buffer);
     appendType(
@@ -84,7 +84,7 @@ fn emitAutomaticDrop(
     appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
     appendNewline(buffer);
     if (valueType.kind == TypeKind.STR) {
-        val pointer = nextTemporary(counter);
+        val pointer = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
         buffer.append("extractvalue");
         appendSpacedStringType(buffer); buffer.append("%"); appendDecimal(buffer, loaded);
@@ -233,21 +233,21 @@ fn emitStatement(
             buffer, source, nodes, genericArguments, leftRoot, counter);
         val finish = emitExpression(
             buffer, source, nodes, genericArguments, rightRoot, counter);
-        val ascending = nextTemporary(counter);
+        val ascending = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, ascending); appendEquals(buffer);
         appendComparison(buffer, 81, start.typeKind); buffer.append(" ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         buffer.append(" "); appendIrValue(buffer, source, start);
         buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
-        val different = nextTemporary(counter);
+        val different = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, different); appendEquals(buffer);
         appendComparison(buffer, 80, start.typeKind); buffer.append(" ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         buffer.append(" "); appendIrValue(buffer, source, start);
         buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
-        val step = nextTemporary(counter);
+        val step = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, step); appendEquals(buffer);
         buffer.append("select i1 ");
         buffer.append("%"); appendDecimal(buffer, ascending);
@@ -260,7 +260,7 @@ fn emitStatement(
         var initial = start;
         if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_START.value ||
             collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_BOTH.value) {
-            val shifted = nextTemporary(counter);
+            val shifted = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, shifted); appendEquals(buffer);
             appendOperator(buffer, 60, start.typeKind); buffer.append(" ");
             appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
@@ -275,18 +275,18 @@ fn emitStatement(
         buffer.append(" "); appendIrValue(buffer, source, initial);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
-        val conditionBlock = nextBlock(counter);
-        val bodyBlock = nextBlock(counter);
-        val incrementBlock = nextBlock(counter);
-        val endBlock = nextBlock(counter);
+        val conditionBlock = counter.next_block();
+        val bodyBlock = counter.next_block();
+        val incrementBlock = counter.next_block();
+        val endBlock = counter.next_block();
         appendBranch(buffer, conditionBlock);
         appendBlockLabel(buffer, counter, conditionBlock);
-        val current = nextTemporary(counter);
+        val current = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, current); appendEquals(buffer);
         appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
-        val ascendingCompared = nextTemporary(counter);
+        val ascendingCompared = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, ascendingCompared); appendEquals(buffer);
         var ascendingOperator: u32 = 81;
         if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE.value ||
@@ -298,7 +298,7 @@ fn emitStatement(
         appendIrValue(buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
         buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
-        val descendingCompared = nextTemporary(counter);
+        val descendingCompared = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, descendingCompared); appendEquals(buffer);
         var descendingOperator: u32 = 82;
         if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE.value ||
@@ -310,7 +310,7 @@ fn emitStatement(
         appendIrValue(buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, current, start.typeKind, start.typeName, start.typePointee));
         buffer.append(", ");
         appendIrValue(buffer, source, finish); appendNewline(buffer);
-        val compared = nextTemporary(counter);
+        val compared = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
         buffer.append("select i1 ");
         buffer.append("%"); appendDecimal(buffer, ascending);
@@ -321,7 +321,7 @@ fn emitStatement(
         appendNewline(buffer);
         var conditionValue = IrValue(IrValueKind.TEMPORARY, 0, 0, compared, TypeKind.BOOL.value, 0, 0);
         if (collectionNode.aux != TokenKind.RANGE.value) {
-            val nonempty = nextTemporary(counter);
+            val nonempty = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, nonempty); appendEquals(buffer);
             buffer.append("and i1 %");
             appendDecimal(buffer, compared); buffer.append(",");
@@ -345,14 +345,14 @@ fn emitStatement(
         counter.loopDeferDepth = outerLoopDeferDepth;
         if (!terminated) appendBranch(buffer, incrementBlock);
         appendBlockLabel(buffer, counter, incrementBlock);
-        val loaded = nextTemporary(counter);
+        val loaded = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
         appendLoad(buffer); appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
         appendPtr(buffer); appendLocalPrefix(buffer); appendDecimal(buffer, name.start);
         appendNewline(buffer);
         if (collectionNode.aux == TokenKind.RANGE.value ||
             collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_START.value) {
-            val terminal = nextTemporary(counter);
+            val terminal = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, terminal); appendEquals(buffer);
             appendComparison(buffer, 79, start.typeKind); buffer.append(" ");
             appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]);
@@ -360,13 +360,13 @@ fn emitStatement(
             appendDecimal(buffer, loaded); buffer.append(",");
             buffer.append(" "); appendIrValue(buffer, source, finish);
             appendNewline(buffer);
-            val advanceBlock = nextBlock(counter);
+            val advanceBlock = counter.next_block();
             appendConditionalBranch(
                 buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, terminal, TypeKind.BOOL.value, 0, 0),
                 endBlock, advanceBlock);
             appendBlockLabel(buffer, counter, advanceBlock);
         }
-        val advanced = nextTemporary(counter);
+        val advanced = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
         appendOperator(buffer, 60, start.typeKind); buffer.append(" ");
         appendNodeType(buffer, genericArguments, nodes.data[collectionRoot]); buffer.append(" ");
@@ -448,7 +448,7 @@ fn emitStatement(
                     statement.typeKind, statement.typeName,
                     statement.typePointee, counter);
                 if (statement.conversionKind != 0) {
-                    val tagged = nextTemporary(counter);
+                    val tagged = counter.next_value();
                     appendValuePrefix(buffer);
                     appendDecimal(buffer, tagged);
                     appendEquals(buffer);
@@ -469,7 +469,7 @@ fn emitStatement(
                         statement.typeKind,
                         statement.typeName, statement.typePointee);
                     if (statement.conversionKind == 1) {
-                        val withPayload = nextTemporary(counter);
+                        val withPayload = counter.next_value();
                         appendValuePrefix(buffer);
                         appendDecimal(buffer, withPayload);
                         appendEquals(buffer);
@@ -530,9 +530,9 @@ fn emitStatement(
                     val condition = emitExpression(
                         buffer, source, nodes, genericArguments,
                         conditionRoot, counter);
-                    val thenBlock = nextBlock(counter);
-                    val elseBlock = nextBlock(counter);
-                    val endBlock = nextBlock(counter);
+                    val thenBlock = counter.next_block();
+                    val elseBlock = counter.next_block();
+                    val endBlock = counter.next_block();
                     if (statement.aux == 1) {
                         appendConditionalBranch(
                             buffer, source, condition, thenBlock, elseBlock);
@@ -575,9 +575,9 @@ fn emitStatement(
                     val bodyRoot = root - 1;
                     val conditionRoot =
                         expressionChildBefore(nodes, bodyRoot);
-                    val conditionBlock = nextBlock(counter);
-                    val bodyBlock = nextBlock(counter);
-                    val endBlock = nextBlock(counter);
+                    val conditionBlock = counter.next_block();
+                    val bodyBlock = counter.next_block();
+                    val endBlock = counter.next_block();
                     appendBranch(buffer, conditionBlock);
                     appendBlockLabel(buffer, counter, conditionBlock);
                     val condition = emitExpression(

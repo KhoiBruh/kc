@@ -97,13 +97,13 @@ source.k
 
 - Required version: LLVM **22.1.8**.
 - Local development package:
-  `C:/Users/Admin/tools/llvm-22.1.8`
-- CMake package: set the `KLANG_LLVM_DIR` user environment variable to the
+  `C:/LLVM`
+- CMake package: set the `LLVM` user environment variable to the
   `lib/cmake/llvm` directory (locally
-  `C:/Users/Admin/tools/llvm-22.1.8/lib/cmake/llvm`); `CMakePresets.json`
+  `C:/LLVM/lib/cmake/llvm`); `CMakePresets.json`
   expands it into `LLVM_DIR` so machine paths stay out of versioned files.
 - Clang driver:
-  `C:/Users/Admin/tools/llvm-22.1.8/bin/clang.exe`
+  `C:/LLVM/bin/clang.exe`
 - The Windows LLVM archive contains a stale Visual Studio 2022 Enterprise DIA
   path. `CMakeLists.txt` deliberately redirects `LLVMDebugInfoPDB` to the
   installed Visual Studio Community `diaguids.lib`; preserve this workaround.

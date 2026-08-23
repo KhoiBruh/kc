@@ -69,7 +69,7 @@ fn emitAddress(
             structRootByName(source, nodes, objectNode.typeName);
         val fieldIndex = fieldIndexByName(
             source, nodes, structureRoot, node);
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
@@ -96,7 +96,7 @@ fn emitAddress(
             objectRoot, counter);
         var data = object;
         if (object.typeKind == TypeKind.SLICE.value) {
-            val extracted = nextTemporary(counter);
+            val extracted = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, extracted);
             appendEquals(buffer); appendExtractValue(buffer);
             appendType(
@@ -109,7 +109,7 @@ fn emitAddress(
         val index = emitExpression(
             buffer, source, nodes, genericArguments,
             indexRoot, counter);
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
@@ -174,12 +174,12 @@ fn emitExpression(
         if (node.typeKind == TypeKind.SLICE.value && node.typePointee == TypeKind.U8.value) {
             var decoded = decodeStringLiteral(source, node);
             defer decoded.free();
-            var temporary = nextTemporary(counter);
+            var temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
             appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
             buffer.append(" undef, ptr @.ks"); appendDecimal(buffer, root);
             buffer.append(", 0"); appendNewline(buffer);
-            temporary = nextTemporary(counter);
+            temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer);
             appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
             buffer.append(" "); appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
@@ -190,17 +190,17 @@ fn emitExpression(
         if (node.typeKind == TypeKind.STR.value) {
             var decoded = decodeStringLiteral(source, node);
             defer decoded.free();
-            var temporary = nextTemporary(counter);
+            var temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
             appendStringInsertPointer(buffer);
             appendDecimal(buffer, root); appendIndexZero(buffer);
-            temporary = nextTemporary(counter);
+            temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
             appendSpacedStringType(buffer);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
             appendI64Prefix(buffer); appendDecimal(buffer, decoded.length);
             appendIndexOne(buffer);
-            temporary = nextTemporary(counter);
+            temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary); appendEquals(buffer); appendInsertValue(buffer);
             appendSpacedStringType(buffer);
             appendValuePrefix(buffer); appendDecimal(buffer, temporary - 1);
@@ -232,9 +232,9 @@ fn emitExpression(
         }
         val condition = emitExpression(
             buffer, source, nodes, genericArguments, childRoot, counter);
-        val thenBlock = nextBlock(counter);
-        val elseBlock = nextBlock(counter);
-        val mergeBlock = nextBlock(counter);
+        val thenBlock = counter.next_block();
+        val elseBlock = counter.next_block();
+        val mergeBlock = counter.next_block();
         appendConditionalBranch(
             buffer, source, condition, thenBlock, elseBlock);
         appendBlockLabel(buffer, counter, thenBlock);
@@ -284,7 +284,7 @@ fn emitExpression(
         val elseValueBlock = counter.currentBlock;
         appendBranch(buffer, mergeBlock);
         appendBlockLabel(buffer, counter, mergeBlock);
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
         appendEquals(buffer);
         buffer.append("phi ");
@@ -322,7 +322,7 @@ fn emitExpression(
             subject = emitExpression(
                 buffer, source, nodes, genericArguments, branchRoot, counter);
         }
-        val mergeBlock = nextBlock(counter);
+        val mergeBlock = counter.next_block();
         var hasElse = false;
         for (index in 0..<branchCount) {
             val branch = nodes.data[roots[index as u64]];
@@ -343,10 +343,10 @@ fn emitExpression(
                         statementRoots[statementIndex as u64]);
                 }
             }
-            val bodyBlock = nextBlock(counter);
+            val bodyBlock = counter.next_block();
             var nextBlockValue = mergeBlock;
             if (!branch.whenBranchIsElse()) {
-                nextBlockValue = nextBlock(counter);
+                nextBlockValue = counter.next_block();
                 val patternCount = branch.whenBranchPatternCount();
                 val patternRoots =
                     k_boot_alloc((patternCount as u64) * sizeof(u64)) as u64*;
@@ -360,7 +360,7 @@ fn emitExpression(
                         buffer, source, nodes, genericArguments,
                         patternRoots[patternIndex as u64], counter);
                     if (hasSubject == 1) {
-                        val compared = nextTemporary(counter);
+                        val compared = counter.next_value();
                         appendValuePrefix(buffer); appendDecimal(buffer, compared);
                         appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
                         buffer.append(" "); appendType(
@@ -376,7 +376,7 @@ fn emitExpression(
                     var branchTarget = bodyBlock;
                     var branchElse = nextBlockValue;
                     if (patternIndex + 1 < patternCount) {
-                        branchElse = nextBlock(counter);
+                        branchElse = counter.next_block();
                     }
                     appendConditionalBranch(
                         buffer, source, condition, branchTarget, branchElse);
@@ -414,7 +414,7 @@ fn emitExpression(
             appendNewline(buffer); 
         }
         appendBlockLabel(buffer, counter, mergeBlock);
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, temporary);
         appendEquals(buffer);
         buffer.append("phi ");
@@ -457,7 +457,7 @@ fn emitExpression(
             val element = emitExpression(
                 buffer, source, nodes, genericArguments,
                 roots[index as u64], counter);
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer); appendInsertValue(buffer);
             appendNodeType(buffer, genericArguments, node);
@@ -492,7 +492,7 @@ fn emitExpression(
             buffer, source, nodes, genericArguments,
             operandRoot, counter);
         if (node.aux == TokenKind.STAR.value) {
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
@@ -505,7 +505,7 @@ fn emitExpression(
                 node.typeKind, node.typeName, node.typePointee);
         }
         if (node.aux == TokenKind.MINUS.value) {
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
@@ -525,7 +525,7 @@ fn emitExpression(
                 node.typeKind, node.typeName, node.typePointee);
         }
         if (node.aux == TokenKind.BANG.value) {
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
@@ -552,7 +552,7 @@ fn emitExpression(
                 buffer, source, nodes, genericArguments,
                 node.storage - 1, counter);
         }
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
@@ -589,7 +589,7 @@ fn emitExpression(
             if (range.aux == TokenKind.RANGE_EXCLUSIVE.value ||
                 range.aux == TokenKind.RANGE_EXCLUSIVE_BOTH.value)
                 upperOperator = TokenKind.LESS.value;
-            val lowerCheck = nextTemporary(counter);
+            val lowerCheck = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, lowerCheck); appendEquals(buffer);
             appendComparison(buffer, lowerOperator, subject.typeKind);
             buffer.append(" ");
@@ -599,7 +599,7 @@ fn emitExpression(
             buffer.append(" "); appendIrValue(buffer, source, subject);
             buffer.append(", ");
             appendIrValue(buffer, source, lower); appendNewline(buffer);
-            val upperCheck = nextTemporary(counter);
+            val upperCheck = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, upperCheck); appendEquals(buffer);
             appendComparison(buffer, upperOperator, subject.typeKind);
             buffer.append(" ");
@@ -609,7 +609,7 @@ fn emitExpression(
             buffer.append(" "); appendIrValue(buffer, source, subject);
             buffer.append(", ");
             appendIrValue(buffer, source, upper); appendNewline(buffer);
-            val result = nextTemporary(counter);
+            val result = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, result); appendEquals(buffer);
             buffer.append("and i1 %");
             appendDecimal(buffer, lowerCheck); buffer.append(",");
@@ -624,8 +624,8 @@ fn emitExpression(
         if (node.aux == TokenKind.OR_OR.value) logical = true;
         if (logical) {
             val leftBlock = counter.currentBlock;
-            val rhsBlock = nextBlock(counter);
-            val mergeBlock = nextBlock(counter);
+            val rhsBlock = counter.next_block();
+            val mergeBlock = counter.next_block();
             if (node.aux == TokenKind.AND_AND.value) {
                 appendConditionalBranch(
                     buffer, source, left, rhsBlock, mergeBlock);
@@ -640,7 +640,7 @@ fn emitExpression(
             val rightBlock = counter.currentBlock;
             appendBranch(buffer, mergeBlock);
             appendBlockLabel(buffer, counter, mergeBlock);
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer);
             buffer.append("phi i1 [");
@@ -688,7 +688,7 @@ fn emitExpression(
                 buffer, source, genericArguments, right,
                 node.typeKind, node.typeName, node.typePointee, counter);
         }
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
@@ -725,14 +725,14 @@ fn emitExpression(
             targetNode.typeKind, targetNode.typeName,
             targetNode.typePointee, counter);
         if (node.aux != TokenKind.EQUAL.value) {
-            val loaded = nextTemporary(counter);
+            val loaded = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
             appendLoad(buffer);
             appendType(
                 buffer, genericArguments, targetNode.typeKind,
                 targetNode.typeName, targetNode.typePointee);
             appendPointerValue(buffer, source, target); appendNewline(buffer);
-            val updated = nextTemporary(counter);
+            val updated = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
             appendOperator(buffer, node.aux - 14, targetNode.typeKind);
             buffer.append(" ");
@@ -786,9 +786,9 @@ fn emitExpression(
         val targetType = TypeValue(typeKindFromValue(node.typeKind), node.typeName, node.typePointee);
         if (node.conversionKind >= 5) {
             if (node.conversionKind == 6) {
-                val lower = nextTemporary(counter);
-                val upper = nextTemporary(counter);
-                val check = nextTemporary(counter);
+                val lower = counter.next_value();
+                val upper = counter.next_value();
+                val check = counter.next_value();
                 appendFloatRangeComparison(
                     buffer, source, genericArguments, value,
                     targetType.kind.value, lower, true);
@@ -801,8 +801,8 @@ fn emitExpression(
                 appendDecimal(buffer, lower); buffer.append(",");
                 buffer.append(" %");
                 appendDecimal(buffer, upper); appendNewline(buffer);
-                val validBlock = nextBlock(counter);
-                val panicBlock = nextBlock(counter);
+                val validBlock = counter.next_block();
+                val panicBlock = counter.next_block();
                 appendConditionalBranch(
                     buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, check, TypeKind.BOOL.value, 0, 0),
                     validBlock, panicBlock);
@@ -810,7 +810,7 @@ fn emitExpression(
                 appendCastPanic(buffer);
                 appendBlockLabel(buffer, counter, validBlock);
             }
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer);
             var opcode: u32 = 1;
@@ -844,7 +844,7 @@ fn emitExpression(
             value.kind, value.start, value.end, value.temporary,
             node.typeKind, node.typeName, node.typePointee);
         if (sourceWidth != targetWidth) {
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, temporary);
             appendEquals(buffer);
@@ -870,8 +870,8 @@ fn emitExpression(
         if (node.conversionKind == 4) {
             var check: u64 = 0;
             if (sourceWidth != targetWidth) {
-                val roundTrip = nextTemporary(counter);
-                check = nextTemporary(counter);
+                val roundTrip = counter.next_value();
+                check = counter.next_value();
                 appendValuePrefix(buffer); appendDecimal(buffer, roundTrip);
                 appendEquals(buffer);
                 var reverseOpcode: u32 = 2;
@@ -897,7 +897,7 @@ fn emitExpression(
                 buffer.append("%"); appendDecimal(buffer, roundTrip);
                 appendNewline(buffer);
             } else {
-                check = nextTemporary(counter);
+                check = counter.next_value();
                 appendValuePrefix(buffer); appendDecimal(buffer, check);
                 appendEquals(buffer);
                 buffer.append("icmp ");
@@ -921,8 +921,8 @@ fn emitExpression(
                 }
                 appendNewline(buffer);
             }
-            val validBlock = nextBlock(counter);
-            val panicBlock = nextBlock(counter);
+            val validBlock = counter.next_block();
+            val panicBlock = counter.next_block();
             appendConditionalBranch(
                 buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, check, TypeKind.BOOL.value, 0, 0),
                 validBlock, panicBlock);
@@ -949,24 +949,24 @@ fn emitExpression(
             val object = emitExpression(
                 buffer, source, nodes, genericArguments,
                 objectRoot, counter);
-            val data = nextTemporary(counter);
+            val data = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, data); appendEquals(buffer);
             appendExtractValue(buffer); appendSpacedStringType(buffer);
             appendIrValue(buffer, source, object); buffer.append(", ");
             buffer.append("0"); appendNewline(buffer);
-            val length = nextTemporary(counter);
+            val length = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, length); appendEquals(buffer);
             appendExtractValue(buffer); appendSpacedStringType(buffer);
             appendIrValue(buffer, source, object); buffer.append(", ");
             buffer.append("1"); appendNewline(buffer);
-            val withData = nextTemporary(counter);
+            val withData = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, withData); appendEquals(buffer);
             appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
             buffer.append(" "); appendUndef(buffer); buffer.append(", ");
             buffer.append("ptr ");
             appendValuePrefix(buffer); appendDecimal(buffer, data);
             buffer.append(", 0"); appendNewline(buffer);
-            val slice = nextTemporary(counter);
+            val slice = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, slice); appendEquals(buffer);
             appendInsertValue(buffer); appendType(buffer, genericArguments, 13, 0, 5);
             buffer.append(" "); appendValuePrefix(buffer); appendDecimal(buffer, withData);
@@ -994,7 +994,7 @@ fn emitExpression(
                 objectRoot, counter);
             val fieldIndex = fieldIndexByName(
                 source, nodes, structureRoot, node);
-            val extracted = nextTemporary(counter);
+            val extracted = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, extracted);
             appendEquals(buffer);
@@ -1012,7 +1012,7 @@ fn emitExpression(
         }
         val address = emitAddress(
             buffer, source, nodes, genericArguments, root, counter);
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
@@ -1042,7 +1042,7 @@ fn emitExpression(
             val object = emitExpression(
                 buffer, source, nodes, genericArguments,
                 objectRoot, counter);
-            val temporary = nextTemporary(counter);
+            val temporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, temporary);
             appendEquals(buffer); appendExtractValue(buffer);
             appendType(
@@ -1060,7 +1060,7 @@ fn emitExpression(
         }
         val address = emitAddress(
             buffer, source, nodes, genericArguments, root, counter);
-        val temporary = nextTemporary(counter);
+        val temporary = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, temporary);
         appendEquals(buffer);
@@ -1078,11 +1078,11 @@ fn emitExpression(
             val valueRoot = root - 1;
             val address = emitAddress(
                 buffer, source, nodes, genericArguments, valueRoot, counter);
-            val loaded = nextTemporary(counter);
+            val loaded = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
             appendLoad(buffer); appendNodeType(buffer, genericArguments, node);
             appendPointerValue(buffer, source, address); appendNewline(buffer);
-            val updated = nextTemporary(counter);
+            val updated = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, updated); appendEquals(buffer);
             var operatorKind: u32 = 60;
             if (node.aux == TokenKind.MINUS_MINUS.value)
@@ -1107,7 +1107,7 @@ fn emitExpression(
         val operand = emitExpression(
             buffer, source, nodes, genericArguments,
             root - 1, counter);
-        val hasValue = nextTemporary(counter);
+        val hasValue = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, hasValue);
         appendEquals(buffer);
@@ -1118,8 +1118,8 @@ fn emitExpression(
         appendIrValue(buffer, source, operand);
         buffer.append(", 0");
         appendNewline(buffer);
-        val validBlock = nextBlock(counter);
-        val panicBlock = nextBlock(counter);
+        val validBlock = counter.next_block();
+        val panicBlock = counter.next_block();
         appendConditionalBranch(
             buffer, source,
             IrValue(IrValueKind.TEMPORARY, 0, 0, hasValue, TypeKind.BOOL.value, 0, 0),
@@ -1130,7 +1130,7 @@ fn emitExpression(
         buffer.append("  unreachable");
         appendNewline(buffer);
         appendBlockLabel(buffer, counter, validBlock);
-        val value = nextTemporary(counter);
+        val value = counter.next_value();
         appendValuePrefix(buffer);
         appendDecimal(buffer, value);
         appendEquals(buffer);
@@ -1238,7 +1238,7 @@ fn emitExpression(
             values[1] = emitImplicitIntegerWiden(
                 buffer, source, genericArguments, values[1], 7, 0, 0,
                 counter);
-            val dataTemporary = nextTemporary(counter);
+            val dataTemporary = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, dataTemporary);
             appendEquals(buffer);
@@ -1251,7 +1251,7 @@ fn emitExpression(
             appendIrValue(buffer, source, values[0]);
             buffer.append(", 0");
             appendNewline(buffer);
-            val lengthTemporary = nextTemporary(counter);
+            val lengthTemporary = counter.next_value();
             appendValuePrefix(buffer);
             appendDecimal(buffer, lengthTemporary);
             appendEquals(buffer);
@@ -1280,7 +1280,7 @@ fn emitExpression(
             val count = node.typePointee / 65536;
             var aggregateTemporary: u64 = 0;
             for (index in 0..<argumentCount) {
-                aggregateTemporary = nextTemporary(counter);
+                aggregateTemporary = counter.next_value();
                 appendValuePrefix(buffer);
                 appendDecimal(buffer, aggregateTemporary);
                 appendEquals(buffer);
@@ -1324,11 +1324,11 @@ fn emitExpression(
         }
         val isPrint = sourceNodeIsPrint(source, callee);
         if (isPrint && values[0].typeKind == TypeKind.STR.value) {
-            val dataTemporary = nextTemporary(counter);
+            val dataTemporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary); appendEquals(buffer); appendExtractValue(buffer);
             appendSpacedStringType(buffer); appendIrValue(buffer, source, values[0]);
             appendIndexZero(buffer);
-            val lengthTemporary = nextTemporary(counter);
+            val lengthTemporary = counter.next_value();
             appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary); appendEquals(buffer); appendExtractValue(buffer);
             appendSpacedStringType(buffer); appendIrValue(buffer, source, values[0]);
             appendExtractLengthAndPrint(buffer);
@@ -1345,7 +1345,7 @@ fn emitExpression(
             buffer.append("void @k_std_print_i32");
         } else {
             if (node.typeKind != TypeKind.UNIT.value) {
-                temporary = nextTemporary(counter);
+                temporary = counter.next_value();
                 appendValuePrefix(buffer);
                 appendDecimal(buffer, temporary);
                 appendEquals(buffer);

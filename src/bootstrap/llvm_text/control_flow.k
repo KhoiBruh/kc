@@ -38,7 +38,7 @@ fn emitCollectionFor(
     var length = IrValue(IrValueKind.IMMEDIATE_CONSTANT, 0, 0, 0, TypeKind.U64.value, 0, 0);
     if (collectionNode.typeKind == TypeKind.ARRAY.value) {
         elementKind = collectionNode.typePointee % 256;
-        val pointer = nextTemporary(counter);
+        val pointer = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, pointer); appendEquals(buffer);
         appendGetElementPtr(buffer); buffer.append(" ");
         appendNodeType(buffer, genericArguments, collectionNode);
@@ -54,7 +54,7 @@ fn emitCollectionFor(
             IrValueKind.IMMEDIATE_CONSTANT, 0, 0, (collectionNode.typePointee / 256) as u64,
             7, 0, 0);
     } else {
-        val dataTemporary = nextTemporary(counter);
+        val dataTemporary = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, dataTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
         appendNodeType(buffer, genericArguments, collectionNode);
@@ -62,7 +62,7 @@ fn emitCollectionFor(
         buffer.append(", 0");
         appendNewline(buffer);
         data = IrValue(IrValueKind.TEMPORARY, 0, 0, dataTemporary, TypeKind.POINTER.value, elementName, elementKind);
-        val lengthTemporary = nextTemporary(counter);
+        val lengthTemporary = counter.next_value();
         appendValuePrefix(buffer); appendDecimal(buffer, lengthTemporary);
         appendEquals(buffer); appendExtractValue(buffer);
         appendNodeType(buffer, genericArguments, collectionNode);
@@ -74,17 +74,17 @@ fn emitCollectionFor(
     appendStore(buffer); appendI64(buffer); buffer.append(" ");
     buffer.append("0"); appendPtr(buffer); appendLocalPrefix(buffer);
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
-    val conditionBlock = nextBlock(counter);
-    val bodyBlock = nextBlock(counter);
-    val incrementBlock = nextBlock(counter);
-    val endBlock = nextBlock(counter);
+    val conditionBlock = counter.next_block();
+    val bodyBlock = counter.next_block();
+    val incrementBlock = counter.next_block();
+    val endBlock = counter.next_block();
     appendBranch(buffer, conditionBlock);
     appendBlockLabel(buffer, counter, conditionBlock);
-    val index = nextTemporary(counter);
+    val index = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, index); appendEquals(buffer);
     appendLoad(buffer); appendI64(buffer); appendPtr(buffer); appendLocalPrefix(buffer);
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
-    val compared = nextTemporary(counter);
+    val compared = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, compared); appendEquals(buffer);
     appendComparison(buffer, 66, 7); buffer.append(" ");
     appendI64(buffer); buffer.append(" ");
@@ -95,7 +95,7 @@ fn emitCollectionFor(
         buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, compared, TypeKind.BOOL.value, 0, 0),
         bodyBlock, endBlock);
     appendBlockLabel(buffer, counter, bodyBlock);
-    val elementPointer = nextTemporary(counter);
+    val elementPointer = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, elementPointer); appendEquals(buffer);
     appendGetElementPtr(buffer); buffer.append(" ");
     appendType(buffer, genericArguments, elementKind, elementName, 0);
@@ -104,7 +104,7 @@ fn emitCollectionFor(
     buffer.append(" ");
     appendIrValue(buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, index, TypeKind.U64.value, 0, 0));
     appendNewline(buffer);
-    val element = nextTemporary(counter);
+    val element = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, element); appendEquals(buffer);
     appendLoad(buffer); appendType(buffer, genericArguments, elementKind, elementName, 0);
     appendPointerValue(
@@ -127,11 +127,11 @@ fn emitCollectionFor(
     counter.loopDeferDepth = outerLoopDeferDepth;
     if (!terminated) appendBranch(buffer, incrementBlock);
     appendBlockLabel(buffer, counter, incrementBlock);
-    val loaded = nextTemporary(counter);
+    val loaded = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, loaded); appendEquals(buffer);
     appendLoad(buffer); appendI64(buffer); appendPtr(buffer); appendLocalPrefix(buffer);
     appendDecimal(buffer, indexStorage); appendNewline(buffer);
-    val advanced = nextTemporary(counter);
+    val advanced = counter.next_value();
     appendValuePrefix(buffer); appendDecimal(buffer, advanced); appendEquals(buffer);
     appendOperator(buffer, 60, 7); buffer.append(" "); appendI64(buffer);
     buffer.append(" ");
@@ -165,17 +165,17 @@ fn emitWhen(
         subject = emitExpression(
             buffer, source, nodes, genericArguments, branchRoot, counter);
     }
-    val mergeBlock = nextBlock(counter);
+    val mergeBlock = counter.next_block();
     var hasElse = false;
     var allTerminate = branchCount > 0;
     for (index in 0..<branchCount) {
         val branch = nodes.data[roots[index as u64]];
         val bodyRoot = roots[index as u64] - 1;
-        val bodyBlock = nextBlock(counter);
+        val bodyBlock = counter.next_block();
         if (!branch.whenBranchIsElse()) {
             var nextBlockValue = mergeBlock;
             if (index + 1 < branchCount) {
-                nextBlockValue = nextBlock(counter);
+                nextBlockValue = counter.next_block();
             }
             val patternCount = branch.whenBranchPatternCount();
             val patternRoots =
@@ -190,7 +190,7 @@ fn emitWhen(
                     buffer, source, nodes, genericArguments,
                     patternRoots[patternIndex as u64], counter);
                 if (hasSubject == 1) {
-                    val compared = nextTemporary(counter);
+                    val compared = counter.next_value();
                     appendValuePrefix(buffer); appendDecimal(buffer, compared);
                     appendEquals(buffer); appendComparison(buffer, 79, subject.typeKind);
                     buffer.append(" ");
@@ -204,7 +204,7 @@ fn emitWhen(
                 }
                 var missBlock = nextBlockValue;
                 val hasNextPattern = patternIndex + 1 < patternCount;
-                if (hasNextPattern) missBlock = nextBlock(counter);
+                if (hasNextPattern) missBlock = counter.next_block();
                 appendConditionalBranch(
                     buffer, source, condition, bodyBlock, missBlock);
                 if (hasNextPattern) {

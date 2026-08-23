@@ -73,7 +73,7 @@ fn emitterDropFunctionRoot(
     val structureRoot = structRootByName(source, nodes, typeName);
     if (structureRoot == nodes.length) return nodes.length;
     var methodRoot = structureRoot - 1;
-    for (index in 0..<emitterStructMethodCount(nodes.data[structureRoot])) {
+    for (index in 0..<nodes.data[structureRoot].methodCount()) {
         val method = nodes.data[methodRoot];
         val name = nodes.data[method.subtreeStart];
         if (source.hash(name.start, name.end) == 6385234055)
@@ -97,7 +97,7 @@ fn emitterVariableRootByStorage(
 
 fn emitterRootBeforeStructMethods(val nodes: List<AstNode>, structureRoot: u64): u64 {
     var root = structureRoot - 1;
-    val remaining = emitterStructMethodCount(nodes.data[structureRoot]);
+    val remaining = nodes.data[structureRoot].methodCount();
     for (method in 0..<remaining) {
         root = nodes.data[root].subtreeStart - 1;
     }
@@ -114,8 +114,7 @@ fn emitterAssociatedOwnerStructRoot(
         val structureRoot = roots[index as u64];
         if (nodes.data[structureRoot].kind == AstKind.STRUCT_DECLARATION) {
             var methodRoot = structureRoot - 1;
-            val methodCount = emitterStructMethodCount(
-                nodes.data[structureRoot]);
+            val methodCount = nodes.data[structureRoot].methodCount();
             for (methodIndex in 0..<methodCount) {
                 if (methodRoot == functionRoot) owner = structureRoot;
                 methodRoot = nodes.data[methodRoot].subtreeStart - 1;
@@ -130,9 +129,9 @@ fn emitterFieldRootAt(
     val nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
     val structure = nodes.data[structureRoot];
     var roots =
-        k_boot_alloc((emitterStructFieldCount(structure) as u64) * sizeof(u64)) as u64*;
+        k_boot_alloc((structure.fieldCount() as u64) * sizeof(u64)) as u64*;
     var root = emitterRootBeforeStructMethods(nodes, structureRoot);
-    val remaining = emitterStructFieldCount(structure);
+    val remaining = structure.fieldCount();
     for (index in remaining>..0) {
         roots[index as u64] = root;
         root = nodes.data[root].subtreeStart - 1;
@@ -147,7 +146,7 @@ fn fieldIndexByName(
     nameNode: AstNode): u32 {
     val wanted = source.hash(nameNode.start, nameNode.end);
     val structure = nodes.data[structureRoot];
-    val fieldCount = emitterStructFieldCount(structure);
+    val fieldCount = structure.fieldCount();
     for (index in 0..<fieldCount) {
         val field = nodes.data[emitterFieldRootAt(nodes, structureRoot, index)];
         val fieldName = nodes.data[field.subtreeStart];
