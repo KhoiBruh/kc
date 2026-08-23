@@ -100,16 +100,20 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 		return true;
 	}
 
+	fn genericStart(val self): u32 => self.pointee % 65536;
+
+	fn genericCount(val self): u32 => self.pointee / 65536;
+
 	fn equals(val self, right: TypeValue, val genericArguments: List<TypeValue>): bool {
 		if (self.kind != right.kind) return false;
 		if (self.name != right.name) return false;
 		if (self.kind == TypeKind.STRUCT) {
-			val leftCount = self.pointee / 65536;
-			val rightCount = right.pointee / 65536;
+			val leftCount = self.genericCount();
+			val rightCount = right.genericCount();
 			if (leftCount != rightCount) return false;
 			if (leftCount == 0) return true;
-			val leftStart = self.pointee % 65536;
-			val rightStart = right.pointee % 65536;
+			val leftStart = self.genericStart();
+			val rightStart = right.genericStart();
 			for (index in 0..<leftCount) {
 				val leftArg = genericArguments.data[leftStart as u64 + index as u64];
 				val rightArg = genericArguments.data[rightStart as u64 + index as u64];

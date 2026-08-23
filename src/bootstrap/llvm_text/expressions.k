@@ -986,8 +986,8 @@ fn emitExpression(
             structRootByName(
                 source, nodes, objectNode.typeName);
         val structure = nodes.data[structureRoot];
-        val start = objectNode.typePointee % 65536;
-        val count = objectNode.typePointee / 65536;
+        val start = objectNode.typeGenericStart();
+        val count = objectNode.typeGenericCount();
         
         var addressable = objectNode.kind == AstKind.IDENTIFIER;
         if (objectNode.kind == AstKind.MEMBER) addressable = true;
@@ -1283,8 +1283,8 @@ fn emitExpression(
             val structureRoot =
                 structRootByName(source, nodes, node.typeName);
             val structure = nodes.data[structureRoot];
-            val start = node.typePointee % 65536;
-            val count = node.typePointee / 65536;
+            val start = node.typeGenericStart();
+            val count = node.typeGenericCount();
             var aggregateTemporary: u64 = 0;
             for (index in 0..<argumentCount) {
                 aggregateTemporary = counter.next_value();

@@ -99,11 +99,11 @@ fn emitAutomaticDrop(
         buffer.append(".");
         val freeName = nodes.data[nodes.data[freeRoot].subtreeStart];
         appendSource(buffer, source, freeName.start, freeName.end);
-        val argumentCount = valueType.pointee / 65536;
+        val argumentCount = valueType.genericCount();
         if (argumentCount > 0) {
             appendSpecializationSuffix(
                 buffer, genericArguments,
-                (valueType.pointee % 65536) as u64, argumentCount);
+                valueType.genericStart() as u64, argumentCount);
         }
         buffer.append("(");
         appendType(

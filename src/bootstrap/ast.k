@@ -112,6 +112,10 @@ struct AstNode(
 
     fn whenBranchPatternCount(val self): u32 => self.aux / 65536;
 
+    fn typeGenericStart(val self): u32 => self.typePointee % 65536;
+
+    fn typeGenericCount(val self): u32 => self.typePointee / 65536;
+
 }
 
 struct AstView(nodes: List<AstNode>) {

@@ -765,8 +765,8 @@ fn emitModule(
     for (nodeIndex in 0..<nodes.length) {
         val node = nodes.data[nodeIndex];
         if (node.typeKind == TypeKind.STRUCT.value) {
-            val start = node.typePointee % 65536;
-            val count = node.typePointee / 65536;
+            val start = node.typeGenericStart();
+            val count = node.typeGenericCount();
             if (count > 0) {
                 if (structArgumentsAreConcrete(genericArguments, start as u64, count)) {
                     val structureRoot = symbols.structRoot(node.typeName);

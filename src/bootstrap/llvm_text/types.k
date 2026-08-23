@@ -322,8 +322,8 @@ fn substituteEmitterType(
     pattern: TypeValue, var args: List<TypeValue>,
     start: u64, count: u32): TypeValue {
     if (pattern.kind == TypeKind.STRUCT) {
-        val ownStart = pattern.pointee % 65536;
-        val argumentCount = pattern.pointee / 65536;
+        val ownStart = pattern.genericStart();
+        val argumentCount = pattern.genericCount();
         if (argumentCount == 0) return pattern;
         val substituted =
             k_boot_alloc((argumentCount as u64) * sizeof(TypeValue)) as TypeValue*;
