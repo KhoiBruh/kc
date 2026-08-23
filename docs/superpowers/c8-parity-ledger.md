@@ -11,6 +11,8 @@ Status values: `open` · `fixed-kc1` · `fixed-kc0` · `intentional`
 | D1 | Method call on a constructor temporary inside an expression-bodied function (`fn f() => AstView(n).walk();`) | Builds | Rejected by semantic ("type mismatch") | fixed-kc1 (2026-08-23) | 2026-08-23, AstView refactor |
 | D2 | `when` expression arm-type unification with mixed literal / call arms | Accepts | Requires uniform arm types (first-arm typing; literals default `i32`) | fixed-kc0 (2026-08-23, rule standardized) | 2026-08-23, types.k conversion |
 | D3 | Checked integer-cast lowering strategy | Direct range check against target-type bounds | Value round-trip (`trunc/sext/zext` back + `icmp eq`, panic on mismatch) | intentional | 2026-08-23, cast_widening_checks fixture |
+| D4 | Cast-panic diagnostics: `k_boot_panic` called with null message | Emits named global with "integer/float cast out of range" (25/23 bytes) | Emits `ptr null, i64 0` — silent exit 2 | fixed-kc1 (2026-08-23) | 2026-08-23, differential harness |
+| D5 | Slice indexing of non-local collections (`view.bytes[1]`, const-slice `PREFIX[0]`) | Supported (value path) | Required a local collection; rejected | fixed-kc0 (2026-08-23) | 2026-08-23, differential harness |
 
 Closure notes:
 
@@ -34,6 +36,16 @@ Closure notes:
   `when` result and convert explicitly. Regression fixture:
   `tests/fixtures/bootstrap-semantic-when-common-type.k` (acceptance
   invalid list). Rule documented in `docs.md`, `when` expression section.
+* **D4 (fixed in kc1).** `appendCastPanic` emitted `k_boot_panic(ptr null,
+  i64 0)` — programs panicked with exit 2 but printed nothing. Now emits two
+  module globals (`integer cast out of range` / `float cast out of range`)
+  selected per cast path, with a GEP'd pointer + exact length. Found by the
+  differential harness (stderr mismatch on panic fixtures).
+* **D5 (fixed in kc0).** Slice indexing required the collection to be a local
+  variable; member-field slices (`view.bytes[1]`) and constant slices
+  (`PREFIX[0]`) were rejected. `emitIndexPointer` now falls back to a value
+  path: `emitExpr` produces the `{ptr, len}` slice for any non-local object,
+  then bounds-check + GEP as usual. Found by the differential harness.
 
 Rules:
 

@@ -203,4 +203,18 @@ if(BUILD_TESTING)
             -InvalidFixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -OutputDirectory "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-acceptance"
     )
+
+    add_test(
+        NAME k_differential_tests
+        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/DifferentialTests.ps1"
+            -Kc0 "$<TARGET_FILE:kc>"
+            -Opt "${LLVM_TOOLS_BINARY_DIR}/opt.exe"
+            -Clang "${LLVM_TOOLS_BINARY_DIR}/clang.exe"
+            -StdRuntime "$<TARGET_FILE:k_std_runtime>"
+            -BootstrapRuntime "$<TARGET_FILE:k_bootstrap_runtime>"
+            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
+            -CasesDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/cases"
+            -OutputDirectory "${CMAKE_CURRENT_BINARY_DIR}/differential"
+    )
 endif()

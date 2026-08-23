@@ -811,7 +811,7 @@ fn emitExpression(
                     buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, check, TypeKind.BOOL.value, 0, 0),
                     validBlock, panicBlock);
                 appendBlockLabel(buffer, counter, panicBlock);
-                appendCastPanic(buffer);
+                appendCastPanic(buffer, counter, true);
                 appendBlockLabel(buffer, counter, validBlock);
             }
             val temporary = counter.next_value();
@@ -934,7 +934,7 @@ fn emitExpression(
                 buffer, source, IrValue(IrValueKind.TEMPORARY, 0, 0, check, TypeKind.BOOL.value, 0, 0),
                 validBlock, panicBlock);
             appendBlockLabel(buffer, counter, panicBlock);
-            appendCastPanic(buffer);
+            appendCastPanic(buffer, counter, false);
             appendBlockLabel(buffer, counter, validBlock);
         }
         return converted;

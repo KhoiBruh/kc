@@ -88,7 +88,9 @@ fn appendPrintBytesDeclaration(var buffer: StringBuilder) {
 }
 
 fn appendPanicDeclaration(var buffer: StringBuilder) {
-    buffer.append("declare void @k_boot_panic(ptr, i64)\n\n");
+    buffer.append("declare void @k_boot_panic(ptr, i64)\n");
+    buffer.append("@.kpanic_integer = private unnamed_addr constant [26 x i8] c\"integer cast out of range\\00\"\n");
+    buffer.append("@.kpanic_float = private unnamed_addr constant [24 x i8] c\"float cast out of range\\00\"\n\n");
 }
 
 fn appendModuleHeader(var buffer: StringBuilder) {
@@ -237,11 +239,26 @@ fn appendFloatCastBound(
     }
 }
 
-fn appendCastPanic(var buffer: StringBuilder) {
-    buffer.append("  call void @k_boot_panic(ptr null, i64 0)");
+fn appendCastPanic(
+    var buffer: StringBuilder, var counter: IrCounter, float: bool) {
+    val message = counter.next_value();
+    appendValuePrefix(buffer); appendDecimal(buffer, message);
+    appendEquals(buffer);
+    appendGetElementPtr(buffer); buffer.append(" inbounds ");
+    if (float) {
+        buffer.append("[24 x i8], ptr @.kpanic_float");
+        buffer.append(", i64 0, i64 0"); appendNewline(buffer);
+        buffer.append("  call void @k_boot_panic(ptr %"); appendDecimal(buffer, message);
+        buffer.append(", i64 23)");
+    } else {
+        buffer.append("[26 x i8], ptr @.kpanic_integer");
+        buffer.append(", i64 0, i64 0"); appendNewline(buffer);
+        buffer.append("  call void @k_boot_panic(ptr %"); appendDecimal(buffer, message);
+        buffer.append(", i64 25)");
+    }
     appendNewline(buffer);
-    buffer.append("  unreachabl");
-    buffer.append("e"); appendNewline(buffer);
+    buffer.append("  unreachable");
+    appendNewline(buffer);
 }
 
 fn appendLocalPrefix(var buffer: StringBuilder) {

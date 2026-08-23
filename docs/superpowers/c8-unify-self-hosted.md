@@ -60,6 +60,13 @@ release tag, or keep `kc0` in-tree purely as a seed builder.
 
 ## 4. Phase 0 — Parity ledger + differential harness (no behavior change)
 
+**Status: complete (2026-08-23).** Ledger seeded with D1–D3; differential
+harness merged as `tests/drivers/DifferentialTests.ps1` (CTest name
+`k_differential_tests`), comparing exit codes, stdout, and stderr of every
+`tests/cases/*.k` program built through both pipelines; IR hashes recorded
+informationally. First run surfaced D4/D5, both fixed. Ledger has no
+untriaged rows.
+
 Create `docs/superpowers/c8-parity-ledger.md`. Seeded entries from the
 2026-08 session (each reproduced and verified):
 

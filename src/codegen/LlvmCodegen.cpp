@@ -2016,19 +2016,19 @@ private:
                 elementType, pointer, indexValue);
         }
         const auto* object = std::get_if<IdentifierExpr>(&index.object->node);
-        if (!object) {
-            diagnose("array and slice indexing requires a local collection",
-                     index.object->span);
-            return nullptr;
-        }
-        const auto name = spelling(source(), object->name);
-        const auto local = locals_.find(name);
+        const auto name =
+            object ? spelling(source(), object->name) : std::string{};
+        const auto local = object ? locals_.find(name) : locals_.end();
         if (type->second.kind == SemanticTypeKind::Slice) {
-            if (local == locals_.end()) return nullptr;
-            auto* sliceType = llvm::cast<llvm::StructType>(
-                lowerType(type->second, index.object->span));
-            auto* slice =
-                builder_.CreateLoad(sliceType, local->second.address);
+            llvm::Value* slice = nullptr;
+            if (local != locals_.end()) {
+                auto* sliceType = llvm::cast<llvm::StructType>(
+                    lowerType(type->second, index.object->span));
+                slice = builder_.CreateLoad(sliceType, local->second.address);
+            } else {
+                slice = emitExpr(*index.object);
+                if (!slice) return nullptr;
+            }
             auto* data = builder_.CreateExtractValue(slice, 0);
             auto* length = builder_.CreateExtractValue(slice, 1);
             auto* indexValue = emitExpr(*index.index);
