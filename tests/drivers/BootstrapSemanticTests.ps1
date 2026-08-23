@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "K semantic analyzer rejected the valid multiple generic fixture"
 }
 
-$literalSliceValid = Join-Path $FixtureDirectory "../bootstrap/literal_slice_contexts.k"
+$literalSliceValid = Join-Path $FixtureDirectory "../cases/literal_slice_contexts.k"
 $null = & $Output $literalSliceValid
 if ($LASTEXITCODE -ne 0) {
     Write-Error "K semantic analyzer rejected literal slice contexts"
 }
 
-$rawPointerSliceValid = Join-Path $FixtureDirectory "../bootstrap/slice_from_pointer.k"
+$rawPointerSliceValid = Join-Path $FixtureDirectory "../cases/slice_from_pointer.k"
 $null = & $Output $rawPointerSliceValid
 if ($LASTEXITCODE -ne 0) {
     Write-Error "K semantic analyzer rejected raw-pointer slice construction"

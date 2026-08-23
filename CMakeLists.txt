@@ -83,29 +83,29 @@ add_dependencies(kc k_std_runtime k_bootstrap_runtime)
 
 include(CTest)
 if(BUILD_TESTING)
-    add_executable(k_frontend_tests tests/LexerTests.cpp)
+    add_executable(k_frontend_tests tests/unit/LexerTests.cpp)
     target_include_directories(k_frontend_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     target_link_libraries(k_frontend_tests PRIVATE k_frontend)
     add_test(NAME k_frontend_tests COMMAND k_frontend_tests)
 
-    add_executable(k_parser_tests tests/ParserTests.cpp)
+    add_executable(k_parser_tests tests/unit/ParserTests.cpp)
     target_include_directories(k_parser_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     target_link_libraries(k_parser_tests PRIVATE k_frontend)
     add_test(NAME k_parser_tests COMMAND k_parser_tests)
 
-    add_executable(k_semantic_tests tests/SemanticTests.cpp)
+    add_executable(k_semantic_tests tests/unit/SemanticTests.cpp)
     target_include_directories(k_semantic_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     target_link_libraries(k_semantic_tests PRIVATE k_frontend)
     add_test(NAME k_semantic_tests COMMAND k_semantic_tests)
 
-    add_executable(k_codegen_tests tests/CodegenTests.cpp)
+    add_executable(k_codegen_tests tests/unit/CodegenTests.cpp)
     target_include_directories(k_codegen_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     target_include_directories(k_codegen_tests PRIVATE ${LLVM_INCLUDE_DIRS})
     target_link_libraries(k_codegen_tests PRIVATE k_codegen)
     add_test(NAME k_codegen_tests COMMAND k_codegen_tests)
 
 
-    add_executable(k_native_tests tests/NativeEmitterTests.cpp)
+    add_executable(k_native_tests tests/unit/NativeEmitterTests.cpp)
     target_include_directories(k_native_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     target_link_libraries(k_native_tests PRIVATE k_codegen)
     add_test(NAME k_native_tests COMMAND k_native_tests)
@@ -113,44 +113,44 @@ if(BUILD_TESTING)
     add_test(
         NAME k_module_cli_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/ModuleCliTests.ps1"
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/ModuleCliTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/modules/diamond/main.k"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/module-diamond.exe"
     )
 
-    add_executable(k_bootstrap_runtime_tests tests/BootstrapRuntimeTests.cpp)
+    add_executable(k_bootstrap_runtime_tests tests/unit/BootstrapRuntimeTests.cpp)
     target_include_directories(k_bootstrap_runtime_tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/tests"
         "${CMAKE_CURRENT_SOURCE_DIR}/src")
     target_link_libraries(k_bootstrap_runtime_tests PRIVATE k_bootstrap_runtime)
     add_test(NAME k_bootstrap_runtime_tests COMMAND k_bootstrap_runtime_tests)
 
-    add_executable(k_token_dump tests/TokenDump.cpp)
+    add_executable(k_token_dump tests/tools/TokenDump.cpp)
     target_link_libraries(k_token_dump PRIVATE k_frontend)
 
-    add_executable(k_ast_shape_dump tests/AstShapeDump.cpp)
+    add_executable(k_ast_shape_dump tests/tools/AstShapeDump.cpp)
     target_link_libraries(k_ast_shape_dump PRIVATE k_frontend)
 
-    add_executable(k_semantic_shape_dump tests/SemanticShapeDump.cpp)
+    add_executable(k_semantic_shape_dump tests/tools/SemanticShapeDump.cpp)
     target_link_libraries(k_semantic_shape_dump PRIVATE k_frontend)
 
     add_test(
         NAME k_bootstrap_container_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapContainerTests.ps1"
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/BootstrapContainerTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -Token "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/token.k"
             -List "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/list.k"
             -Library "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/containers.k"
-            -TestSource "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/container_tests.k"
+            -TestSource "${CMAKE_CURRENT_SOURCE_DIR}/tests/harness/container_tests.k"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-containers-test.exe"
     )
 
     add_test(
         NAME k_bootstrap_lexer_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapLexerTests.ps1"
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/BootstrapLexerTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -TokenDump "$<TARGET_FILE:k_token_dump>"
             -SourceModule "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/source.k"
@@ -158,7 +158,7 @@ if(BUILD_TESTING)
             -List "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/list.k"
             -Containers "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/containers.k"
             -Lexer "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/lexer.k"
-            -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/lexer_main.k"
+            -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/harness/lexer_main.k"
             -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/bootstrap-lexer.k"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-lexer-test.exe"
     )
@@ -166,11 +166,11 @@ if(BUILD_TESTING)
     add_test(
         NAME k_bootstrap_parser_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapParserTests.ps1"
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/BootstrapParserTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -AstDump "$<TARGET_FILE:k_ast_shape_dump>"
             -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
-            -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/parser_main.k"
+            -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/harness/parser_main.k"
             -Fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/bootstrap-lexer.k"
             -SecondFixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/bootstrap-parser.k"
             -InvalidDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
@@ -180,11 +180,11 @@ if(BUILD_TESTING)
     add_test(
         NAME k_bootstrap_semantic_tests
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapSemanticTests.ps1"
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/BootstrapSemanticTests.ps1"
             -Compiler "$<TARGET_FILE:kc>"
             -SemanticDump "$<TARGET_FILE:k_semantic_shape_dump>"
             -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
-            -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/semantic_main.k"
+            -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/harness/semantic_main.k"
             -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-semantic-test.exe"
     )
@@ -192,14 +192,14 @@ if(BUILD_TESTING)
     add_test(
         NAME k_bootstrap_acceptance
         COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapAcceptance.ps1"
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/BootstrapAcceptance.ps1"
             -Kc0 "$<TARGET_FILE:kc>"
             -Opt "${LLVM_TOOLS_BINARY_DIR}/opt.exe"
             -Clang "${LLVM_TOOLS_BINARY_DIR}/clang.exe"
             -StdRuntime "$<TARGET_FILE:k_std_runtime>"
             -BootstrapRuntime "$<TARGET_FILE:k_bootstrap_runtime>"
             -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
-            -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap"
+            -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/cases"
             -InvalidFixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -OutputDirectory "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-acceptance"
     )

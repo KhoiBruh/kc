@@ -46,7 +46,10 @@ source.k
 - `src/codegen/ClangLinker.*`: invokes the configured Clang driver.
 - `src/cli/main.cpp`: `kc` modes and diagnostic/output handling.
 - `src/lib/std/`: minimal runtime currently linked into native executables.
-- `tests/`: dependency-free test executables and `.k` acceptance fixtures.
+- `tests/`: `unit/` dependency-free C++ unit tests, `tools/` diagnostic dump
+  executables used by drivers, `drivers/` PowerShell scenario scripts,
+  `cases/` self-hosted acceptance `.k` programs, `harness/` K driver sources,
+  and `fixtures/` shared fixtures (invalid inputs, module graphs).
 
 ## Established K language decisions
 
