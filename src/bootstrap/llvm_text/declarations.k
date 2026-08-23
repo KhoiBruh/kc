@@ -25,40 +25,123 @@ fn declarationRoots(val nodes: List<AstNode>): u64* {
 
 fn structRootByName(
     source: Source, val nodes: List<AstNode>, name: u64): u64 {
-    val program = nodes.data[nodes.length - 1];
-    val roots = declarationRoots(nodes);
+    val programRoot = nodes.length - 1;
+    val program = nodes.data[programRoot];
+    var cursor = programRoot - 1;
+    var visited: u64 = 0;
     var found = nodes.length;
-    for (index in 0..<program.aux) {
-        val root = roots[index as u64];
-        val node = nodes.data[root];
+    while (visited < program.aux) {
+        val node = nodes.data[cursor];
         if (node.kind == AstKind.STRUCT_DECLARATION) {
             val nameNode = nodes.data[node.subtreeStart];
-            if (source.hash(nameNode.start, nameNode.end) == name) {
-                found = root;
+            if (found == nodes.length &&
+                    source.hash(nameNode.start, nameNode.end) == name) {
+                found = cursor;
             }
         }
+        cursor = node.subtreeStart - 1;
+        visited++;
     }
-    k_boot_free(roots as unit*);
     return found;
 }
 
 fn functionRootByName(
     source: Source, val nodes: List<AstNode>, name: u64): u64 {
-    val program = nodes.data[nodes.length - 1];
-    val roots = declarationRoots(nodes);
+    val programRoot = nodes.length - 1;
+    val program = nodes.data[programRoot];
+    var cursor = programRoot - 1;
+    var visited: u64 = 0;
     var found = nodes.length;
-    for (index in 0..<program.aux) {
-        val root = roots[index as u64];
-        val node = nodes.data[root];
+    while (visited < program.aux) {
+        val node = nodes.data[cursor];
         if (node.kind == AstKind.FUNCTION_OR_DEFER) {
             val nameNode = nodes.data[node.subtreeStart];
-            if (source.hash(nameNode.start, nameNode.end) == name) {
-                found = root;
+            if (found == nodes.length &&
+                    source.hash(nameNode.start, nameNode.end) == name) {
+                found = cursor;
             }
         }
+        cursor = node.subtreeStart - 1;
+        visited++;
     }
-    k_boot_free(roots as unit*);
     return found;
+}
+
+struct RootEntry(key: u64, root: u64)
+
+struct RootTable(data: RootEntry*, length: u64, capacity: u64) {
+
+    fn new() => RootTable(
+        k_boot_alloc(8 * sizeof(RootEntry)) as RootEntry*, 0, 8);
+
+    fn grow(var self) {
+        val capacity = self.capacity * 2;
+        val data = k_boot_alloc(capacity * sizeof(RootEntry)) as RootEntry*;
+        for (i in 0..<self.length) data[i] = self.data[i];
+        k_boot_free(self.data as unit*);
+        self.data = data;
+        self.capacity = capacity;
+    }
+
+    fn add(var self, key: u64, root: u64) {
+        if (self.length == self.capacity) self.grow();
+        self.data[self.length] = RootEntry(key, root);
+        self.length++;
+    }
+
+    fn find(val self, name: u64): u64 {
+        for (i in 0..<self.length) {
+            if (self.data[i].key == name) return self.data[i].root;
+        }
+        return self.length;
+    }
+
+    fn free(self) => k_boot_free(self.data as unit*);
+}
+
+struct EmitterSymbols(structs: RootTable, functions: RootTable, notFound: u64) {
+
+    fn build(source: Source, val nodes: List<AstNode>): EmitterSymbols {
+        var result = EmitterSymbols(
+            RootTable.new(), RootTable.new(), nodes.length);
+        val programRoot = nodes.length - 1;
+        val program = nodes.data[programRoot];
+        var cursor = programRoot - 1;
+        var visited: u64 = 0;
+        while (visited < program.aux) {
+            val node = nodes.data[cursor];
+            if (node.kind == AstKind.STRUCT_DECLARATION ||
+                    node.kind == AstKind.FUNCTION_OR_DEFER) {
+                val nameNode = nodes.data[node.subtreeStart];
+                val name = source.hash(nameNode.start, nameNode.end);
+                if (node.kind == AstKind.STRUCT_DECLARATION) {
+                    result.structs.add(name, cursor);
+                } else {
+                    result.functions.add(name, cursor);
+                }
+            }
+            cursor = node.subtreeStart - 1;
+            visited++;
+        }
+        return result;
+    }
+
+    fn structRoot(val self, name: u64): u64 {
+        val root = self.structs.find(name);
+        if (root == self.structs.length) return self.notFound;
+        return root;
+    }
+
+    fn functionRoot(val self, name: u64): u64 {
+        val root = self.functions.find(name);
+        if (root == self.functions.length) return self.notFound;
+        return root;
+    }
+}
+
+fn freeEmitterSymbols(val symbols: EmitterSymbols) {
+    k_boot_free(symbols.structs.data as unit*);
+    k_boot_free(symbols.functions.data as unit*);
 }
 
 fn emitterDropFunctionRoot(
@@ -644,6 +727,8 @@ fn callArgumentsAreConcrete(
 fn emitModule(
     source: Source, val nodes: List<AstNode>,
     var genericArguments: List<TypeValue>): StringBuilder {
+    val symbols = EmitterSymbols.build(source, nodes);
+    defer freeEmitterSymbols(symbols);
     var buffer = StringBuilder.new();
     appendModuleHeader(buffer);
     appendPrintDeclaration(buffer);
@@ -684,7 +769,7 @@ fn emitModule(
             val count = node.typePointee / 65536;
             if (count > 0) {
                 if (structArgumentsAreConcrete(genericArguments, start as u64, count)) {
-                    val structureRoot = structRootByName(source, nodes, node.typeName);
+                    val structureRoot = symbols.structRoot(node.typeName);
                     if (structureRoot != nodes.length) {
                         if (
                             !structSpecializationRequestExists(
@@ -740,8 +825,7 @@ fn emitModule(
                 val calleeRoot = callCalleeRoot(nodes, callIndex);
                 val callee = nodes.data[calleeRoot];
                 var functionRoot =
-                    functionRootByName(
-                        source, nodes,
+                    symbols.functionRoot(
                         source.hash(callee.start, callee.end));
                 if (callee.kind == AstKind.MEMBER) functionRoot = call.storage;
                 if (functionRoot != nodes.length) {
@@ -778,8 +862,7 @@ fn emitModule(
                     callCalleeRoot(nodes, nestedIndex);
                 val callee = nodes.data[calleeRoot];
                 var nestedFunctionRoot =
-                    functionRootByName(
-                        source, nodes,
+                    symbols.functionRoot(
                         source.hash(callee.start, callee.end));
                 if (callee.kind == AstKind.MEMBER)
                     nestedFunctionRoot = nestedCall.storage;
