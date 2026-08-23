@@ -142,9 +142,11 @@ fn appendFloatRangeComparison(
         if (targetKind == TypeKind.I32.value) {
             if (value.typeKind == TypeKind.F32.value) inclusive = true;
         }
-        buffer.append("g");
-        if (inclusive) buffer.append("e");
-        else buffer.append("t");
+        if (inclusive) {
+            buffer.append("ge");
+        } else {
+            buffer.append("gt");
+        }
     } else {
         buffer.append("lt");
     }

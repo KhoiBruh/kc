@@ -117,8 +117,7 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
         TokenKind.STAR.value -> buffer.append("mul");
         TokenKind.SLASH.value -> {
             if (floating) {
-                buffer.append("di");
-                buffer.append("v"); return;
+                buffer.append("div"); return;
             }
             val unsigned = when (typeKind) {
                 TypeKind.U8.value,
@@ -135,8 +134,7 @@ fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
         }
         TokenKind.PERCENT.value -> {
             if (floating) {
-                buffer.append("re");
-                buffer.append("m"); return;
+                buffer.append("rem"); return;
             }
             val unsigned = when (typeKind) {
                 TypeKind.U8.value,
@@ -170,26 +168,22 @@ fn appendCastOpcode(var buffer: StringBuilder, kind: u32) {
 
 fn appendFloatCastOpcode(var buffer: StringBuilder, kind: u32) {
     if (kind == 1) {
-        buffer.append("fpex");
-        buffer.append("t"); return;
+        buffer.append("fpext"); return;
     }
     if (kind == 2) {
-        buffer.append("fptrun");
-        buffer.append("c"); return;
+        buffer.append("fptrunc"); return;
     }
     if (kind == 3) buffer.append("s");
     if (kind == 4) buffer.append("u");
     var integerToFloat = kind == 3;
     if (kind == 4) integerToFloat = true;
     if (integerToFloat) {
-        buffer.append("itof");
-        buffer.append("p"); return;
+        buffer.append("itofp"); return;
     }
-    buffer.append("fpto");
     if (kind == 5) {
-        buffer.append("si");
+        buffer.append("fptosi");
     } else {
-        buffer.append("ui");
+        buffer.append("fptoui");
     }
 }
 
