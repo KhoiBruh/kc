@@ -1,5 +1,5 @@
 fn printToken(token: Token) {
-    print(token.kind as i32);
+    print(token.kind.value as i32);
     print(":");
     print(token.start as i32);
     print(":");

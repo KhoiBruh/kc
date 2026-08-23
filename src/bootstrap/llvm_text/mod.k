@@ -1,0 +1,26 @@
+module bootstrap.llvm_text;
+
+import bootstrap.source.Source;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
+import bootstrap.lexer.lex;
+import bootstrap.ast.AstNode;
+import bootstrap.ast.AstKind;
+import bootstrap.parser.mod.parse;
+import bootstrap.types.TypeValue;
+import bootstrap.types.TypeKind;
+import bootstrap.types.typeKindFromValue;
+import bootstrap.diagnostic.SemanticResult;
+import bootstrap.semantic.mod.analyze;
+import bootstrap.llvm_text.mod.emitModule;
+import bootstrap.token.TokenKind;
+import bootstrap.llvm_text.emit_text.appendOperator;
+import bootstrap.llvm_text.strings.decodeStringLiteral;
+import bootstrap.llvm_text.context.IrValue;
+import bootstrap.llvm_text.types.typeSize;
+import bootstrap.llvm_text.declarations.emitModule;
+import bootstrap.llvm_text.expressions.emitExpression;
+import bootstrap.llvm_text.statements.emitStatement;
+import bootstrap.llvm_text.control_flow.emitWhen;

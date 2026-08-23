@@ -26,10 +26,12 @@ struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
         self.length++;
     }
 
+    fn append(var self, val bytes: []u8) {
+        for (byte in bytes) self.add(byte);
+    }
+
     fn free(self) => k_boot_free(self.data as unit*);
 }
-
-struct StringLayout(data: u8*, length: u64, capacity: u64)
 
 struct StringBuilder(data: u8*, length: u64, capacity: u64) {
 
@@ -50,25 +52,25 @@ struct StringBuilder(data: u8*, length: u64, capacity: u64) {
         self.length++;
     }
 
-    fn appendBytes(var self, data: u8*, length: u64) {
-        for (i in 0..<length) self.add(data[i]);
+    fn appendBytes(var self, val bytes: []u8) {
+        for (byte in bytes) self.add(byte);
     }
 
-    fn append(var self, val text: string) {
+    fn append(var self, val text: str) {
         val bytes = text.bytes;
         for (value in bytes) self.add(value);
     }
 
-    fn toString(val self): string {
+    fn to_str(val self): str {
         var result = "";
-        k_boot_string_copy(
-            self.data, self.length, (&result) as unit*);
+        k_boot_string_copy(self.data, self.length, (&result) as unit*);
         return result;
     }
 
     fn free(self) => k_boot_free(self.data as unit*);
 }
 
+struct StrLayout(data: u8*, length: u64, capacity: u64)
 struct StringRef(data: u8*, length: u64)
 
 struct SymbolEntry(key: u64, value: unit*)

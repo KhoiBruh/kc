@@ -68,6 +68,24 @@ source.k
   resource structs with exact `fn free(self)` receive deterministic automatic
   drop; resource owned parameters are also dropped. Automatic `.copy()` is not
   implemented yet.
+- `const` initializers are compile-time expressions: literals, operators,
+  casts, and references to previously declared `const` only. Function calls
+  (including inside nested expressions or generics) and forward references are
+  rejected semantically. Scalar constants are evaluated and folded at
+  compile time in declaration order; circular references and division/remainder
+  by zero are diagnosed. Non-foldable constants fall back to emitting their
+  initializer expression.
+- Native code emission is demand-driven: only declarations reachable from a
+  non-extern `main` are emitted (functions, structs, enums, constants, and
+  generic specializations, tracked by `src/codegen/Reachability.*`). Semantic
+  analysis stays whole-program; without a `main` entry all declarations are
+  emitted. `mod.k` is not a compilation registry.
+- Wildcard imports (`import foo.*`) are a permanent name-resolution feature:
+  they bring module names into scope but never make the imported module
+  reachable. Only declarations actually referenced from the entry point are
+  compiled; unused wildcard imports are legal. Import resolution
+  (`ModuleSystem`, bootstrap `loader.k`) and compilation reachability
+  (`src/codegen/Reachability.*`) are separate concerns.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order
@@ -79,13 +97,13 @@ source.k
 
 - Required version: LLVM **22.1.8**.
 - Local development package:
-  `C:/Users/Admin/tools/llvm-22.1.8`
-- CMake package: set the `KLANG_LLVM_DIR` user environment variable to the
+  `C:/LLVM`
+- CMake package: set the `LLVM` user environment variable to the
   `lib/cmake/llvm` directory (locally
-  `C:/Users/Admin/tools/llvm-22.1.8/lib/cmake/llvm`); `CMakePresets.json`
+  `C:/LLVM/lib/cmake/llvm`); `CMakePresets.json`
   expands it into `LLVM_DIR` so machine paths stay out of versioned files.
 - Clang driver:
-  `C:/Users/Admin/tools/llvm-22.1.8/bin/clang.exe`
+  `C:/LLVM/bin/clang.exe`
 - The Windows LLVM archive contains a stale Visual Studio 2022 Enterprise DIA
   path. `CMakeLists.txt` deliberately redirects `LLVMDebugInfoPDB` to the
   installed Visual Studio Community `diaguids.lib`; preserve this workaround.
@@ -222,8 +240,7 @@ Static move-ownership self-hosting is complete for the current contract.
   runtime paths before source loading or process launch.
 - Bootstrap acceptance requires stable CLI failure messages exactly once across
   `kc1` through `kc4`, plus exact semantic diagnostic parity.
-- Bootstrap stages compile `src/bootstrap/main.k` as a real module graph;
-  `manifest.txt` only verifies that every compiler source remains reachable.
+- Bootstrap stages compile `src/bootstrap/main.k` as a real module graph.
 - Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
   fixed-point check under `out/bootstrap/`.
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,

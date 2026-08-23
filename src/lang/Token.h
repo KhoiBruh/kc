@@ -21,7 +21,7 @@ enum class TokenKind {
     KwTrue, KwFalse, KwNull,
     KwBool, KwI8, KwI16, KwI32, KwI64, KwI128,
     KwU8, KwU16, KwU32, KwU64, KwU128,
-    KwF8, KwF16, KwF32, KwF64, KwChar, KwString, KwUnit,
+    KwF8, KwF16, KwF32, KwF64, KwChar, KwStr, KwUnit,
 
     LeftParen, RightParen,
     LeftBrace, RightBrace,

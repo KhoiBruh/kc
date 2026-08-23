@@ -1,0 +1,331 @@
+module bootstrap.llvm_text.emit_text;
+
+import bootstrap.source.Source;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
+import bootstrap.lexer.lex;
+import bootstrap.ast.AstNode;
+import bootstrap.ast.AstKind;
+import bootstrap.parser.mod.parse;
+import bootstrap.types.TypeValue;
+import bootstrap.types.TypeKind;
+import bootstrap.types.typeKindFromValue;
+import bootstrap.diagnostic.SemanticResult;
+import bootstrap.semantic.mod.analyze;
+import bootstrap.llvm_text.mod.emitModule;
+import bootstrap.token.TokenKind;
+
+fn appendDecimal(var buffer: StringBuilder, value: u64) {
+    val digits = k_boot_alloc(20) as u8*;
+    var remaining = value;
+    var length: u64 = 0;
+    if (remaining == 0) {
+        buffer.append("0");
+    } else {
+        while (remaining > 0) {
+            digits[length] = (remaining % 10) as u8 + 48;
+            remaining /= 10;
+            length++;
+        }
+        for (index in length>..0) buffer.add(digits[index]);
+    }
+    k_boot_free(digits as unit*);
+}
+
+fn appendSource(
+    var buffer: StringBuilder, source: Source, start: u64, end: u64) {
+    for (offset in start..<end) {
+        buffer.add(source.data[offset]);
+    }
+}
+
+fn appendDefine(var buffer: StringBuilder) {
+    buffer.append("define ");
+}
+
+fn appendI32(var buffer: StringBuilder) => buffer.append("i32");
+
+fn appendFunctionOpen(var buffer: StringBuilder) => buffer.append(" @");
+
+fn appendEmptyParameters(var buffer: StringBuilder) => buffer.append("() {\n");
+
+fn appendEntry(var buffer: StringBuilder) => buffer.append("entry:\n  ");
+
+fn appendReturnI32(var buffer: StringBuilder) {
+    buffer.append("ret ");
+    appendI32(buffer);
+    buffer.append(" ");
+}
+
+fn appendFunctionClose(var buffer: StringBuilder) => buffer.append("\n}\n");
+
+fn appendValuePrefix(var buffer: StringBuilder) => buffer.append("  %");
+
+fn appendEquals(var buffer: StringBuilder) => buffer.append(" = ");
+
+fn appendLoad(var buffer: StringBuilder) => buffer.append("load ");
+
+fn appendStore(var buffer: StringBuilder) {
+    buffer.append("  store ");
+}
+
+fn appendPtr(var buffer: StringBuilder) {
+    buffer.append(", ptr %");
+}
+
+fn appendAlloca(var buffer: StringBuilder) => buffer.append("alloca ");
+
+fn appendCall(var buffer: StringBuilder) => buffer.append("call ");
+
+fn appendPrintDeclaration(var buffer: StringBuilder) {
+    buffer.append("declare void @k_std_print_i32(i32)\n\n");
+    appendPrintBytesDeclaration(buffer);
+}
+fn appendPrintBytesDeclaration(var buffer: StringBuilder) {
+    buffer.append("declare void @k_std_print_bytes(ptr, i64)\n\n");
+}
+
+fn appendPanicDeclaration(var buffer: StringBuilder) {
+    buffer.append("declare void @k_boot_panic(ptr, i64)\n\n");
+}
+
+fn appendModuleHeader(var buffer: StringBuilder) {
+    buffer.append("target datalayout = \"e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128\"\ntarget triple = \"x86_64-pc-windows-msvc\"\n\n");
+}
+
+fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
+    if (node.end - node.start != 5) return false;
+    if (source.data[node.start] != 112) return false;
+    if (source.data[node.start + 1] != 114) return false;
+    if (source.data[node.start + 2] != 105) return false;
+    if (source.data[node.start + 3] != 110) return false;
+    return source.data[node.start + 4] == 116;
+}
+
+fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
+    val floating = when (typeKind) {
+        TypeKind.F32.value,
+        TypeKind.F64.value -> true;
+        else -> false;
+    };
+    if (floating) buffer.append("f");
+    when (kind) {
+        TokenKind.PLUS.value -> buffer.append("add");
+        TokenKind.MINUS.value -> buffer.append("sub");
+        TokenKind.STAR.value -> buffer.append("mul");
+        TokenKind.SLASH.value -> {
+            if (floating) {
+                buffer.append("div"); return;
+            }
+            val unsigned = when (typeKind) {
+                TypeKind.U8.value,
+                TypeKind.U32.value,
+                TypeKind.U64.value -> true;
+                else -> false;
+            };
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("div");
+        }
+        TokenKind.PERCENT.value -> {
+            if (floating) {
+                buffer.append("rem"); return;
+            }
+            val unsigned = when (typeKind) {
+                TypeKind.U8.value,
+                TypeKind.U32.value,
+                TypeKind.U64.value -> true;
+                else -> false;
+            };
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("rem");
+        }
+    }
+}
+
+fn appendNewline(var buffer: StringBuilder) => buffer.append("\n");
+
+fn appendCastOpcode(var buffer: StringBuilder, kind: u32) {
+    when (kind) {
+        1 -> buffer.append("s");
+        2 -> buffer.append("z");
+        else -> {
+            buffer.append("trunc");
+            return;
+        }
+    }
+    buffer.append("ext");
+}
+
+fn appendFloatCastOpcode(var buffer: StringBuilder, kind: u32) {
+    if (kind == 1) {
+        buffer.append("fpext"); return;
+    }
+    if (kind == 2) {
+        buffer.append("fptrunc"); return;
+    }
+    if (kind == 3) buffer.append("s");
+    if (kind == 4) buffer.append("u");
+    var integerToFloat = kind == 3;
+    if (kind == 4) integerToFloat = true;
+    if (integerToFloat) {
+        buffer.append("itofp"); return;
+    }
+    if (kind == 5) {
+        buffer.append("fptosi");
+    } else {
+        buffer.append("fptoui");
+    }
+}
+
+fn appendFloatIntegerConstant(
+    var buffer: StringBuilder, negative: bool, magnitude: u64,
+    appendSix: bool
+) {
+    if (negative) buffer.append("-");
+    appendDecimal(buffer, magnitude);
+    if (appendSix) buffer.append("6");
+    buffer.append(".0");
+}
+
+fn appendFloatCastBound(
+    var buffer: StringBuilder, sourceKind: u32, targetKind: u32,
+    lower: bool
+) {
+    if (lower) {
+        if (targetKind == TypeKind.I32.value) {
+            var magnitude: u64 = 2147483649;
+            if (sourceKind == TypeKind.F32.value) magnitude = 2147483648;
+            appendFloatIntegerConstant(buffer, true, magnitude, false);
+            return;
+        }
+        if (targetKind == TypeKind.I64.value) {
+            appendFloatIntegerConstant(
+                buffer, true, 9223372036854775808, false);
+            return;
+        }
+        appendFloatIntegerConstant(buffer, true, 1, false);
+        return;
+    }
+    if (targetKind == TypeKind.I32.value) {
+        appendFloatIntegerConstant(buffer, false, 2147483648, false);
+    } else {
+        if (targetKind == TypeKind.I64.value) {
+            appendFloatIntegerConstant(
+                buffer, false, 9223372036854775808, false);
+        } else {
+            if (targetKind == TypeKind.U8.value) {
+                appendFloatIntegerConstant(buffer, false, 256, false);
+            }
+            if (targetKind == TypeKind.U32.value) {
+                appendFloatIntegerConstant(buffer, false, 4294967296, false);
+            }
+            if (targetKind == TypeKind.U64.value) {
+                appendFloatIntegerConstant(
+                    buffer, false, 1844674407370955161, true);
+            }
+        }
+    }
+}
+
+fn appendCastPanic(var buffer: StringBuilder) {
+    buffer.append("  call void @k_boot_panic(ptr null, i64 0)");
+    appendNewline(buffer);
+    buffer.append("  unreachabl");
+    buffer.append("e"); appendNewline(buffer);
+}
+
+fn appendLocalPrefix(var buffer: StringBuilder) {
+    buffer.append("local.");
+}
+
+fn appendOwnedStringDeclarations(var buffer: StringBuilder) {
+    buffer.append("declare ptr @k_std_alloc(i64)\ndeclare void @k_std_free(ptr)\n\n");
+}
+
+fn appendDropFlagName(var buffer: StringBuilder, storage: u64) {
+    appendLocalPrefix(buffer);
+    appendDecimal(buffer, storage);
+    buffer.append(".drop");
+}
+
+fn appendI64(var buffer: StringBuilder) {
+    buffer.append("i64");
+}
+
+fn appendGetElementPtr(var buffer: StringBuilder) {
+    buffer.append("getelementptr");
+}
+
+fn appendInsertValue(var buffer: StringBuilder) {
+    buffer.append("insertvalue");
+}
+
+fn appendExtractValue(var buffer: StringBuilder) {
+    buffer.append("extractvalue");
+}
+
+fn appendUndef(var buffer: StringBuilder) {
+    buffer.append("undef");
+}
+
+fn appendUnreachable(var buffer: StringBuilder) {
+    buffer.append("unreachable");
+}
+
+fn appendComparison(
+    var buffer: StringBuilder, kind: u32, typeKind: u32) {
+    buffer.append("icmp ");
+    val unsigned = when (typeKind) {
+        TypeKind.U8.value,
+        TypeKind.U32.value,
+        TypeKind.U64.value,
+        TypeKind.ENUM.value -> true;
+        else -> false;
+    };
+    when (kind) {
+        TokenKind.EQUAL_EQUAL.value -> buffer.append("eq");
+        TokenKind.BANG_EQUAL.value -> buffer.append("ne");
+        TokenKind.LESS.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("lt");
+        }
+        TokenKind.LESS_EQUAL.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("le");
+        }
+        TokenKind.GREATER.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("gt");
+        }
+        TokenKind.GREATER_EQUAL.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("ge");
+        }
+    }
+}

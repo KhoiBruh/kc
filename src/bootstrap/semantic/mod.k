@@ -1,0 +1,25 @@
+module bootstrap.semantic;
+
+import bootstrap.source.Source;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
+import bootstrap.lexer.lex;
+import bootstrap.ast.AstNode;
+import bootstrap.ast.AstKind;
+import bootstrap.parser.mod.parse;
+import bootstrap.types.TypeValue;
+import bootstrap.types.TypeKind;
+import bootstrap.types.typeKindFromValue;
+import bootstrap.diagnostic.SemanticResult;
+import bootstrap.semantic.mod.analyze;
+import bootstrap.llvm_text.mod.emitModule;
+import bootstrap.token.TokenKind;
+import bootstrap.semantic.context.Semantic;
+import bootstrap.semantic.types.integerConstant;
+import bootstrap.semantic.patterns.whenConditionRoot;
+import bootstrap.semantic.expressions.inferExpressionType;
+import bootstrap.semantic.statements.checkStatement;
+import bootstrap.semantic.ownership.markExpressionMoved;
+import bootstrap.semantic.declarations.analyze;

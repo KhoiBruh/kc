@@ -65,6 +65,7 @@ add_library(k_codegen STATIC
     src/codegen/ClangLinker.cpp
     src/codegen/LlvmCodegen.cpp
     src/codegen/NativeEmitter.cpp
+    src/codegen/Reachability.cpp
 )
 target_compile_definitions(k_codegen PRIVATE
     K_CONFIGURED_CLANG_PATH="${LLVM_TOOLS_BINARY_DIR}/clang.exe"
@@ -186,14 +187,6 @@ if(BUILD_TESTING)
             -Main "${CMAKE_CURRENT_SOURCE_DIR}/tests/bootstrap/semantic_main.k"
             -FixtureDirectory "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
             -Output "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-semantic-test.exe"
-    )
-
-    add_test(
-        NAME k_bootstrap_manifest_tests
-        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/BootstrapManifestTests.ps1"
-            -SourceDirectory "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap"
-            -Manifest "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/manifest.txt"
     )
 
     add_test(

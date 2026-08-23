@@ -1,5 +1,6 @@
 #pragma once
 
+#include "codegen/Reachability.h"
 #include "lang/Ast.h"
 #include "lang/Diagnostic.h"
 #include "lang/ModuleSystem.h"
@@ -21,23 +22,19 @@ struct CodegenResult {
     std::vector<Diagnostic> diagnostics;
 };
 
-struct ParsedModule {
-    std::unique_ptr<Source> source;
-    std::unique_ptr<Program> program;
-    std::unique_ptr<SemanticResult> semantic;
-};
-
 class LlvmCodegen {
 public:
     LlvmCodegen(
         std::vector<ParsedModule> modules,
-        llvm::LLVMContext& context);
+        llvm::LLVMContext& context,
+        ReachableDeclarations reachable = {});
 
     [[nodiscard]] CodegenResult generate();
 
 private:
     std::vector<ParsedModule> modules_;
     llvm::LLVMContext& context_;
+    ReachableDeclarations reachable_;
 };
 
 }

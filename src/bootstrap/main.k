@@ -9,78 +9,27 @@ struct Argument(data: u8*, length: u64, ok: bool)
 fn mainError(kind: u32) {
     var message = StringBuilder.new();
     defer message.free();
-    message.add(101); message.add(114);
-    message.add(114); message.add(111);
-    message.add(114); message.add(58);
-    message.add(32);
-    
+    message.append("error: ");
+
     if (kind == 1) {
-        message.add(101); message.add(120);
-        message.add(112); message.add(101);
-        message.add(99); message.add(116);
-        message.add(101); message.add(100);
-        message.add(32); message.add(55);
-        message.add(32); message.add(97);
-        message.add(114); message.add(103);
-        message.add(117); message.add(109);
-        message.add(101); message.add(110);
-        message.add(116); message.add(115);
+        message.append("expected 7 arguments");
     } else {
-        message.add(99); message.add(97);
-        message.add(110); message.add(110);
-        message.add(111); message.add(116);
-        message.add(32); message.add(108);
-        message.add(111); message.add(97);
-        message.add(100); message.add(32);
-        message.add(105); message.add(110);
-        message.add(112); message.add(117);
-        message.add(116);
+        message.append("cannot load input");
     }
 
-    message.add(10);
+    message.append("\n");
     k_boot_stderr(message.data, message.length);
 }
 
 fn mainPathError(kind: u32) {
     var message = StringBuilder.new();
     defer message.free();
-    message.add(101); message.add(114);
-    message.add(114); message.add(111);
-    message.add(114); message.add(58);
-    message.add(32);
+    message.append("error: ");
     when (kind) {
-        1 -> {
-            message.add(105); message.add(110);
-            message.add(112); message.add(117);
-            message.add(116); message.add(32);
-            message.add(109); message.add(117);
-            message.add(115); message.add(116);
-            message.add(32); message.add(117);
-            message.add(115); message.add(101);
-            message.add(32); message.add(46);
-            message.add(107); message.add(32);
-            message.add(101); message.add(120);
-            message.add(116); message.add(101);
-            message.add(110); message.add(115);
-            message.add(105); message.add(111);
-            message.add(110);
-        }
-        else -> {
-            message.add(112); message.add(97);
-            message.add(116); message.add(104);
-            message.add(115); message.add(32);
-            message.add(109); message.add(117);
-            message.add(115); message.add(116);
-            message.add(32); message.add(110);
-            message.add(111); message.add(116);
-            message.add(32); message.add(98);
-            message.add(101); message.add(32);
-            message.add(101); message.add(109);
-            message.add(112); message.add(116);
-            message.add(121);
-        }
+        1 -> message.append("input must use .k extension");
+        else -> message.append("paths must not be empty");
     }
-    message.add(10);
+    message.append("\n");
     k_boot_stderr(message.data, message.length);
 }
 

@@ -34,7 +34,12 @@ $modules = @(
     "containers.k",
     "lexer.k",
     "ast.k",
-    "parser.k"
+    "parser/mod.k",
+    "parser/core.k",
+    "parser/types.k",
+    "parser/expressions.k",
+    "parser/statements.k",
+    "parser/declarations.k"
 )
 $source = ($modules | ForEach-Object {
     [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))
@@ -76,7 +81,10 @@ $invalidFixtures = @(
     "bootstrap-unterminated-string.k",
     "bootstrap-missing-delimiter.k",
     "bootstrap-missing-semicolon.k",
-    "bootstrap-invalid-assignment.k"
+    "bootstrap-invalid-assignment.k",
+    "bootstrap-enum-value-binary.k",
+    "bootstrap-enum-value-identifier.k",
+    "bootstrap-enum-value-call.k"
 )
 foreach ($name in $invalidFixtures) {
     $path = Join-Path $InvalidDirectory $name

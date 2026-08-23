@@ -34,7 +34,7 @@ std::string_view tokenKindName(TokenKind kind) noexcept {
         K_TOKEN_NAME(KwI128); K_TOKEN_NAME(KwU8); K_TOKEN_NAME(KwU16);
         K_TOKEN_NAME(KwU32); K_TOKEN_NAME(KwU64); K_TOKEN_NAME(KwU128);
         K_TOKEN_NAME(KwF8); K_TOKEN_NAME(KwF16); K_TOKEN_NAME(KwF32);
-        K_TOKEN_NAME(KwF64); K_TOKEN_NAME(KwChar); K_TOKEN_NAME(KwString);
+        K_TOKEN_NAME(KwF64); K_TOKEN_NAME(KwChar); K_TOKEN_NAME(KwStr);
         K_TOKEN_NAME(KwUnit); K_TOKEN_NAME(LeftParen); K_TOKEN_NAME(RightParen);
         K_TOKEN_NAME(LeftBrace); K_TOKEN_NAME(RightBrace);
         K_TOKEN_NAME(LeftBracket); K_TOKEN_NAME(RightBracket);

@@ -1,8 +1,18 @@
 fn main(): i32 {
+    if (TokenKind.EOF.value != 0) return 10;
+    if (TokenKind.IDENTIFIER.value != 1) return 11;
+    if (TokenKind.STRING_LITERAL.value != 5) return 12;
+    if (TokenKind.FN.value != 10) return 13;
+    if (TokenKind.LEFT_PAREN.value != 50) return 14;
+    if (TokenKind.EQUAL.value != 65) return 15;
+    if (TokenKind.RANGE.value != 87) return 16;
+    if (TokenKind.RANGE_EXCLUSIVE.value != 88) return 17;
+    if (TokenKind.RANGE_EXCLUSIVE_START.value != 93) return 18;
+    if (TokenKind.RANGE_EXCLUSIVE_BOTH.value != 94) return 19;
+
     var bytes = ByteBuffer.new();
-    bytes.add(7);
-    bytes.add(8);
-    bytes.add(9);
+    bytes.append("");
+    bytes.append("\u{7}\u{8}\u{9}");
     if (bytes.length != 3) {
         return 1;
     }
@@ -12,10 +22,10 @@ fn main(): i32 {
     bytes.free();
 
     var tokens = List<Token>.new();
-    tokens.add(Token(4, 10, 12));
-    tokens.add(Token(5, 12, 14));
-    tokens.add(Token(6, 14, 16));
-    if (tokens.data[2].kind != 6) {
+    tokens.add(Token(TokenKind.CHAR_LITERAL, 10, 12));
+    tokens.add(Token(TokenKind.STRING_LITERAL, 12, 14));
+    tokens.add(Token(TokenKind.VAL, 14, 16));
+    if (tokens.data[2].kind != TokenKind.VAL) {
         return 3;
     }
     tokens.free();
@@ -52,14 +62,23 @@ fn main(): i32 {
 
     {
         var builder = StringBuilder.new();
+        val raw = k_boot_alloc(3) as u8*;
+        raw[0] = 1;
+        raw[1] = 2;
+        raw[2] = 3;
+        builder.appendBytes(slice(raw, 0));
+        builder.appendBytes(slice(raw, 3));
+        if (builder.length != 3) return 20;
+        if (builder.data[2] != 3) return 21;
+        k_boot_free(raw as unit*);
         builder.append("A ");
         builder.append("😀");
-        var built = builder.toString();
-        val view = (&built) as StringLayout*;
-        if ((*view).length != 6) {
+        var built = builder.to_str();
+        val view = (&built) as StrLayout*;
+        if ((*view).length != 9) {
             return 9;
         }
-        if ((*view).data[5] != 128) {
+        if ((*view).data[8] != 128) {
             return 10;
         }
     }

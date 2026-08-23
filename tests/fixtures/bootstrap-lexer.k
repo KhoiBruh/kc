@@ -3,7 +3,7 @@ struct Pair(left: i32, right: u32) {}
 extern fn write(val data: u8*, val length: u64): bool;
 
 fn main(): i32 {
-    val message: string = "ok";
+    val message: str = "ok";
     val ratio: f32 = 1.25e2;
     val wide: f64 = 2.5e-3;
     var value = 40;

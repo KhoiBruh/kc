@@ -1,19 +1,29 @@
 module bootstrap.compiler;
 
-import bootstrap.*;
+import bootstrap.source.Source;
+import bootstrap.token.Token;
+import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
+import bootstrap.lexer.lex;
+import bootstrap.ast.AstNode;
+import bootstrap.ast.AstKind;
+import bootstrap.parser.mod.parse;
+import bootstrap.types.TypeValue;
+import bootstrap.types.TypeKind;
+import bootstrap.types.typeKindFromValue;
+import bootstrap.diagnostic.SemanticResult;
+import bootstrap.semantic.mod.analyze;
+import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.loader.LoadResult;
 import bootstrap.loader.SourceMapSegment;
 
 extern fn k_boot_write_file(path: u8*, pathLength: u64, data: u8*, length: u64): bool;
 extern fn k_boot_run(command: u8*, commandLength: u64): i32;
 
-fn appendRaw(var buffer: StringBuilder, data: u8*, length: u64) {
-    buffer.appendBytes(data, length);
-}
-
-fn appendQuoted(var buffer: StringBuilder, data: u8*, length: u64) {
+fn appendQuoted(var buffer: StringBuilder, val bytes: []u8) {
     buffer.append("\"");
-    appendRaw(buffer, data, length);
+    buffer.appendBytes(bytes);
     buffer.append("\"");
 }
 
@@ -39,14 +49,14 @@ fn compilerFailure(kind: u32) {
         2 -> message.append("launch opt");
         else -> message.append("launch clang");
     }
-    message.add(10);
+    message.append("\n");
     k_boot_stderr(message.data, message.length);
 }
 
 fn compileToLl(
     sourceData: u8*,
     sourceLength: u64,
-    val sourceMap: List<SourceMapSegment>,
+    val sources: List<SourceMapSegment>,
     outputPath: u8*,
     outputPathLength: u64,
     optPath: u8*,
@@ -57,7 +67,7 @@ fn compileToLl(
     defer lexed.tokens.free();
     if (!lexed.ok) {
         printDiagnostic(
-            source, sourceMap, 99 + lexed.errorKind,
+            source, sources, 99 + lexed.errorKind,
             lexed.errorStart, lexed.errorStart + 1
         );
         return 2;
@@ -67,7 +77,7 @@ fn compileToLl(
     defer parsed.nodes.free();
     if (!parsed.ok) {
         printDiagnostic(
-            source, sourceMap, 1000 + parsed.expectedKind,
+            source, sources, 1000 + parsed.expectedKind,
             parsed.errorStart, parsed.errorStart + 1
 		);
         return 2;
@@ -76,7 +86,7 @@ fn compileToLl(
     var checked = analyze(source, parsed.nodes);
     if (!checked.ok) {
         printDiagnostic(
-            source, sourceMap, checked.category,
+            source, sources, checked.category,
             checked.start, checked.end
         );
         return 2;
@@ -88,7 +98,7 @@ fn compileToLl(
 
     var temporaryPath = StringBuilder.new();
     defer temporaryPath.free();
-    appendRaw(temporaryPath, outputPath, outputPathLength);
+    temporaryPath.appendBytes(slice(outputPath, outputPathLength));
     temporaryPath.append(".tmp.ll");
     val written = k_boot_write_file(
         temporaryPath.data, temporaryPath.length, output.data, output.length);
@@ -99,9 +109,10 @@ fn compileToLl(
     var verifyCommand = StringBuilder.new();
     defer verifyCommand.free();
 
-    appendQuoted(verifyCommand, optPath, optPathLength);
+    appendQuoted(verifyCommand, slice(optPath, optPathLength));
     appendVerifyFlags(verifyCommand);
-    appendQuoted(verifyCommand, temporaryPath.data, temporaryPath.length);
+    appendQuoted(
+        verifyCommand, slice(temporaryPath.data, temporaryPath.length));
     val verified = k_boot_run(verifyCommand.data, verifyCommand.length);
     if (verified != 0) {
         if (verified < 0) {
@@ -126,15 +137,15 @@ fn linkLl(
 ): i32 {
     var command = StringBuilder.new();
     defer command.free();
-    appendQuoted(command, clangPath, clangPathLength);
+    appendQuoted(command, slice(clangPath, clangPathLength));
     command.append(" ");
-    appendQuoted(command, llPath, llPathLength);
+    appendQuoted(command, slice(llPath, llPathLength));
     command.append(" ");
-    appendQuoted(command, stdRuntime, stdRuntimeLength);
+    appendQuoted(command, slice(stdRuntime, stdRuntimeLength));
     command.append(" ");
-    appendQuoted(command, bootstrapRuntime, bootstrapRuntimeLength);
+    appendQuoted(command, slice(bootstrapRuntime, bootstrapRuntimeLength));
     appendOutputFlag(command);
-    appendQuoted(command, executablePath, executablePathLength);
+    appendQuoted(command, slice(executablePath, executablePathLength));
     val result = k_boot_run(command.data, command.length);
     if (result == 0) return 0;
     if (result < 0) { 
@@ -143,23 +154,6 @@ fn linkLl(
     }
     return 2;
 }
-
-fn findLine(source: Source, sourceStart: u64, offset: u64): u64 {
-    var line: u64 = 1;
-    for (i in sourceStart..<offset) if (source.data[i] == 10) line++;
-    return line;
-}
-
-fn findColumn(source: Source, sourceStart: u64, offset: u64): u64 {
-    var col: u64 = 1;
-    for (index in offset>..sourceStart) {
-        if (source.data[index] == 10) return col;
-        col++;
-    }
-    return col;
-}
-
-fn stderrWrite(data: u8*, length: u64) => k_boot_stderr(data, length);
 
 fn stderrNumber(value: u64): StringBuilder {
     var buf = StringBuilder.new();
@@ -186,208 +180,73 @@ fn stderrNumber(value: u64): StringBuilder {
 
 fn appendErrorMessage(var buffer: StringBuilder, category: u32) {
     if (category >= 1000) {
-        buffer.add(101); buffer.add(120);
-        buffer.add(112); buffer.add(101);
-        buffer.add(99); buffer.add(116);
-        buffer.add(101); buffer.add(100);
-        buffer.add(32); buffer.add(39);
+        buffer.append("expected '");
         val kind = category - 1000;
         when (kind) {
-            1 -> {
-                buffer.add(105); buffer.add(110);
-                buffer.add(100); buffer.add(101);
-                buffer.add(110); buffer.add(116);
-                buffer.add(105); buffer.add(102);
-                buffer.add(105); buffer.add(101);
-                buffer.add(114);
-            }
-            50 -> buffer.add(40);
-            51 -> buffer.add(41);
-            52 -> buffer.add(123);
-            53 -> buffer.add(125);
-            54 -> buffer.add(91);
-            55 -> buffer.add(93);
-            56 -> buffer.add(44);
-            57 -> buffer.add(58);
-            58 -> buffer.add(59);
-            59 -> buffer.add(46);
-            67 -> buffer.add(61);
-            else -> {
-                buffer.add(116); buffer.add(111);
-                buffer.add(107); buffer.add(101);
-                buffer.add(110);
-            }
+            1 -> buffer.append("identifier");
+            50 -> buffer.append("(");
+            51 -> buffer.append(")");
+            52 -> buffer.append("{");
+            53 -> buffer.append("}");
+            54 -> buffer.append("[");
+            55 -> buffer.append("]");
+            56 -> buffer.append(",");
+            57 -> buffer.append(":");
+            58 -> buffer.append(";");
+            59 -> buffer.append(".");
+            67 -> buffer.append("=");
+            else -> buffer.append("token");
         }
-        buffer.add(39);
+        buffer.append("'");
     } else {
         when (category) {
-            100 -> {
-                buffer.add(117); buffer.add(110);
-                buffer.add(116); buffer.add(101);
-                buffer.add(114); buffer.add(109);
-                buffer.add(105); buffer.add(110);
-                buffer.add(97); buffer.add(116);
-                buffer.add(101); buffer.add(100);
-                buffer.add(32); buffer.add(115);
-                buffer.add(116); buffer.add(114);
-                buffer.add(105); buffer.add(110);
-                buffer.add(103);
-            }
-            101 -> {
-                buffer.add(105); buffer.add(110);
-                buffer.add(118); buffer.add(97);
-                buffer.add(108); buffer.add(105);
-                buffer.add(100); buffer.add(32);
-                buffer.add(99); buffer.add(104);
-                buffer.add(97); buffer.add(114);
-                buffer.add(97); buffer.add(99);
-                buffer.add(116); buffer.add(101);
-                buffer.add(114);
-            }
-            1 -> {
-                buffer.add(100); buffer.add(117);
-                buffer.add(112); buffer.add(108);
-                buffer.add(105); buffer.add(99);
-                buffer.add(97); buffer.add(116);
-                buffer.add(101); buffer.add(32);
-                buffer.add(100); buffer.add(101);
-                buffer.add(99); buffer.add(108);
-                buffer.add(97); buffer.add(114);
-                buffer.add(97); buffer.add(116);
-                buffer.add(105); buffer.add(111);
-                buffer.add(110);
-            }
-            2 -> {
-                buffer.add(117); buffer.add(110);
-                buffer.add(107); buffer.add(110);
-                buffer.add(111); buffer.add(119);
-                buffer.add(110); buffer.add(32);
-                buffer.add(105); buffer.add(100);
-                buffer.add(101); buffer.add(110);
-                buffer.add(116); buffer.add(105);
-                buffer.add(102); buffer.add(105);
-                buffer.add(101); buffer.add(114);
-            }
-            3 -> {
-                buffer.add(97); buffer.add(114);
-                buffer.add(103); buffer.add(117);
-                buffer.add(109); buffer.add(101);
-                buffer.add(110); buffer.add(116);
-                buffer.add(32); buffer.add(99);
-                buffer.add(111); buffer.add(117);
-                buffer.add(110); buffer.add(116);
-                buffer.add(32); buffer.add(109);
-                buffer.add(105); buffer.add(115);
-                buffer.add(109); buffer.add(97);
-                buffer.add(116); buffer.add(99);
-                buffer.add(104);
-            }
-            4 -> {
-                buffer.add(116); buffer.add(121);
-                buffer.add(112); buffer.add(101);
-                buffer.add(32); buffer.add(109);
-                buffer.add(105); buffer.add(115);
-                buffer.add(109); buffer.add(97);
-                buffer.add(116); buffer.add(99);
-                buffer.add(104);
-            }
-            5 -> {
-                buffer.add(114); buffer.add(101);
-                buffer.add(116); buffer.add(117);
-                buffer.add(114); buffer.add(110);
-                buffer.add(32); buffer.add(116);
-                buffer.add(121); buffer.add(112);
-                buffer.add(101); buffer.add(32);
-                buffer.add(109); buffer.add(105);
-                buffer.add(115); buffer.add(109);
-                buffer.add(97); buffer.add(116);
-                buffer.add(99);
-            }
-            6 -> {
-                buffer.add(99); buffer.add(111);
-                buffer.add(110); buffer.add(100);
-                buffer.add(105); buffer.add(116);
-                buffer.add(105); buffer.add(111);
-                buffer.add(110); buffer.add(32);
-                buffer.add(109); buffer.add(117);
-                buffer.add(115); buffer.add(116);
-                buffer.add(32); buffer.add(98);
-                buffer.add(101); buffer.add(32);
-                buffer.add(98); buffer.add(111);
-                buffer.add(111); buffer.add(108);
-            }
-            7 -> {
-                buffer.add(99); buffer.add(97);
-                buffer.add(110); buffer.add(110);
-                buffer.add(111); buffer.add(116);
-                buffer.add(32); buffer.add(97);
-                buffer.add(115); buffer.add(115);
-                buffer.add(105); buffer.add(103);
-                buffer.add(110); buffer.add(32);
-                buffer.add(116); buffer.add(111);
-                buffer.add(32); buffer.add(105);
-                buffer.add(109); buffer.add(109);
-                buffer.add(117); buffer.add(116);
-                buffer.add(97); buffer.add(98);
-                buffer.add(108); buffer.add(101);
-            }
-            8 -> {
-                buffer.add(105); buffer.add(110);
-                buffer.add(118); buffer.add(97);
-                buffer.add(108); buffer.add(105);
-                buffer.add(100); buffer.add(32);
-                buffer.add(109); buffer.add(101);
-                buffer.add(109); buffer.add(98);
-                buffer.add(101); buffer.add(114);
-                buffer.add(32); buffer.add(97);
-                buffer.add(99); buffer.add(99);
-                buffer.add(101); buffer.add(115);
-                buffer.add(115);
-            }
-            else -> {
-                buffer.add(101); buffer.add(114);
-                buffer.add(114); buffer.add(111);
-                buffer.add(114);
-            }
+            100 -> buffer.append("unterminated string");
+            101 -> buffer.append("invalid character");
+            1 -> buffer.append("duplicate declaration");
+            2 -> buffer.append("unknown identifier");
+            3 -> buffer.append("argument count mismatch");
+            4 -> buffer.append("type mismatch");
+            5 -> buffer.append("return type mismatch");
+            6 -> buffer.append("condition must be bool");
+            7 -> buffer.append("cannot assign to immutable");
+            8 -> buffer.append("invalid member access");
+            else -> buffer.append("error");
         }
     }
 }
 
 fn printDiagnostic(
-    source: Source, val sourceMap: List<SourceMapSegment>,
+    source: Source, val sources: List<SourceMapSegment>,
     category: u32, start: u64, end: u64
 ) {
     var buf = StringBuilder.new();
     defer buf.free();
+
     var sourceStart: u64 = 0;
-    for (i in 0..<sourceMap.length) {
-        val segment = sourceMap.data[i];
+    for (i in 0..<sources.length) {
+        val segment = sources.data[i];
         val total = segment.sourceStart + segment.sourceLength;
         if (start in segment.sourceStart..total) {
-			appendRaw(buf, segment.path, segment.pathLength);
-			buf.add(58);
+			buf.appendBytes(slice(segment.path, segment.pathLength));
+			buf.append(":");
 			sourceStart = segment.sourceStart;
             break;
         }
     }
     
-    val lineNum = stderrNumber(findLine(source, sourceStart, start));
+    val lineNum = stderrNumber(source.line(sourceStart, start));
     defer lineNum.free();
-    appendRaw(buf, lineNum.data, lineNum.length);
-    buf.add(58);
-    val colNum = stderrNumber(findColumn(source, sourceStart, start));
+
+    buf.appendBytes(slice(lineNum.data, lineNum.length));
+    buf.append(":");
+
+    val colNum = stderrNumber(source.column(sourceStart, start));
     defer colNum.free();
-    appendRaw(buf, colNum.data, colNum.length);
-    buf.add(58);
-    buf.add(32);
-    buf.add(101);
-    buf.add(114);
-    buf.add(114);
-    buf.add(111);
-    buf.add(114);
-    buf.add(58);
-    buf.add(32);
+
+    buf.appendBytes(slice(colNum.data, colNum.length));
+    buf.append(": ");
+    buf.append("error: ");
     appendErrorMessage(buf, category);
-    buf.add(10);
+    buf.append("\n");
     k_boot_stderr(buf.data, buf.length);
 }

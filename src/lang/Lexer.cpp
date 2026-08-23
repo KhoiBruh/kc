@@ -23,6 +23,7 @@ constexpr std::array keywords{
     Spelling{"in", TokenKind::KwIn}, Spelling{"while", TokenKind::KwWhile},
     Spelling{"return", TokenKind::KwReturn}, Spelling{"defer", TokenKind::KwDefer},
     Spelling{"fault", TokenKind::KwFault}, Spelling{"module", TokenKind::KwModule},
+
     Spelling{"import", TokenKind::KwImport}, Spelling{"enum", TokenKind::KwEnum},
     Spelling{"catch", TokenKind::KwCatch}, Spelling{"as", TokenKind::KwAs},
     Spelling{"sizeof", TokenKind::KwSizeof},
@@ -36,7 +37,8 @@ constexpr std::array keywords{
     Spelling{"u128", TokenKind::KwU128}, Spelling{"f8", TokenKind::KwF8},
     Spelling{"f16", TokenKind::KwF16}, Spelling{"f32", TokenKind::KwF32},
     Spelling{"f64", TokenKind::KwF64}, Spelling{"char", TokenKind::KwChar},
-    Spelling{"string", TokenKind::KwString}, Spelling{"unit", TokenKind::KwUnit},
+    Spelling{"str", TokenKind::KwStr}, Spelling{"string", TokenKind::KwStr},
+    Spelling{"unit", TokenKind::KwUnit},
     Spelling{"break", TokenKind::KwBreak},
     Spelling{"continue", TokenKind::KwContinue},
 };

@@ -27,7 +27,9 @@ std::string generateIr(std::string text, std::vector<k::Diagnostic>& diagnostics
     module.program = std::move(programPtr);
     module.semantic = std::move(semanticPtr);
     modules.push_back(std::move(module));
-    auto generated = k::LlvmCodegen{std::move(modules), context}.generate();
+    const auto reachable = k::computeReachable(modules);
+    auto generated = k::LlvmCodegen{
+        std::move(modules), context, reachable}.generate();
     diagnostics = std::move(generated.diagnostics);
     std::string ir;
     llvm::raw_string_ostream output{ir};
@@ -83,6 +85,34 @@ TEST(codegen_lowers_print_builtins_to_runtime_calls) {
     EXPECT_TRUE(diagnostics.empty());
     EXPECT_TRUE(ir.find("@k_std_print_bytes") != std::string::npos);
     EXPECT_TRUE(ir.find("@k_std_print_i32") != std::string::npos);
+}
+
+TEST(codegen_constructs_borrowed_slice_without_allocation) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn first(data: u8*, length: u64): u8 {"
+        "val bytes = slice(data, length);"
+        "return bytes[0];"
+        "}",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("insertvalue { ptr, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_std_alloc") == std::string::npos);
+    EXPECT_TRUE(ir.find("call ptr @k_boot_alloc") == std::string::npos);
+    EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
+}
+
+TEST(codegen_calls_user_function_named_slice) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn slice(data: u8*, length: u64): i32 { return 42; }"
+        "fn call(data: u8*, length: u64): i32 { return slice(data, length); }",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("call i32 @slice(") != std::string::npos);
+    EXPECT_TRUE(ir.find("insertvalue { ptr, i64 }") == std::string::npos);
 }
 
 TEST(codegen_lowers_direct_user_function_calls) {
@@ -203,7 +233,7 @@ TEST(codegen_lowers_var_parameters_as_mutable_borrows) {
 TEST(codegen_lowers_forward_recursive_nested_and_unit_calls) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
-        "fn main(): i32 { notify(); return twice(add(20, 1)); }"
+        "fn main(): i32 { notify(); return recurse(twice(add(20, 1))); }"
         "fn add(val a: i32, val b: i32): i32 { return a + b; }"
         "fn twice(val value: i32): i32 { return value + value; }"
         "fn recurse(val value: i32): i32 { return recurse(value); }"
@@ -274,7 +304,10 @@ TEST(codegen_lowers_comparison_kinds_and_terminating_if) {
         "fn choose(val value: i32): i32 {"
         "if (value == 0) { return 1; } else { return 2; }"
         "}"
-        "fn main(): i32 { return choose(0); }",
+        "fn main(): i32 {"
+        "val ul = unsignedLess(1, 2); val fl = floatLess(0.5, 1.0);"
+        "return choose(0);"
+        "}",
         diagnostics);
 
     EXPECT_TRUE(diagnostics.empty());
@@ -652,6 +685,27 @@ TEST(codegen_lowers_when_with_first_match_control_flow) {
     EXPECT_TRUE(ir.find("icmp eq i32") != std::string::npos);
 }
 
+TEST(codegen_walks_subjectless_when_statement_in_reachable_function) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn unused(): i32 { return 1; }"
+        "fn main(): i32 {"
+        "val code = 7;"
+        "when {"
+        "code == 1 -> return 10;"
+        "code == 7 -> return 20;"
+        "else -> return 12;"
+        "}"
+        "return 0;"
+        "}",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("when.branch") != std::string::npos);
+    EXPECT_TRUE(ir.find("when.next") != std::string::npos);
+    EXPECT_TRUE(ir.find("@main") != std::string::npos);
+    EXPECT_TRUE(ir.find("@unused") == std::string::npos);
+}
+
 TEST(codegen_lowers_struct_construction_and_field_access) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
@@ -723,6 +777,19 @@ TEST(codegen_lowers_array_to_slice_and_slice_indexing) {
     EXPECT_TRUE(ir.find("@k_boot_panic") != std::string::npos);
 }
 
+TEST(codegen_lowers_string_literal_to_read_only_byte_slice) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn first(val bytes: []u8): u8 { return bytes[0]; }"
+        "fn main(): u8 { return first(\"abc\"); }",
+        diagnostics);
+
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("c\"abc\\00\"") != std::string::npos);
+    EXPECT_TRUE(ir.find("{ ptr, i64 }") != std::string::npos);
+    EXPECT_TRUE(ir.find("i64 3") != std::string::npos);
+}
+
 TEST(codegen_lowers_when_expression_to_phi) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
@@ -779,6 +846,20 @@ TEST(codegen_lowers_enum_variants_as_u32_tags) {
     EXPECT_TRUE(ir.find("ret i32 2") != std::string::npos);
 }
 
+TEST(codegen_lowers_enum_backing_values_without_runtime_conversion) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "enum Tiny: u8 { A = 10, B }"
+        "enum Signed: i32 { Negative = -1, Zero }"
+        "fn tiny(): u8 { return Tiny.B.value; }"
+        "fn signed(): i32 { val value = Signed.Negative; return value.value; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define i8 @tiny") != std::string::npos);
+    EXPECT_TRUE(ir.find("ret i8 11") != std::string::npos);
+    EXPECT_TRUE(ir.find("store i32 -1") != std::string::npos);
+}
+
 TEST(codegen_lowers_exhaustive_enum_when_without_else) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
@@ -808,12 +889,60 @@ TEST(codegen_inlines_fixed_array_constants) {
     std::vector<k::Diagnostic> diagnostics;
     const auto ir = generateIr(
         "const A = [1, 2, 3, 4];"
-        "const B: i32[] = [5, 6, 7, 8];"
-        "const C: i32[4] = [9, 10, 11, 12];"
+        "const B: i32[] = [1, 2, 3, 4];"
+        "const C: i32[4] = [1, 2, 3, 4];"
         "fn value(): i32 { return A[0] + B[1] + C[2]; }",
         diagnostics);
     EXPECT_TRUE(diagnostics.empty());
     EXPECT_TRUE(ir.find("[4 x i32]") != std::string::npos);
+}
+
+TEST(codegen_folds_constant_expressions_at_compile_time) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "const A = 1 + 1; const B = A + 2;"
+        "fn main(): i32 { return B; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("ret i32 4") != std::string::npos);
+}
+
+TEST(codegen_omits_constants_unreachable_from_main) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "const USED = 7; const UNUSED = 99;"
+        "fn main(): i32 { return USED; }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("ret i32 7") != std::string::npos);
+    EXPECT_TRUE(ir.find("99") == std::string::npos);
+}
+
+TEST(codegen_emits_only_functions_reachable_from_main) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "fn foo(): i32 { return 1; }"
+        "fn bar(): i32 { return 2; }"
+        "fn main(): i32 { return foo(); }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("define i32 @foo") != std::string::npos);
+    EXPECT_TRUE(ir.find("define i32 @bar") == std::string::npos);
+    EXPECT_TRUE(ir.find("define i32 @main") != std::string::npos);
+}
+
+TEST(codegen_emits_transitive_struct_dependencies_of_main) {
+    std::vector<k::Diagnostic> diagnostics;
+    const auto ir = generateIr(
+        "struct Pair(left: i32, right: i32)"
+        "struct Unused(only: i32)"
+        "fn read(val pair: Pair): i32 { return pair.left; }"
+        "fn main(): i32 { return read(Pair(40, 2)); }",
+        diagnostics);
+    EXPECT_TRUE(diagnostics.empty());
+    EXPECT_TRUE(ir.find("%Pair") != std::string::npos);
+    EXPECT_TRUE(ir.find("%Unused") == std::string::npos);
+    EXPECT_TRUE(ir.find("define i32 @read") != std::string::npos);
 }
 
 TEST(codegen_lowers_expression_bodied_functions_with_inferred_returns) {

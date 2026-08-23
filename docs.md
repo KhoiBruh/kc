@@ -244,9 +244,15 @@ val inferred: i8[] = [0, 1, 2]      // Suy luận thành i8[3]
 ```text
 val values: i8[] = [0, 1, 2, 3]
 val view: []i8 = values
+val rawView: []u8 = slice(data, length)
 ```
 
 Slice không được sống lâu hơn mảng hoặc vùng dữ liệu mà nó tham chiếu.
+`slice(pointer, length)` là cầu nối low-level tường minh từ raw pointer có kiểu
+`T*` sang borrowed slice `[]T`. Thao tác này không cấp phát, sao chép hay nhận
+quyền sở hữu. Người gọi phải giữ vùng nhớ hợp lệ trong toàn bộ thời gian dùng
+slice; raw pointer không mang thông tin kích thước nên `length` do người gọi
+cung cấp quyết định giới hạn bounds check.
 
 ### Kiểu liệt kê (Enums)
 
@@ -262,10 +268,28 @@ enum Status {
 val state: Status = Status.Ready
 ```
 
+Enum may declare an integer backing type and explicit values:
+
+```text
+enum HttpStatus: u32 {
+    Ok = 200,
+    Created,
+    NotFound = 404
+}
+
+val raw: u32 = HttpStatus.Created.value
+```
+
+The supported backing types are `i32`, `i64`, `u8`, `u32`, and `u64`; omitted
+backing type means `u32`. The first implicit value is `0`, later implicit values
+increment the preceding value, and duplicate or out-of-range values are rejected.
+The read-only `.value` member exposes the backing representation. Enum/integer
+implicit conversions and `as` casts remain unsupported.
+
 * Dấu phẩy là bắt buộc giữa hai variant; trailing comma trước `}` bị từ chối.
 * Variant được tạo và truy cập qua tên enum, ví dụ `Status.Ready`.
-* Tag bắt đầu từ `0` theo thứ tự khai báo và dùng `u32` nội bộ.
-* Không hỗ trợ payload, generic enum, underlying type công khai hoặc gán tag thủ công trong v0.1.
+* Backing type mặc định là `u32`; backing type và giá trị tường minh tuân theo contract ở trên.
+* Không hỗ trợ payload hoặc generic enum trong v0.1.
 * Enum là kiểu riêng, copy ngầm và không chuyển đổi ngầm sang số nguyên.
 * Với enum `when`, `else` có thể bỏ qua chỉ khi mọi
   variant đã xuất hiện đúng một lần; nhánh trùng hoặc thiếu variant là diagnostic.
@@ -314,7 +338,9 @@ when (optional) {
 * **Suy luận kiểu (Type Inference):** Hỗ trợ suy luận kiểu khi khởi tạo rõ ràng (VD: `val a = true`, `val b = "text"`). Literal số nguyên không có ngữ cảnh mặc định là `i32`, còn literal số thực mặc định là `f64`.
 * **Quy tắc phạm vi:** KHÔNG có biến toàn cục (global variables). `const` chỉ được khai báo ở cấp module: `const MAX_SIZE: i32 = 100;`.
 * Kiểu của `const` có thể được suy luận. Literal số nguyên mặc định là `i32`, nên `const MAX_SIZE = 100;` có kiểu `i32`; dùng `const MAX_SIZE: i64 = 100;` khi cần kiểu khác.
-* Initializer của `const` là biểu thức compile-time gồm literal, toán tử/cast hợp lệ và tham chiếu tới `const` đã khai báo trước. Scalar constant được inline khi sinh IR và không có storage runtime riêng.
+* Initializer của `const` là biểu thức compile-time gồm literal, toán tử/cast hợp lệ và tham chiếu tới `const` đã khai báo trước. Không được gọi hàm (kể cả bên trong biểu thức lồng nhau hay generic) và không được tham chiếu tới `const` khai báo sau; vi phạm bị báo lỗi semantic. Biểu thức được đánh giá (fold) hoàn toàn ở compile-time theo thứ tự khai báo; vòng lặp tham chiếu, chia/lấy dư cho 0 bị báo lỗi. Scalar constant được inline khi sinh IR và không có storage runtime riêng; hằng không fold được (vd mảng, chuỗi) vẫn fallback về emit biểu thức khởi tạo như trước.
+* **Reachability:** Trình biên dịch chỉ sinh code cho các declaration reachable từ entry `main` (hàm, generic specialization, struct tham chiếu qua kiểu, const) theo đồ thị phụ thuộc BFS; diagnostic vẫn dựa trên toàn bộ chương trình. Nếu entry không có `main` non-extern, toàn bộ module được sinh (compat với codegen library-style).
+* **Wildcard import:** `import foo.*` là tính năng name-resolution cố định: đưa tên của module `foo` vào scope nhưng không bao giờ khiến module đó reachable. Chỉ declaration thực sự được tham chiếu từ entry mới được compile; wildcard import không dùng tới vẫn hợp lệ. Import resolution (`ModuleSystem`, bootstrap `loader.k`) và compilation reachability (`Reachability`) là hai phạm trù tách biệt.
 * Fixed array constant hỗ trợ cả suy luận đầy đủ (`const A = [1, 2];`), suy luận kích thước (`const B: i32[] = [1, 2];`) và kích thước tường minh (`const C: i32[2] = [1, 2];`). Mảng rỗng phải có kiểu phần tử, ví dụ `const EMPTY: i32[] = [];`.
 
 ### Ownership, Move và Borrow
@@ -869,12 +895,10 @@ và LLVM IR parity đều pass qua `kc1`–`kc4`. Debug và Release giữ cùng 
 IR hợp lệ và fixed-point `kc3.ll == kc4.ll`.
 
 **Payload-free enum self-hosting milestone: complete.** Khai báo enum,
-`Enum.Variant`, truyền/trả enum, tag `u32`, và exhaustive enum `when` có
+`Enum.Variant`, backing value, `.value`, truyền/trả enum, và exhaustive enum `when` có
 diagnostic span/category parity đều được compiler K tự biên dịch qua `kc1`–`kc4`.
 
-The bootstrap subset lives in `src/bootstrap/`; `manifest.txt` is an inventory
-and the bootstrap-manifest test requires every listed K source to be reachable
-from `main.k` through imports. It currently supports the
+The bootstrap subset lives in `src/bootstrap/`; it supports the
 dependency-first module loader, lexer, flat AST, Pratt parser, two-pass semantic analysis,
 textual LLVM IR, LLVM verification, and Windows x64 linking.
 

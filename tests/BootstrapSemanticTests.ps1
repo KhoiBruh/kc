@@ -22,8 +22,13 @@ $ErrorActionPreference = "Stop"
 
 $combined = "$Output.combined.k"
 $modules = @(
-    "source.k", "token.k", "list.k", "containers.k", "lexer.k", "ast.k", "parser.k",
-    "types.k", "diagnostic.k", "semantic.k"
+    "source.k", "token.k", "list.k", "containers.k", "lexer.k", "ast.k",
+    "parser/mod.k", "parser/core.k", "parser/types.k", "parser/expressions.k",
+    "parser/statements.k", "parser/declarations.k",
+    "types.k", "diagnostic.k",
+    "semantic/mod.k", "semantic/context.k", "semantic/types.k", "semantic/patterns.k",
+    "semantic/expressions.k", "semantic/statements.k", "semantic/ownership.k",
+    "semantic/declarations.k"
 )
 $source = ($modules | ForEach-Object {
     [System.IO.File]::ReadAllText((Join-Path $SourceDirectory $_))
@@ -52,6 +57,18 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "K semantic analyzer rejected the valid multiple generic fixture"
 }
 
+$literalSliceValid = Join-Path $FixtureDirectory "../bootstrap/literal_slice_contexts.k"
+$null = & $Output $literalSliceValid
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "K semantic analyzer rejected literal slice contexts"
+}
+
+$rawPointerSliceValid = Join-Path $FixtureDirectory "../bootstrap/slice_from_pointer.k"
+$null = & $Output $rawPointerSliceValid
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "K semantic analyzer rejected raw-pointer slice construction"
+}
+
 foreach ($validOwnershipCase in @(
     "bootstrap-semantic-move-reinitialize-valid.k",
     "bootstrap-semantic-move-borrow-valid.k"
@@ -67,6 +84,7 @@ $cases = @(
     @("bootstrap-semantic-unknown.k", 2),
     @("bootstrap-semantic-arity.k", 3),
     @("bootstrap-semantic-type.k", 4),
+    @("bootstrap-semantic-literal-slice-owned.k", 4),
     @("bootstrap-semantic-return.k", 5),
     @("bootstrap-semantic-condition.k", 6),
     @("bootstrap-semantic-logical-type.k", 4),
@@ -81,11 +99,17 @@ $cases = @(
     @("bootstrap-semantic-if-expression-condition.k", 6),
     @("bootstrap-semantic-if-expression-type.k", 4),
     @("bootstrap-semantic-enum-duplicate.k", 1),
+    @("bootstrap-semantic-enum-name-duplicate.k", 1),
+    @("bootstrap-semantic-struct-name-duplicate.k", 1),
+    @("bootstrap-semantic-struct-enum-name-before.k", 1),
+    @("bootstrap-semantic-struct-enum-name-after.k", 1),
     @("bootstrap-semantic-enum-unknown.k", 2),
     @("bootstrap-semantic-enum-when-missing.k", 4),
     @("bootstrap-semantic-enum-when-duplicate.k", 1),
     @("bootstrap-semantic-immutable.k", 7),
     @("bootstrap-semantic-access.k", 8),
+    @("bootstrap-semantic-slice-first.k", 4),
+    @("bootstrap-semantic-slice-arity.k", 3),
     @("bootstrap-semantic-cast-range.k", 4),
     @("bootstrap-semantic-cast-negative.k", 4),
     @("bootstrap-semantic-cast-overflow.k", 4),

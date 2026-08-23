@@ -660,6 +660,37 @@ TEST(semantic_accepts_print_string_and_i32_builtins) {
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
 }
 
+TEST(semantic_constructs_borrowed_slices_from_typed_raw_pointers) {
+    SemanticFixture valid{
+        "fn view(data: u8*, length: u64): []u8 {"
+        "val inferred = slice(data, length);"
+        "val explicit: []u8 = slice(data, 0);"
+        "return inferred;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalidFirst{
+        "fn bad(): i32 { val bytes = slice(123, 4); return 0; }"};
+    EXPECT_EQ(invalidFirst.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture invalidArity{
+        "fn bad(data: u8*): i32 { val bytes = slice(data); return 0; }"};
+    EXPECT_EQ(invalidArity.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture shadowed{
+        "fn bad(slice: u8*, length: u64): i32 {"
+        "val bytes = slice(slice, length); return 0; }"};
+    EXPECT_EQ(shadowed.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_prefers_user_function_named_slice_over_intrinsic) {
+    SemanticFixture fixture{
+        "fn slice(value: i32): i32 { return value + 1; }"
+        "fn main(): i32 { return slice(41); }"};
+
+    EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
 TEST(semantic_checks_control_flow_conditions_and_scopes) {
     SemanticFixture valid{
         "fn main(): i32 {"
@@ -689,6 +720,73 @@ TEST(semantic_resolves_enum_variants_and_rejects_unknown_variants) {
         "enum Status { Ready, Ready }"
         "fn current(): Status { return Status.Missing; }"};
     EXPECT_EQ(invalid.semantic.diagnostics.size(), 2u);
+}
+
+TEST(semantic_types_enum_backing_values_and_value_member) {
+    SemanticFixture valid{
+        "enum Default { A, B, C }"
+        "enum Explicit: u32 { A = 10, B, C = 20, D }"
+        "enum Tiny: u8 { A = 254, B }"
+        "enum Signed: i32 { Negative = -1, Zero = 0 }"
+        "enum NamedValue { value }"
+        "fn raw(val value: Explicit): u32 { return value.value; }"
+        "fn direct(): i32 { return Signed.Negative.value; }"
+        "fn named(): u32 { return NamedValue.value.value; }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture overflow{
+        "enum E: u8 { Bad = 256 } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(overflow.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture autoOverflow{
+        "enum E: u8 { Last = 255, Bad } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(autoOverflow.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture duplicate{
+        "enum E: u32 { A = 10, B = 10 } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(duplicate.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture invalidBacking{
+        "enum E: bool { A } fn main(): i32 { return 0; }"};
+    EXPECT_EQ(invalidBacking.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_keeps_enum_integer_conversions_explicitly_unavailable) {
+    SemanticFixture enumToInteger{
+        "enum E { A } fn main(): i32 { val x: u32 = E.A; return 0; }"};
+    EXPECT_EQ(enumToInteger.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture enumCast{
+        "enum E { A } fn main(): i32 { return E.A as i32; }"};
+    EXPECT_EQ(enumCast.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture integerToEnum{
+        "enum E { A } fn take(val value: E) {} fn main(): i32 { take(0); return 0; }"};
+    EXPECT_EQ(integerToEnum.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_resolves_enum_types_independent_of_declaration_order) {
+    SemanticFixture before{
+        "enum TestKind { Alpha, Beta }"
+        "struct Holder(kind: TestKind)"
+        "fn identity(kind: TestKind): TestKind { return kind; }"};
+    EXPECT_TRUE(before.semantic.diagnostics.empty());
+
+    SemanticFixture after{
+        "struct Holder(kind: TestKind)"
+        "enum TestKind { Alpha, Beta }"
+        "fn identity(kind: TestKind): TestKind { return kind; }"};
+    EXPECT_TRUE(after.semantic.diagnostics.empty());
+
+    SemanticFixture structThenEnum{
+        "struct Thing(value: i32)"
+        "enum Thing { A }"};
+    EXPECT_EQ(structThenEnum.semantic.diagnostics.size(), 1u);
+
+    SemanticFixture enumThenStruct{
+        "enum Thing { A }"
+        "struct Thing(value: i32)"};
+    EXPECT_EQ(enumThenStruct.semantic.diagnostics.size(), 1u);
 }
 
 TEST(semantic_types_when_expressions_and_requires_else) {
@@ -774,6 +872,58 @@ TEST(semantic_accepts_prior_constants_and_rejects_runtime_initializers) {
     EXPECT_EQ(runtime.semantic.diagnostics.size(), 1u);
     EXPECT_EQ(runtime.semantic.diagnostics[0].message,
               "constant initializer must be a compile-time expression");
+}
+
+TEST(semantic_rejects_const_initializers_with_indirect_calls) {
+    SemanticFixture nested{
+        "fn value(): i32 { return 1; }"
+        "fn wrap(): i32 { return value(); }"
+        "const BAD = 1 + wrap();"
+        "fn main(): i32 { return BAD; }"};
+    EXPECT_EQ(nested.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(nested.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+
+    SemanticFixture genericCall{
+        "fn make<T>(val value: T): T { return value; }"
+        "const BAD = make(3);"
+        "fn main(): i32 { return BAD; }"};
+    EXPECT_EQ(genericCall.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(genericCall.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+
+    SemanticFixture parenthesized{
+        "fn value(): i32 { return 1; }"
+        "const BAD: i32 = (2 * value());"
+        "fn main(): i32 { return BAD; }"};
+    EXPECT_EQ(parenthesized.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(parenthesized.semantic.diagnostics[0].message,
+              "constant initializer must be a compile-time expression");
+}
+
+TEST(semantic_rejects_constant_cycles_without_recursion) {
+    SemanticFixture cycle{
+        "const A = B + 1; const B = A + 1;"
+        "fn main(): i32 { return 0; }"};
+    EXPECT_EQ(cycle.semantic.diagnostics.size(), 4u);
+    EXPECT_EQ(cycle.semantic.diagnostics[0].message,
+              "unknown identifier 'B'");
+}
+
+TEST(semantic_rejects_constant_division_by_zero) {
+    SemanticFixture divide{
+        "const A = 10 / 0;"
+        "fn main(): i32 { return A; }"};
+    EXPECT_EQ(divide.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(divide.semantic.diagnostics[0].message,
+              "division by zero in constant expression");
+
+    SemanticFixture modulo{
+        "const A = 10 % 0;"
+        "fn main(): i32 { return A; }"};
+    EXPECT_EQ(modulo.semantic.diagnostics.size(), 1u);
+    EXPECT_EQ(modulo.semantic.diagnostics[0].message,
+              "division by zero in constant expression");
 }
 
 TEST(semantic_infers_constant_array_sizes) {
@@ -1106,6 +1256,36 @@ TEST(semantic_move_only_allows_overwrite_for_automatic_drop) {
         "a = Resource(2);"
         "}"};
     EXPECT_TRUE(fixture.semantic.diagnostics.empty());
+}
+
+TEST(semantic_contextually_converts_string_literals_to_byte_slices) {
+    SemanticFixture valid{
+        "fn first(val bytes: []u8): u8 { return bytes[0]; }"
+        "fn main(): u8 { return first(\"abc\"); }"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "fn first(val bytes: []u8): u8 { return bytes[0]; }"
+        "fn main(): u8 { val text = \"abc\"; return first(text); }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
+}
+
+TEST(semantic_contextually_converts_string_literals_in_all_expected_type_paths) {
+    SemanticFixture valid{
+        "struct View(bytes: []u8)"
+        "const PREFIX: []u8 = \"p\";"
+        "fn main(): i32 {"
+        "val view = View(\"abc\");"
+        "var bytes: []u8 = \"a\";"
+        "bytes = \"bc\";"
+        "return (view.bytes[1] + bytes[0] + PREFIX[0]) as i32;"
+        "}"};
+    EXPECT_TRUE(valid.semantic.diagnostics.empty());
+
+    SemanticFixture invalid{
+        "struct View(bytes: []u8)"
+        "fn main() { val text = \"abc\"; val view = View(text); }"};
+    EXPECT_EQ(invalid.semantic.diagnostics.size(), 1u);
 }
 
 TEST(semantic_exposes_borrowed_string_bytes) {

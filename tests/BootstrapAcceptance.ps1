@@ -78,13 +78,16 @@ if ((Get-FileHash $kc3Ll -Algorithm SHA256).Hash -cne
 $validFixtures = @(
     "hello.k", "functions.k", "control_flow.k", "aggregates.k",
     "generics.k", "generics_multiple.k", "generic_nullable.k",
-    "generic_structs.k", "generic_struct_methods.k", "generic_list.k", "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
+    "generic_structs.k", "generic_struct_methods.k", "generic_list.k",     "integer_casts.k", "implicit_integer_widening.k", "compound_assignments.k", "postfix_mutation.k", "range_membership.k", "integer_cast_panic.k",
+    "cast_widening_checks.k",
     "float_casts.k", "float_cast_panic.k", "float_cast_nan_panic.k",
     "float_cast_infinity_panic.k", "float_cast_boundaries.k",
     "short_circuit.k", "loop_control.k", "for_control.k", "descending_for.k",
-    "collection_for.k", "when_control.k", "enum_control.k", "string_literals.k",
+    "collection_for.k", "when_control.k", "enum_control.k", "enum_backing_values.k", "enum_type_before.k",
+    "enum_type_after.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
-    "ownership_control_flow.k"
+    "ownership_control_flow.k", "literal_slice_contexts.k", "slice_from_pointer.k",
+    "slice_function_shadow.k"
 )
 Push-Location $moduleRoot
 try {
@@ -123,8 +126,26 @@ foreach ($fixtureName in $validFixtures) {
         $stage1Output -cne $stage4Output) {
         Write-Error "bootstrap stage behavior differs for $fixtureName"
     }
+    if ($fixtureName -eq "cast_widening_checks.k" -and $stage1Exit -ne 42) {
+        Write-Error "checked widening cast fixture did not return 42"
+    }
     if ($fixtureName -eq "integer_casts.k" -and $stage1Exit -ne 42) {
         Write-Error "checked integer cast fixture did not return 42"
+    }
+    if ($fixtureName -eq "slice_from_pointer.k" -and $stage1Exit -ne 42) {
+        Write-Error "borrowed raw-pointer slice fixture did not return 42"
+    }
+    if ($fixtureName -eq "slice_function_shadow.k" -and $stage1Exit -ne 42) {
+        Write-Error "user function named slice fixture did not return 42"
+    }
+    if ($fixtureName -eq "slice_function_shadow.k") {
+        foreach ($ll in @($stage1Ll, $stage2Ll, $stage3Ll, $stage4Ll)) {
+            $text = Get-Content -Raw $ll
+            if ($text -cnotmatch "call i32 @slice\(i32 41\)" -or
+                $text -cmatch "insertvalue \{ ptr, i64 \}") {
+                Write-Error "user function named slice did not lower as an ordinary call in $ll"
+            }
+        }
     }
     if ($fixtureName -eq "implicit_integer_widening.k" -and $stage1Exit -ne 42) {
         Write-Error "implicit integer widening fixture did not return 42"
@@ -175,6 +196,13 @@ foreach ($fixtureName in $validFixtures) {
     }
     if ($fixtureName -eq "enum_control.k" -and $stage1Exit -ne 42) {
         Write-Error "enum control fixture did not return 42"
+    }
+    if ($fixtureName -eq "enum_backing_values.k" -and $stage1Exit -ne 42) {
+        Write-Error "enum backing-value fixture did not return 42"
+    }
+    if (($fixtureName -eq "enum_type_before.k" -or
+         $fixtureName -eq "enum_type_after.k") -and $stage1Exit -ne 42) {
+        Write-Error "enum type declaration-order fixture did not return 42"
     }
     if ($fixtureName -eq "integer_cast_panic.k" -and $stage1Exit -ne 2) {
         Write-Error "out-of-range integer cast did not panic with exit code 2"
@@ -305,7 +333,7 @@ foreach ($moduleStage in $moduleStages) {
         $missingRuntime, $BootstrapRuntime, $exe) 2 "linker diagnostic"
 }
 
-foreach ($moduleFixture in @("diamond", "wildcard", "cycle")) {
+foreach ($moduleFixture in @("diamond", "wildcard", "cycle", "flat_visibility")) {
     $moduleEntry = Join-Path $moduleRoot "$moduleFixture/main.k"
     $moduleResults = @()
     Push-Location $moduleRoot
@@ -500,13 +528,18 @@ $invalidFixtures = @(
     "bootstrap-semantic-condition.k",
     "bootstrap-semantic-immutable.k",
     "bootstrap-semantic-access.k",
+    "bootstrap-semantic-slice-first.k",
+    "bootstrap-semantic-slice-arity.k",
     "bootstrap-semantic-move-generic.k",
     "bootstrap-semantic-move-associated.k",
     "bootstrap-semantic-move-method.k",
     "bootstrap-semantic-move-nullable.k",
     "bootstrap-semantic-move-if-value.k",
     "bootstrap-semantic-move-when-value.k",
-    "bootstrap-semantic-move-array.k"
+    "bootstrap-semantic-move-array.k",
+    "bootstrap-semantic-enum-overflow.k",
+    "bootstrap-semantic-enum-duplicate-value.k",
+    "bootstrap-semantic-enum-conversion.k"
 )
 foreach ($fixtureName in $invalidFixtures) {
     $fixture = Join-Path $InvalidFixtureDirectory $fixtureName

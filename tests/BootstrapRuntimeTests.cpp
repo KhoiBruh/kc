@@ -1,9 +1,14 @@
 #include "TestHarness.h"
 #include "lib/bootstrap/BootstrapRuntime.h"
 
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 TEST(bootstrap_runtime_allocates_and_frees_memory) {
@@ -84,6 +89,34 @@ TEST(bootstrap_runtime_returns_child_process_exit_code) {
             reinterpret_cast<const std::uint8_t*>(command.data()),
             command.size()),
         std::int32_t{7});
+}
+
+TEST(bootstrap_runtime_child_stderr_reaches_caller) {
+    const auto path = std::filesystem::current_path() /
+        "klang-child-stderr-test.txt";
+    std::error_code ignored;
+    std::filesystem::remove(path, ignored);
+    SECURITY_ATTRIBUTES inherit{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
+    HANDLE file = CreateFileW(
+        path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &inherit,
+        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    EXPECT_TRUE(file != INVALID_HANDLE_VALUE);
+    if (file == INVALID_HANDLE_VALUE) return;
+    const HANDLE previous = GetStdHandle(STD_ERROR_HANDLE);
+    SetStdHandle(STD_ERROR_HANDLE, file);
+    const std::string command{"cmd.exe /d /c echo boom 1>&2"};
+    const std::int32_t result = k_boot_run(
+        reinterpret_cast<const std::uint8_t*>(command.data()),
+        command.size());
+    FlushFileBuffers(file);
+    SetStdHandle(STD_ERROR_HANDLE, previous);
+    CloseHandle(file);
+    EXPECT_EQ(result, std::int32_t{0});
+    std::ifstream contents(path);
+    std::string text{std::istreambuf_iterator<char>{contents},
+        std::istreambuf_iterator<char>{}};
+    EXPECT_TRUE(text.find("boom") != std::string::npos);
+    std::filesystem::remove(path, ignored);
 }
 
 TEST(bootstrap_runtime_exposes_command_line_arguments) {
