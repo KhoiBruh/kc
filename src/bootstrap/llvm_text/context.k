@@ -151,7 +151,5 @@ fn appendConditionalBranch(
     appendNewline(buffer);
 }
 
-fn expressionChildBefore(val nodes: List<AstNode>, root: u64): u64 {
-    val view = AstView(nodes);
-    return view.expressionChildBefore(root);
-}
+fn expressionChildBefore(val nodes: List<AstNode>, root: u64): u64 =>
+    AstView(nodes).expressionChildBefore(root);

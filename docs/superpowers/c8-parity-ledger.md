@@ -8,9 +8,22 @@ Status values: `open` · `fixed-kc1` · `fixed-kc0` · `intentional`
 
 | ID | Summary | kc0 behavior | kc1 behavior | Status | Discovered |
 | --- | --- | --- | --- | --- | --- |
-| D1 | Method call on a constructor temporary inside an expression-bodied function (`fn f() => AstView(n).walk();`) | Builds | Rejected by semantic ("type mismatch") | open | 2026-08-23, AstView refactor |
+| D1 | Method call on a constructor temporary inside an expression-bodied function (`fn f() => AstView(n).walk();`) | Builds | Rejected by semantic ("type mismatch") | fixed-kc1 (2026-08-23) | 2026-08-23, AstView refactor |
 | D2 | `when` expression arm-type unification with mixed literal / call arms | Accepts | Requires uniform arm types (first-arm typing; literals default `i32`) | open | 2026-08-23, types.k conversion |
 | D3 | Checked integer-cast lowering strategy | Direct range check against target-type bounds | Value round-trip (`trunc/sext/zext` back + `icmp eq`, panic on mismatch) | intentional | 2026-08-23, cast_widening_checks fixture |
+
+Closure notes:
+
+* **D1 (fixed in kc1).** Root cause: the self-hosted semantic inferred the
+  receiver expression twice for instance-method calls (once for the receiver
+  type, once in the argument loop); the second inference re-ran
+  `markExpressionMoved` on an already-moved parameter and rejected it. Fix:
+  constructor calls now stamp their result type onto the AST node
+  (`inferExpressionType` short-circuits stamped `CALL` nodes) and the argument
+  loop reuses the already-computed receiver `TypeValue`. Emission additionally
+  needed `registerDropRequests` so auto-dropped resource parameters register
+  their `List<T>.free` specializations before body emission. Regression case:
+  `tests/cases/temporary_receiver_method.k`.
 
 Rules:
 

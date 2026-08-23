@@ -17,6 +17,8 @@ import bootstrap.semantic.mod.analyze;
 import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
+
+
 fn nodeIsPrint(val semantic: Semantic, node: AstNode): bool {
     if (node.end - node.start != 5) return false;
     if (semantic.source.data[node.start] != 112) return false;
@@ -48,6 +50,10 @@ fn associatedObjectRoot(val semantic: Semantic, memberRoot: u64): u64 {
 fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
     if (!semantic.result.ok) return invalidType();
     val node = semantic.nodes.data[root];
+    if (node.kind == AstKind.CALL && node.typeKind != TypeKind.INVALID.value) {
+        return TypeValue(
+            typeKindFromValue(node.typeKind), node.typeName, node.typePointee);
+    }
     if (node.kind == AstKind.IDENTIFIER) {
         val name = semantic.hash(node);
         val local = localFind(semantic.locals, name);
@@ -556,6 +562,11 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                 }
                 semantic.nodes.data[root] = callNode;
             }
+            var callResult = semantic.nodes.data[root];
+            callResult.typeKind = TypeKind.STRUCT.value;
+            callResult.typeName = semantic.structs.data[structureIndex].name;
+            callResult.typePointee = start + typeCount * 65536;
+            semantic.nodes.data[root] = callResult;
             k_boot_free(typeArguments as unit*);
             k_boot_free(explicitTypeRoots as unit*);
             k_boot_free(argumentRoots as unit*);
@@ -615,6 +626,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
         for (explicit in 0..<typeCount) {
             typeArguments[explicit as u64] = invalidType();
         }
+        var receiver = invalidType();
         if (methodOwner != semantic.nodes.length) {
             if (associated) {
                 for (explicit in 0..<explicitTypeCount) {
@@ -624,7 +636,7 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
                             explicitTypeRoots[explicit as u64]);
                 }
             } else {
-                val receiver = expressionType(semantic, argumentRoots[0]);
+                receiver = expressionType(semantic, argumentRoots[0]);
                 val start = receiver.pointee % 65536;
                 val count = receiver.pointee / 65536;
                 if (receiver.kind != TypeKind.STRUCT || count != typeCount) {
@@ -645,8 +657,14 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
         }
         for (argument in 0..<argumentCount) {
-            var actual = expressionType(
-                semantic, argumentRoots[argument as u64]);
+            var actual = invalidType();
+            if (argument == 0 && !associated &&
+                    methodOwner != semantic.nodes.length) {
+                actual = receiver;
+            } else {
+                actual = expressionType(
+                    semantic, argumentRoots[argument as u64]);
+            }
             val parameterRoot =
                 functionParameterRoot(
                     semantic, functionRoot, argument + 1);

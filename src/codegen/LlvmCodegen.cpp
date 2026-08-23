@@ -1690,7 +1690,10 @@ private:
                     }
                     return emitExpr(*constant->second.declaration->initializer);
                 }
-                diagnose("unknown local during LLVM codegen", identifier->name);
+                diagnose(
+                    ("unknown local during LLVM codegen: '" +
+                     std::string(spelling(source(), identifier->name)) + "'"),
+                    identifier->name);
                 return nullptr;
             }
             return builder_.CreateLoad(
@@ -1815,7 +1818,10 @@ private:
             const auto name = spelling(source(), target->name);
             const auto found = locals_.find(name);
             if (found == locals_.end()) {
-                diagnose("unknown local during LLVM codegen", target->name);
+                diagnose(
+                    ("unknown local during LLVM codegen: '" +
+                     std::string(name) + "'"),
+                    target->name);
                 return nullptr;
             }
             auto* value = emitAssignedValue(*assignment, found->second.address);

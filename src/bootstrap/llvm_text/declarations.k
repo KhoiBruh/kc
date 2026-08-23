@@ -712,6 +712,55 @@ fn specializationRequestExists(
     return false;
 }
 
+fn registerDropRequests(
+    source: Source, val nodes: List<AstNode>,
+    functionRoot: u64, var genericArguments: List<TypeValue>,
+    var requests: List<SpecializationRequest>) {
+    val function = nodes.data[functionRoot];
+    if (function.isExtern()) return;
+    val parameterTotal = function.parameterCount();
+    for (p in 0..<parameterTotal) {
+        var root = functionRoot - 1;
+        root = nodes.data[root].subtreeStart - 1;
+        var skips = parameterTotal - p;
+        while (skips > 0) {
+            root = nodes.data[root].subtreeStart - 1;
+            skips--;
+        }
+        val parameter = nodes.data[root];
+        if ((parameter.ownership / 2) % 2 != 1) {
+            continue;
+        }
+        val typeNode = nodes.data[root - 1];
+        if (typeNode.typeKind != TypeKind.STRUCT.value) {
+            continue;
+        }
+        val start = typeNode.typeGenericStart();
+        val genericCount = typeNode.typeGenericCount();
+        if (genericCount == 0) {
+            continue;
+        }
+        if (!structArgumentsAreConcrete(genericArguments, start as u64, genericCount)) {
+            continue;
+        }
+        val freeRoot =
+            emitterDropFunctionRoot(source, nodes, typeNode.typeName);
+        if (freeRoot == nodes.length) {
+            continue;
+        }
+        if (
+            !specializationRequestExists(
+                requests, genericArguments,
+                freeRoot, start as u64, genericCount
+            )
+        ) {
+            requests.add(
+                SpecializationRequest(freeRoot, start as u64, genericCount)
+            );
+        }
+    }
+}
+
 fn callArgumentsAreConcrete(
     call: AstNode, val arguments: List<TypeValue>): bool {
     if (call.genericArgumentCount == 0) return false;
@@ -848,8 +897,76 @@ fn emitModule(
                 }
             }
         }
+        for (nodeIndex in 0..<nodes.length) {
+            val dropStatement = nodes.data[nodeIndex];
+            if (dropStatement.kind != AstKind.VARIABLE_DECLARATION) {
+                continue;
+            }
+            if ((dropStatement.ownership / 2) % 2 != 1) {
+                continue;
+            }
+            val initializer = nodes.data[nodeIndex - 1];
+            if (initializer.typeKind != TypeKind.STRUCT.value) {
+                continue;
+            }
+            val start = initializer.typeGenericStart();
+            val count = initializer.typeGenericCount();
+            if (count == 0) {
+                continue;
+            }
+            if (!structArgumentsAreConcrete(genericArguments, start as u64, count)) {
+                continue;
+            }
+            val freeRoot =
+                emitterDropFunctionRoot(source, nodes, initializer.typeName);
+            if (freeRoot == nodes.length) {
+                continue;
+            }
+            if (
+                !specializationRequestExists(
+                    requests, genericArguments,
+                    freeRoot, start as u64, count
+                )
+            ) {
+                requests.add(
+                    SpecializationRequest(freeRoot, start as u64, count)
+                );
+            }
+        }
     }
     var requestIndex: u64 = 0;
+    val declarationRootsList = declarationRoots(nodes);
+    val programForDrops = nodes.data[nodes.length - 1];
+    for (declarationIndex in 0..<programForDrops.aux) {
+        val declarationRoot =
+            declarationRootsList[declarationIndex as u64];
+        val declarationNode = nodes.data[declarationRoot];
+        if (declarationNode.kind == AstKind.FUNCTION_OR_DEFER) {
+            if (declarationNode.typeParameterCount() == 0) {
+                registerDropRequests(
+                    source, nodes, declarationRoot,
+                    genericArguments, requests);
+            }
+        } else {
+            if (declarationNode.kind == AstKind.STRUCT_DECLARATION) {
+                if (declarationNode.structTypeParameterCount() != 0) {
+                    continue;
+                }
+                var methodRoot = declarationRoot - 1;
+                val methodTotal = declarationNode.methodCount();
+                for (methodIndex in 0..<methodTotal) {
+                    if (nodes.data[methodRoot].typeParameterCount() == 0) {
+                        registerDropRequests(
+                            source, nodes, methodRoot,
+                            genericArguments, requests);
+                    }
+                    methodRoot =
+                        nodes.data[methodRoot].subtreeStart - 1;
+                }
+            }
+        }
+    }
+    k_boot_free(declarationRootsList as unit*);
     while (requestIndex < requests.length) {
         val request = requests.data[requestIndex];
         val functionStart =
