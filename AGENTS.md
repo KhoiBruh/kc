@@ -244,8 +244,18 @@ Static move-ownership self-hosting is complete for the current contract.
 - Bootstrap acceptance requires stable CLI failure messages exactly once across
   `kc1` through `kc4`, plus exact semantic diagnostic parity.
 - Bootstrap stages compile `src/bootstrap/main.k` as a real module graph.
-- Run `.\scripts\bootstrap.ps1` to build `kc1` through `kc4` and perform a
-  fixed-point check under `out/bootstrap/`.
+- Run `.\scripts\bootstrap.ps1` for the clean-room development loop: it wipes
+  `out/bootstrap/`, seeds `kc1` via `kc0`, builds `kc2`–`kc4`, verifies the
+  fixed point (`kc3.ll` == `kc4.ll`), logs per-stage wall time to
+  `out/bootstrap/timings.txt` (baseline ~35–50 s/stage Release; warn >120 s),
+  then runs the fixture/parity suite. `-SkipNativeBuild`, `-NoCleanRoom`, and
+  `-SkipSuite` scope individual runs. The C++ toolchain is invoked only by the
+  seed step.
+- Development flow (C8 Phase 2): feature work lands only in `src/bootstrap`,
+  `tests/cases`, and `docs.md`. `src/lang` and `src/codegen` are frozen —
+  modify them only to repair a C++-side break, stating the reason in the
+  commit. Behavior changes require an acceptance fixture plus a differential
+  harness pass (`k_differential_tests`).
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
   generic functions and structs (including generic-struct instance methods and
   associated functions), and minimal nullable values emit typed LLVM text

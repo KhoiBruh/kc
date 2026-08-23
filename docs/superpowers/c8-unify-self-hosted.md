@@ -112,6 +112,18 @@ the same commit.
 
 ## 6. Phase 2 — Invert the development flow
 
+**Status: complete (2026-08-23).**
+
+* Seed policy decision: **`kc0` stays in-tree** as the seed builder until
+  Phase 3; no binary seeds are committed while the language is unstable.
+* AGENTS.md now routes all feature work to `src/bootstrap` and freezes
+  `src/lang` + `src/codegen` (toolchain-repair only, reason required).
+* `scripts/bootstrap.ps1` rewritten as the clean-room loop: wipes
+  `out/bootstrap/`, seeds `kc1` via `kc0`, builds `kc2`–`kc4`, verifies the
+  fixed point, appends per-stage wall time to `timings.txt`
+  (Release baseline ~35–50 s/stage), then runs the fixture/parity suite.
+  `-SkipNativeBuild`, `-NoCleanRoom`, `-SkipSuite` scope individual runs.
+
 * AGENTS.md is rewritten: feature work targets `src/bootstrap` + fixtures only;
   touching `src/lang`/`src/codegen` requires a stated reason.
 * `scripts/bootstrap.ps1` gains a clean-room mode: wipe stage artifacts, seed
