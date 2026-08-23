@@ -56,25 +56,22 @@ struct IrCounter(
 
 fn appendIrValue(
     var buffer: StringBuilder, source: Source, value: IrValue) {
-    if (value.kind == IrValueKind.SOURCE_LITERAL) {
-        appendSource(buffer, source, value.start, value.end);
-    } else {
-        if (value.kind == IrValueKind.LOCAL_ADDRESS) {
+    when (value.kind) {
+        IrValueKind.SOURCE_LITERAL ->
+            appendSource(buffer, source, value.start, value.end);
+        IrValueKind.LOCAL_ADDRESS -> {
             buffer.append("%");
             appendLocalPrefix(buffer);
             appendDecimal(buffer, value.temporary);
-            return;
         }
-        if (value.kind == IrValueKind.IMMEDIATE_CONSTANT) {
+        IrValueKind.IMMEDIATE_CONSTANT ->
             appendDecimal(buffer, value.temporary);
-            return;
-        }
-        if (value.kind == IrValueKind.ZERO_INITIALIZER) {
+        IrValueKind.ZERO_INITIALIZER ->
             buffer.append("zeroinitializer");
-            return;
+        else -> {
+            buffer.append("%");
+            appendDecimal(buffer, value.temporary);
         }
-        buffer.append("%");
-        appendDecimal(buffer, value.temporary);
     }
 }
 

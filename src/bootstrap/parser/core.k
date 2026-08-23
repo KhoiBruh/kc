@@ -79,12 +79,15 @@ struct Parser(
         for (cursor in self.current..<self.tokens.length) {
             val kind = self.tokens.data[cursor].kind;
             if (kind == TokenKind.ELSE) return true;
-            var declaration = kind == TokenKind.EOF;
-            if (kind == TokenKind.CONST) declaration = true;
-            if (kind == TokenKind.EXTERN) declaration = true;
-            if (kind == TokenKind.FN) declaration = true;
-            if (kind == TokenKind.STRUCT) declaration = true;
-            if (kind == TokenKind.ENUM) declaration = true;
+            val declaration = when (kind) {
+                TokenKind.EOF,
+                TokenKind.CONST,
+                TokenKind.EXTERN,
+                TokenKind.FN,
+                TokenKind.STRUCT,
+                TokenKind.ENUM -> true;
+                else -> false;
+            };
             if (declaration) return false;
         }
         return false;

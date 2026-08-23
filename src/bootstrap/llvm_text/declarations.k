@@ -216,69 +216,72 @@ fn emitBlockAllocas(
     for (index in 0..<nodes.data[blockRoot].aux) {
         val root = roots[index as u64];
         val statement = nodes.data[root];
-        if (statement.kind == AstKind.VARIABLE_DECLARATION) {
-            emitVariableAlloca(buffer, genericArguments, nodes, root);
-        }
-        if (statement.kind == AstKind.BLOCK) {
-            emitBlockAllocas(buffer, genericArguments, nodes, root);
-        }
-        if (statement.kind == AstKind.IF_STATEMENT) {
-            var branchRoot = root - 1;
-            if (statement.aux == 1) {
-                emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
-                branchRoot = expressionChildBefore(nodes, branchRoot);
-            }
-            emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
-        }
-        if (statement.kind == AstKind.WHILE_STATEMENT) {
-            emitBlockAllocas(buffer, genericArguments, nodes, root - 1);
-        }
-        if (statement.kind == AstKind.FOR_STATEMENT) {
-            val bodyRoot = root - 1;
-            val collectionRoot = expressionChildBefore(nodes, bodyRoot);
-            val name = nodes.data[statement.subtreeStart];
-            val collection = nodes.data[collectionRoot];
-            var range = collection.kind == AstKind.BINARY;
-            if (range) {
-                range = collection.aux == TokenKind.RANGE.value;
-                if (collection.aux == TokenKind.RANGE_EXCLUSIVE.value) range = true;
-                if (collection.aux == TokenKind.RANGE_EXCLUSIVE_START.value) range = true;
-                if (collection.aux == TokenKind.RANGE_EXCLUSIVE_BOTH.value) range = true;
-            }
-            appendValuePrefix(buffer); appendLocalPrefix(buffer);
-            appendDecimal(buffer, name.start); appendEquals(buffer);
-            appendAlloca(buffer);
-            if (range) {
-                appendNodeType(buffer, genericArguments, collection);
-            } else {
-                var elementKind = collection.typePointee;
-                if (collection.typeKind == TypeKind.ARRAY.value) {
-                    elementKind = collection.typePointee % 256;
-                }
-                appendType(
-                    buffer, genericArguments,
-                    elementKind, collection.typeName, 0);
-            }
-            appendNewline(buffer);
-            if (!range) {
-                var indexStorage = statement.start;
+        when (statement.kind) {
+            AstKind.VARIABLE_DECLARATION ->
+                emitVariableAlloca(buffer, genericArguments, nodes, root);
+            AstKind.BLOCK ->
+                emitBlockAllocas(buffer, genericArguments, nodes, root);
+            AstKind.IF_STATEMENT -> {
+                var branchRoot = root - 1;
                 if (statement.aux == 1) {
-                    indexStorage = nodes.data[statement.subtreeStart + 1].start;
+                    emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
+                    branchRoot = expressionChildBefore(nodes, branchRoot);
                 }
+                emitBlockAllocas(buffer, genericArguments, nodes, branchRoot);
+            }
+            AstKind.WHILE_STATEMENT ->
+                emitBlockAllocas(buffer, genericArguments, nodes, root - 1);
+            AstKind.FOR_STATEMENT -> {
+                val bodyRoot = root - 1;
+                val collectionRoot = expressionChildBefore(nodes, bodyRoot);
+                val name = nodes.data[statement.subtreeStart];
+                val collection = nodes.data[collectionRoot];
+                var range = when (collection.kind) {
+                    AstKind.BINARY -> when (collection.aux) {
+                        TokenKind.RANGE.value,
+                        TokenKind.RANGE_EXCLUSIVE.value,
+                        TokenKind.RANGE_EXCLUSIVE_START.value,
+                        TokenKind.RANGE_EXCLUSIVE_BOTH.value -> true;
+                        else -> false;
+                    };
+                    else -> false;
+                };
                 appendValuePrefix(buffer); appendLocalPrefix(buffer);
-                appendDecimal(buffer, indexStorage); appendEquals(buffer);
-                appendAlloca(buffer); appendI64(buffer); appendNewline(buffer);
+                appendDecimal(buffer, name.start); appendEquals(buffer);
+                appendAlloca(buffer);
+                if (range) {
+                    appendNodeType(buffer, genericArguments, collection);
+                } else {
+                    var elementKind = collection.typePointee;
+                    if (collection.typeKind == TypeKind.ARRAY.value) {
+                        elementKind = collection.typePointee % 256;
+                    }
+                    appendType(
+                        buffer, genericArguments,
+                        elementKind, collection.typeName, 0);
+                }
+                appendNewline(buffer);
+                if (!range) {
+                    var indexStorage = statement.start;
+                    if (statement.aux == 1) {
+                        indexStorage = nodes.data[statement.subtreeStart + 1].start;
+                    }
+                    appendValuePrefix(buffer); appendLocalPrefix(buffer);
+                    appendDecimal(buffer, indexStorage); appendEquals(buffer);
+                    appendAlloca(buffer); appendI64(buffer); appendNewline(buffer);
+                }
+                emitBlockAllocas(buffer, genericArguments, nodes, bodyRoot);
             }
-            emitBlockAllocas(buffer, genericArguments, nodes, bodyRoot);
-        }
-        if (statement.kind == AstKind.WHEN_STATEMENT) {
-            val branchCount = statement.aux % 65536;
-            var branchRoot = root - 1;
-            for (branchIndex in 0..<branchCount) {
-                emitBlockAllocas(
-                    buffer, genericArguments, nodes, branchRoot - 1);
-                branchRoot = nodes.data[branchRoot].subtreeStart - 1;
+            AstKind.WHEN_STATEMENT -> {
+                val branchCount = statement.aux % 65536;
+                var branchRoot = root - 1;
+                for (branchIndex in 0..<branchCount) {
+                    emitBlockAllocas(
+                        buffer, genericArguments, nodes, branchRoot - 1);
+                    branchRoot = nodes.data[branchRoot].subtreeStart - 1;
+                }
             }
+            else -> { }
         }
     }
     k_boot_free(roots as unit*);

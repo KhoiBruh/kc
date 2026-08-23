@@ -61,16 +61,19 @@ fn parseValueExpressionBranch(var parser: Parser): u32 {
                 return 0;
             }
             val next = parser.peek().kind;
-            var statementStart = next == TokenKind.VAL;
-            if (next == TokenKind.VAR) statementStart = true;
-            if (next == TokenKind.WHEN) statementStart = true;
-            if (next == TokenKind.IF) statementStart = true;
-            if (next == TokenKind.FOR) statementStart = true;
-            if (next == TokenKind.WHILE) statementStart = true;
-            if (next == TokenKind.RETURN) statementStart = true;
-            if (next == TokenKind.LEFT_BRACE) statementStart = true;
-            if (next == TokenKind.BREAK) statementStart = true;
-            if (next == TokenKind.CONTINUE) statementStart = true;
+            val statementStart = when (next) {
+                TokenKind.VAL,
+                TokenKind.VAR,
+                TokenKind.WHEN,
+                TokenKind.IF,
+                TokenKind.FOR,
+                TokenKind.WHILE,
+                TokenKind.RETURN,
+                TokenKind.LEFT_BRACE,
+                TokenKind.BREAK,
+                TokenKind.CONTINUE -> true;
+                else -> false;
+            };
             if (statementStart) {
                 parseStatement(parser);
                 statementCount++;
@@ -174,15 +177,18 @@ fn parseExpression(var parser: Parser, minimumPower: u32): u64 {
                                     return 0;
                                 }
                                 val next = parser.peek().kind;
-                                var statementStart = next == TokenKind.VAL;
-                                if (next == TokenKind.VAR) statementStart = true;
-                                if (next == TokenKind.IF) statementStart = true;
-                                if (next == TokenKind.FOR) statementStart = true;
-                                if (next == TokenKind.WHILE) statementStart = true;
-                                if (next == TokenKind.RETURN) statementStart = true;
-                                if (next == TokenKind.LEFT_BRACE) statementStart = true;
-                                if (next == TokenKind.BREAK) statementStart = true;
-                                if (next == TokenKind.CONTINUE) statementStart = true;
+                                val statementStart = when (next) {
+                                    TokenKind.VAL,
+                                    TokenKind.VAR,
+                                    TokenKind.IF,
+                                    TokenKind.FOR,
+                                    TokenKind.WHILE,
+                                    TokenKind.RETURN,
+                                    TokenKind.LEFT_BRACE,
+                                    TokenKind.BREAK,
+                                    TokenKind.CONTINUE -> true;
+                                    else -> false;
+                                };
                                 if (statementStart) {
                                     parseStatement(parser);
                                     statementCount++;

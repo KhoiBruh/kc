@@ -123,10 +123,13 @@ fn checkStatement(var semantic: Semantic, root: u64) {
         var valueType = expressionType(semantic, collectionRoot);
         var range = collectionNode.kind == AstKind.BINARY;
         if (range) {
-            range = collectionNode.aux == TokenKind.RANGE.value;
-            if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE.value) range = true;
-            if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_START.value) range = true;
-            if (collectionNode.aux == TokenKind.RANGE_EXCLUSIVE_BOTH.value) range = true;
+            range = when (collectionNode.aux) {
+                TokenKind.RANGE.value,
+                TokenKind.RANGE_EXCLUSIVE.value,
+                TokenKind.RANGE_EXCLUSIVE_START.value,
+                TokenKind.RANGE_EXCLUSIVE_BOTH.value -> true;
+                else -> false;
+            };
         }
         if (range) {
             if (node.aux == 1) {

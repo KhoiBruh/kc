@@ -659,13 +659,15 @@ fn emitExpression(
         var right = emitExpression(
             buffer, source, nodes, genericArguments,
             rightRoot, counter);
-        var comparison = false;
-        if (node.aux == TokenKind.LESS.value) comparison = true;
-        if (node.aux == TokenKind.GREATER.value) comparison = true;
-        if (node.aux == TokenKind.EQUAL_EQUAL.value) comparison = true;
-        if (node.aux == TokenKind.BANG_EQUAL.value) comparison = true;
-        if (node.aux == TokenKind.LESS_EQUAL.value) comparison = true;
-        if (node.aux == TokenKind.GREATER_EQUAL.value) comparison = true;
+        val comparison = when (node.aux) {
+            TokenKind.LESS.value,
+            TokenKind.GREATER.value,
+            TokenKind.EQUAL_EQUAL.value,
+            TokenKind.BANG_EQUAL.value,
+            TokenKind.LESS_EQUAL.value,
+            TokenKind.GREATER_EQUAL.value -> true;
+            else -> false;
+        };
         if (comparison) {
             val leftType = TypeValue(typeKindFromValue(left.typeKind), left.typeName, left.typePointee);
             val rightType = TypeValue(typeKindFromValue(right.typeKind), right.typeName, right.typePointee);

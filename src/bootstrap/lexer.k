@@ -300,17 +300,18 @@ fn punctuationKind(value: u8): TokenKind => when (value) {
 fn doublePunctuationKind(first: u8, second: u8): TokenKind {
     if (first == 43 && second == 43) return TokenKind.PLUS_PLUS;
     if (first == 45 && second == 45) return TokenKind.MINUS_MINUS;
-    if (second == 61) {
-        if (first == 43) return TokenKind.PLUS_EQUAL;
-        if (first == 45) return TokenKind.MINUS_EQUAL;
-        if (first == 42) return TokenKind.STAR_EQUAL;
-        if (first == 47) return TokenKind.SLASH_EQUAL;
-        if (first == 37) return TokenKind.PERCENT_EQUAL;
-        if (first == 61) return TokenKind.EQUAL_EQUAL;
-        if (first == 33) return TokenKind.BANG_EQUAL;
-        if (first == 60) return TokenKind.LESS_EQUAL;
-        if (first == 62) return TokenKind.GREATER_EQUAL;
-    }
+    if (second == 61) return when (first) {
+        43 -> TokenKind.PLUS_EQUAL;
+        45 -> TokenKind.MINUS_EQUAL;
+        42 -> TokenKind.STAR_EQUAL;
+        47 -> TokenKind.SLASH_EQUAL;
+        37 -> TokenKind.PERCENT_EQUAL;
+        61 -> TokenKind.EQUAL_EQUAL;
+        33 -> TokenKind.BANG_EQUAL;
+        60 -> TokenKind.LESS_EQUAL;
+        62 -> TokenKind.GREATER_EQUAL;
+        else -> TokenKind.EOF;
+    };
     if (first == 38 && second == 38) return TokenKind.AND_AND;
     if (first == 124 && second == 124) return TokenKind.OR_OR;
     if (first == 45 && second == 62) return TokenKind.ARROW;

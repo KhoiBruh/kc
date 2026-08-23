@@ -105,47 +105,52 @@ fn sourceNodeIsPrint(source: Source, node: AstNode): bool {
 }
 
 fn appendOperator(var buffer: StringBuilder, kind: u32, typeKind: u32) {
-    var floating = typeKind == TypeKind.F32.value;
-    if (typeKind == TypeKind.F64.value) floating = true;
+    val floating = when (typeKind) {
+        TypeKind.F32.value,
+        TypeKind.F64.value -> true;
+        else -> false;
+    };
     if (floating) buffer.append("f");
-    if (kind == TokenKind.PLUS.value) {
-        buffer.append("add");
-    }
-    if (kind == TokenKind.MINUS.value) {
-        buffer.append("sub");
-    }
-    if (kind == TokenKind.STAR.value) {
-        buffer.append("mul");
-    }
-    if (kind == TokenKind.SLASH.value) {
-        if (floating) {
-            buffer.append("di");
-            buffer.append("v"); return;
+    when (kind) {
+        TokenKind.PLUS.value -> buffer.append("add");
+        TokenKind.MINUS.value -> buffer.append("sub");
+        TokenKind.STAR.value -> buffer.append("mul");
+        TokenKind.SLASH.value -> {
+            if (floating) {
+                buffer.append("di");
+                buffer.append("v"); return;
+            }
+            val unsigned = when (typeKind) {
+                TypeKind.U8.value,
+                TypeKind.U32.value,
+                TypeKind.U64.value -> true;
+                else -> false;
+            };
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("div");
         }
-        var unsigned = typeKind == TypeKind.U8.value;
-        if (typeKind == TypeKind.U32.value) unsigned = true;
-        if (typeKind == TypeKind.U64.value) unsigned = true;
-        if (unsigned) {
-            buffer.append("u");
-        } else {
-            buffer.append("s");
+        TokenKind.PERCENT.value -> {
+            if (floating) {
+                buffer.append("re");
+                buffer.append("m"); return;
+            }
+            val unsigned = when (typeKind) {
+                TypeKind.U8.value,
+                TypeKind.U32.value,
+                TypeKind.U64.value -> true;
+                else -> false;
+            };
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("rem");
         }
-        buffer.append("div");
-    }
-    if (kind == TokenKind.PERCENT.value) {
-        if (floating) {
-            buffer.append("re");
-            buffer.append("m"); return;
-        }
-        var unsigned = typeKind == TypeKind.U8.value;
-        if (typeKind == TypeKind.U32.value) unsigned = true;
-        if (typeKind == TypeKind.U64.value) unsigned = true;
-        if (unsigned) {
-            buffer.append("u");
-        } else {
-            buffer.append("s");
-        }
-        buffer.append("rem");
     }
 }
 
@@ -286,46 +291,47 @@ fn appendUnreachable(var buffer: StringBuilder) {
 fn appendComparison(
     var buffer: StringBuilder, kind: u32, typeKind: u32) {
     buffer.append("icmp ");
-    if (kind == TokenKind.EQUAL_EQUAL.value) {
-        buffer.append("eq");
-    }
-    if (kind == TokenKind.BANG_EQUAL.value) {
-        buffer.append("ne");
-    }
-    var unsigned = typeKind == TypeKind.U8.value;
-    if (typeKind == TypeKind.U32.value) unsigned = true;
-    if (typeKind == TypeKind.U64.value) unsigned = true;
-    if (typeKind == TypeKind.ENUM.value) unsigned = true;
-    if (kind == TokenKind.LESS.value) {
-        if (unsigned) {
-            buffer.append("u");
-        } else {
-            buffer.append("s");
+    val unsigned = when (typeKind) {
+        TypeKind.U8.value,
+        TypeKind.U32.value,
+        TypeKind.U64.value,
+        TypeKind.ENUM.value -> true;
+        else -> false;
+    };
+    when (kind) {
+        TokenKind.EQUAL_EQUAL.value -> buffer.append("eq");
+        TokenKind.BANG_EQUAL.value -> buffer.append("ne");
+        TokenKind.LESS.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("lt");
         }
-        buffer.append("lt");
-    }
-    if (kind == TokenKind.LESS_EQUAL.value) {
-        if (unsigned) {
-            buffer.append("u");
-        } else {
-            buffer.append("s");
+        TokenKind.LESS_EQUAL.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("le");
         }
-        buffer.append("le");
-    }
-    if (kind == TokenKind.GREATER.value) {
-        if (unsigned) {
-            buffer.append("u");
-        } else {
-            buffer.append("s");
+        TokenKind.GREATER.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("gt");
         }
-        buffer.append("gt");
-    }
-    if (kind == TokenKind.GREATER_EQUAL.value) {
-        if (unsigned) {
-            buffer.append("u");
-        } else {
-            buffer.append("s");
+        TokenKind.GREATER_EQUAL.value -> {
+            if (unsigned) {
+                buffer.append("u");
+            } else {
+                buffer.append("s");
+            }
+            buffer.append("ge");
         }
-        buffer.append("ge");
     }
 }

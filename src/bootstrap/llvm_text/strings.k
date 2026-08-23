@@ -109,23 +109,26 @@ fn decodeStringLiteral(source: Source, node: AstNode): StringBuilder {
         if (value != 92) { result.add(value); offset++; continue; }
         offset++;
         value = source.data[offset];
-        if (value == 110) result.add(10);
-        else if (value == 114) result.add(13);
-        else if (value == 116) result.add(9);
-        else if (value == 48) result.add(0);
-        else if (value == 117) {
-            offset += 2;
-            var codepoint: u32 = 0;
-            while (source.data[offset] != 125) {
-                val digit = source.data[offset];
-                var numeric = (digit - 48) as u32;
-                if (digit >= 65) numeric = (digit - 55) as u32;
-                if (digit >= 97) numeric = (digit - 87) as u32;
-                codepoint = codepoint * 16 + numeric;
-                offset++;
+        when (value) {
+            110 -> result.add(10);
+            114 -> result.add(13);
+            116 -> result.add(9);
+            48 -> result.add(0);
+            117 -> {
+                offset += 2;
+                var codepoint: u32 = 0;
+                while (source.data[offset] != 125) {
+                    val digit = source.data[offset];
+                    var numeric = (digit - 48) as u32;
+                    if (digit >= 65) numeric = (digit - 55) as u32;
+                    if (digit >= 97) numeric = (digit - 87) as u32;
+                    codepoint = codepoint * 16 + numeric;
+                    offset++;
+                }
+                appendUtf8(result, codepoint);
             }
-            appendUtf8(result, codepoint);
-        } else result.add(value);
+            else -> result.add(value);
+        }
         offset++;
     }
     return result;

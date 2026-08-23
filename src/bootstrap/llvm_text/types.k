@@ -39,41 +39,42 @@ fn appendType(
     var buffer: StringBuilder, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32
 ) {
-    if (kind == TypeKind.UNIT.value) buffer.append("void");
-    if (kind == TypeKind.BOOL.value) buffer.append("i1");
-    if (kind == TypeKind.I32.value) appendI32(buffer);
-    if (kind == TypeKind.I64.value) buffer.append("i64");
-    if (kind == TypeKind.U8.value) buffer.append("i8");
-    if (kind == TypeKind.U32.value) appendI32(buffer);
-    if (kind == TypeKind.U64.value) buffer.append("i64");
-    if (kind == TypeKind.STRUCT.value) {
-        buffer.append("%s");
-        appendDecimal(buffer, name);
-        val start = pointee % 65536;
-        val count = pointee / 65536;
-        if (count > 0) {
-            appendStructSpecializationSuffix(buffer, genericArguments, start as u64, count);
+    when (kind) {
+        TypeKind.UNIT.value -> buffer.append("void");
+        TypeKind.BOOL.value -> buffer.append("i1");
+        TypeKind.I32.value,
+        TypeKind.U32.value,
+        TypeKind.INTEGER_LITERAL.value -> appendI32(buffer);
+        TypeKind.I64.value,
+        TypeKind.U64.value -> buffer.append("i64");
+        TypeKind.U8.value -> buffer.append("i8");
+        TypeKind.STRUCT.value -> {
+            buffer.append("%s");
+            appendDecimal(buffer, name);
+            val start = pointee % 65536;
+            val count = pointee / 65536;
+            if (count > 0) {
+                appendStructSpecializationSuffix(buffer, genericArguments, start as u64, count);
+            }
         }
-    }
-    if (kind == TypeKind.POINTER.value) buffer.append("ptr");
-    if (kind == TypeKind.STR.value) appendStringType(buffer);
-    if (kind == TypeKind.F32.value) buffer.append("float");
-    if (kind == TypeKind.F64.value) buffer.append("double");
-    if (kind == TypeKind.INTEGER_LITERAL.value) appendI32(buffer);
-    if (kind == TypeKind.ENUM.value)
-        appendType(buffer, genericArguments, pointee, 0, 0);
-    if (kind == TypeKind.SLICE.value) buffer.append("{ ptr, i64 }");
-    if (kind == TypeKind.NULLABLE.value) {
-        buffer.append("{ i1, ");
-        appendType(buffer, genericArguments, pointee, name, 0);
-        buffer.append(" }");
-    }
-    if (kind == TypeKind.ARRAY.value) {
-        buffer.append("[");
-        appendDecimal(buffer, (pointee / 256) as u64);
-        buffer.append(" x ");
-        appendType(buffer, genericArguments, pointee % 256, name, 0);
-        buffer.append("]");
+        TypeKind.POINTER.value -> buffer.append("ptr");
+        TypeKind.STR.value -> appendStringType(buffer);
+        TypeKind.F32.value -> buffer.append("float");
+        TypeKind.F64.value -> buffer.append("double");
+        TypeKind.ENUM.value -> appendType(buffer, genericArguments, pointee, 0, 0);
+        TypeKind.SLICE.value -> buffer.append("{ ptr, i64 }");
+        TypeKind.NULLABLE.value -> {
+            buffer.append("{ i1, ");
+            appendType(buffer, genericArguments, pointee, name, 0);
+            buffer.append(" }");
+        }
+        TypeKind.ARRAY.value -> {
+            buffer.append("[");
+            appendDecimal(buffer, (pointee / 256) as u64);
+            buffer.append(" x ");
+            appendType(buffer, genericArguments, pointee % 256, name, 0);
+            buffer.append("]");
+        }
     }
 }
 
@@ -174,25 +175,10 @@ fn typeAlignment(
     source: Source, val nodes: List<AstNode>, var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32
 ): u64 {
-    if (kind == TypeKind.BOOL.value) return 1;
-    if (kind == TypeKind.U8.value) return 1;
-    if (kind == TypeKind.I32.value) return 4;
-    if (kind == TypeKind.U32.value) return 4;
-    if (kind == TypeKind.INTEGER_LITERAL.value) return 4;
     if (kind == TypeKind.ENUM.value)
         return typeAlignment(source, nodes, genericArguments, pointee, 0, 0);
-    if (kind == TypeKind.F32.value) return 4;
-    if (kind == TypeKind.I64.value) return 8;
-    if (kind == TypeKind.U64.value) return 8;
-    if (kind == TypeKind.POINTER.value) return 8;
-    if (kind == TypeKind.STR.value) return 24;
-    if (kind == TypeKind.F64.value) return 8;
-    if (kind == TypeKind.SLICE.value) return 8;
-    if (kind == TypeKind.ARRAY.value) {
-        return typeAlignment(
-            source, nodes, genericArguments,
-            pointee % 256, name, 0);
-    }
+    if (kind == TypeKind.ARRAY.value)
+        return typeAlignment(source, nodes, genericArguments, pointee % 256, name, 0);
     if (kind == TypeKind.STRUCT.value) {
         val root = structRootByName(source, nodes, name);
         val structure = nodes.data[root];
@@ -218,7 +204,21 @@ fn typeAlignment(
         }
         return alignment;
     }
-    return 1;
+    return when (kind) {
+        TypeKind.BOOL.value,
+        TypeKind.U8.value -> 1;
+        TypeKind.I32.value,
+        TypeKind.U32.value,
+        TypeKind.INTEGER_LITERAL.value,
+        TypeKind.F32.value -> 4;
+        TypeKind.I64.value,
+        TypeKind.U64.value,
+        TypeKind.POINTER.value,
+        TypeKind.F64.value,
+        TypeKind.SLICE.value -> 8;
+        TypeKind.STR.value -> 24;
+        else -> 1;
+    };
 }
 
 fn typeSize(
@@ -226,21 +226,8 @@ fn typeSize(
     var genericArguments: List<TypeValue>,
     kind: u32, name: u64, pointee: u32
 ): u64 {
-    if (kind == TypeKind.UNIT.value) return 0;
-    if (kind == TypeKind.BOOL.value) return 1;
-    if (kind == TypeKind.U8.value) return 1;
-    if (kind == TypeKind.I32.value) return 4;
-    if (kind == TypeKind.U32.value) return 4;
-    if (kind == TypeKind.INTEGER_LITERAL.value) return 4;
     if (kind == TypeKind.ENUM.value)
         return typeSize(source, nodes, genericArguments, pointee, 0, 0);
-    if (kind == TypeKind.F32.value) return 4;
-    if (kind == TypeKind.I64.value) return 8;
-    if (kind == TypeKind.U64.value) return 8;
-    if (kind == TypeKind.POINTER.value) return 8;
-    if (kind == TypeKind.STR.value) return 8;
-    if (kind == TypeKind.F64.value) return 8;
-    if (kind == TypeKind.SLICE.value) return 16;
     if (kind == TypeKind.ARRAY.value) {
         val elementSize = typeSize(
             source, nodes, genericArguments,
@@ -275,7 +262,22 @@ fn typeSize(
         return alignUp(
             size, typeAlignment(source, nodes, genericArguments, kind, name, pointee));
     }
-    return 0;
+    return when (kind) {
+        TypeKind.UNIT.value -> 0;
+        TypeKind.BOOL.value,
+        TypeKind.U8.value -> 1;
+        TypeKind.I32.value,
+        TypeKind.U32.value,
+        TypeKind.INTEGER_LITERAL.value,
+        TypeKind.F32.value -> 4;
+        TypeKind.I64.value,
+        TypeKind.U64.value,
+        TypeKind.POINTER.value,
+        TypeKind.STR.value,
+        TypeKind.F64.value -> 8;
+        TypeKind.SLICE.value -> 16;
+        else -> 0;
+    };
 }
 
 fn emitterTypeParameterRoot(

@@ -173,12 +173,15 @@ fn inferExpressionType(var semantic: Semantic, root: u64): TypeValue {
             }
             return boolType();
         }
-        var comparison = node.aux == TokenKind.LESS.value;
-        if (node.aux == TokenKind.GREATER.value) comparison = true;
-        if (node.aux == TokenKind.EQUAL_EQUAL.value) comparison = true;
-        if (node.aux == TokenKind.BANG_EQUAL.value) comparison = true;
-        if (node.aux == TokenKind.LESS_EQUAL.value) comparison = true;
-        if (node.aux == TokenKind.GREATER_EQUAL.value) comparison = true;
+        val comparison = when (node.aux) {
+            TokenKind.LESS.value,
+            TokenKind.GREATER.value,
+            TokenKind.EQUAL_EQUAL.value,
+            TokenKind.BANG_EQUAL.value,
+            TokenKind.LESS_EQUAL.value,
+            TokenKind.GREATER_EQUAL.value -> true;
+            else -> false;
+        };
         if (comparison) {
             if (!left.accepts(right, semantic.genericArguments)) {
                 if (!right.accepts(left, semantic.genericArguments)) {
