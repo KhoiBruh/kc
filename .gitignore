@@ -17,3 +17,6 @@ scripts/
 *.exe
 *.ilk
 *.pdb
+
+tests/**/*.ll
+tests/**/*.exe
