@@ -8,6 +8,7 @@ import bootstrap.containers.StringBuilder;
 import bootstrap.lexer.lex;
 import bootstrap.ast.AstNode;
 import bootstrap.ast.AstKind;
+import bootstrap.ast.AstView;
 import bootstrap.parser.mod.parse;
 import bootstrap.types.TypeValue;
 import bootstrap.types.TypeKind;
@@ -18,16 +19,8 @@ import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
 fn declarationRoots(val nodes: List<AstNode>): u64* {
-    val programRoot = nodes.length - 1;
-    val program = nodes.data[programRoot];
-    val roots =
-        k_boot_alloc((program.aux as u64) * sizeof(u64)) as u64*;
-    var root = programRoot - 1;
-    for (index in program.aux>..0) {
-        roots[index as u64] = root;
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    return roots;
+    val view = AstView(nodes);
+    return view.declarationRoots();
 }
 
 fn structRootByName(
@@ -96,49 +89,20 @@ fn emitterVariableRootByStorage(
 }
 
 fn emitterRootBeforeStructMethods(val nodes: List<AstNode>, structureRoot: u64): u64 {
-    var root = structureRoot - 1;
-    val remaining = nodes.data[structureRoot].methodCount();
-    for (method in 0..<remaining) {
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    return root;
+    val view = AstView(nodes);
+    return view.emitterRootBeforeStructMethods(structureRoot);
 }
 
 fn emitterAssociatedOwnerStructRoot(
     val nodes: List<AstNode>, functionRoot: u64): u64 {
-    if (nodes.data[functionRoot].conversionKind != 2) return nodes.length;
-    val program = nodes.data[nodes.length - 1];
-    val roots = declarationRoots(nodes);
-    var owner = nodes.length;
-    for (index in 0..<program.aux) {
-        val structureRoot = roots[index as u64];
-        if (nodes.data[structureRoot].kind == AstKind.STRUCT_DECLARATION) {
-            var methodRoot = structureRoot - 1;
-            val methodCount = nodes.data[structureRoot].methodCount();
-            for (methodIndex in 0..<methodCount) {
-                if (methodRoot == functionRoot) owner = structureRoot;
-                methodRoot = nodes.data[methodRoot].subtreeStart - 1;
-            }
-        }
-    }
-    k_boot_free(roots as unit*);
-    return owner;
+    val view = AstView(nodes);
+    return view.emitterAssociatedOwnerStructRoot(functionRoot);
 }
 
 fn emitterFieldRootAt(
     val nodes: List<AstNode>, structureRoot: u64, wanted: u32): u64 {
-    val structure = nodes.data[structureRoot];
-    var roots =
-        k_boot_alloc((structure.fieldCount() as u64) * sizeof(u64)) as u64*;
-    var root = emitterRootBeforeStructMethods(nodes, structureRoot);
-    val remaining = structure.fieldCount();
-    for (index in remaining>..0) {
-        roots[index as u64] = root;
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    val result = roots[wanted as u64];
-    k_boot_free(roots as unit*);
-    return result;
+    val view = AstView(nodes);
+    return view.emitterFieldRootAt(structureRoot, wanted);
 }
 
 fn fieldIndexByName(
@@ -159,23 +123,13 @@ fn fieldIndexByName(
 
 fn parameterRoot(
     val nodes: List<AstNode>, functionRoot: u64, position: u32): u64 {
-    val function = nodes.data[functionRoot];
-    var root = functionRoot - 1;
-    if (!function.isExtern()) {
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    val remaining = function.parameterCount();
-    for (index in position - 1..<remaining) {
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    return root;
+    val view = AstView(nodes);
+    return view.parameterRoot(functionRoot, position);
 }
 
 fn returnTypeRoot(val nodes: List<AstNode>, functionRoot: u64): u64 {
-    if (nodes.data[functionRoot].isExtern()) {
-        return functionRoot - 1;
-    }
-    return nodes.data[functionRoot - 1].subtreeStart - 1;
+    val view = AstView(nodes);
+    return view.returnTypeRoot(functionRoot);
 }
 
 fn emitVariableAlloca(
@@ -501,31 +455,13 @@ fn emitSpecializedFunction(
 }
 
 fn callCalleeRoot(val nodes: List<AstNode>, callRoot: u64): u64 {
-    val call = nodes.data[callRoot];
-    var cursor = callRoot - 1;
-    val argumentCount = call.callArgumentCount();
-    for (argument in 0..<argumentCount) {
-        cursor = expressionChildBefore(nodes, cursor);
-    }
-    val explicitTypeCount = call.callTypeArgumentCount();
-    for (explicitType in 0..<explicitTypeCount) {
-        cursor = expressionChildBefore(nodes, cursor);
-    }
-    return cursor;
+    val view = AstView(nodes);
+    return view.callCalleeRoot(callRoot);
 }
 
 fn firstStatementRoot(val nodes: List<AstNode>, blockRoot: u64): u64 {
-    val block = nodes.data[blockRoot];
-    var roots =
-        k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
-    var root = blockRoot - 1;
-    for (index in block.aux>..0) {
-        roots[index as u64] = root;
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    val result = roots[0];
-    k_boot_free(roots as unit*);
-    return result;
+    val view = AstView(nodes);
+    return view.firstStatementRoot(blockRoot);
 }
 
 fn emitSimpleFunction(

@@ -8,6 +8,7 @@ import bootstrap.containers.StringBuilder;
 import bootstrap.lexer.lex;
 import bootstrap.ast.AstNode;
 import bootstrap.ast.AstKind;
+import bootstrap.ast.AstView;
 import bootstrap.parser.mod.parse;
 import bootstrap.types.TypeValue;
 import bootstrap.types.TypeKind;
@@ -105,15 +106,8 @@ fn emitterStructTypeParameterRoot(
     source: Source, val nodes: List<AstNode>, 
     root: u64, position: u32
 ): u64 {
-    val structure = nodes.data[root];
-    var lastRoot = emitterRootBeforeStructMethods(nodes, root);
-    val fields = structure.fieldCount();
-
-    for (field in 0..<fields) lastRoot = nodes.data[lastRoot].subtreeStart - 1;
-    val remain = structure.structTypeParameterCount();
-    for (index in position..<remain) lastRoot = nodes.data[lastRoot].subtreeStart - 1;
-
-    return lastRoot;
+    val view = AstView(nodes);
+    return view.emitterStructTypeParameterRoot(root, position);
 }
 
 fn emitterStructTypeParameterPosition(
@@ -284,15 +278,8 @@ fn emitterTypeParameterRoot(
     val nodes: List<AstNode>,
     root: u64, position: u32
 ): u64 {
-    var returnRoot = returnTypeRoot(nodes, root);
-
-    val params = nodes.data[root].parameterCount();
-    for (param in 0..<params) returnRoot = nodes.data[returnRoot].subtreeStart - 1;
-
-    val remain = nodes.data[root].typeParameterCount();
-    for (index in position - 1..<remain) returnRoot = nodes.data[returnRoot].subtreeStart - 1;
-
-    return returnRoot;
+    val view = AstView(nodes);
+    return view.emitterTypeParameterRoot(root, position);
 }
 
 fn emitterTypeParameterPosition(

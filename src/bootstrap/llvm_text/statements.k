@@ -8,6 +8,7 @@ import bootstrap.containers.StringBuilder;
 import bootstrap.lexer.lex;
 import bootstrap.ast.AstNode;
 import bootstrap.ast.AstKind;
+import bootstrap.ast.AstView;
 import bootstrap.parser.mod.parse;
 import bootstrap.types.TypeValue;
 import bootstrap.types.TypeKind;
@@ -18,15 +19,8 @@ import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
 fn blockStatementRoots(val nodes: List<AstNode>, blockRoot: u64): u64* {
-    val block = nodes.data[blockRoot];
-    val roots =
-        k_boot_alloc((block.aux as u64) * sizeof(u64)) as u64*;
-    var root = blockRoot - 1;
-    for (index in block.aux>..0) {
-        roots[index as u64] = root;
-        root = nodes.data[root].subtreeStart - 1;
-    }
-    return roots;
+    val view = AstView(nodes);
+    return view.blockStatementRoots(blockRoot);
 }
 
 fn emitAutomaticDrop(

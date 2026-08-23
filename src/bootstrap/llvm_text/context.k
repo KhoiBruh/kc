@@ -8,6 +8,7 @@ import bootstrap.containers.StringBuilder;
 import bootstrap.lexer.lex;
 import bootstrap.ast.AstNode;
 import bootstrap.ast.AstKind;
+import bootstrap.ast.AstView;
 import bootstrap.parser.mod.parse;
 import bootstrap.types.TypeValue;
 import bootstrap.types.TypeKind;
@@ -150,5 +151,7 @@ fn appendConditionalBranch(
     appendNewline(buffer);
 }
 
-fn expressionChildBefore(val nodes: List<AstNode>, root: u64) =>
-    nodes.data[root].subtreeStart - 1;
+fn expressionChildBefore(val nodes: List<AstNode>, root: u64): u64 {
+    val view = AstView(nodes);
+    return view.expressionChildBefore(root);
+}
