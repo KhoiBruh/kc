@@ -1,2 +1,2 @@
-module std.core;
+module std.io;
 
