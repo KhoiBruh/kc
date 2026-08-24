@@ -27,246 +27,46 @@ fn isIdentifierStart(value: u8) => when {
 
 fn isIdentifierContinue(value: u8) => if (isIdentifierStart(value)) true else isDigit(value);
 
-fn matches2(source: Source, start: u64, a: u8, b: u8) => when {
-    source.data[start] != a -> false;
-    source.data[start + 1] != b -> false;
-    else -> true;
-};
-
 fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
     val length = end - start;
-    if (length == 2) {
-        if (matches2(source, start, 102, 110)) return TokenKind.FN;
-        if (matches2(source, start, 105, 102)) return TokenKind.IF;
-        if (matches2(source, start, 105, 110)) return TokenKind.IN;
-        if (matches2(source, start, 117, 56)) return TokenKind.U8;
-        if (matches2(source, start, 97, 115)) return TokenKind.AS;
-    }
-    if (length == 3) {
-        if (source.data[start] == 118) {
-            if (source.data[start + 1] == 97) {
-                if (source.data[start + 2] == 108) return TokenKind.VAL;
-                if (source.data[start + 2] == 114) return TokenKind.VAR;
-            }
-        }
-        if (source.data[start] == 105) {
-            if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) return TokenKind.I32;
-            }
-            if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) return TokenKind.I64;
-            }
-        }
-        if (source.data[start] == 117) {
-            if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) return TokenKind.U32;
-            }
-            if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) return TokenKind.U64;
-            }
-        }
-        if (source.data[start] == 102) {
-            if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 114) return TokenKind.FOR;
-            }
-            if (source.data[start + 1] == 51) {
-                if (source.data[start + 2] == 50) return TokenKind.F32;
-            }
-            if (source.data[start + 1] == 54) {
-                if (source.data[start + 2] == 52) return TokenKind.F64;
-            }
-        }
-        if (source.data[start] == 115) {
-            if (source.data[start + 1] == 116) {
-                if (source.data[start + 2] == 114) return TokenKind.STR;
-            }
-        }
-    }
-    if (length == 4) {
-        if (source.data[start] == 119) {
-            if (source.data[start + 1] == 104) {
-                if (source.data[start + 2] == 101) {
-                    if (source.data[start + 3] == 110) return TokenKind.WHEN;
-                }
-            }
-        }
-        if (source.data[start] == 101) {
-            if (source.data[start + 1] == 108) {
-                if (source.data[start + 2] == 115) {
-                    if (source.data[start + 3] == 101) return TokenKind.ELSE;
-                }
-            }
-        }
-        if (source.data[start] == 117) {
-            if (source.data[start + 1] == 110) {
-                if (source.data[start + 2] == 105) {
-                    if (source.data[start + 3] == 116) return TokenKind.UNIT;
-                }
-            }
-        }
-        if (source.data[start] == 98) {
-            if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 111) {
-                    if (source.data[start + 3] == 108) return TokenKind.BOOL;
-                }
-            }
-        }
-        if (source.data[start] == 116) {
-            if (source.data[start + 1] == 114) {
-                if (source.data[start + 2] == 117) {
-                    if (source.data[start + 3] == 101) return TokenKind.TRUE;
-                }
-            }
-        }
-        if (source.data[start] == 110) {
-            if (source.data[start + 1] == 117) {
-                if (source.data[start + 2] == 108) {
-                    if (source.data[start + 3] == 108) return TokenKind.NULL;
-                }
-            }
-        }
-        if (source.data[start] == 101) {
-            if (source.data[start + 1] == 110) {
-                if (source.data[start + 2] == 117) {
-                    if (source.data[start + 3] == 109) return TokenKind.ENUM;
-                }
-            }
-        }
-    }
-    if (length == 5) {
-        if (source.data[start] == 99) {
-            if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 110) {
-                    if (source.data[start + 3] == 115) {
-                        if (source.data[start + 4] == 116) return TokenKind.CONST;
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 98) {
-            if (source.data[start + 1] == 114) {
-                if (source.data[start + 2] == 101) {
-                    if (source.data[start + 3] == 97) {
-                        if (source.data[start + 4] == 107) return TokenKind.BREAK;
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 119) {
-            if (source.data[start + 1] == 104) {
-                if (source.data[start + 2] == 105) {
-                    if (source.data[start + 3] == 108) {
-                        if (source.data[start + 4] == 101) return TokenKind.WHILE;
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 100) {
-            if (source.data[start + 1] == 101) {
-                if (source.data[start + 2] == 102) {
-                    if (source.data[start + 3] == 101) {
-                        if (source.data[start + 4] == 114) return TokenKind.DEFER;
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 102) {
-            if (source.data[start + 1] == 97) {
-                if (source.data[start + 2] == 108) {
-                    if (source.data[start + 3] == 115) {
-                        if (source.data[start + 4] == 101) return TokenKind.FALSE;
-                    }
-                }
-            }
-        }
-    }
-    if (length == 6) {
-        if (source.data[start] == 109) {
-            if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 100) {
-                    if (source.data[start + 3] == 117) {
-                        if (source.data[start + 4] == 108) {
-                            if (source.data[start + 5] == 101) return TokenKind.MODULE;
-                        }
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 105) {
-            if (source.data[start + 1] == 109) {
-                if (source.data[start + 2] == 112) {
-                    if (source.data[start + 3] == 111) {
-                        if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 116) return TokenKind.IMPORT;
-                        }
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 114) {
-            if (source.data[start + 1] == 101) {
-                if (source.data[start + 2] == 116) {
-                    if (source.data[start + 3] == 117) {
-                        if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 110) return TokenKind.RETURN;
-                        }
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 115) {
-            if (source.data[start + 1] == 116) {
-                if (source.data[start + 2] == 114) {
-                    if (source.data[start + 3] == 117) {
-                        if (source.data[start + 4] == 99) {
-                            if (source.data[start + 5] == 116) return TokenKind.STRUCT;
-                        }
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 101) {
-            if (source.data[start + 1] == 120) {
-                if (source.data[start + 2] == 116) {
-                    if (source.data[start + 3] == 101) {
-                        if (source.data[start + 4] == 114) {
-                            if (source.data[start + 5] == 110) return TokenKind.EXTERN;
-                        }
-                    }
-                }
-            }
-        }
-        if (source.data[start] == 115) {
-            if (source.data[start + 1] == 105) {
-                if (source.data[start + 2] == 122) {
-                    if (source.data[start + 3] == 101) {
-                        if (source.data[start + 4] == 111) {
-                            if (source.data[start + 5] == 102) return TokenKind.SIZEOF;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    if (length == 8) {
-        if (source.data[start] == 99) {
-            if (source.data[start + 1] == 111) {
-                if (source.data[start + 2] == 110) {
-                    if (source.data[start + 3] == 116) {
-                        if (source.data[start + 4] == 105) {
-                            if (source.data[start + 5] == 110) {
-                                if (source.data[start + 6] == 117) {
-                                    if (source.data[start + 7] == 101) return TokenKind.CONTINUE;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return TokenKind.IDENTIFIER;
+    if (length < 2 || length > 8) return TokenKind.IDENTIFIER;
+    return when (source.hash(start, end)) {
+        5863225 -> TokenKind.AS;
+        5863385 -> TokenKind.FN;
+        5863476 -> TokenKind.IF;
+        5863484 -> TokenKind.IN;
+        5863826 -> TokenKind.U8;
+        193489808 -> TokenKind.F32;
+        193489909 -> TokenKind.F64;
+        193491852 -> TokenKind.FOR;
+        193493075 -> TokenKind.I32;
+        193493176 -> TokenKind.I64;
+        193506143 -> TokenKind.U32;
+        193506174 -> TokenKind.STR;
+        193506244 -> TokenKind.U64;
+        193508808 -> TokenKind.VAL;
+        193508814 -> TokenKind.VAR;
+        6385087377 -> TokenKind.BOOL;
+        6385192046 -> TokenKind.ELSE;
+        6385194298 -> TokenKind.ENUM;
+        6385525056 -> TokenKind.NULL;
+        6385737701 -> TokenKind.TRUE;
+        6385768901 -> TokenKind.UNIT;
+        6385834103 -> TokenKind.WHEN;
+        210707980106 -> TokenKind.BREAK;
+        210709068620 -> TokenKind.CONST;
+        210709885995 -> TokenKind.DEFER;
+        210712121072 -> TokenKind.FALSE;
+        210732529790 -> TokenKind.WHILE;
+        6953488408955 -> TokenKind.EXTERN;
+        6953631772544 -> TokenKind.IMPORT;
+        6953790261035 -> TokenKind.MODULE;
+        6953974653989 -> TokenKind.RETURN;
+        6954018731157 -> TokenKind.SIZEOF;
+        6954031505834 -> TokenKind.STRUCT;
+        7572251799911306 -> TokenKind.CONTINUE;
+        else -> TokenKind.IDENTIFIER;
+    };
 }
 
 fn punctuationKind(value: u8): TokenKind => when (value) {
