@@ -50,7 +50,10 @@ function Build-Stage {
     )
     $ll = Join-Path $Directory "$Name.ll"
     $exe = Join-Path $Directory "$Name.exe"
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $Compiler $entry $ll $Opt $Clang $StdRuntime $BootstrapRuntime $exe
+    $ErrorActionPreference = $previousPreference
     if ($LASTEXITCODE -ne 0) {
         Write-Error "$Compiler failed to build $Name"
     }
@@ -96,28 +99,40 @@ foreach ($fixtureName in $validFixtures) {
     $fixture = Join-Path $FixtureDirectory $fixtureName
     $stage1Ll = Join-Path $stage1 "$fixtureName.ll"
     $stage1Exe = Join-Path $stage1 "$fixtureName.exe"
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $kc1 $fixture $stage1Ll $Opt $Clang $StdRuntime $BootstrapRuntime $stage1Exe
+    $ErrorActionPreference = $previousPreference
     if ($LASTEXITCODE -ne 0) { Write-Error "kc1 rejected $fixtureName" }
     $stage2Ll = Join-Path $stage2 "$fixtureName.ll"
     $stage2Exe = Join-Path $stage2 "$fixtureName.exe"
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $kc2 $fixture $stage2Ll $Opt $Clang $StdRuntime $BootstrapRuntime $stage2Exe
+    $ErrorActionPreference = $previousPreference
     if ($LASTEXITCODE -ne 0) { Write-Error "kc2 rejected $fixtureName" }
     $stage3Ll = Join-Path $stage3 "$fixtureName.ll"
     $stage3Exe = Join-Path $stage3 "$fixtureName.exe"
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $kc3 $fixture $stage3Ll $Opt $Clang $StdRuntime $BootstrapRuntime $stage3Exe
+    $ErrorActionPreference = $previousPreference
     if ($LASTEXITCODE -ne 0) { Write-Error "kc3 rejected $fixtureName" }
     $stage4Ll = Join-Path $stage4 "$fixtureName.ll"
     $stage4Exe = Join-Path $stage4 "$fixtureName.exe"
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $kc4 $fixture $stage4Ll $Opt $Clang $StdRuntime $BootstrapRuntime $stage4Exe
+    $ErrorActionPreference = $previousPreference
     if ($LASTEXITCODE -ne 0) { Write-Error "kc4 rejected $fixtureName" }
 
-    $stage1Output = & $stage1Exe
+    $previousRunPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'; $stage1Output = & $stage1Exe; $ErrorActionPreference = $previousRunPreference
     $stage1Exit = $LASTEXITCODE
-    $stage2Output = & $stage2Exe
+    $previousRunPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'; $stage2Output = & $stage2Exe; $ErrorActionPreference = $previousRunPreference
     $stage2Exit = $LASTEXITCODE
-    $stage3Output = & $stage3Exe
+    $previousRunPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'; $stage3Output = & $stage3Exe; $ErrorActionPreference = $previousRunPreference
     $stage3Exit = $LASTEXITCODE
-    $stage4Output = & $stage4Exe
+    $previousRunPreference = $ErrorActionPreference; $ErrorActionPreference = 'Continue'; $stage4Output = & $stage4Exe; $ErrorActionPreference = $previousRunPreference
     $stage4Exit = $LASTEXITCODE
     if ($stage1Exit -ne $stage2Exit -or
         $stage1Exit -ne $stage3Exit -or
@@ -345,8 +360,11 @@ foreach ($moduleFixture in @("diamond", "wildcard", "cycle", "flat_visibility"))
         foreach ($moduleStage in $moduleStages) {
             $moduleLl = Join-Path $moduleStage[1] "module-$moduleFixture.ll"
             $moduleExe = Join-Path $moduleStage[1] "module-$moduleFixture.exe"
+        $previousPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
             & $moduleStage[0] $moduleEntry $moduleLl $Opt $Clang `
                 $StdRuntime $BootstrapRuntime $moduleExe
+        $ErrorActionPreference = $previousPreference
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "$($moduleStage[0]) rejected module $moduleFixture fixture"
             }
@@ -489,8 +507,11 @@ try {
     foreach ($moduleStage in $moduleStages) {
         $depthLl = Join-Path $moduleStage[1] "module-depth-ok.ll"
         $depthExe = Join-Path $moduleStage[1] "module-depth-ok.exe"
+        $previousPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
         & $moduleStage[0] $depthOkEntry $depthLl $Opt $Clang `
             $StdRuntime $BootstrapRuntime $depthExe
+        $ErrorActionPreference = $previousPreference
         if ($LASTEXITCODE -ne 0) { Write-Error "depth-64 boundary was rejected" }
         & $Opt -passes=verify -disable-output $depthLl
         if ($LASTEXITCODE -ne 0) { Write-Error "depth-64 IR failed verification" }
@@ -548,13 +569,25 @@ $invalidFixtures = @(
 )
 foreach ($fixtureName in $invalidFixtures) {
     $fixture = Join-Path $InvalidFixtureDirectory $fixtureName
+    $previousErrorActionOne = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     $one = & $kc1 $fixture (Join-Path $stage1 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage1 "invalid.exe")
+    $ErrorActionPreference = $previousErrorActionOne
     $oneExit = $LASTEXITCODE
+    $previousErrorActionTwo = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     $two = & $kc2 $fixture (Join-Path $stage2 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage2 "invalid.exe")
+    $ErrorActionPreference = $previousErrorActionTwo
     $twoExit = $LASTEXITCODE
+    $previousErrorActionThree = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     $three = & $kc3 $fixture (Join-Path $stage3 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage3 "invalid.exe")
+    $ErrorActionPreference = $previousErrorActionThree
     $threeExit = $LASTEXITCODE
+    $previousErrorActionFour = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     $four = & $kc4 $fixture (Join-Path $stage4 "invalid.ll") $Opt $Clang $StdRuntime $BootstrapRuntime (Join-Path $stage4 "invalid.exe")
+    $ErrorActionPreference = $previousErrorActionFour
     $fourExit = $LASTEXITCODE
     $oneText = [string]($one -join "`n")
     $twoText = [string]($two -join "`n")

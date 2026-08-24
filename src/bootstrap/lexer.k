@@ -329,28 +329,37 @@ struct Lexer(
     errorKind: u32
 ) {
 
-    fn isAtEnd(val self): bool => self.offset >= self.source.length;
+    fn isAtEnd(val self) => self.offset >= self.source.length;
 
-    fn peek(val self): u8 =>
+    fn peek(val self) =>
         if (self.isAtEnd()) 0 as u8 else self.source.data[self.offset];
 
-    fn peekAhead(val self, distance: u64): u8 =>
+    fn peekAhead(val self, distance: u64) =>
         if (self.offset + distance >= self.source.length) 0 as u8
         else self.source.data[self.offset + distance];
 
     fn scanInteger(var self) {
-        while ((self.offset < self.source.length) && isDigit(self.source.data[self.offset])) {
-            self.offset++;
-        }
+        while (
+            self.offset < self.source.length
+            && isDigit(self.source.data[self.offset])
+		) self.offset++;
     }
 
     fn scanIdentifier(var self) {
         val start = self.offset;
         self.offset++;
-        while ((self.offset < self.source.length) && isIdentifierContinue(self.source.data[self.offset])) {
-            self.offset++;
-        }
-        self.tokens.add(Token(keywordKind(self.source, start, self.offset), start, self.offset));
+
+        while (
+            self.offset < self.source.length
+            && isIdentifierContinue(self.source.data[self.offset])
+        ) self.offset++;
+
+        val token = Token(
+            keywordKind(self.source, start, self.offset),
+            start,
+            self.offset
+        );
+        self.tokens.add(token);
     }
 
     fn scanNumber(var self) {
@@ -359,16 +368,15 @@ struct Lexer(
         self.scanInteger();
         var kind = TokenKind.INTEGER_LITERAL;
 
-        if (self.offset < self.source.length) {
-            if (self.source.data[self.offset] == 46) {
-                if (self.offset + 1 < self.source.length) {
-                    if (isDigit(self.source.data[self.offset + 1])) {
-                        kind = TokenKind.FLOAT_LITERAL;
-                        self.offset = self.offset + 2;
-                        self.scanInteger();
-                    }
-                }
-            }
+        if (
+            self.offset < self.source.length
+            && self.source.data[self.offset] == 46
+            && self.offset + 1 < self.source.length
+            && isDigit(self.source.data[self.offset + 1])
+        ) {
+			kind = TokenKind.FLOAT_LITERAL;
+			self.offset = self.offset + 2;
+			self.scanInteger();
         }
 
         if (self.offset < self.source.length) {
@@ -394,6 +402,7 @@ struct Lexer(
         val start = self.offset;
         var escaped = false;
         var foundEnd = false;
+
         for (i in (start + 1)..<self.source.length) {
             val value = self.source.data[i];
             if (escaped) {
@@ -409,6 +418,7 @@ struct Lexer(
                 }
             }
         }
+
         if (!foundEnd) {
             self.failed = true;
             self.errorStart = start;
@@ -421,7 +431,12 @@ struct Lexer(
         if (self.offset + 1 < self.source.length) {
             if (self.source.data[self.offset + 1] == 47) {
                 self.offset = self.offset + 2;
-                while ((self.offset < self.source.length) && self.source.data[self.offset] != 10) self.offset++;
+
+                while (
+                    self.offset < self.source.length
+                    && self.source.data[self.offset] != 10
+                ) self.offset++;
+
                 if (self.offset < self.source.length) self.offset++;
             } else {
                 val pairKind = doublePunctuationKind(47, self.source.data[self.offset + 1]);
@@ -442,44 +457,48 @@ struct Lexer(
     fn scanPunctuation(var self, value: u8) {
         val start = self.offset;
         var kind = punctuationKind(value);
-        if (value == 62) {
-            if (self.offset + 2 < self.source.length) {
-                if (
-                    self.source.data[self.offset + 1] == 46 &&
-                    self.source.data[self.offset + 2] == 46
-                ) {
-                    kind = TokenKind.RANGE_EXCLUSIVE_START;
-                    self.offset = self.offset + 2;
-                    if (self.offset + 1 < self.source.length) {
-                        if (self.source.data[self.offset + 1] == 60) {
-                            kind = TokenKind.RANGE_EXCLUSIVE_BOTH;
-                            self.offset++;
-                        }
-                    }
-                }
-            }
-        }
-        if (value == 46) {
-            if (self.offset + 2 < self.source.length) {
-                if (self.source.data[self.offset + 1] == 46) {
-                    if (self.source.data[self.offset + 2] == 60) {
-                        kind = TokenKind.RANGE_EXCLUSIVE;
-                        self.offset = self.offset + 2;
-                    }
-                }
-            }
-        }
-        if (kind != TokenKind.RANGE_EXCLUSIVE &&
-            kind != TokenKind.RANGE_EXCLUSIVE_START &&
-            kind != TokenKind.RANGE_EXCLUSIVE_BOTH) {
-            if (self.offset + 1 < self.source.length) {
-                val pairKind = doublePunctuationKind(value, self.source.data[self.offset + 1]);
-                if (pairKind != TokenKind.EOF) {
-                    kind = pairKind;
-                    self.offset++;
-                }
-            }
-        }
+
+        if (
+            value == 62
+            && self.offset + 2 < self.source.length
+            && self.source.data[self.offset + 1] == 46
+            && self.source.data[self.offset + 2] == 46
+		) {
+			kind = TokenKind.RANGE_EXCLUSIVE_START;
+			self.offset = self.offset + 2;
+
+			if (
+				self.offset + 1 < self.source.length
+				&& self.source.data[self.offset + 1] == 60
+			) {
+				kind = TokenKind.RANGE_EXCLUSIVE_BOTH;
+				self.offset++;
+			}
+		}
+
+        if (
+            value == 46
+            && self.offset + 2 < self.source.length
+            && self.source.data[self.offset + 1] == 46
+            && self.source.data[self.offset + 2] == 60
+		) {
+			kind = TokenKind.RANGE_EXCLUSIVE;
+			self.offset = self.offset + 2;
+		}
+
+        if (
+            kind != TokenKind.RANGE_EXCLUSIVE
+            && kind != TokenKind.RANGE_EXCLUSIVE_START
+            && kind != TokenKind.RANGE_EXCLUSIVE_BOTH
+	        && self.offset + 1 < self.source.length
+	    ) {
+		    val pairKind = doublePunctuationKind(value, self.source.data[self.offset + 1]);
+		    if (pairKind != TokenKind.EOF) {
+		        kind = pairKind;
+		        self.offset++;
+		    }
+		}
+
         if (kind == TokenKind.EOF) {
             self.failed = true;
             self.errorStart = start;
@@ -510,16 +529,20 @@ struct Lexer(
             self.scanToken();
             if (self.failed) break;
         }
+
         var ok = true;
         if (self.failed) {
             ok = false;
         } else {
             self.tokens.add(Token(TokenKind.EOF, self.source.length, self.source.length));
         }
+
         val errorStart = self.errorStart;
         val errorKind = self.errorKind;
-        return LexResult(self.tokens, ok, errorStart, errorKind);
+        val tokens = self.tokens;
+        return LexResult(tokens, ok, errorStart, errorKind);
     }
+
 }
 
 fn lex(source: Source): LexResult {

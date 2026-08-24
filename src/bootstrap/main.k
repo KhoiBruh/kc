@@ -96,6 +96,7 @@ fn main(): i32 {
         freeArguments(input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
         return 1;
     }
+
     var pathsOk = true;
     if (llOutput.length == 0) pathsOk = false;
     if (opt.length == 0) pathsOk = false;
@@ -107,7 +108,10 @@ fn main(): i32 {
     if (!pathsOk) {
         mainPathError(2);
         freeArguments(
-            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+            input, llOutput, opt, clang,
+            stdRuntime, bootstrapRuntime, executable
+		);
+
         return 1;
     }
 
@@ -117,7 +121,10 @@ fn main(): i32 {
         k_boot_free(loaded.sourceMap.data as unit*);
         if (failureKind == 1) mainError(2);
         freeArguments(
-            input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+            input, llOutput, opt, clang,
+            stdRuntime, bootstrapRuntime, executable
+        );
+
         return failureKind;
     }
 
@@ -126,17 +133,22 @@ fn main(): i32 {
         llOutput.data, llOutput.length,
         opt.data, opt.length
     );
+
     if (result == 0) {
         result = linkLl(
             llOutput.data, llOutput.length, clang.data, clang.length,
             stdRuntime.data, stdRuntime.length,
             bootstrapRuntime.data, bootstrapRuntime.length,
-            executable.data, executable.length);
+            executable.data, executable.length
+        );
     }
 
     k_boot_free(loaded.source.data as unit*);
     sourceMapFree(loaded.sourceMap);
     freeArguments(
-        input, llOutput, opt, clang, stdRuntime, bootstrapRuntime, executable);
+		input, llOutput, opt, clang,
+		stdRuntime, bootstrapRuntime, executable
+	);
+
     return result;
 }

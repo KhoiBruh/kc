@@ -56,10 +56,12 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 
 	fn array(val self, size: u64) => TypeValue(
         TypeKind.ARRAY, self.name,
-        self.kind.value + (size as u32) * 256);
+        self.kind.value + (size as u32) * 256
+	);
 
 	fn arrayElement(val self) => TypeValue(
-        typeKindFromValue(self.pointee % 256), self.name, 0);
+        typeKindFromValue(self.pointee % 256), self.name, 0
+	);
 
 	fn arraySize(val self) => self.pointee / 256;
 
@@ -84,10 +86,10 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 		if (self.kind == target.kind) return false;
 		val sourceWidth = self.intWidth();
 		val targetWidth = target.intWidth();
-		if (self.isSigned() == target.isSigned()) {
-			return targetWidth < sourceWidth;
-		}
+
+		if (self.isSigned() == target.isSigned()) return targetWidth < sourceWidth;
 		if (self.isSigned()) return true;
+
 		return targetWidth <= sourceWidth;
 	}
 
@@ -100,45 +102,52 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 		return true;
 	}
 
-	fn genericStart(val self): u32 => self.pointee % 65536;
+	fn genericStart(val self) => self.pointee % 65536;
 
-	fn genericCount(val self): u32 => self.pointee / 65536;
+	fn genericCount(val self) => self.pointee / 65536;
 
 	fn equals(val self, right: TypeValue, val genericArguments: List<TypeValue>): bool {
 		if (self.kind != right.kind) return false;
 		if (self.name != right.name) return false;
+
 		if (self.kind == TypeKind.STRUCT) {
 			val leftCount = self.genericCount();
 			val rightCount = right.genericCount();
 			if (leftCount != rightCount) return false;
 			if (leftCount == 0) return true;
+
 			val leftStart = self.genericStart();
 			val rightStart = right.genericStart();
+
 			for (index in 0..<leftCount) {
-				val leftArg = genericArguments.data[leftStart as u64 + index as u64];
-				val rightArg = genericArguments.data[rightStart as u64 + index as u64];
-				if (!leftArg.equals(rightArg, genericArguments)) {
-					return false;
-				}
+				val leftArg = genericArguments.data[leftStart + index];
+				val rightArg = genericArguments.data[rightStart + index];
+				if (!leftArg.equals(rightArg, genericArguments)) return false;
 			}
+
 			return true;
 		}
+
 		return self.pointee == right.pointee;
 	}
 
 	fn accepts(val self, actual: TypeValue, val genericArguments: List<TypeValue>): bool {
 		if (self.equals(actual, genericArguments)) return true;
 		if (actual.implicitlyWidensTo(self)) return true;
+
 		if (self.kind == TypeKind.NULLABLE) {
 			if (actual.kind == TypeKind.NULL_LITERAL) return true;
 			return TypeValue(typeKindFromValue(self.pointee), self.name, 0).equals(actual, genericArguments);
 		}
+
 		if (actual.kind == TypeKind.INTEGER_LITERAL) {
 			if (self.isInteger()) return true;
 		}
+
 		if (actual.kind == TypeKind.F64) {
 			if (self.isFloat()) return true;
 		}
+
 		if (self.kind == TypeKind.ARRAY) {
 			if (actual.kind == TypeKind.ARRAY) {
 				if (self.arraySize() == actual.arraySize()) {
@@ -146,6 +155,7 @@ struct TypeValue(kind: TypeKind, name: u64, pointee: u32) {
 				}
 			}
 		}
+
 		return false;
 	}
 }
@@ -158,7 +168,7 @@ fn boolType() => TypeValue(TypeKind.BOOL, 0, 0);
 
 fn integerLiteralType() => TypeValue(TypeKind.INTEGER_LITERAL, 0, 0);
 
-fn primitiveType(tokenKind: u32): TypeValue => when (tokenKind) {
+fn primitiveType(tokenKind: u32) => when (tokenKind) {
     TokenKind.UNIT.value -> unitType();
     TokenKind.BOOL.value -> boolType();
     TokenKind.I32.value -> TypeValue(TypeKind.I32, 0, 0);
@@ -173,8 +183,10 @@ fn primitiveType(tokenKind: u32): TypeValue => when (tokenKind) {
 };
 
 struct LocalInfo(
-    name: u64, valueType: TypeValue, mutable: bool, storage: u64,
-    moved: bool, autoDrop: bool)
+    name: u64, valueType: TypeValue, mutable: bool,
+    storage: u64, moved: bool, autoDrop: bool
+)
+
 fn localFind(val locals: List<LocalInfo>, name: u64): u64 {
     for (index in locals.length>..0)
         if (locals.data[index].name == name) return index;
@@ -188,6 +200,7 @@ fn localFindFrom(val locals: List<LocalInfo>, name: u64, start: u64): u64 {
 }
 
 struct DeclarationInfo(name: u64, node: u64)
+
 fn declarationFind(val declarations: List<DeclarationInfo>, name: u64): u64 {
     for (index in 0..<declarations.length)
         if (declarations.data[index].name == name) return index;
