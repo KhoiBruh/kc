@@ -135,12 +135,23 @@ the same commit.
 
 ## 7. Phase 3 — Freeze, then remove
 
-1. Freeze: `src/lang` + `src/codegen` accept only toolchain-breaking fixes;
-   README marks them as reference-only.
-2. After one full release cycle with an empty ledger and green inverted-flow
-   CI: delete both directories, drop `kc0` targets from CMake, update
-   AGENTS.md architecture diagram and build instructions.
-3. Repository then ships: K sources + seed policy artifact + scripts.
+**Status: complete (2026-08-24, executed early by maintainer decision).**
+The seed-policy flip (§6) made the freeze step moot: `src/lang`,
+`src/codegen`, and `src/cli` were deleted from `main`; the C++ source is
+preserved on the `kc0-reference` branch and a prebuilt binary ships with the
+`kc0-seed-v0.1` release. CMake now builds only the runtime libraries and the
+runtime unit test; driver tests resolve the kc0 seed binary via
+`KLANG_KC0_EXE` / `$env:KLANG_KC0` / `tools/kc0.exe`. The three frontend
+differential drivers that compared against the deleted C++ lexer/parser/
+semantic (`BootstrapLexerTests`, `BootstrapParserTests`,
+`BootstrapSemanticTests`) and their dump tools were removed with it; future
+frontend parity checks build `kc0` from the reference branch.
+
+1. ~~Freeze~~ — superseded: deletion happened without an intermediate freeze.
+2. ~~One release cycle~~ — waived by maintainer decision; the differential
+   harness plus acceptance suite gate every change instead.
+3. Done: repository ships K sources + runtime + scripts; seed policy = binary
+   artifact (`kc0-seed-v0.1`) or locally rebuilt `kc0-reference`.
 
 ## 8. Risks and mitigations
 

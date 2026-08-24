@@ -20,3 +20,5 @@ scripts/
 
 tests/**/*.ll
 tests/**/*.exe
+
+tools/

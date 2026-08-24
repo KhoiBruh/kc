@@ -9,7 +9,8 @@
             "installDir": "${sourceDir}/out/install/${presetName}",
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER": "cl.exe",
-                "LLVM_DIR": "$env{LLVM}"
+                "LLVM_DIR": "$env{LLVM}",
+                "KLANG_KC0_EXE": "$env{KLANG_KC0}"
             },
             "condition": {
                 "type": "equals",

@@ -3,8 +3,9 @@
 ## Project goal
 
 Klang is an experimental low-level, statically compiled language named **K**.
-The compiler CLI is `kc`, source files use `.k`, and LLVM is the backend.
-Work incrementally in small, runnable vertical slices. Do not add concurrency yet.
+The compiler is **self-hosted**: `src/bootstrap` contains the entire compiler
+written in K, and LLVM is the backend. Work incrementally in small, runnable
+vertical slices. Do not add concurrency yet.
 
 Read `docs.md` before changing language behavior. Approved implementation plans
 and design history are under `docs/superpowers/`.
@@ -15,41 +16,48 @@ and design history are under `docs/superpowers/`.
 - Do not refactor or rename unrelated code.
 - Use TDD for language/compiler behavior: add a focused failing test, observe
   the expected failure, implement, then run the relevant target and CTest.
-- Keep `src/lang/` independent of LLVM, Windows APIs, and the runtime.
-- LLVM-dependent code belongs in `src/codegen/`.
-- Standard-library/runtime code belongs in `src/lib/std/`; isolate OS calls in
-  `src/lib/std/platform/`.
+- All compiler code lives in `src/bootstrap/`; runtime/standard-library code
+  belongs in `src/lib/std/` (isolate OS calls in `src/lib/std/platform/`) and
+  `src/lib/bootstrap/`.
+- The C++ reference compiler was removed from this branch (Phase 3 of C8).
+  Its source is preserved on the `kc0-reference` branch; a prebuilt seed
+  binary ships with the GitHub release `kc0-seed-v0.1`. Place a copy at
+  `tools/kc0.exe` or set `$env:KLANG_KC0` for driver tests and
+  `scripts/bootstrap.ps1`.
 - Preserve positioned diagnostics and CLI exit codes:
   `0` success, `1` CLI/filesystem/tool invocation failure, `2` source,
   semantic, codegen, or linker diagnostic.
 - Git remote: `https://github.com/KhoiBruh/kc`. IDE settings, `out/`,
-  `cmake-build-*`, and `scripts/` are gitignored to keep machine environment
-  details out of the repository.
+  `cmake-build-*`, `scripts/`, and `tools/` are gitignored to keep machine
+  environment details out of the repository.
 
 ## Current architecture
 
 ```text
 source.k
-  -> Lexer
-  -> Parser / AST
-  -> SemanticAnalyzer
-  -> LlvmCodegen
-  -> LLVM Module
+  -> Lexer (K)
+  -> Parser / AST (K)
+  -> SemanticAnalyzer (K)
+  -> LlvmTextEmitter (K)
      -> textual .ll
-     -> NativeEmitter / TargetMachine -> COFF .obj
-     -> ClangLinker -> Windows .exe
+     -> opt -passes=verify
+     -> clang -> Windows .exe
+
+Bootstrap chain: kc0 (seed binary) -> kc1 -> kc2 -> kc3 -> kc4
+Fixed point: kc3.ll == kc4.ll
 ```
 
-- `src/lang/`: source model, tokens, lexer, AST, parser, semantic types/checker.
-- `src/codegen/LlvmCodegen.*`: lowers the supported typed AST to verified IR.
-- `src/codegen/NativeEmitter.*`: configures the host target and emits objects.
-- `src/codegen/ClangLinker.*`: invokes the configured Clang driver.
-- `src/cli/main.cpp`: `kc` modes and diagnostic/output handling.
+Bootstrap chain: kc0 (seed binary) -> kc1 -> kc2 -> kc3 -> kc4
+Fixed point: kc3.ll == kc4.ll
+```
+
+- `src/bootstrap/`: the entire compiler — source loading, lexer, parser,
+  semantic checking, and textual LLVM emission, written in K.
 - `src/lib/std/`: minimal runtime currently linked into native executables.
-- `tests/`: `unit/` dependency-free C++ unit tests, `tools/` diagnostic dump
-  executables used by drivers, `drivers/` PowerShell scenario scripts,
-  `cases/` self-hosted acceptance `.k` programs, `harness/` K driver sources,
-  and `fixtures/` shared fixtures (invalid inputs, module graphs).
+- `tests/`: `unit/` runtime unit tests, `drivers/` PowerShell scenario scripts
+  (including the differential harness), `cases/` self-hosted acceptance `.k`
+  programs, `harness/` K driver sources, and `fixtures/` shared fixtures
+  (invalid inputs, module graphs).
 
 ## Established K language decisions
 
@@ -80,15 +88,14 @@ source.k
   initializer expression.
 - Native code emission is demand-driven: only declarations reachable from a
   non-extern `main` are emitted (functions, structs, enums, constants, and
-  generic specializations, tracked by `src/codegen/Reachability.*`). Semantic
-  analysis stays whole-program; without a `main` entry all declarations are
-  emitted. `mod.k` is not a compilation registry.
+  generic specializations). Semantic analysis stays whole-program; without a
+  `main` entry all declarations are emitted. `mod.k` is not a compilation
+  registry.
 - Wildcard imports (`import foo.*`) are a permanent name-resolution feature:
   they bring module names into scope but never make the imported module
   reachable. Only declarations actually referenced from the entry point are
-  compiled; unused wildcard imports are legal. Import resolution
-  (`ModuleSystem`, bootstrap `loader.k`) and compilation reachability
-  (`src/codegen/Reachability.*`) are separate concerns.
+  compiled; unused wildcard imports are legal. Import resolution and
+  compilation reachability are separate concerns.
 - Nullable syntax is only `T?`; postfix `!` unwraps. Nested `T??` is invalid.
 - Enum v0.1 is payload-free and non-generic. Variants are comma-separated with
   no trailing comma, accessed as `Enum.Variant`, and use declaration-order
@@ -118,6 +125,11 @@ source.k
 
 ## Build and verification
 
+The C++ build now produces only the runtime libraries and the runtime unit
+test. Driver tests additionally need a `kc0` seed binary — place one at
+`tools/kc0.exe` or configure with `-DKLANG_KC0_EXE=<path>` (see the release
+`kc0-seed-v0.1` or the `kc0-reference` branch for sources).
+
 Preferred agent commands automatically enter the Visual Studio developer
 environment:
 
@@ -132,17 +144,18 @@ environment:
 Run `.\scripts\dev.ps1` without arguments to open an interactive DevShell at the project root.
 
 Before completion, also configure/build/test `x64-release`. Run targeted tests
-while iterating; run all CTest targets only at a milestone boundary.
+while iterating; run all CTest targets only at a milestone boundary. The full
+self-hosted loop (chain + fixed point + fixtures) is
+`.\scripts\bootstrap.ps1`.
 
-Useful CLI checks:
+Useful CLI checks (through any stage binary, e.g. `out/bootstrap/kc4.exe`):
 
 ```powershell
-kc --tokens file.k
-kc --ast file.k
-kc --check file.k
-kc --emit-llvm file.k -o file.ll
-kc --emit-obj file.k -o file.obj
-kc file.k -o file.exe
+kc4 --tokens file.k
+kc4 --ast file.k
+kc4 --check file.k
+kc4 --emit-llvm file.k -o file.ll
+kc4 file.k -o file.exe
 ```
 
 Validate artifacts with LLVM 22 tools:
@@ -248,13 +261,13 @@ Static move-ownership self-hosting is complete for the current contract.
   `out/bootstrap/`, seeds `kc1` via `kc0`, builds `kc2`–`kc4`, verifies the
   fixed point (`kc3.ll` == `kc4.ll`), logs per-stage wall time to
   `out/bootstrap/timings.txt` (baseline ~35–50 s/stage Release; warn >120 s),
-  then runs the fixture/parity suite. `-SkipNativeBuild`, `-NoCleanRoom`, and
-  `-SkipSuite` scope individual runs. The C++ toolchain is invoked only by the
-  seed step.
-- Development flow (C8 Phase 2): feature work lands only in `src/bootstrap`,
-  `tests/cases`, and `docs.md`. `src/lang` and `src/codegen` are frozen —
-  modify them only to repair a C++-side break, stating the reason in the
-  commit. Behavior changes require an acceptance fixture plus a differential
+    then runs the fixture/parity suite. `-SkipNativeBuild`, `-NoCleanRoom`, and
+    `-SkipSuite` scope individual runs; `-Kc0Path`/`$env:KLANG_KC0` select the
+    seed binary.
+- Development flow (C8 Phase 3): feature work lands only in `src/bootstrap`,
+  `tests/cases`, and `docs.md`. The C++ reference compiler is removed from
+  this branch — its source lives on `kc0-reference`; never reintroduce it
+  here. Behavior changes require an acceptance fixture plus a differential
   harness pass (`k_differential_tests`).
 - Scalar functions, control flow, raw pointers, casts, indexing, structs,
   generic functions and structs (including generic-struct instance methods and
