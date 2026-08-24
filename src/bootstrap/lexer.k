@@ -4,10 +4,14 @@ import bootstrap.source.Source;
 import bootstrap.token.Token;
 import bootstrap.token.TokenKind;
 import bootstrap.list.List;
+import bootstrap.containers.ByteBuffer;
+import bootstrap.containers.StringBuilder;
 
 extern fn k_boot_arg_count(): i32;
 extern fn k_boot_arg(index: i32, data: u8**, length: u64*): bool;
 extern fn k_boot_read_file(path: u8*, pathLength: u64, data: u8**, length: u64*): bool;
+
+
 
 struct LexResult(tokens: List<Token>, ok: bool, errorStart: u64, errorKind: u32)
 
@@ -25,7 +29,7 @@ fn isIdentifierStart(value: u8) => when {
 	else -> false;
 };
 
-fn isIdentifierContinue(value: u8) => if (isIdentifierStart(value)) true else isDigit(value);
+fn isIdentifierContinue(value: u8) => isIdentifierStart(value) || isDigit(value);
 
 fn keywordKind(source: Source, start: u64, end: u64): TokenKind {
     val length = end - start;
@@ -98,8 +102,6 @@ fn punctuationKind(value: u8): TokenKind => when (value) {
 };
 
 fn doublePunctuationKind(first: u8, second: u8): TokenKind {
-    if (first == 43 && second == 43) return TokenKind.PLUS_PLUS;
-    if (first == 45 && second == 45) return TokenKind.MINUS_MINUS;
     if (second == 61) return when (first) {
         43 -> TokenKind.PLUS_EQUAL;
         45 -> TokenKind.MINUS_EQUAL;
@@ -112,11 +114,19 @@ fn doublePunctuationKind(first: u8, second: u8): TokenKind {
         62 -> TokenKind.GREATER_EQUAL;
         else -> TokenKind.EOF;
     };
-    if (first == 38 && second == 38) return TokenKind.AND_AND;
-    if (first == 124 && second == 124) return TokenKind.OR_OR;
-    if (first == 45 && second == 62) return TokenKind.ARROW;
-    if (first == 61 && second == 62) return TokenKind.FAT_ARROW;
-    if (first == 46 && second == 46) return TokenKind.RANGE;
+    if (second == 62) return when (first) {
+        45 -> TokenKind.ARROW;
+        61 -> TokenKind.FAT_ARROW;
+        else -> TokenKind.EOF;
+    };
+    if (first == second) return when (first) {
+        43 -> TokenKind.PLUS_PLUS;
+        45 -> TokenKind.MINUS_MINUS;
+        38 -> TokenKind.AND_AND;
+        124 -> TokenKind.OR_OR;
+        46 -> TokenKind.RANGE;
+        else -> TokenKind.EOF;
+    };
     return TokenKind.EOF;
 }
 
@@ -139,20 +149,14 @@ struct Lexer(
         else self.source.data[self.offset + distance];
 
     fn scanInteger(var self) {
-        while (
-            self.offset < self.source.length
-            && isDigit(self.source.data[self.offset])
-		) self.offset++;
+        while (isDigit(self.peek())) self.offset++;
     }
 
     fn scanIdentifier(var self) {
         val start = self.offset;
         self.offset++;
 
-        while (
-            self.offset < self.source.length
-            && isIdentifierContinue(self.source.data[self.offset])
-        ) self.offset++;
+        while (isIdentifierContinue(self.peek())) self.offset++;
 
         val token = Token(
             keywordKind(self.source, start, self.offset),
@@ -168,31 +172,17 @@ struct Lexer(
         self.scanInteger();
         var kind = TokenKind.INTEGER_LITERAL;
 
-        if (
-            self.offset < self.source.length
-            && self.source.data[self.offset] == 46
-            && self.offset + 1 < self.source.length
-            && isDigit(self.source.data[self.offset + 1])
-        ) {
-			kind = TokenKind.FLOAT_LITERAL;
-			self.offset = self.offset + 2;
-			self.scanInteger();
+        if (self.peek() == 46 && isDigit(self.peekAhead(1))) {
+            kind = TokenKind.FLOAT_LITERAL;
+            self.offset = self.offset + 2;
+            self.scanInteger();
         }
 
-        if (self.offset < self.source.length) {
-            var exponentMarker = self.source.data[self.offset] == 101;
-            if (self.source.data[self.offset] == 69) exponentMarker = true;
-            if (exponentMarker) {
-                kind = TokenKind.FLOAT_LITERAL;
-                self.offset++;
-                if (self.offset < self.source.length) {
-                    var exponentSign = self.source.data[self.offset] == 43;
-                    if (self.source.data[self.offset] == 45) exponentSign = true;
-                    if (exponentSign) self.offset++;
-                }
-
-                self.scanInteger();
-            }
+        if (self.peek() == 101 || self.peek() == 69) {
+            kind = TokenKind.FLOAT_LITERAL;
+            self.offset++;
+            if (self.peek() == 43 || self.peek() == 45) self.offset++;
+            self.scanInteger();
         }
 
         self.tokens.add(Token(kind, start, self.offset));
@@ -228,76 +218,47 @@ struct Lexer(
 
     fn scanSlash(var self) {
         val start = self.offset;
-        if (self.offset + 1 < self.source.length) {
-            if (self.source.data[self.offset + 1] == 47) {
-                self.offset = self.offset + 2;
+        val next = self.peekAhead(1);
 
-                while (
-                    self.offset < self.source.length
-                    && self.source.data[self.offset] != 10
-                ) self.offset++;
-
-                if (self.offset < self.source.length) self.offset++;
-            } else {
-                val pairKind = doublePunctuationKind(47, self.source.data[self.offset + 1]);
-                if (pairKind == TokenKind.EOF) {
-                    self.offset++;
-                    self.tokens.add(Token(TokenKind.SLASH, start, self.offset));
-                } else {
-                    self.offset = self.offset + 2;
-                    self.tokens.add(Token(pairKind, start, self.offset));
-                }
-            }
-        } else {
-            self.offset++;
-            self.tokens.add(Token(TokenKind.SLASH, start, self.offset));
+        if (next == 47) {
+            self.offset = self.offset + 2;
+            while (!self.isAtEnd() && self.peek() != 10) self.offset++;
+            if (!self.isAtEnd()) self.offset++;
+            return;
         }
+
+        val pairKind = doublePunctuationKind(47, next);
+        if (pairKind != TokenKind.EOF) {
+            self.offset = self.offset + 2;
+            self.tokens.add(Token(pairKind, start, self.offset));
+            return;
+        }
+
+        self.offset++;
+        self.tokens.add(Token(TokenKind.SLASH, start, self.offset));
     }
 
     fn scanPunctuation(var self, value: u8) {
         val start = self.offset;
         var kind = punctuationKind(value);
 
-        if (
-            value == 62
-            && self.offset + 2 < self.source.length
-            && self.source.data[self.offset + 1] == 46
-            && self.source.data[self.offset + 2] == 46
-		) {
-			kind = TokenKind.RANGE_EXCLUSIVE_START;
-			self.offset = self.offset + 2;
-
-			if (
-				self.offset + 1 < self.source.length
-				&& self.source.data[self.offset + 1] == 60
-			) {
-				kind = TokenKind.RANGE_EXCLUSIVE_BOTH;
-				self.offset++;
-			}
-		}
-
-        if (
-            value == 46
-            && self.offset + 2 < self.source.length
-            && self.source.data[self.offset + 1] == 46
-            && self.source.data[self.offset + 2] == 60
-		) {
-			kind = TokenKind.RANGE_EXCLUSIVE;
-			self.offset = self.offset + 2;
-		}
-
-        if (
-            kind != TokenKind.RANGE_EXCLUSIVE
-            && kind != TokenKind.RANGE_EXCLUSIVE_START
-            && kind != TokenKind.RANGE_EXCLUSIVE_BOTH
-	        && self.offset + 1 < self.source.length
-	    ) {
-		    val pairKind = doublePunctuationKind(value, self.source.data[self.offset + 1]);
-		    if (pairKind != TokenKind.EOF) {
-		        kind = pairKind;
-		        self.offset++;
-		    }
-		}
+        if (value == 62 && self.peekAhead(1) == 46 && self.peekAhead(2) == 46) {
+            kind = TokenKind.RANGE_EXCLUSIVE_START;
+            self.offset = self.offset + 2;
+            if (self.peekAhead(1) == 60) {
+                kind = TokenKind.RANGE_EXCLUSIVE_BOTH;
+                self.offset++;
+            }
+        } else if (value == 46 && self.peekAhead(1) == 46 && self.peekAhead(2) == 60) {
+            kind = TokenKind.RANGE_EXCLUSIVE;
+            self.offset = self.offset + 2;
+        } else if (self.peekAhead(1) != 0) {
+            val pairKind = doublePunctuationKind(value, self.peekAhead(1));
+            if (pairKind != TokenKind.EOF) {
+                kind = pairKind;
+                self.offset++;
+            }
+        }
 
         if (kind == TokenKind.EOF) {
             self.failed = true;
