@@ -6,6 +6,9 @@ param(
     [string]$Token,
 
     [Parameter(Mandatory)]
+    [string]$Heap,
+
+    [Parameter(Mandatory)]
     [string]$List,
 
     [Parameter(Mandatory)]
@@ -22,11 +25,12 @@ $ErrorActionPreference = "Stop"
 
 $combined = "$Output.combined.k"
 $tokenText = [System.IO.File]::ReadAllText($Token)
+$heapText = [System.IO.File]::ReadAllText($Heap)
 $listText = [System.IO.File]::ReadAllText($List)
 $libraryText = [System.IO.File]::ReadAllText($Library)
 $testText = [System.IO.File]::ReadAllText($TestSource)
 [System.IO.File]::WriteAllText(
-    $combined, $tokenText + "`n" + $listText + "`n" + $libraryText + "`n" + $testText)
+    $combined, $tokenText + "`n" + $heapText + "`n" + $listText + "`n" + $libraryText + "`n" + $testText)
 
 & $Compiler $combined -o $Output
 if ($LASTEXITCODE -ne 0) {

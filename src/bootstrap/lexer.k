@@ -11,8 +11,6 @@ extern fn k_boot_arg_count(): i32;
 extern fn k_boot_arg(index: i32, data: u8**, length: u64*): bool;
 extern fn k_boot_read_file(path: u8*, pathLength: u64, data: u8**, length: u64*): bool;
 
-
-
 struct LexResult(tokens: List<Token>, ok: bool, errorStart: u64, errorKind: u32)
 
 fn isWhitespace(value: u8) => when (value) {

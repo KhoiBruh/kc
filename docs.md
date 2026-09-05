@@ -872,6 +872,26 @@ specialization đều dùng container này.
 `ByteBuffer` và `SymbolTable` vẫn ở `src/bootstrap/containers.k` vì chúng có API
 chuyên biệt cho byte và tra cứu theo key, không phải danh sách tuần tự thuần.
 
+### Bộ cấp phát chuẩn `bootstrap.heap`
+
+`src/bootstrap/heap.k` là nơi khai báo duy nhất các extern `k_boot_alloc`/
+`k_boot_free`; module khác không được khai báo lại hoặc import trực tiếp từ
+`bootstrap.list`. API kiểu hóa:
+
+```text
+fn alloc<T>(count: u64): T*;
+fn free<T>(pointer: T*);
+fn grow<T>(old: T*, oldCount: u64, newCount: u64): T*;
+```
+
+Vì suy luận tham số kiểu không xuyên qua kiểu con trỏ, call-site phải chỉ định
+tường minh: `alloc<u8>(2)`, `grow<u8>(self.data, self.length, capacity)`,
+`free<u8>(self.data)`. `List<T>`, `ByteBuffer` và `StringBuilder` dùng bộ này.
+`SymbolTable` tạm giữ ABI thô vì `kc0` hạ specialization cho cả khai báo không
+được tham chiếu từ entry ("type not supported by the LLVM backend"); chuyển sang
+`heap.alloc/free/grow` khi nó trở thành reachable. Null trả về khi hết bộ nhớ
+chưa được kiểm tra ở tầng này.
+
 # Bootstrap compiler status
 
 **Module/import self-hosting milestone: complete.** Bootstrap compilation starts
@@ -946,3 +966,11 @@ methods remain unsupported, as do type packs, overload resolution, payload
 enums, and user-defined traits. Static move ownership and deterministic drop
 for owned strings and resource structs are self-hosted; array drop glue and lifetime
 checking remain separate work.
+
+**Generic pointer/slice substitution: complete.** `substituteGenericType` giờ thay
+tham số kiểu xuất hiện trực tiếp dưới `T*` và `[]T` trong kiểu trả về/tham số
+của hàm tổng quát (trước đây chỉ `substituteStructType` của method xử lý được,
+khiến generic function trả `T*` bị chẩn đoán `type mismatch` sai). Con trỏ lồng
+nhiều cấp và kiểu không chứa tham số giữ nguyên ngữ nghĩa cũ. Fixture chấp nhận:
+`tests/cases/heap_alloc.k` (`alloc<T>`/`grow<T>`/`free<T>` cho `i32` và struct,
+chạy được, exit 0, parity `kc0`–`kc4` qua differential).

@@ -1,11 +1,12 @@
 module bootstrap.list;
 
-extern fn k_boot_alloc(size: u64): unit*;
-extern fn k_boot_free(pointer: unit*);
+import bootstrap.heap.alloc;
+import bootstrap.heap.free;
+import bootstrap.heap.grow;
 
 struct List<T>(data: T*, length: u64, capacity: u64, size: u64) {
 
-    fn new() => List<T>(k_boot_alloc(2 * sizeof(T)) as T*, 0, 2, sizeof(T));
+    fn new() => List<T>(alloc<T>(2), 0, 2, sizeof(T));
 
 	fn add(var self, value: T): u64 {
 		if (self.length == self.capacity) self.grow();
@@ -17,14 +18,11 @@ struct List<T>(data: T*, length: u64, capacity: u64, size: u64) {
 
  	fn grow(var self) {
         val capacity = self.capacity * 2;
-        val data = k_boot_alloc(capacity * self.size) as T*;
-        for (i in 0..<self.length) data[i] = self.data[i];
-        k_boot_free(self.data as unit*);
-        self.data = data;
+        self.data = grow<T>(self.data, self.length, capacity);
         self.capacity = capacity;
     }
 
-    fn free(self) => k_boot_free(self.data as unit*);
+    fn free(self) => free<T>(self.data);
 
     fn setLength(var self, value: u64) {
         self.length = value;

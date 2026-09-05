@@ -17,8 +17,6 @@ import bootstrap.semantic.mod.analyze;
 import bootstrap.llvm_text.mod.emitModule;
 import bootstrap.token.TokenKind;
 
-
-
 fn nodeIsPrint(val semantic: Semantic, node: AstNode): bool {
     if (node.end - node.start != 5) return false;
     if (semantic.source.data[node.start] != 112) return false;

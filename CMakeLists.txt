@@ -63,6 +63,7 @@ if(BUILD_TESTING)
             -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/drivers/BootstrapContainerTests.ps1"
             -Compiler "${KLANG_KC0_EXE}"
             -Token "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/token.k"
+            -Heap "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/heap.k"
             -List "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/list.k"
             -Library "${CMAKE_CURRENT_SOURCE_DIR}/src/bootstrap/containers.k"
             -TestSource "${CMAKE_CURRENT_SOURCE_DIR}/tests/harness/container_tests.k"

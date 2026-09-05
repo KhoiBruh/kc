@@ -91,7 +91,7 @@ $validFixtures = @(
     "enum_type_after.k", "string_literals.k",
     "constants.k", "expression_functions.k", "struct_methods.k", "associated_factories.k",
     "ownership_control_flow.k", "literal_slice_contexts.k", "slice_from_pointer.k",
-    "slice_function_shadow.k"
+    "slice_function_shadow.k", "heap_alloc.k"
 )
 Push-Location $moduleRoot
 try {

@@ -328,6 +328,24 @@ fn substituteGenericType(
         if (inner.kind == TypeKind.INVALID) return inner;
         return TypeValue(TypeKind.NULLABLE, inner.name, inner.kind.value);
     }
+    if (type.kind == TypeKind.POINTER) {
+        val innerKind = typeKindFromValue(type.pointee);
+        if (innerKind != TypeKind.TYPE_PARAMETER) return type;
+        val position =
+            typeParameterPosition(semantic, functionRoot, type.name);
+        if (position >= count) return invalidType();
+        val argument = arguments[position as u64];
+        return TypeValue(TypeKind.POINTER, argument.name, argument.kind.value);
+    }
+    if (type.kind == TypeKind.SLICE) {
+        val innerKind = typeKindFromValue(type.pointee);
+        if (innerKind != TypeKind.TYPE_PARAMETER) return type;
+        val position =
+            typeParameterPosition(semantic, functionRoot, type.name);
+        if (position >= count) return invalidType();
+        val argument = arguments[position as u64];
+        return TypeValue(TypeKind.SLICE, argument.name, argument.kind.value);
+    }
     if (type.kind != TypeKind.TYPE_PARAMETER) return type;
     val position =
         typeParameterPosition(semantic, functionRoot, type.name);

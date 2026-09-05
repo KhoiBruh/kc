@@ -1,7 +1,8 @@
 module bootstrap.containers;
 
-import bootstrap.list.k_boot_alloc;
-import bootstrap.list.k_boot_free;
+import bootstrap.heap.alloc;
+import bootstrap.heap.free;
+import bootstrap.heap.grow;
 
 extern fn k_boot_live_allocations(): u64;
 extern fn k_boot_stderr(data: u8*, length: u64);
@@ -9,14 +10,11 @@ extern fn k_boot_string_copy(data: u8*, length: u64, output: unit*);
 
 struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
 
-	fn new() => ByteBuffer(k_boot_alloc(2) as u8*, 0, 2);
+	fn new() => ByteBuffer(alloc<u8>(2), 0, 2);
 
     fn grow(var self) {
         val capacity = self.capacity * 2;
-        val data = k_boot_alloc(capacity) as u8*;
-        for (i in 0..<self.length) data[i] = self.data[i];
-        k_boot_free(self.data as unit*);
-        self.data = data;
+        self.data = grow<u8>(self.data, self.length, capacity);
         self.capacity = capacity;
     }
 
@@ -30,19 +28,16 @@ struct ByteBuffer(data: u8*, length: u64, capacity: u64) {
         for (byte in bytes) self.add(byte);
     }
 
-    fn free(self) => k_boot_free(self.data as unit*);
+    fn free(self) => free<u8>(self.data);
 }
 
 struct StringBuilder(data: u8*, length: u64, capacity: u64) {
 
-    fn new() => StringBuilder(k_boot_alloc(2) as u8*, 0, 2);
+    fn new() => StringBuilder(alloc<u8>(2), 0, 2);
 
     fn grow(var self) {
         val capacity = self.capacity * 2;
-        val data = k_boot_alloc(capacity) as u8*;
-        for (i in 0..<self.length) data[i] = self.data[i];
-        k_boot_free(self.data as unit*);
-        self.data = data;
+        self.data = grow<u8>(self.data, self.length, capacity);
         self.capacity = capacity;
     }
 
@@ -67,7 +62,7 @@ struct StringBuilder(data: u8*, length: u64, capacity: u64) {
         return result;
     }
 
-    fn free(self) => k_boot_free(self.data as unit*);
+    fn free(self) => free<u8>(self.data);
 }
 
 struct StrLayout(data: u8*, length: u64, capacity: u64)
@@ -76,6 +71,10 @@ struct StringRef(data: u8*, length: u64)
 struct SymbolEntry(key: u64, value: unit*)
 struct SymbolTable(data: SymbolEntry*, length: u64, capacity: u64) {
 
+	// SymbolTable stays on the raw k_boot_* ABI: nothing references it from
+	// the entry graph yet, and kc0 lowers generic specializations even in
+	// unreachable declarations ("type not supported by the LLVM backend").
+	// Move these to heap.alloc/grow/free once it is reachable from main.
 	fn new() => SymbolTable(k_boot_alloc(2 * sizeof(SymbolEntry)) as SymbolEntry*, 0, 2);
 
     fn grow(var self) {
